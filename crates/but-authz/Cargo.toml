@@ -1,0 +1,17 @@
+[package]
+name = "but-authz"
+version = "0.0.0"
+edition.workspace = true
+authors.workspace = true
+publish = false
+rust-version.workspace = true
+description = "Pure functional authorization catalog and authority-set primitives"
+
+[lib]
+doctest = false
+
+[dependencies]
+thiserror.workspace = true
+
+[lints]
+workspace = true
