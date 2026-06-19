@@ -75,6 +75,7 @@ pub use table::{
     workflows::Workflow,
     claude::{ClaudeMessage, ClaudePermissionRequest, ClaudeSession},
     file_write_locks::FileWriteLock,
+    local_review_verdicts::LocalReviewVerdict,
     workspace_rules::WorkspaceRule,
     gerrit_metadata::{GerritMeta, GerritMetadataHandle},
     forge_reviews::ForgeReview,
@@ -138,6 +139,7 @@ pub const MIGRATIONS: &[&[M<'static>]] = &[
     table::forge_reviews::M,
     table::ci_checks::M,
     table::virtual_branches::M,
+    table::local_review_verdicts::M,
 ];
 
 /// A migration and all the necessary data associated with it to perform it once.

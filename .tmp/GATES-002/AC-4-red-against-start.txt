@@ -1,0 +1,307 @@
+   Compiling libc v0.2.186
+   Compiling proc-macro2 v1.0.106
+   Compiling cfg-if v1.0.4
+   Compiling unicode-ident v1.0.24
+   Compiling quote v1.0.45
+   Compiling memchr v2.8.0
+   Compiling regex-automata v0.4.14
+   Compiling thiserror v2.0.18
+   Compiling tinyvec_macros v0.1.1
+   Compiling fastrand v2.3.0
+   Compiling gix-trace v0.1.20 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+   Compiling smallvec v1.15.1
+   Compiling parking_lot_core v0.9.12
+   Compiling scopeguard v1.2.0
+   Compiling once_cell v1.21.4
+   Compiling crossbeam-utils v0.8.21
+   Compiling crc32fast v1.5.0
+   Compiling typenum v1.20.0
+   Compiling tinyvec v1.10.0
+   Compiling lock_api v0.4.14
+   Compiling same-file v1.0.6
+   Compiling zlib-rs v0.6.2
+   Compiling version_check v0.9.5
+   Compiling walkdir v2.5.0
+   Compiling bitflags v2.11.1
+   Compiling byteorder v1.5.0
+   Compiling heapless v0.8.0
+   Compiling stable_deref_trait v1.2.1
+   Compiling foldhash v0.2.0
+   Compiling hash32 v0.3.1
+   Compiling itoa v1.0.17
+   Compiling generic-array v0.14.7
+   Compiling unicode-normalization v0.1.25
+   Compiling jiff v0.2.28
+   Compiling equivalent v1.0.2
+   Compiling allocator-api2 v0.2.21
+   Compiling rustix v1.1.4
+   Compiling getrandom v0.4.1
+   Compiling nonempty v0.12.0
+   Compiling bstr v1.12.1
+   Compiling hybrid-array v0.4.11
+   Compiling hashbrown v0.17.1
+   Compiling serde_core v1.0.228
+   Compiling unicode-bom v2.0.3
+   Compiling static_assertions v1.1.0
+   Compiling gix-validate v0.11.2 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+   Compiling gix-utils v0.3.3 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+   Compiling gix-error v0.2.4 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+   Compiling crypto-common v0.2.1
+   Compiling block-buffer v0.12.0
+   Compiling gix-quote v0.7.2 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+   Compiling gix-chunk v0.7.2 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+   Compiling kstring v2.0.2
+   Compiling shell-words v1.1.1
+   Compiling percent-encoding v2.3.2
+   Compiling rustversion v1.0.22
+   Compiling serde v1.0.228
+   Compiling zerocopy v0.8.39
+   Compiling gix-bitmap v0.3.2 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+   Compiling digest v0.11.3
+   Compiling autocfg v1.5.0
+   Compiling fnv v1.0.7
+   Compiling find-msvc-tools v0.1.9
+   Compiling shlex v1.3.0
+   Compiling clru v0.6.2
+   Compiling num-traits v0.2.19
+   Compiling cc v1.2.56
+   Compiling pkg-config v0.3.32
+   Compiling vcpkg v0.2.15
+   Compiling crossbeam-channel v0.5.15
+   Compiling encoding_rs v0.8.35
+   Compiling faster-hex v0.10.0
+   Compiling gix-date v0.15.4 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+   Compiling core-foundation-sys v0.8.7
+   Compiling gix-actor v0.41.1 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+   Compiling libsqlite3-sys v0.37.0
+   Compiling winnow v0.7.14
+   Compiling anyhow v1.0.102
+   Compiling block-buffer v0.10.4
+   Compiling crypto-common v0.1.7
+   Compiling digest v0.10.7
+   Compiling iana-time-zone v0.1.65
+   Compiling hashbrown v0.16.1
+   Compiling toml_writer v1.0.6+spec-1.1.0
+   Compiling tracing-core v0.1.36
+   Compiling instant v0.1.13
+   Compiling but-db v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/GATES-002/crates/but-db)
+   Compiling fallible-streaming-iterator v0.1.9
+   Compiling hashlink v0.11.0
+   Compiling fallible-iterator v0.3.0
+   Compiling pin-project-lite v0.2.16
+   Compiling similar v2.7.0
+   Compiling toml_parser v1.0.9+spec-1.1.0
+   Compiling syn v2.0.117
+   Compiling cpufeatures v0.2.17
+   Compiling cpufeatures v0.3.0
+   Compiling errno v0.3.14
+   Compiling memmap2 v0.9.10
+   Compiling gix-sec v0.14.1 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+   Compiling filetime v0.2.29
+   Compiling sha1 v0.10.6
+   Compiling sha2 v0.11.0
+   Compiling getrandom v0.2.17
+   Compiling console v0.16.3
+   Compiling parking_lot v0.12.5
+   Compiling sha1-checked v0.10.0
+   Compiling rand_core v0.6.4
+   Compiling prodash v31.0.0
+   Compiling tempfile v3.27.0
+   Compiling arc-swap v1.9.1
+   Compiling toml_datetime v0.7.5+spec-1.1.0
+   Compiling serde_spanned v1.0.4
+   Compiling thiserror-impl v2.0.18
+   Compiling serde_derive v1.0.228
+   Compiling maybe-async v0.2.11
+   Compiling tracing-attributes v0.1.31
+   Compiling toml v0.9.12+spec-1.1.0
+   Compiling tracing v0.1.44
+   Compiling ppv-lite86 v0.2.21
+   Compiling rand_chacha v0.3.1
+   Compiling rand v0.8.5
+   Compiling backoff v0.4.0
+   Compiling gix-path v0.12.1 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+   Compiling gix-packetline v0.21.5 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+   Compiling gix-features v0.48.1 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+   Compiling gix-config-value v0.18.1 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+   Compiling gix-command v0.9.1 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+   Compiling gix-url v0.36.1 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+   Compiling gix-prompt v0.15.1 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+   Compiling gix-hash v0.25.1 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+   Compiling gix-fs v0.21.2 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+   Compiling gix-glob v0.26.1 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+   Compiling gix-transport v0.57.1 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+   Compiling gix-credentials v0.38.1 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+   Compiling gix-tempfile v23.0.1 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+   Compiling gix-hashtable v0.15.1 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+   Compiling gix-commitgraph v0.37.1 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+   Compiling gix-attributes v0.33.1 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+   Compiling gix-ignore v0.21.1 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+   Compiling gix-object v0.61.0 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+   Compiling gix-lock v23.0.1 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+   Compiling chrono v0.4.44
+   Compiling insta v1.47.2
+   Compiling gix-shallow v0.12.1 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+   Compiling gix-pathspec v0.18.1 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+   Compiling gix-revwalk v0.32.0 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+   Compiling gix-ref v0.64.0 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+   Compiling gix-pack v0.71.0 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+   Compiling gix-filter v0.31.0 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+   Compiling gix-diff v0.64.0 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+   Compiling gix-traverse v0.58.0 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+   Compiling gix-revision v0.46.0 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+   Compiling gix-negotiate v0.32.0 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+   Compiling rusqlite v0.39.0
+   Compiling gix-index v0.52.0 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+   Compiling gix-refspec v0.42.0 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+   Compiling gix-config v0.57.0 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+   Compiling gix-discover v0.52.0 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+   Compiling gix-protocol v0.62.0 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+   Compiling gix-odb v0.81.0 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+   Compiling gix-worktree v0.53.0 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+   Compiling gix-dir v0.26.0 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+   Compiling gix-submodule v0.31.0 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+   Compiling gix v0.84.0 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+   Compiling but-utils v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/GATES-002/crates/but-utils)
+error[E0432]: unresolved import `but_db::LocalReviewVerdict`
+ --> crates/but-db/tests/db/table/local_review_verdicts.rs:1:5
+  |
+1 | use but_db::LocalReviewVerdict;
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^ no `LocalReviewVerdict` in the root
+
+error[E0599]: no method named `local_review_verdicts_mut` found for struct `DbHandle` in the current scope
+  --> crates/but-db/tests/db/table/local_review_verdicts.rs:17:8
+   |
+17 |     db.local_review_verdicts_mut().insert(verdict.clone())?;
+   |        ^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+help: there is a method `forge_reviews_mut` with a similar name
+   |
+17 -     db.local_review_verdicts_mut().insert(verdict.clone())?;
+17 +     db.forge_reviews_mut().insert(verdict.clone())?;
+   |
+
+error[E0599]: no method named `local_review_verdicts` found for struct `DbHandle` in the current scope
+  --> crates/but-db/tests/db/table/local_review_verdicts.rs:20:10
+   |
+19 |       let rows = db
+   |  ________________-
+20 | |         .local_review_verdicts()
+   | |         -^^^^^^^^^^^^^^^^^^^^^ method not found in `DbHandle`
+   | |_________|
+   |
+
+error[E0599]: no method named `local_review_verdicts_mut` found for struct `DbHandle` in the current scope
+  --> crates/but-db/tests/db/table/local_review_verdicts.rs:50:8
+   |
+50 |     db.local_review_verdicts_mut().insert(first_head.clone())?;
+   |        ^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+help: there is a method `forge_reviews_mut` with a similar name
+   |
+50 -     db.local_review_verdicts_mut().insert(first_head.clone())?;
+50 +     db.forge_reviews_mut().insert(first_head.clone())?;
+   |
+
+error[E0599]: no method named `local_review_verdicts_mut` found for struct `DbHandle` in the current scope
+  --> crates/but-db/tests/db/table/local_review_verdicts.rs:51:8
+   |
+51 |     db.local_review_verdicts_mut().insert(second_head.clone())?;
+   |        ^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+help: there is a method `forge_reviews_mut` with a similar name
+   |
+51 -     db.local_review_verdicts_mut().insert(second_head.clone())?;
+51 +     db.forge_reviews_mut().insert(second_head.clone())?;
+   |
+
+error[E0599]: no method named `local_review_verdicts` found for struct `DbHandle` in the current scope
+  --> crates/but-db/tests/db/table/local_review_verdicts.rs:54:10
+   |
+53 |       let rows = db
+   |  ________________-
+54 | |         .local_review_verdicts()
+   | |         -^^^^^^^^^^^^^^^^^^^^^ method not found in `DbHandle`
+   | |_________|
+   |
+
+error[E0599]: no method named `local_review_verdicts` found for struct `DbHandle` in the current scope
+  --> crates/but-db/tests/db/table/local_review_verdicts.rs:76:10
+   |
+75 |       let initial_rows = db
+   |  ________________________-
+76 | |         .local_review_verdicts()
+   | |         -^^^^^^^^^^^^^^^^^^^^^ method not found in `DbHandle`
+   | |_________|
+   |
+
+error[E0599]: no method named `local_review_verdicts_mut` found for struct `DbHandle` in the current scope
+  --> crates/but-db/tests/db/table/local_review_verdicts.rs:92:8
+   |
+92 |     db.local_review_verdicts_mut()
+   |        ^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+help: there is a method `forge_reviews_mut` with a similar name
+   |
+92 -     db.local_review_verdicts_mut()
+92 +     db.forge_reviews_mut()
+   |
+
+error[E0599]: no method named `local_review_verdicts` found for struct `DbHandle` in the current scope
+  --> crates/but-db/tests/db/table/local_review_verdicts.rs:96:10
+   |
+95 |       let other_rows = db
+   |  ______________________-
+96 | |         .local_review_verdicts()
+   | |         -^^^^^^^^^^^^^^^^^^^^^ method not found in `DbHandle`
+   | |_________|
+   |
+
+error[E0599]: no method named `local_review_verdicts` found for struct `DbHandle` in the current scope
+   --> crates/but-db/tests/db/table/local_review_verdicts.rs:106:10
+    |
+105 |       let feat_rows = db
+    |  _____________________-
+106 | |         .local_review_verdicts()
+    | |         -^^^^^^^^^^^^^^^^^^^^^ method not found in `DbHandle`
+    | |_________|
+    |
+
+error[E0599]: no method named `local_review_verdicts_mut` found for struct `DbHandle` in the current scope
+   --> crates/but-db/tests/db/table/local_review_verdicts.rs:137:8
+    |
+137 |     db.local_review_verdicts_mut()
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+help: there is a method `forge_reviews_mut` with a similar name
+    |
+137 -     db.local_review_verdicts_mut()
+137 +     db.forge_reviews_mut()
+    |
+
+error[E0599]: no method named `local_review_verdicts_mut` found for struct `DbHandle` in the current scope
+   --> crates/but-db/tests/db/table/local_review_verdicts.rs:139:8
+    |
+139 |     db.local_review_verdicts_mut()
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+help: there is a method `forge_reviews_mut` with a similar name
+    |
+139 -     db.local_review_verdicts_mut()
+139 +     db.forge_reviews_mut()
+    |
+
+error[E0599]: no method named `local_review_verdicts` found for struct `DbHandle` in the current scope
+   --> crates/but-db/tests/db/table/local_review_verdicts.rs:143:10
+    |
+142 |       let rows = db
+    |  ________________-
+143 | |         .local_review_verdicts()
+    | |         -^^^^^^^^^^^^^^^^^^^^^ method not found in `DbHandle`
+    | |_________|
+    |
+
+Some errors have detailed explanations: E0432, E0599.
+For more information about an error, try `rustc --explain E0432`.
+error: could not compile `but-db` (test "db") due to 13 previous errors
+warning: build failed, waiting for other jobs to finish...
