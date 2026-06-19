@@ -1,0 +1,97 @@
+{
+  "task_id": "AUTHZ-002",
+  "timestamp": "2026-06-19T02:12:20Z",
+  "commit_sha": "5f8082f308d3491c84c1d75b733c2196774ae01f",
+  "typecheck": {
+    "exit_code": 0
+  },
+  "lint": {
+    "exit_code": 0,
+    "warnings": 0
+  },
+  "pre_existing_issues": false,
+  "requirement_results": [
+    {
+      "id": "AC-1",
+      "verify": "cargo test -p but-authz config_loads_from_target_ref",
+      "exit_code": 0,
+      "output_file": ".tmp/AUTHZ-002/ac-1-output.txt",
+      "red_against_start_file": ".tmp/AUTHZ-002/AC-1-red-against-start.txt",
+      "green_file": ".tmp/AUTHZ-002/AC-1-green.txt",
+      "seeded_value": ".tmp/AUTHZ-002/AC-1-seeded-artifact.txt"
+    },
+    {
+      "id": "AC-2",
+      "verify": "cargo test -p but-authz config_ignores_working_tree_edit",
+      "exit_code": 0,
+      "output_file": ".tmp/AUTHZ-002/ac-2-output.txt",
+      "red_against_start_file": ".tmp/AUTHZ-002/AC-2-red-against-start.txt",
+      "green_file": ".tmp/AUTHZ-002/AC-2-green.txt",
+      "seeded_value": ".tmp/AUTHZ-002/AC-2-seeded-artifact.txt"
+    },
+    {
+      "id": "AC-3",
+      "verify": "cargo test -p but-authz config_malformed_fails_closed",
+      "exit_code": 0,
+      "output_file": ".tmp/AUTHZ-002/ac-3-output.txt",
+      "red_against_start_file": ".tmp/AUTHZ-002/AC-3-red-against-start.txt",
+      "green_file": ".tmp/AUTHZ-002/AC-3-green.txt",
+      "seeded_value": ".tmp/AUTHZ-002/AC-3-seeded-artifact.txt"
+    },
+    {
+      "id": "AC-4",
+      "verify": "cargo test -p but-authz config_role_entry_desugars",
+      "exit_code": 0,
+      "output_file": ".tmp/AUTHZ-002/ac-4-output.txt",
+      "red_against_start_file": ".tmp/AUTHZ-002/AC-4-red-against-start.txt",
+      "green_file": ".tmp/AUTHZ-002/AC-4-green.txt",
+      "seeded_value": ".tmp/AUTHZ-002/AC-4-seeded-artifact.txt"
+    },
+    {
+      "id": "AC-5",
+      "verify": "cargo test -p but-authz config_loads_from_target_not_head",
+      "exit_code": 0,
+      "output_file": ".tmp/AUTHZ-002/ac-5-output.txt",
+      "red_against_start_file": ".tmp/AUTHZ-002/AC-5-red-against-start.txt",
+      "green_file": ".tmp/AUTHZ-002/AC-5-green.txt",
+      "seeded_value": ".tmp/AUTHZ-002/AC-5-seeded-artifact.txt"
+    },
+    {
+      "id": "TC-1",
+      "verify": "cargo test -p but-authz config_loads_from_target_ref",
+      "exit_code": 0,
+      "output_file": ".tmp/AUTHZ-002/tc-1-output.txt"
+    },
+    {
+      "id": "TC-2",
+      "verify": "cargo test -p but-authz config_ignores_working_tree_edit",
+      "exit_code": 0,
+      "output_file": ".tmp/AUTHZ-002/tc-2-output.txt"
+    },
+    {
+      "id": "TC-3",
+      "verify": "cargo test -p but-authz config_malformed_fails_closed",
+      "exit_code": 0,
+      "output_file": ".tmp/AUTHZ-002/tc-3-output.txt"
+    },
+    {
+      "id": "TC-4",
+      "verify": "cargo test -p but-authz config_role_entry_desugars",
+      "exit_code": 0,
+      "output_file": ".tmp/AUTHZ-002/tc-4-output.txt"
+    },
+    {
+      "id": "TC-5",
+      "verify": "cargo test -p but-authz config_loads_from_target_not_head",
+      "exit_code": 0,
+      "output_file": ".tmp/AUTHZ-002/tc-5-output.txt"
+    }
+  ],
+  "red_evidence": {
+    "required": true
+  },
+  "tests": {
+    "exit_code": 0,
+    "output_file": ".tmp/AUTHZ-002/test-output.txt"
+  }
+}
