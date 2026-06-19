@@ -1,0 +1,4 @@
+$ cargo check -p but-authz --all-targets
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.25s
+
+EXIT_CODE=0

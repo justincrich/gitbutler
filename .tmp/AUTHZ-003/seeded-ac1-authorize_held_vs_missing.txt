@@ -1,0 +1,2 @@
+Seeded behavior source: crates/but-authz/tests/authorize.rs::authorize_held_vs_missing
+Scenario seed: governed_repo() writes committed .gitbutler/permissions.toml and .gitbutler/gates.toml in the governance-base fixture.
