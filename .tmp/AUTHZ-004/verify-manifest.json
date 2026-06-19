@@ -1,0 +1,66 @@
+{
+  "task_id": "AUTHZ-004",
+  "tracker_id": "tt-001",
+  "project_commands": {
+    "test": "cargo test -p but-api merge_gate",
+    "typecheck": "cargo check -p but-api --all-targets",
+    "lint": "cargo clippy -p but-api --all-targets"
+  },
+  "verification_policy": {
+    "requires_tests": true,
+    "requires_red_evidence": true,
+    "requires_seeded_evidence": true
+  },
+  "requirements": [
+    {
+      "id": "AC-1",
+      "verify": "cargo test -p but-api merge_gate_unknown_and_no_handle_failclosed",
+      "description": "GIVEN merge_gated_unknown WHEN a merge is attempted by a principal absent from permissions.toml (BUT_AGENT_HANDLE=ghost), then with BUT_AGENT_HANDLE unset THEN both are denied error.code==\"perm.denied\" (exit 1, nothing merged, trunk HEAD sha == base) \u2014 an unknown principal and a no-handle invocation are fail-closed, never default-allow. CLI contract asserts {code,message} only (the mirror has no remediation_hint; MGMT-IPC-002)"
+    },
+    {
+      "id": "AC-2",
+      "verify": "cargo test -p but-api merge_gate_malformed_config_is_config_invalid",
+      "description": "GIVEN merge_gated_malformed_targetref WHEN maint (HOLDS merge) attempts the merge, then a ghost (absent from permissions.toml) attempts the same merge against the same malformed config THEN BOTH are denied error.code==\"config.invalid\" (NEVER perm.denied), exit 1, nothing merged \u2014 config-load happens first regardless of caller, so a malformed config surfaces config.invalid even for a fully-authorized principal AND even for an unknown ghost, never blurred into perm.denied and never skipped"
+    },
+    {
+      "id": "AC-3",
+      "verify": "cargo test -p but-api merge_gate_undefined_required_group_denied",
+      "description": "GIVEN merge_gated_undefined_group (require_approval_from_group=[\"ghost-reviewers\"] naming a group UNDEFINED in target-ref permissions.toml, with a distinct approval present @head from a defined reviewer) WHEN maint attempts the merge THEN the merge is denied gate.review_required naming the undefined required group in unmet[], exit 1, nothing merged \u2014 an undefined required group is NEVER vacuously satisfied; the hard-deny is enforced in the but-api merge-gate layer (but-authz has no gate-requirement schema)"
+    },
+    {
+      "id": "AC-4",
+      "verify": "cargo test -p but-api merge_gate_dryrun_unknown_failclosed_persists_nothing",
+      "description": "GIVEN merge_gated_unknown WHEN a DryRun merge is attempted by an unknown principal (BUT_AGENT_HANDLE=ghost) THEN the gate still fires perm.denied (exit 1) and persists nothing (no merge ref/object, no verdict mutation, trunk HEAD sha == base) \u2014 DryRun does NOT bypass the fail-closed gate"
+    },
+    {
+      "id": "TC-1",
+      "verify": "cargo test -p but-api merge_gate_unknown_and_no_handle_failclosed",
+      "description": "unknown principal (ghost) merge denied perm.denied; no-handle merge denied perm.denied; nothing merged; CLI error is {code,message} (T-AUTHZ-027, T-AUTHZ-028)"
+    },
+    {
+      "id": "TC-2",
+      "verify": "cargo test -p but-api merge_gate_malformed_config_is_config_invalid",
+      "description": "malformed target-ref gates.toml -> config.invalid for BOTH a merge-holder AND a ghost caller, NEVER perm.denied, never skipped (config-load-first, caller-independent) (T-AUTHZ-029, M1)"
+    },
+    {
+      "id": "TC-3",
+      "verify": "cargo test -p but-api merge_gate_undefined_required_group_denied",
+      "description": "require_approval_from_group naming an undefined group hard-denied in the merge-gate layer, not vacuously satisfied (T-AUTHZ-030)"
+    },
+    {
+      "id": "TC-4",
+      "verify": "cargo test -p but-api merge_gate_dryrun_unknown_failclosed_persists_nothing",
+      "description": "DryRun merge by an unknown principal still perm.denied + persists nothing (T-AUTHZ-031, CAP-AUTHZ-01)"
+    },
+    {
+      "id": "TC-5",
+      "verify": "cargo test -p but-api merge_gate_malformed_config_is_config_invalid",
+      "description": "deterministic classification ordering: config-load-first so malformed config -> config.invalid regardless of caller, then authorize -> perm.denied, then requirement -> gate.review_required, never blurred (T-AUTHZ-029/030/031, M1)"
+    }
+  ],
+  "write_allowed": [
+    "crates/but",
+    "crates/but",
+    "crates/but"
+  ]
+}
