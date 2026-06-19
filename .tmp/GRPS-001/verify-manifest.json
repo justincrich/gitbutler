@@ -1,0 +1,63 @@
+{
+  "task_id": "GRPS-001",
+  "verification_policy": {
+    "requires_tests": true,
+    "requires_red_evidence": true,
+    "requires_seeded_evidence": true
+  },
+  "project_commands": {
+    "typecheck": "cargo check -p but-authz --all-targets",
+    "lint": "cargo clippy -p but-authz --all-targets",
+    "test": "cargo test -p but-authz"
+  },
+  "requirements": [
+    {
+      "id": "AC-1",
+      "verify": "cargo test -p but-authz group_union_authorizes_review_denies_merge"
+    },
+    {
+      "id": "AC-2",
+      "verify": "cargo test -p but-authz union_paths_stay_equal"
+    },
+    {
+      "id": "AC-3",
+      "verify": "cargo test -p but-authz delegated_admin_ceiling"
+    },
+    {
+      "id": "AC-4",
+      "verify": "cargo test -p but-authz claims_do_not_widen_union_even_with_group_backing"
+    },
+    {
+      "id": "TC-1",
+      "verify": "cargo test -p but-authz group_union_authorizes_review_denies_merge"
+    },
+    {
+      "id": "TC-2",
+      "verify": "cargo test -p but-authz group_union_authorizes_review_denies_merge"
+    },
+    {
+      "id": "TC-3",
+      "verify": "cargo test -p but-authz union_paths_stay_equal"
+    },
+    {
+      "id": "TC-4",
+      "verify": "cargo test -p but-authz union_paths_stay_equal"
+    },
+    {
+      "id": "TC-5",
+      "verify": "cargo test -p but-authz delegated_admin_ceiling"
+    },
+    {
+      "id": "TC-6",
+      "verify": "cargo test -p but-authz delegated_admin_ceiling"
+    },
+    {
+      "id": "TC-7",
+      "verify": "cargo test -p but-authz claims_do_not_widen_union_even_with_group_backing"
+    },
+    {
+      "id": "TC-8",
+      "verify": "cargo test -p but-authz invariant_build_gates"
+    }
+  ]
+}

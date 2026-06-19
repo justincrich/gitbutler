@@ -49,16 +49,12 @@ pub fn authorize(principal: &Principal, action: Authority, cfg: &GovConfig) -> R
 /// # Ok::<(), but_authz::ParseAuthorityError>(())
 /// ```
 pub fn effective_authority(principal: &Principal, cfg: &GovConfig) -> AuthoritySet {
-    let Some(authorities) = cfg.principal_authorities(principal.id()) else {
-        return AuthoritySet::empty();
-    };
-
-    cfg.groups()
-        .values()
-        .filter(|group| group.members().contains(principal.id()))
-        .fold(authorities.clone(), |held, group| {
-            held.union(group.authorities())
-        })
+    // `config::normalize_permissions` folds direct grants and both group
+    // membership directions at load time, so this is equal to
+    // `GovConfig::principal_authorities` by construction.
+    cfg.principal_authorities(principal.id())
+        .cloned()
+        .unwrap_or_else(AuthoritySet::empty)
 }
 
 /// Resolve the acting principal from an injected environment lookup.
