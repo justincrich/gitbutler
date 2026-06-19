@@ -1,7 +1,7 @@
 {
-  "task": "FIX-GATES-001-REVIEW-1",
-  "base_sha": "b480b78b47882cb7fafe7eec30f92c16861e8678",
-  "commit_sha": "c9ffe6afc49fb5f7ad2731fb037b2e08979b5ecf",
+  "task": "FIX-GATES-001-REVIEW-2",
+  "base_sha": "07284b6386543bfe2eac7b60d1cc80d3ebe4348c",
+  "commit_sha": "d8f5d79fe80f2953ea6f44d1be00bc3af1fd6c7d",
   "status": "completed",
   "blocker_classification": null,
   "blocker": null,
@@ -9,53 +9,71 @@
     "Moved CLI commit2 authorization before RepoExclusiveGuard acquisition: target resolution now runs under shared read access, enforce_commit_gate_for_target runs next, and exclusive access is acquired only before change selection and mutation.",
     "Added resolved CommitGateTarget support so direct branch commits check branch protection while new-branch, branch-bucket, and commit-relative commits still require contents:write with branch protection N/A.",
     "Added CLI snapbox commit_gate tests for branch.protected, perm.denied, and config.invalid behavior through the real but binary.",
-    "Cargo.lock changed when cargo reconciled the already-added but-api dependency/dev-dependency entries for but-authz, serial_test, and temp-env; the lockfile update is included so the worktree is not left stale."
+    "Scoped commit-gate enforcement to target refs that carry committed governance marker files. Refs with neither committed governance file remain non-governed, removing the broad CLI mutation regression. Refs with partial or malformed governance still flow through load_governance_config and fail closed as config.invalid.",
+    "Added a CLI regression test proving ordinary non-governed commit2 flows still succeed.",
+    "Updated the API absent-config coverage to use a partial governed config so governed targets with absent required config still fail closed."
   ],
   "commands": [
     {
       "command": "cargo test -p but-api commit_gate",
-      "status": "passed"
+      "status": "passed",
+      "evidence": ".tmp/GATES-001/but-api-commit-gate-output.txt"
     },
     {
       "command": "cargo test -p but --features legacy,but-2 commit_gate",
-      "status": "passed"
+      "status": "passed",
+      "evidence": ".tmp/GATES-001/but-cli-commit-gate-legacy-but2-output.txt"
     },
     {
       "command": "cargo test -p but commit_gate",
       "status": "passed",
-      "note": "default feature set compiled test targets and found 0 matching commit_gate tests because commit2 is behind the but-2 feature"
+      "note": "default feature set compiled test targets and found 0 matching commit_gate tests because commit2 is behind the but-2 feature",
+      "evidence": ".tmp/GATES-001/but-commit-gate-default-output.txt"
+    },
+    {
+      "command": "cargo test -p but --features legacy,but-2",
+      "status": "passed",
+      "note": "broad reviewer-regression check passed; previously failing non-governed commit, absorb, rub, squash, move, undo, and status CLI scenarios no longer return missing governance config errors",
+      "evidence": ".tmp/GATES-001/but-broad-legacy-but2-output.txt"
     },
     {
       "command": "cargo check -p but-api -p but --all-targets",
-      "status": "passed"
+      "status": "passed",
+      "evidence": ".tmp/GATES-001/check-output.txt"
     },
     {
       "command": "cargo clippy -p but-api -p but --all-targets -- -D warnings",
-      "status": "passed"
+      "status": "passed",
+      "evidence": ".tmp/GATES-001/clippy-output.txt"
     },
     {
       "command": "cargo fmt --check",
-      "status": "passed"
+      "status": "passed",
+      "evidence": ".tmp/GATES-001/static-gates-output.txt"
     },
     {
       "command": "cargo doc -p but-api -p but --no-deps",
       "status": "passed",
-      "note": "rustdoc emitted an existing unresolved-link warning in crates/but-api/src/open/editor.rs"
+      "note": "rustdoc emitted an existing unresolved-link warning in crates/but-api/src/open/editor.rs",
+      "evidence": ".tmp/GATES-001/static-gates-output.txt"
     },
     {
       "command": "rg -n \"std::fs|read_to_string|workdir|worktree|\\.gitbutler|permissions\\.toml|gates\\.toml\" crates/but-api/src/commit/gate.rs",
       "status": "passed",
-      "note": "no matches"
+      "note": "no matches",
+      "evidence": ".tmp/GATES-001/static-gates-output.txt"
     },
     {
       "command": "rg -n \"write_permission\\(|RepoExclusive\" crates/but-api/src/commit/gate.rs",
       "status": "passed",
-      "note": "no matches"
+      "note": "no matches",
+      "evidence": ".tmp/GATES-001/static-gates-output.txt"
     },
     {
       "command": "rg -n \"load_governance_config|branch\\.protected|but_authz::authorize\" crates/but-workspace/src/commit_engine/mod.rs",
       "status": "passed",
-      "note": "no matches"
+      "note": "no matches",
+      "evidence": ".tmp/GATES-001/static-gates-output.txt"
     }
   ]
 }

@@ -56,3 +56,28 @@ GREEN command:
 `cargo test -p but-api commit_gate_malformed_absent_and_dryrun`
 
 GREEN evidence: `.tmp/GATES-001/test-output.txt`
+
+## REVIEW-2 Regression
+
+RED command:
+
+`cargo test -p but --features legacy,but-2 commit_gate_allows_non_governed_commit2_flow --test but`
+
+RED failure captured before scoping the gate:
+
+```text
+test command::commit_gate::commit_gate_allows_non_governed_commit2_flow ... FAILED
+Error: {"error":{"code":"config.invalid","message":"invalid governance config: missing .gitbutler/permissions.toml at refs/heads/A"}}
+```
+
+GREEN command:
+
+`cargo test -p but --features legacy,but-2 commit_gate_allows_non_governed_commit2_flow --test but`
+
+GREEN evidence: `.tmp/GATES-001/but-cli-commit-gate-legacy-but2-output.txt`
+
+Broad regression command:
+
+`cargo test -p but --features legacy,but-2`
+
+Broad evidence: `.tmp/GATES-001/but-broad-legacy-but2-output.txt`

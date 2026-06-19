@@ -1,6 +1,34 @@
 use crate::utils::{CommandExt as _, Sandbox};
 
 #[test]
+fn commit_gate_allows_non_governed_commit2_flow() -> anyhow::Result<()> {
+    let env = Sandbox::init_scenario_with_target_and_default_settings("one-stack")?;
+    env.setup_metadata(&["A"])?;
+
+    env.file("ordinary.txt", "ordinary");
+    env.but("commit2 -m ordinary").assert().success();
+
+    env.but("status")
+        .assert()
+        .success()
+        .stdout_eq(snapbox::str![[r#"
+╭┄zz [unassigned changes] (no changes)
+┊
+┊╭┄g0 [A]
+┊●   [..] ordinary
+┊●   9477ae7 add A
+├╯
+┊
+┴ 0dc3733 (common base) 2000-01-02 add M
+
+Hint: run `but help` for all commands
+
+"#]]);
+
+    Ok(())
+}
+
+#[test]
 fn commit_gate_denies_protected_branch() -> anyhow::Result<()> {
     let env = governed_env("one-stack", Some("A"))?;
 

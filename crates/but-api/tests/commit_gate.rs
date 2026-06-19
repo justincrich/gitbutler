@@ -187,7 +187,7 @@ git commit -m "malformed feat gates"
         );
         assert_eq!(ref_id(&repo, FEAT_REF)?, feat_before);
 
-        let (repo, _tmp) = repo_without_governance_config();
+        let (repo, _tmp) = repo_with_partial_governance_config();
         checkout(&repo, "feat");
         write_file(&repo, "absent.txt", "absent\n")?;
         let feat_before = ref_id(&repo, FEAT_REF)?;
@@ -276,10 +276,18 @@ git checkout main
     (repo, tmp)
 }
 
-fn repo_without_governance_config() -> (gix::Repository, tempfile::TempDir) {
+fn repo_with_partial_governance_config() -> (gix::Repository, tempfile::TempDir) {
     let (repo, tmp) = but_testsupport::writable_scenario("checkout-head-info");
     but_testsupport::invoke_bash(
         r#"
+mkdir -p .gitbutler
+cat >.gitbutler/permissions.toml <<'EOF'
+[[principal]]
+id = "dev"
+permissions = ["contents:write"]
+EOF
+git add .gitbutler/permissions.toml
+git commit -m "partial governance config"
 git checkout -b feat
 echo feat-base >feat-base.txt
 git add feat-base.txt

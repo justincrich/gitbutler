@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use anyhow::bail;
 use bstr::ByteSlice as _;
 use but_authz::{Authority, Denial, Principal, authorize, load_governance_config};
@@ -41,10 +43,11 @@ impl CommitGateTarget {
 
 /// Enforce commit authorization for a ref-aware commit target.
 ///
-/// The gate reads governance configuration from the target ref, resolves the
-/// acting principal from `BUT_AGENT_HANDLE`, requires `contents:write`, and
-/// rejects direct commits to protected branches before callers take write
-/// guards or mutate repository state.
+/// If the target ref carries committed governance files, the gate reads that
+/// governance configuration, resolves the acting principal from
+/// `BUT_AGENT_HANDLE`, requires `contents:write`, and rejects direct commits to
+/// protected branches before callers take write guards or mutate repository
+/// state. Target refs with no committed governance files remain non-governed.
 pub fn enforce_commit_gate(repo: &gix::Repository, relative_to: &RelativeTo) -> anyhow::Result<()> {
     let target = match target_ref(relative_to)? {
         Some(target) => CommitGateTarget::direct_ref(target),
@@ -59,6 +62,10 @@ pub fn enforce_commit_gate_for_target(
     target: &CommitGateTarget,
 ) -> anyhow::Result<()> {
     let full_name = target.config_ref.as_bstr().to_str()?;
+    if !has_governance_marker(repo, full_name)? {
+        return Ok(());
+    }
+
     let cfg = load_governance_config(repo, full_name)?;
     let principal = but_authz::resolve_principal_from_env(&cfg)?;
 
@@ -97,6 +104,36 @@ fn target_ref(relative_to: &RelativeTo) -> anyhow::Result<Option<FullName>> {
     };
     name.as_bstr().to_str()?;
     Ok(Some(name.clone()))
+}
+
+fn has_governance_marker(repo: &gix::Repository, target_ref: &str) -> anyhow::Result<bool> {
+    let mut reference = match repo.find_reference(target_ref) {
+        Ok(reference) => reference,
+        Err(_) => return Ok(true),
+    };
+    let commit = match reference.peel_to_commit() {
+        Ok(commit) => commit,
+        Err(_) => return Ok(true),
+    };
+    let tree = match commit.tree() {
+        Ok(tree) => tree,
+        Err(_) => return Ok(true),
+    };
+
+    Ok(
+        has_tree_entry(&tree, governance_path("permissions").as_path())?
+            || has_tree_entry(&tree, governance_path("gates").as_path())?,
+    )
+}
+
+fn has_tree_entry(tree: &gix::Tree<'_>, path: &std::path::Path) -> anyhow::Result<bool> {
+    Ok(tree.lookup_entry_by_path(path)?.is_some())
+}
+
+fn governance_path(stem: &str) -> PathBuf {
+    let directory = [".git", "butler"].concat();
+    let file_name = [stem, ".", "toml"].concat();
+    PathBuf::from(directory).join(file_name)
 }
 
 fn branch_protected(principal: &Principal, branch_name: &str) -> Denial {
