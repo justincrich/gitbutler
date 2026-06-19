@@ -1,0 +1,21 @@
+AUTHZ-005 AC-3 seeded artifact.
+
+Seeded value:
+admin_write_confined_repo committed GovConfig at refs/heads/main:
+- reviewer permissions: reviews:write
+- maint permissions: merge
+- admin permissions: administration:write, merge
+- branch main protected=true
+
+confined_merge_repo committed GovConfig at refs/heads/main:
+- reviewer permissions: reviews:write
+- maint permissions: merge
+- admin permissions: administration:write, merge
+- branch main protected=true
+- merge-layer review requirement requiring one distinct current-head approval
+
+The test uses but_authz::load_governance_config and
+but_authz::resolve_principal_from_env with BUT_AGENT_HANDLE=reviewer, then proves
+the effective authority is from committed config by asserting reviews:write is
+present, merge is absent, and but_authz::authorize(..., Authority::Merge, ...)
+returns perm.denied.

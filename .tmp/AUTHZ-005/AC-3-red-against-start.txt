@@ -1,0 +1,16 @@
+AUTHZ-005 AC-3 red-against-start evidence.
+
+Command captured before repairing the expectation:
+cargo test -p but-api confinement_authority_from_config_not_claim
+
+Captured output:
+.tmp/AUTHZ-005/red-output.txt
+
+Failure excerpt:
+test confinement_authority_from_config_not_claim ... FAILED
+assertion `left == right` failed: RED: repaired contract requires the resolver to return reviewer
+left: "reviewer"
+right: "maint"
+
+This is the direct RED for AC-3's repaired positive resolver assertion. The
+failing expectation was then changed to reviewer before the final green run.
