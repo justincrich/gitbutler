@@ -23,7 +23,7 @@ use nonempty::NonEmpty;
 use serde::Serialize;
 
 use crate::{
-    CliId, CliResult, CliResultExt, IdMap,
+    CliError, CliId, CliResult, CliResultExt, IdMap,
     args::{
         atoms::{BranchArg, BranchOrCommit, CliIdArg, Purpose},
         commit2::Platform,
@@ -129,6 +129,13 @@ pub fn commit(
         let head_info = but_api::legacy::workspace::head_info(ctx)?;
         resolve(guard, ctx, args, &mut out, &head_info, &id_map)?
     };
+    if let Some(relative_to) = commit_op.gate_relative_to() {
+        {
+            let repo = ctx.repo.get()?;
+            but_api::commit::create::gate::enforce_commit_gate(&repo, &relative_to)
+                .map_err(commit_gate_cli_error)?;
+        }
+    }
     run(
         ctx,
         &mut meta,
@@ -468,6 +475,13 @@ enum CommitOperation {
 }
 
 impl CommitOperation {
+    fn gate_relative_to(&self) -> Option<RelativeTo> {
+        match self {
+            CommitOperation::CommitToNewBranch(_) => None,
+            CommitOperation::CommitAt(op) => op.target.gate_relative_to(),
+        }
+    }
+
     fn execute(
         self,
         tx: &mut Transaction<'_, '_, impl RefMetadata>,
@@ -577,6 +591,56 @@ enum CommitRelativeToTarget {
         name: FullName,
         position: CommitRelativeToTargetPosition,
     },
+}
+
+impl CommitRelativeToTarget {
+    fn gate_relative_to(&self) -> Option<RelativeTo> {
+        match self {
+            Self::Commit { commit_id, .. } => Some(RelativeTo::Commit(*commit_id)),
+            Self::BranchTip { name } => Some(RelativeTo::Reference(name.clone())),
+            Self::BranchBucket { .. } => None,
+        }
+    }
+}
+
+fn commit_gate_cli_error(err: anyhow::Error) -> CliError {
+    if let Some(gate_error) = but_api::commit::create::gate::classify_error(&err) {
+        return anyhow::anyhow!(
+            "{}",
+            serde_json::json!({
+                "error": {
+                    "code": gate_error.code,
+                    "message": gate_error.message,
+                }
+            })
+        )
+        .into();
+    }
+
+    err.into()
+}
+
+#[cfg(test)]
+mod commit_gate_tests {
+    use super::*;
+
+    #[test]
+    fn commit_gate_relative_to_uses_branch_tip_ref() -> anyhow::Result<()> {
+        let main = FullName::try_from("refs/heads/main")?;
+        let relative_to = CommitRelativeToTarget::BranchTip { name: main.clone() }
+            .gate_relative_to()
+            .ok_or_else(|| anyhow::anyhow!("branch tip target should be gated"))?;
+
+        let RelativeTo::Reference(actual) = relative_to else {
+            anyhow::bail!("branch tip target should gate against a ref");
+        };
+        assert_eq!(
+            actual, main,
+            "CLI branch-tip commits must authorize against the target ref"
+        );
+
+        Ok(())
+    }
 }
 
 #[derive(Clone)]

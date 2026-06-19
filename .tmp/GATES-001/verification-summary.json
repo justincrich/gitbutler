@@ -1,0 +1,82 @@
+{
+  "task": "GATES-001",
+  "base_sha": "220686834207ecd95d4b029e7589d1dea5b15db1",
+  "status": "blocked",
+  "blocker_classification": "recoverable_dependency_missing",
+  "blocker": "The in-scope implementation requires adding but-authz as a direct but-api dependency. Cargo updates Cargo.lock for that dependency, but Cargo.lock is outside the GATES-001 write scope, so the lockfile update must be owned by a separate dependency task.",
+  "commands": [
+    {
+      "command": "cargo test -p but-api commit_gate_feature_ok_protected_rejected",
+      "status": "passed",
+      "evidence": ".tmp/GATES-001/test-output.txt"
+    },
+    {
+      "command": "cargo test -p but-api commit_gate_readonly_and_bad_handle_denied",
+      "status": "passed",
+      "evidence": ".tmp/GATES-001/test-output.txt"
+    },
+    {
+      "command": "cargo test -p but-api commit_gate_edit_cannot_unprotect",
+      "status": "passed",
+      "evidence": ".tmp/GATES-001/test-output.txt"
+    },
+    {
+      "command": "cargo test -p but-api commit_gate_malformed_absent_and_dryrun",
+      "status": "passed",
+      "evidence": ".tmp/GATES-001/test-output.txt"
+    },
+    {
+      "command": "cargo test -p but-api commit_gate",
+      "status": "passed",
+      "evidence": ".tmp/GATES-001/test-output.txt"
+    },
+    {
+      "command": "cargo test -p but commit_gate",
+      "status": "passed",
+      "note": "default feature set compiled the but test targets and found 0 matching commit_gate tests",
+      "evidence": ".tmp/GATES-001/test-output.txt"
+    },
+    {
+      "command": "cargo test -p but --features legacy,but-2 commit_gate",
+      "status": "passed",
+      "note": "feature-enabled compile runs the commit2 CLI gate seam unit test",
+      "evidence": ".tmp/GATES-001/test-output.txt"
+    },
+    {
+      "command": "cargo check -p but-api -p but --all-targets",
+      "status": "passed",
+      "evidence": ".tmp/GATES-001/typecheck-output.txt"
+    },
+    {
+      "command": "cargo clippy -p but-api -p but --all-targets -- -D warnings",
+      "status": "passed",
+      "evidence": ".tmp/GATES-001/lint-output.txt"
+    },
+    {
+      "command": "cargo fmt --check",
+      "status": "passed",
+      "evidence": ".tmp/GATES-001/static-gates-output.txt"
+    },
+    {
+      "command": "cargo doc -p but-api -p but --no-deps",
+      "status": "passed",
+      "note": "rustdoc emitted an existing unresolved-link warning in crates/but-api/src/open/editor.rs",
+      "evidence": ".tmp/GATES-001/static-gates-output.txt"
+    },
+    {
+      "command": "! grep -rEn 'workdir|std::fs::read|read_to_string' crates/but-api/src/commit/gate.rs",
+      "status": "passed",
+      "evidence": ".tmp/GATES-001/static-gates-output.txt"
+    },
+    {
+      "command": "! grep -rEn 'write_permission\\(|RepoExclusive' crates/but-api/src/commit/gate.rs",
+      "status": "passed",
+      "evidence": ".tmp/GATES-001/static-gates-output.txt"
+    },
+    {
+      "command": "! grep -rEn 'load_governance_config|branch.protected|but_authz::authorize' crates/but-workspace/src/commit_engine/mod.rs",
+      "status": "passed",
+      "evidence": ".tmp/GATES-001/static-gates-output.txt"
+    }
+  ]
+}

@@ -10,6 +10,10 @@ use tracing::instrument;
 
 use super::types::CommitCreateResult;
 
+/// Commit authorization gate shared by ref-aware commit entry points.
+#[path = "gate.rs"]
+pub mod gate;
+
 /// Creates a commit from `changes` with `message`, inserted on `side` of
 /// `relative_to`.
 ///
@@ -28,6 +32,11 @@ pub fn commit_create_only(
     message: String,
     dry_run: DryRun,
 ) -> anyhow::Result<CommitCreateResult> {
+    {
+        let repo = ctx.repo.get()?;
+        gate::enforce_commit_gate(&repo, &relative_to)?;
+    }
+
     let context_lines = ctx.settings.context_lines;
     let mut guard = ctx.exclusive_worktree_access();
     commit_create_only_impl(
@@ -106,6 +115,11 @@ pub fn commit_create(
     dry_run: DryRun,
     perm: &mut RepoExclusive,
 ) -> anyhow::Result<CommitCreateResult> {
+    {
+        let repo = ctx.repo.get()?;
+        gate::enforce_commit_gate(&repo, &relative_to)?;
+    }
+
     let context_lines = ctx.settings.context_lines;
     let maybe_oplog_entry = but_oplog::UnmaterializedOplogSnapshot::from_details_with_perm(
         ctx,
