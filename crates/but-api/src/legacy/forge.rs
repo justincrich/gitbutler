@@ -616,6 +616,17 @@ pub async fn merge_review(
     .await
 }
 
+/// Enforce the governed merge gate for a review without calling the forge or persisting changes.
+///
+/// This is the API-boundary dry-run companion to [`merge_review`]. It deliberately returns
+/// immediately after `merge_gate::enforce_merge_gate`, so callers can prove local governance would
+/// allow the merge without touching network-backed forge state.
+#[instrument(err(Debug))]
+pub fn dry_run_merge_review(ctx: ThreadSafeContext, review_id: usize) -> Result<()> {
+    let ctx = ctx.into_thread_local();
+    crate::legacy::merge_gate::enforce_merge_gate(&ctx, review_id)
+}
+
 /// Enable or disable a review's auto-merge.
 #[but_api(napi)]
 #[instrument(err(Debug))]

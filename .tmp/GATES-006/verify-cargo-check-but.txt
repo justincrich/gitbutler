@@ -1,0 +1,4 @@
+    Checking but v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/GATES-006/crates/but)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 4.48s
+
+EXIT_STATUS:0

@@ -1327,6 +1327,21 @@ async fn match_subcommand(
                         .await
                         .emit_metrics(metrics_ctx)
                 }
+                Some(forge::pr::Subcommands::Merge {
+                    selector,
+                    method,
+                    dry_run,
+                }) => command::legacy::forge::review::merge(
+                    &mut ctx,
+                    selector,
+                    method.map(Into::into),
+                    dry_run,
+                    out,
+                )
+                .await
+                .context("Failed to merge review.")
+                .emit_metrics(metrics_ctx)
+                .map_err(CliError::from),
                 Some(forge::pr::Subcommands::AutoMerge { selector, off }) => {
                     command::legacy::forge::review::enable_auto_merge(&mut ctx, selector, off, out)
                         .await

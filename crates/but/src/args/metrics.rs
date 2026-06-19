@@ -49,6 +49,7 @@ pub enum CommandName {
     ForgeListUsers,
     ForgeForget,
     PrNew,
+    PrMerge,
     PrTemplate,
     DisableAutoMerge,
     EnableAutoMerge,

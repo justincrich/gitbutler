@@ -196,6 +196,53 @@ pub async fn enable_auto_merge(
     Ok(())
 }
 
+/// Merge exactly one selected review after enforcing the same local gate as the API merge path.
+pub async fn merge(
+    ctx: &mut Context,
+    selector: Option<String>,
+    merge_method: Option<but_forge::ReviewMergeMethod>,
+    dry_run: bool,
+    out: &mut OutputChannel,
+) -> anyhow::Result<()> {
+    let review_id = resolve_single_review_id(ctx, selector, out)?;
+
+    if dry_run {
+        but_api::legacy::forge::dry_run_merge_review(ctx.to_sync(), review_id)
+            .map_err(merge_gate_cli_error)?;
+        if let Some(out) = out.for_human() {
+            writeln!(out, "Merge gate passed for review {review_id}")?;
+        }
+        return Ok(());
+    }
+
+    but_api::legacy::forge::merge_review(ctx.to_sync(), review_id, merge_method)
+        .await
+        .with_context(|| format!("forge merge_review boundary rejected review {review_id}"))
+        .map_err(merge_gate_cli_error)?;
+
+    if let Some(out) = out.for_human() {
+        writeln!(out, "Merged review {review_id}")?;
+    }
+
+    Ok(())
+}
+
+fn resolve_single_review_id(
+    ctx: &mut Context,
+    selector: Option<String>,
+    out: &mut OutputChannel,
+) -> anyhow::Result<usize> {
+    let review_ids = resolve_review_selection(ctx, selector, out)?;
+    match review_ids.as_slice() {
+        [] => anyhow::bail!("No reviews selected"),
+        [review_id] => Ok(*review_id),
+        multiple => anyhow::bail!(
+            "Merge requires exactly one review, but the selector matched {} reviews",
+            multiple.len()
+        ),
+    }
+}
+
 fn merge_gate_cli_error(err: anyhow::Error) -> anyhow::Error {
     if let Some(gate_error) = but_api::legacy::merge_gate::classify_error(&err) {
         return anyhow::anyhow!(

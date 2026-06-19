@@ -23,6 +23,8 @@ mod discard;
 #[cfg(unix)]
 mod external;
 mod format;
+#[cfg(feature = "legacy")]
+mod governed_merge_cli;
 mod gui;
 mod help;
 #[cfg(feature = "legacy")]

@@ -155,6 +155,7 @@ impl Subcommands {
                 Some(forge::pr::Subcommands::RequestChanges { .. }) => PrNew,
                 Some(forge::pr::Subcommands::Comment { .. }) => PrNew,
                 Some(forge::pr::Subcommands::Close { .. }) => PrNew,
+                Some(forge::pr::Subcommands::Merge { .. }) => PrMerge,
                 Some(forge::pr::Subcommands::Template { .. }) => PrTemplate,
                 Some(forge::pr::Subcommands::AutoMerge { off, .. }) => {
                     if *off {
