@@ -89,20 +89,20 @@ help: change this to
 270 + [[principal]]
 271 + id = "implementer"
 272 + permissions = ["contents:write", "pull_requests:write"]
-273 + 
+273 +
 274 + [[principal]]
 275 + id = "reviewer"
 276 + groups = ["code-reviewers"]
-277 + 
+277 +
 278 + [[principal]]
 279 + id = "maintainer"
 280 + groups = ["maintainers"]
-281 + 
+281 +
 282 + [[group]]
 283 + name = "code-reviewers"
 284 + permissions = ["reviews:write"]
 285 + members = ["reviewer"]
-286 + 
+286 +
 287 + [[group]]
 288 + name = "maintainers"
 289 + permissions = ["merge"]
@@ -113,7 +113,7 @@ help: change this to
 294 + [[branch]]
 295 + name = "main"
 296 + protected = true
-297 + 
+297 +
 298 + [[gate]]
 299 + branch = "main"
 300 + type = "review"
@@ -125,7 +125,7 @@ help: change this to
 306 + [[branch]]
 307 + name = "main"
 308 + protected = true
-309 + 
+309 +
 310 + [[branch]]
 311 + name = "{branch_name}"
 312 + protected = false
