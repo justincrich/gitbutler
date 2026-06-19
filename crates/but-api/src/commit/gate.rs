@@ -1,6 +1,5 @@
 use std::path::PathBuf;
 
-use anyhow::bail;
 use bstr::ByteSlice as _;
 use but_authz::{Authority, Denial, Principal, authorize, load_governance_config};
 use but_rebase::graph_rebase::mutate::RelativeTo;
@@ -48,12 +47,10 @@ impl CommitGateTarget {
 /// `BUT_AGENT_HANDLE`, requires `contents:write`, and rejects direct commits to
 /// protected branches before callers take write guards or mutate repository
 /// state. Target refs with no committed governance files remain non-governed.
-pub fn enforce_commit_gate(repo: &gix::Repository, relative_to: &RelativeTo) -> anyhow::Result<()> {
-    let target = match target_ref(relative_to)? {
-        Some(target) => CommitGateTarget::direct_ref(target),
-        None => bail!("target ref is required to load governance config for commit authorization"),
-    };
-    enforce_commit_gate_for_target(repo, &target)
+pub fn enforce_commit_gate(ctx: &but_ctx::Context, relative_to: &RelativeTo) -> anyhow::Result<()> {
+    let target = gate_target(ctx, relative_to)?;
+    let repo = ctx.repo.get()?;
+    enforce_commit_gate_for_target(&repo, &target)
 }
 
 /// Enforce commit authorization for a resolved commit target.
@@ -98,12 +95,67 @@ pub fn classify_error(err: &anyhow::Error) -> Option<CommitGateError> {
         })
 }
 
-fn target_ref(relative_to: &RelativeTo) -> anyhow::Result<Option<FullName>> {
-    let RelativeTo::Reference(name) = relative_to else {
-        return Ok(None);
-    };
-    name.as_bstr().to_str()?;
-    Ok(Some(name.clone()))
+fn gate_target(
+    ctx: &but_ctx::Context,
+    relative_to: &RelativeTo,
+) -> anyhow::Result<CommitGateTarget> {
+    match relative_to {
+        RelativeTo::Reference(name) => {
+            name.as_bstr().to_str()?;
+            Ok(CommitGateTarget::direct_ref(name.clone()))
+        }
+        RelativeTo::Commit(commit_id) => {
+            let head_info = head_info(ctx)?;
+            let config_ref = find_branch_ref_for_commit(&head_info, *commit_id)?;
+            Ok(CommitGateTarget::config_only(config_ref))
+        }
+    }
+}
+
+fn head_info(ctx: &but_ctx::Context) -> anyhow::Result<but_workspace::RefInfo> {
+    let repo = ctx.clone_repo_for_merging_non_persisting()?;
+    let meta = ctx.meta()?;
+    but_workspace::head_info(
+        &repo,
+        &meta,
+        but_workspace::ref_info::Options {
+            project_meta: ctx.project_meta()?,
+            traversal: but_graph::init::Options::limited(),
+            expensive_commit_info: true,
+            gerrit_mode: but_workspace::ref_info::GerritMode::Disabled,
+        },
+    )
+    .map(|info| info.pruned_to_entrypoint())
+}
+
+fn find_branch_ref_for_commit(
+    head_info: &but_workspace::RefInfo,
+    commit_id: gix::ObjectId,
+) -> anyhow::Result<FullName> {
+    head_info
+        .stacks
+        .iter()
+        .flat_map(|stack| stack.segments.iter())
+        .find_map(|segment| {
+            let contains_commit = segment.commits.iter().any(|commit| commit.id == commit_id)
+                || segment
+                    .commits_on_remote
+                    .iter()
+                    .any(|commit| commit.id == commit_id);
+            contains_commit.then(|| {
+                segment
+                    .ref_info
+                    .as_ref()
+                    .map(|ref_info| ref_info.ref_name.clone())
+                    .or_else(|| segment.remote_tracking_ref_name.clone())
+            })?
+        })
+        .ok_or_else(|| {
+            anyhow::anyhow!(
+                "commit {} resolved without an owning branch ref for commit authorization",
+                commit_id.to_hex_with_len(7)
+            )
+        })
 }
 
 fn has_governance_marker(repo: &gix::Repository, target_ref: &str) -> anyhow::Result<bool> {

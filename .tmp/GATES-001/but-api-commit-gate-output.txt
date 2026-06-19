@@ -1,5 +1,8 @@
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
    Compiling but-api v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/GATES-001/crates/but-api)
-    Finished `test` profile [unoptimized + debuginfo] target(s) in 8.17s
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 9.35s
      Running unittests src/lib.rs (target/debug/deps/but_api-7217cdee998ee57e)
 
 running 0 tests
@@ -14,11 +17,13 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 2 filtered out; fini
 
      Running tests/commit_gate.rs (target/debug/deps/commit_gate-5b4f382029045f0e)
 
-running 4 tests
+running 6 tests
+test commit_gate_generated_entrypoint_authorizes_before_exclusive_guard ... ok
 test commit_gate_readonly_and_bad_handle_denied ... ok
+test commit_gate_commit_relative_checks_contents_write_without_branch_protection ... ok
+test commit_gate_malformed_absent_and_dryrun ... ok
 test commit_gate_feature_ok_protected_rejected ... ok
 test commit_gate_edit_cannot_unprotect ... ok
-test commit_gate_malformed_absent_and_dryrun ... ok
 
-test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.19s
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.57s
 

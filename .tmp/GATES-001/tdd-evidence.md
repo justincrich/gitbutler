@@ -81,3 +81,45 @@ Broad regression command:
 `cargo test -p but --features legacy,but-2`
 
 Broad evidence: `.tmp/GATES-001/but-broad-legacy-but2-output.txt`
+
+## REVIEW-3 Regression
+
+RED command:
+
+`cargo test -p but-api commit_create_generated_entrypoint_authorizes_before_exclusive_guard`
+
+RED failure captured before the API wrapper split:
+
+```text
+test commit_create_generated_entrypoint_authorizes_before_exclusive_guard ... FAILED
+annotated commit_create must not take RepoExclusive because the macro acquires it before the function body
+```
+
+RED command:
+
+`cargo test -p but-api commit_gate_commit_relative_checks_contents_write_without_branch_protection`
+
+RED failure captured before commit-relative config-ref authorization:
+
+```text
+test commit_gate_commit_relative_checks_contents_write_without_branch_protection ... FAILED
+commit gate errors should be structured
+```
+
+GREEN command:
+
+`cargo test -p but-api commit_gate`
+
+GREEN evidence: `.tmp/GATES-001/but-api-commit-gate-output.txt`
+
+CLI regression command:
+
+`cargo test -p but --features legacy,but-2 commit_gate`
+
+CLI evidence: `.tmp/GATES-001/but-cli-commit-gate-legacy-but2-output.txt`
+
+Broad regression command:
+
+`cargo test -p but --features legacy,but-2`
+
+Broad evidence: `.tmp/GATES-001/but-broad-legacy-but2-output.txt`

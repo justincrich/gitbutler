@@ -1,24 +1,13 @@
 ## cargo fmt --check
-## cargo doc -p but-api -p but --no-deps
-    Checking but-api v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/GATES-001/crates/but-api)
- Documenting but-api v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/GATES-001/crates/but-api)
-warning: unresolved link to `open_in_editor`
-   --> crates/but-api/src/open/editor.rs:227:34
-    |
-227 | /// For untrusted clients, use [`open_in_editor`] instead.
-    |                                  ^^^^^^^^^^^^^^ no item named `open_in_editor` in scope
-    |
-    = help: to escape `[` and `]` characters, add '\' before them like `\[` or `\]`
-    = note: `#[warn(rustdoc::broken_intra_doc_links)]` on by default
 
-warning: `but-api` (lib doc) generated 1 warning
-    Checking but-transaction v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/GATES-001/crates/but-transaction)
- Documenting but v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/GATES-001/crates/but)
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 6.75s
-   Generated /Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/GATES-001/target/doc/but/index.html and 1 other file
+## grep annotated commit_create has no RepoExclusive
+no matches
+
 ## grep gate does not read worktree config
 no matches
+
 ## grep gate does not use write permission guards
 no matches
+
 ## grep commit_engine stays gate-free
 no matches

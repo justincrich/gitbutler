@@ -238,6 +238,81 @@ git commit -m "malformed feat gates"
     Ok(())
 }
 
+#[test]
+#[serial_test::serial]
+fn commit_gate_commit_relative_checks_contents_write_without_branch_protection()
+-> anyhow::Result<()> {
+    let (repo, _tmp) = governed_repo();
+    let main_before = ref_id(&repo, MAIN_REF)?;
+
+    temp_env::with_var("BUT_AGENT_HANDLE", Some("ro"), || -> anyhow::Result<()> {
+        checkout(&repo, "main");
+        write_file(&repo, "commit-relative-ro.txt", "readonly\n")?;
+        let mut ctx = but_ctx::Context::from_repo(repo.clone())?.with_memory_app_cache();
+        let err = assert_commit_denied(
+            commit_to_commit(
+                &mut ctx,
+                main_before,
+                "readonly commit-relative",
+                DryRun::No,
+            ),
+            "perm.denied",
+        );
+        assert!(
+            err.message.contains("contents:write"),
+            "commit-relative denial should require contents:write"
+        );
+        assert_eq!(
+            ref_id(&repo, MAIN_REF)?,
+            main_before,
+            "readonly commit-relative denial must leave protected main unchanged"
+        );
+        Ok(())
+    })?;
+
+    reset_worktree(&repo);
+
+    temp_env::with_var("BUT_AGENT_HANDLE", Some("dev"), || -> anyhow::Result<()> {
+        checkout(&repo, "main");
+        write_file(&repo, "commit-relative-dev.txt", "dev\n")?;
+        let mut ctx = but_ctx::Context::from_repo(repo.clone())?.with_memory_app_cache();
+        let outcome = commit_to_commit(&mut ctx, main_before, "dev commit-relative", DryRun::No)?;
+        assert!(
+            outcome.new_commit.is_some(),
+            "contents:write principal should create a commit relative to a protected branch commit"
+        );
+        Ok(())
+    })?;
+
+    Ok(())
+}
+
+#[test]
+fn commit_gate_generated_entrypoint_authorizes_before_exclusive_guard() -> anyhow::Result<()> {
+    let source =
+        std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/src/commit/create.rs"))?;
+    let annotated_start = source.find("#[but_api(napi").ok_or_else(|| {
+        anyhow::anyhow!("commit_create must remain the generated N-API entrypoint")
+    })?;
+    let signature_end = source[annotated_start..]
+        .find(") -> anyhow::Result<CommitCreateResult>")
+        .ok_or_else(|| {
+            anyhow::anyhow!("commit_create signature should return CommitCreateResult")
+        })?;
+    let signature = &source[annotated_start..annotated_start + signature_end];
+
+    assert!(
+        !signature.contains("RepoExclusive"),
+        "annotated commit_create must not take RepoExclusive because the macro acquires it before the function body"
+    );
+    assert!(
+        source.contains("fn commit_create_with_perm("),
+        "commit_create should delegate to a permission-taking implementation after authorization"
+    );
+
+    Ok(())
+}
+
 fn governed_repo() -> (gix::Repository, tempfile::TempDir) {
     let (repo, tmp) = but_testsupport::writable_scenario("checkout-head-info");
     but_testsupport::invoke_bash(
@@ -311,6 +386,24 @@ fn commit_to_ref(
         ctx,
         RelativeTo::Reference(gix::refs::FullName::try_from(ref_name)?),
         InsertSide::Below,
+        changes,
+        message.to_owned(),
+        dry_run,
+    )
+}
+
+fn commit_to_commit(
+    ctx: &mut but_ctx::Context,
+    commit_id: gix::ObjectId,
+    message: &str,
+    dry_run: DryRun,
+) -> anyhow::Result<but_api::commit::types::CommitCreateResult> {
+    let repo = ctx.repo.get()?.clone();
+    let changes = worktree_changes_as_specs(&repo)?;
+    but_api::commit::create::commit_create_only(
+        ctx,
+        RelativeTo::Commit(commit_id),
+        InsertSide::Above,
         changes,
         message.to_owned(),
         dry_run,
