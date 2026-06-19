@@ -1,0 +1,3 @@
+crates/but-api/src/commit/gate.rs:69:    but_authz::authorize(&principal, but_authz::Authority::ContentsWrite, &cfg)?;
+
+exit_status=0
