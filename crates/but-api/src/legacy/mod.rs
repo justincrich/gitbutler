@@ -7,6 +7,7 @@ pub mod askpass;
 pub mod cherry_apply;
 pub mod cli;
 pub mod config;
+pub mod config_mutate;
 pub mod forge;
 pub mod git;
 pub mod merge_gate;
