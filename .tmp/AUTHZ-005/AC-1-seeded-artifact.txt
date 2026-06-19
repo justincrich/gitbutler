@@ -1,0 +1,25 @@
+AUTHZ-005 AC-1 seeded artifact.
+
+Seeded value:
+confined_merge_repo:
+- .gitbutler/permissions.toml committed at refs/heads/main
+- impl permissions: contents:write, pull_requests:write, reviews:write
+- reviewer permissions: reviews:write
+- maint permissions: merge
+- admin permissions: administration:write, merge
+- .gitbutler/gates.toml committed at refs/heads/main with [[branch]] main
+  protected=true and a merge-layer [[gate]] review requirement.
+- Review 1 is seeded in the real but-db cache with author impl, source feat,
+  target main, and a current-head approval recorded through governed
+  but_api::legacy::forge::approve_review as reviewer.
+
+admin_write_confined_repo:
+- .gitbutler/permissions.toml committed at refs/heads/main
+- reviewer permissions: reviews:write
+- maint permissions: merge
+- admin permissions: administration:write, merge
+- .gitbutler/gates.toml uses only the but-authz-supported [[branch]] schema:
+  name=main, protected=true.
+
+The AC-1 test asserts both seeded denials without modifying production authz,
+merge, or config code.
