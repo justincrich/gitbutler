@@ -1,0 +1,82 @@
+{
+  "task_id": "FIX-AUTHZ-FORGE-FAILCLOSED",
+  "base_sha": "c33e6b9d79341c8950f012265912488cf5504c28",
+  "notes": [
+    "RED evidence was captured after adding the gates-only integration test and before changing forge.rs.",
+    "The canonical but_authz loader classifies single-file governance as config.invalid while still failing closed; tests assert no approval verdict is written.",
+    "The ungoverned control is not classified as perm.denied, proving the discriminator is not always-governed."
+  ],
+  "acceptance_criteria": [
+    {
+      "id": "AC-1",
+      "test": "forge_guard_gates_toml_only_repo_is_governed",
+      "red_evidence": {
+        "path": ".tmp/FIX-AUTHZ-FORGE-FAILCLOSED/red-gates-only.txt",
+        "command": "cargo test -p but-api forge_guard_gates_toml_only_repo_is_governed -- --nocapture",
+        "exit_code": 101
+      },
+      "green_evidence": {
+        "path": ".tmp/FIX-AUTHZ-FORGE-FAILCLOSED/green-gates-only.txt",
+        "command": "cargo test -p but-api forge_guard_gates_toml_only_repo_is_governed -- --nocapture",
+        "exit_code": 0
+      },
+      "seeded_control": [
+        "gates-only repo: approval denied with config.invalid and no verdict written",
+        "ungoverned repo: approval failure was not classified as perm.denied and no verdict written"
+      ]
+    },
+    {
+      "id": "AC-2",
+      "test": "forge_guard_permissions_and_both_still_governed",
+      "green_evidence": {
+        "path": ".tmp/FIX-AUTHZ-FORGE-FAILCLOSED/green-permissions-both.txt",
+        "command": "cargo test -p but-api forge_guard_permissions_and_both_still_governed -- --nocapture",
+        "exit_code": 0
+      },
+      "seeded_control": [
+        "permissions-only repo: approval denied with config.invalid and no verdict written",
+        "both-files repo: approval denied with perm.denied naming reviews:write and no verdict written"
+      ]
+    },
+    {
+      "id": "AC-3",
+      "structural_evidence": {
+        "path": ".tmp/FIX-AUTHZ-FORGE-FAILCLOSED/structural-checks.txt",
+        "command": "! grep -rEn 'fn has_governance_config' crates/but-api/src/legacy/forge.rs && grep -rEn 'but_authz::governance_present' crates/but-api/src/legacy/forge.rs && ! grep -rEn '\\.gitbutler/(permissions|gates)\\.toml' crates/but-api/src/legacy/forge.rs && [ \"$(grep -cE 'merge_gate::enforce_merge_gate' crates/but-api/src/legacy/forge.rs)\" -ge 3 ]",
+        "exit_code": 0
+      }
+    }
+  ],
+  "verification_commands": [
+    {
+      "command": "cargo test -p but-api forge_guard -- --nocapture",
+      "path": ".tmp/FIX-AUTHZ-FORGE-FAILCLOSED/green-forge-guard.txt",
+      "exit_code": 0
+    },
+    {
+      "command": "cargo check -p but-api --all-targets",
+      "path": ".tmp/FIX-AUTHZ-FORGE-FAILCLOSED/cargo-check.txt",
+      "exit_code": 0
+    },
+    {
+      "command": "cargo clippy -p but-api --all-targets",
+      "path": ".tmp/FIX-AUTHZ-FORGE-FAILCLOSED/cargo-clippy.txt",
+      "exit_code": 0
+    },
+    {
+      "command": "cargo clippy -p but-api --all-targets -- -D warnings",
+      "path": ".tmp/FIX-AUTHZ-FORGE-FAILCLOSED/cargo-clippy-deny-warnings.txt",
+      "exit_code": 0
+    },
+    {
+      "command": "cargo fmt --check",
+      "path": ".tmp/FIX-AUTHZ-FORGE-FAILCLOSED/fmt-check.txt",
+      "exit_code": 0
+    },
+    {
+      "command": "cargo doc -p but-api --no-deps",
+      "path": ".tmp/FIX-AUTHZ-FORGE-FAILCLOSED/cargo-doc.txt",
+      "exit_code": 0
+    }
+  ]
+}

@@ -50,7 +50,7 @@ fn authorize_branch_action(
     authority: Authority,
 ) -> Result<Option<but_authz::Principal>> {
     let ref_name = branch_ref(branch);
-    if !has_governance_config(repo, &ref_name)? {
+    if !but_authz::governance_present(repo, &ref_name)? {
         return Ok(None);
     }
 
@@ -65,15 +65,6 @@ fn authorize_branch_action(
         other => authorize(&principal, other, &cfg)?,
     }
     Ok(Some(principal))
-}
-
-fn has_governance_config(repo: &gix::Repository, target_ref: &str) -> Result<bool> {
-    let mut reference = repo.find_reference(target_ref)?;
-    let commit = reference.peel_to_commit()?;
-    let tree = commit.tree()?;
-    Ok(tree
-        .lookup_entry_by_path(std::path::Path::new(".gitbutler/permissions.toml"))?
-        .is_some())
 }
 
 fn task_contract_invalid(action: &str, detail: impl AsRef<str>) -> anyhow::Error {
