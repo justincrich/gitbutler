@@ -1,17 +1,15 @@
 {
-  "task": "FIX-GATES-001-REVIEW-2",
-  "base_sha": "07284b6386543bfe2eac7b60d1cc80d3ebe4348c",
-  "commit_sha": "2c30fdeb37c67fefc52a8ff3bc984d5782d657d1",
+  "task": "FIX-GATES-001-REVIEW-3",
+  "base_sha": "e831df54ab8cdb78799293108d0cadc2b567123d",
+  "commit_sha": "b53f6d71bfa4dae0e6ccffcbf4ec75c9a9000d87",
   "status": "completed",
   "blocker_classification": null,
   "blocker": null,
   "reviewer_remediation_notes": [
-    "Moved CLI commit2 authorization before RepoExclusiveGuard acquisition: target resolution now runs under shared read access, enforce_commit_gate_for_target runs next, and exclusive access is acquired only before change selection and mutation.",
-    "Added resolved CommitGateTarget support so direct branch commits check branch protection while new-branch, branch-bucket, and commit-relative commits still require contents:write with branch protection N/A.",
-    "Added CLI snapbox commit_gate tests for branch.protected, perm.denied, and config.invalid behavior through the real but binary.",
-    "Scoped commit-gate enforcement to target refs that carry committed governance marker files. Refs with neither committed governance file remain non-governed, removing the broad CLI mutation regression. Refs with partial or malformed governance still flow through load_governance_config and fail closed as config.invalid.",
-    "Added a CLI regression test proving ordinary non-governed commit2 flows still succeed.",
-    "Updated the API absent-config coverage to use a partial governed config so governed targets with absent required config still fail closed."
+    "Split the generated API/N-API commit_create entrypoint so it no longer takes RepoExclusive; it now runs enforce_commit_gate before acquiring exclusive_worktree_access and delegates to a permission-taking implementation.",
+    "Resolved RelativeTo::Commit authorization targets through the current workspace view to find the owning config ref, then applied contents:write with branch protection N/A.",
+    "Kept the legacy but commit caller on a permission-taking helper so existing concurrent commit behavior remains serialized while the generated API/N-API path preserves pre-guard authorization.",
+    "Added a static API wrapper regression test and an API behavior test proving commit-relative protected-branch targets deny ro with perm.denied and allow dev without branch.protected."
   ],
   "commands": [
     {
@@ -25,15 +23,9 @@
       "evidence": ".tmp/GATES-001/but-cli-commit-gate-legacy-but2-output.txt"
     },
     {
-      "command": "cargo test -p but commit_gate",
-      "status": "passed",
-      "note": "default feature set compiled test targets and found 0 matching commit_gate tests because commit2 is behind the but-2 feature",
-      "evidence": ".tmp/GATES-001/but-commit-gate-default-output.txt"
-    },
-    {
       "command": "cargo test -p but --features legacy,but-2",
       "status": "passed",
-      "note": "broad reviewer-regression check passed; previously failing non-governed commit, absorb, rub, squash, move, undo, and status CLI scenarios no longer return missing governance config errors",
+      "note": "broad reviewer-regression check passed, including the previously regressed concurrent legacy commit test",
       "evidence": ".tmp/GATES-001/but-broad-legacy-but2-output.txt"
     },
     {
@@ -52,9 +44,9 @@
       "evidence": ".tmp/GATES-001/static-gates-output.txt"
     },
     {
-      "command": "cargo doc -p but-api -p but --no-deps",
+      "command": "awk '/#\\[but_api\\(napi/{flag=1} flag{print} /\\) -> anyhow::Result<CommitCreateResult>/{exit}' crates/but-api/src/commit/create.rs | rg -n \"RepoExclusive\"",
       "status": "passed",
-      "note": "rustdoc emitted an existing unresolved-link warning in crates/but-api/src/open/editor.rs",
+      "note": "no matches; annotated commit_create does not take RepoExclusive",
       "evidence": ".tmp/GATES-001/static-gates-output.txt"
     },
     {
@@ -70,10 +62,16 @@
       "evidence": ".tmp/GATES-001/static-gates-output.txt"
     },
     {
-      "command": "rg -n \"load_governance_config|branch\\.protected|but_authz::authorize\" crates/but-workspace/src/commit_engine/mod.rs",
+      "command": "rg -n \"load_governance_config|branch\\.protected|but_authz::authorize|enforce_commit_gate\" crates/but-workspace/src/commit_engine/mod.rs",
       "status": "passed",
       "note": "no matches",
       "evidence": ".tmp/GATES-001/static-gates-output.txt"
+    },
+    {
+      "command": "cargo doc -p but-api -p but --no-deps",
+      "status": "passed",
+      "note": "rustdoc emitted an existing unresolved-link warning in crates/but-api/src/open/editor.rs",
+      "evidence": ".tmp/GATES-001/doc-output.txt"
     }
   ]
 }
