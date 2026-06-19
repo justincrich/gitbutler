@@ -224,6 +224,27 @@ impl AuthoritySet {
         }
     }
 
+    /// Desugar an optional named role preset into a flat functional set.
+    ///
+    /// ```
+    /// use but_authz::{AuthoritySet, ParseAuthorityError};
+    ///
+    /// # fn main() -> Result<(), ParseAuthorityError> {
+    /// assert!(AuthoritySet::from_optional_role(None)?.is_empty());
+    /// assert_eq!(
+    ///     AuthoritySet::from_optional_role(Some("maintain"))?,
+    ///     AuthoritySet::from_role("maintain")?
+    /// );
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn from_optional_role(role: Option<&str>) -> Result<Self, ParseAuthorityError> {
+        match role {
+            Some(role) => Self::from_role(role),
+            None => Ok(Self::empty()),
+        }
+    }
+
     /// Return a new set containing authorities from both inputs.
     ///
     /// ```

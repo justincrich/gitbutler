@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use bstr::ByteSlice as _;
-use but_authz::{Authority, Denial, Principal, authorize, load_governance_config};
+use but_authz::{Denial, Principal, load_governance_config};
 use but_rebase::graph_rebase::mutate::RelativeTo;
 use gix::refs::FullName;
 use serde::Serialize;
@@ -66,7 +66,7 @@ pub fn enforce_commit_gate_for_target(
     let cfg = load_governance_config(repo, full_name)?;
     let principal = but_authz::resolve_principal_from_env(&cfg)?;
 
-    authorize(&principal, Authority::ContentsWrite, &cfg)?;
+    but_authz::authorize(&principal, but_authz::Authority::ContentsWrite, &cfg)?;
 
     if let Some(branch_name) = &target.protected_branch
         && cfg

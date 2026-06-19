@@ -355,11 +355,8 @@ fn authority_set_from_wire(
 ) -> anyhow::Result<AuthoritySet> {
     let listed = AuthoritySet::parse(permissions.iter().map(String::as_str))
         .with_context(|| format!("parsing authority list for {subject}"))?;
-    let role_set = match role {
-        Some(role) => AuthoritySet::from_role(role)
-            .with_context(|| format!("desugaring role {role} for {subject}"))?,
-        None => AuthoritySet::empty(),
-    };
+    let role_set = AuthoritySet::from_optional_role(role)
+        .with_context(|| format!("desugaring authority role for {subject}"))?;
 
     Ok(listed.union(&role_set))
 }

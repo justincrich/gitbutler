@@ -1,0 +1,4 @@
+crates/but-authz/src/config.rs:358:    let role_set = match role {
+crates/but-authz/src/config.rs:359:        Some(role) => AuthoritySet::from_role(role)
+
+exit_code=1
