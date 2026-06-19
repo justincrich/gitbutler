@@ -1,6 +1,6 @@
 {
   "task_id": "GATES-006",
-  "commit_sha": "d8a98161f581571612ac8d6fcac8eb32a13f89f1",
+  "commit_sha": "f096f8d4a2d2a2b5d3307b94d57156f6a7d56cab",
   "mode": "proof_only",
   "base_sha": "50efe7e43eceff3754f0d44b0e40d535e1b35831",
   "requires_tests": true,
