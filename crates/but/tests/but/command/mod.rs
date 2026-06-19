@@ -13,6 +13,8 @@ mod clean;
 mod commit;
 #[cfg(all(feature = "legacy", feature = "but-2"))]
 mod commit2;
+#[cfg(all(feature = "legacy", feature = "but-2"))]
+mod commit_gate;
 mod config;
 #[cfg(feature = "legacy")]
 mod diff;
