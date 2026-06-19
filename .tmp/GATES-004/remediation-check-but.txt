@@ -1,0 +1,8 @@
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on build directory
+    Checking but-api v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/GATES-004/crates/but-api)
+    Checking but-transaction v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/GATES-004/crates/but-transaction)
+    Checking but v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/GATES-004/crates/but)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 23.50s

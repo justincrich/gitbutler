@@ -39,6 +39,8 @@ mod push;
 #[cfg(feature = "legacy")]
 mod resolve;
 #[cfg(feature = "legacy")]
+mod review_guard;
+#[cfg(feature = "legacy")]
 mod reword;
 #[cfg(feature = "legacy")]
 mod rub;

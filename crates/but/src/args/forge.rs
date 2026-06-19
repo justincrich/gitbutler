@@ -39,6 +39,36 @@ pub mod pr {
             #[clap(long, short = 'd', default_value_t = false)]
             draft: bool,
         },
+        /// Approve a branch review locally after authorization.
+        Approve {
+            /// The branch to approve.
+            #[clap(value_name = "BRANCH")]
+            branch: String,
+        },
+        /// Request changes on a branch review locally after authorization.
+        RequestChanges {
+            /// The branch to review.
+            #[clap(value_name = "BRANCH")]
+            branch: String,
+            /// Review comment.
+            #[clap(short = 'm', long = "message")]
+            message: Option<String>,
+        },
+        /// Comment on a branch review after authorization.
+        Comment {
+            /// The branch to comment on.
+            #[clap(value_name = "BRANCH")]
+            branch: String,
+            /// Comment text.
+            #[clap(short = 'm', long = "message")]
+            message: String,
+        },
+        /// Close a branch review after authorization.
+        Close {
+            /// The branch whose review should be closed.
+            #[clap(value_name = "BRANCH")]
+            branch: String,
+        },
         /// Enable or disable the automatic merging of a review or reviews.
         /// If no reviews are specified, you will be prompted to select one or multiple of the
         /// review associated with branches in your workspace.

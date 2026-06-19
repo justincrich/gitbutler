@@ -1,13 +1,87 @@
 //! In place of commands.rs
 use anyhow::{Context as _, Result};
 use but_api_macros::but_api;
+use but_authz::{Authority, authorize, load_governance_config, resolve_principal_from_env};
 use but_core::{RepositoryExt, ref_metadata::ProjectMeta};
 use but_ctx::{Context, ThreadSafeContext};
 use but_forge::{
     ForgeName, ReviewTemplateFunctions, available_review_templates, get_review_template_functions,
 };
 use gitbutler_repo::{FileInfo, RepoCommands};
+use serde::Serialize;
 use tracing::instrument;
+
+/// Structured forge-gate error payload for CLI and API callers.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct ForgeGateError {
+    /// Stable consumer-facing error code.
+    pub code: &'static str,
+    /// Human-readable denial message.
+    pub message: String,
+}
+
+/// Extract a structured forge gate payload from an error chain.
+pub fn classify_error(err: &anyhow::Error) -> Option<ForgeGateError> {
+    if let Some(denial) = err.downcast_ref::<but_authz::Denial>() {
+        return Some(ForgeGateError {
+            code: denial.code,
+            message: denial.message.clone(),
+        });
+    }
+
+    err.downcast_ref::<but_authz::ConfigError>()
+        .map(|error| ForgeGateError {
+            code: error.code(),
+            message: error.to_string(),
+        })
+}
+
+fn branch_ref(branch: &str) -> String {
+    if branch.starts_with("refs/") {
+        branch.to_owned()
+    } else {
+        format!("refs/heads/{branch}")
+    }
+}
+
+fn authorize_branch_action(
+    repo: &gix::Repository,
+    branch: &str,
+    authority: Authority,
+) -> Result<Option<but_authz::Principal>> {
+    let ref_name = branch_ref(branch);
+    if !has_governance_config(repo, &ref_name)? {
+        return Ok(None);
+    }
+
+    let cfg = load_governance_config(repo, &ref_name)?;
+    let principal = resolve_principal_from_env(&cfg)?;
+    match authority {
+        Authority::ReviewsWrite => authorize(&principal, Authority::ReviewsWrite, &cfg)?,
+        Authority::CommentsWrite => authorize(&principal, Authority::CommentsWrite, &cfg)?,
+        Authority::PullRequestsWrite => {
+            authorize(&principal, Authority::PullRequestsWrite, &cfg)?;
+        }
+        other => authorize(&principal, other, &cfg)?,
+    }
+    Ok(Some(principal))
+}
+
+fn has_governance_config(repo: &gix::Repository, target_ref: &str) -> Result<bool> {
+    let mut reference = repo.find_reference(target_ref)?;
+    let commit = reference.peel_to_commit()?;
+    let tree = commit.tree()?;
+    Ok(tree
+        .lookup_entry_by_path(std::path::Path::new(".gitbutler/permissions.toml"))?
+        .is_some())
+}
+
+fn task_contract_invalid(action: &str, detail: impl AsRef<str>) -> anyhow::Error {
+    anyhow::anyhow!(
+        "{action} cannot report success: no downstream forge or local storage behavior exists for {}. Minimal spec repair: add a real provider/local persistence operation, or change this governed verb contract to return unsupported.",
+        detail.as_ref()
+    )
+}
 
 pub fn remote_url(project_meta: &ProjectMeta, repo: &gix::Repository) -> Result<String> {
     project_meta.remote_url_with_fallback(repo)
@@ -401,6 +475,7 @@ pub async fn publish_review(
         let ctx = ctx.into_thread_local();
         let project_meta = ctx.project_meta()?;
         let repo = ctx.repo.get()?;
+        authorize_branch_action(&repo, &params.source_branch, Authority::PullRequestsWrite)?;
         let base_remote_url = remote_url(&project_meta, &repo)?;
         let push_remote_url = push_remote_url(&project_meta, &repo)?;
         let forge_repo_info = but_forge::derive_forge_repo_info(&base_remote_url)
@@ -430,6 +505,83 @@ pub async fn publish_review(
         &storage,
     )
     .await
+}
+
+/// Approve a branch review locally after enforcing `reviews:write`.
+#[but_api(napi)]
+#[instrument(err(Debug))]
+pub async fn approve_review(ctx: ThreadSafeContext, branch: String) -> Result<()> {
+    let ctx = ctx.into_thread_local();
+    let repo = ctx.repo.get()?;
+    let principal = authorize_branch_action(&repo, &branch, Authority::ReviewsWrite)?
+        .context("governance config is required to record a local review verdict")?;
+    let ref_name = branch_ref(&branch);
+    let head_oid = repo
+        .find_reference(&ref_name)?
+        .peel_to_commit()?
+        .id
+        .to_string();
+    let mut db = ctx.db.get_cache_mut()?;
+    db.local_review_verdicts_mut()
+        .insert(but_db::LocalReviewVerdict {
+            id: uuid::Uuid::new_v4().to_string(),
+            target: branch,
+            principal_id: principal.id().as_str().to_owned(),
+            verdict: "approved".to_owned(),
+            head_oid,
+            created_at: chrono::Utc::now().naive_utc(),
+        })?;
+
+    Ok(())
+}
+
+/// Request changes on a branch review after enforcing `reviews:write`.
+#[but_api(napi)]
+#[instrument(err(Debug))]
+pub async fn request_changes_review(
+    ctx: ThreadSafeContext,
+    branch: String,
+    message: Option<String>,
+) -> Result<()> {
+    let ctx = ctx.into_thread_local();
+    let repo = ctx.repo.get()?;
+    authorize_branch_action(&repo, &branch, Authority::ReviewsWrite)?;
+    Err(task_contract_invalid(
+        "request_changes_review",
+        format!(
+            "branch `{branch}` with message_present={}",
+            message.is_some()
+        ),
+    ))
+}
+
+/// Comment on a branch review after enforcing `comments:write`.
+#[but_api(napi)]
+#[instrument(err(Debug))]
+pub async fn comment_review(ctx: ThreadSafeContext, branch: String, message: String) -> Result<()> {
+    let ctx = ctx.into_thread_local();
+    let repo = ctx.repo.get()?;
+    authorize_branch_action(&repo, &branch, Authority::CommentsWrite)?;
+    Err(task_contract_invalid(
+        "comment_review",
+        format!(
+            "branch `{branch}` with message_chars={}",
+            message.chars().count()
+        ),
+    ))
+}
+
+/// Close a branch review after enforcing `pull_requests:write`.
+#[but_api(napi)]
+#[instrument(err(Debug))]
+pub async fn close_review(ctx: ThreadSafeContext, branch: String) -> Result<()> {
+    let ctx = ctx.into_thread_local();
+    let repo = ctx.repo.get()?;
+    authorize_branch_action(&repo, &branch, Authority::PullRequestsWrite)?;
+    Err(task_contract_invalid(
+        "close_review",
+        format!("branch `{branch}`"),
+    ))
 }
 
 /// Merge a review on the forge.

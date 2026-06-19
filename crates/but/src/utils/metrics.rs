@@ -151,6 +151,10 @@ impl Subcommands {
             #[cfg(feature = "legacy")]
             Subcommands::Pr(forge::pr::Platform { cmd, .. }) => match cmd {
                 None | Some(forge::pr::Subcommands::New { .. }) => PrNew,
+                Some(forge::pr::Subcommands::Approve { .. }) => PrNew,
+                Some(forge::pr::Subcommands::RequestChanges { .. }) => PrNew,
+                Some(forge::pr::Subcommands::Comment { .. }) => PrNew,
+                Some(forge::pr::Subcommands::Close { .. }) => PrNew,
                 Some(forge::pr::Subcommands::Template { .. }) => PrTemplate,
                 Some(forge::pr::Subcommands::AutoMerge { off, .. }) => {
                     if *off {
