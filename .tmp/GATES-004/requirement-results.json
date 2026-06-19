@@ -1,0 +1,50 @@
+[
+  {
+    "id": "AC-1",
+    "verify": "cargo test -p but review_guard_reviews_write_denied",
+    "exit_code": 0,
+    "output_file": ".tmp/GATES-004/ac-1-output.txt"
+  },
+  {
+    "id": "AC-2",
+    "verify": "cargo test -p but review_guard_reviewer_commit_denied_review_accepted",
+    "exit_code": 0,
+    "output_file": ".tmp/GATES-004/ac-2-output.txt"
+  },
+  {
+    "id": "AC-3",
+    "verify": "cargo test -p but review_guard_comment_comments_write",
+    "exit_code": 0,
+    "output_file": ".tmp/GATES-004/ac-3-output.txt"
+  },
+  {
+    "id": "AC-4",
+    "verify": "grep -rEn 'Approve|RequestChanges|Comment|Close' crates/but/src/args/forge.rs && grep -rEn 'authorize\\(.*(ReviewsWrite|CommentsWrite|PullRequestsWrite)' crates/but-api/src/legacy/forge.rs",
+    "exit_code": 0,
+    "output_file": ".tmp/GATES-004/ac-4-output.txt"
+  },
+  {
+    "id": "TC-1",
+    "verify": "cargo test -p but review_guard_reviews_write_denied",
+    "exit_code": 0,
+    "output_file": ".tmp/GATES-004/tc-1-output.txt"
+  },
+  {
+    "id": "TC-2",
+    "verify": "cargo test -p but review_guard_reviewer_commit_denied_review_accepted",
+    "exit_code": 0,
+    "output_file": ".tmp/GATES-004/tc-2-output.txt"
+  },
+  {
+    "id": "TC-3",
+    "verify": "cargo test -p but review_guard_comment_comments_write",
+    "exit_code": 0,
+    "output_file": ".tmp/GATES-004/tc-3-output.txt"
+  },
+  {
+    "id": "TC-4",
+    "verify": "grep -rEn 'Approve|RequestChanges|Comment|Close' crates/but/src/args/forge.rs",
+    "exit_code": 0,
+    "output_file": ".tmp/GATES-004/tc-4-output.txt"
+  }
+]
