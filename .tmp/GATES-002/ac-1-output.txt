@@ -1,4 +1,4 @@
-    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.17s
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.19s
      Running unittests src/lib.rs (target/debug/deps/but_db-a1a8a30081c1a0c4)
 
 running 0 tests

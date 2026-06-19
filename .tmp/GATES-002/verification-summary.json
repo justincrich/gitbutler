@@ -1,7 +1,7 @@
 {
   "task_id": "GATES-002",
-  "timestamp": "2026-06-19T08:33:46Z",
-  "commit_sha": "c23557482744f2d8aaef5307c6601b146453db37",
+  "timestamp": "2026-06-19T09:02:55Z",
+  "commit_sha": "0dbec6df68b0c92e7513cb68b186f865c4d04354",
   "typecheck": {
     "exit_code": 0
   },
@@ -85,5 +85,24 @@
   "red_evidence": {
     "required": true,
     "output_file": ".tmp/GATES-002/red-output.txt"
+  },
+  "remediation": {
+    "id": "FIX-GATES-002-MIGRATION-SNAPSHOT-4",
+    "migration_run_ours": {
+      "exit_code": 0,
+      "output_file": ".tmp/GATES-002/migration-run-ours-output.txt"
+    },
+    "clippy_d_warnings": {
+      "exit_code": 0,
+      "output_file": ".tmp/GATES-002/clippy-d-warnings-output.txt"
+    },
+    "fmt": {
+      "exit_code": 0,
+      "output_file": ".tmp/GATES-002/fmt-output.txt"
+    },
+    "doc": {
+      "exit_code": 0,
+      "output_file": ".tmp/GATES-002/doc-output.txt"
+    }
   }
 }

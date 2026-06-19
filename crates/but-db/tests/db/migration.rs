@@ -450,6 +450,16 @@ mod run {
         	PRIMARY KEY(`path`, `hunk_header`)
         );
 
+        -- table local_review_verdicts
+        CREATE TABLE `local_review_verdicts`(
+        	`id` TEXT NOT NULL PRIMARY KEY,
+        	`target` TEXT NOT NULL,
+        	`principal_id` TEXT NOT NULL,
+        	`verdict` TEXT NOT NULL,
+        	`head_oid` TEXT NOT NULL,
+        	`created_at` TIMESTAMP NOT NULL
+        );
+
         -- table vb_branch_targets
         CREATE TABLE `vb_branch_targets`(
         	`stack_id` TEXT NOT NULL PRIMARY KEY,
@@ -535,6 +545,10 @@ mod run {
         -- index idx_ci_checks_reference
         CREATE INDEX `idx_ci_checks_reference` ON `ci_checks`(`reference`);
 
+        -- index idx_local_review_verdicts_target_created_at
+        CREATE INDEX `idx_local_review_verdicts_target_created_at`
+        ON `local_review_verdicts`(`target`, `created_at`);
+
         -- index idx_vb_stack_heads_stack_id
         CREATE INDEX `idx_vb_stack_heads_stack_id` ON `vb_stack_heads`(`stack_id`);
 
@@ -586,6 +600,7 @@ mod run {
         Text("20260219130000")
         Text("20260407120000")
         Text("20260618093000")
+        Text("20260619120000")
 
         Table: hunk_assignments
         hunk_header | path | path_bytes | stack_id | id | branch_ref
@@ -631,6 +646,9 @@ mod run {
 
         Table: vb_branch_targets
         stack_id | remote_name | branch_name | remote_url | sha | push_remote_name
+
+        Table: local_review_verdicts
+        id | target | principal_id | verdict | head_oid | created_at
         "#);
 
         let count = migration::run(&mut db, but_db::migration::ours())?;

@@ -1,5 +1,4 @@
-   Compiling but-db v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/GATES-002/crates/but-db)
-    Finished `test` profile [unoptimized + debuginfo] target(s) in 1.27s
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.16s
      Running unittests src/lib.rs (target/debug/deps/but_db-a1a8a30081c1a0c4)
 
 running 0 tests
