@@ -1,0 +1,18 @@
+AC-1 seeded artifact: extended paths, len assertion, no confinement path, and seeded controls call/source are present.
+21:const CONFIG_MUTATE: &str = "crates/but-api/src/legacy/config_mutate.rs";
+23:const ENFORCEMENT_PATHS: &[&str] = &[
+28:    CONFIG_MUTATE,
+31:const SPRINT_02_ENFORCEMENT_PATHS: &[&str] = &[MERGE_GATE, CONFIG_MUTATE];
+41:        ENFORCEMENT_PATHS.len() >= 5,
+44:    assert_paths_exist_and_non_empty(&workspace_root, ENFORCEMENT_PATHS)?;
+50:        ENFORCEMENT_PATHS,
+56:        ENFORCEMENT_PATHS,
+74:        &[CONFIG_MUTATE],
+86:        SPRINT_02_ENFORCEMENT_PATHS,
+89:    assert_seeded_controls_fire()?;
+168:fn assert_seeded_controls_fire() -> anyhow::Result<()> {
+171:    let role_fixture = temp_dir.path().join("role-branch-violation.rs");
+187:        &["role-branch-violation.rs"],
+190:    let label_fixture = temp_dir.path().join("label-branch-violation.rs");
+206:        &["label-branch-violation.rs"],
+unexpected_confinement_match=0

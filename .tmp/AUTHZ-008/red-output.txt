@@ -1,0 +1,2 @@
+RED structural coverage check before AUTHZ-008 implementation
+Expecting CONFIG_MUTATE path, code-level len assertion, and authority checks; these are absent pre-change.
