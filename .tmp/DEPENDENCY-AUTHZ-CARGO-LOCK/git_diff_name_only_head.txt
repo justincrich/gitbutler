@@ -1,0 +1,7 @@
+$ git diff --name-only HEAD
+.tmp/DEPENDENCY-AUTHZ-CARGO-LOCK/cargo_check_but_authz_all_targets.txt
+.tmp/DEPENDENCY-AUTHZ-CARGO-LOCK/cargo_check_initial.txt
+.tmp/DEPENDENCY-AUTHZ-CARGO-LOCK/git_diff_name_only_head.txt
+.tmp/DEPENDENCY-AUTHZ-CARGO-LOCK/grep_count_test.txt
+.tmp/DEPENDENCY-AUTHZ-CARGO-LOCK/grep_name_but_authz.txt
+Cargo.lock

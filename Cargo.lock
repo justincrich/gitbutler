@@ -1054,6 +1054,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "but-authz"
+version = "0.0.0"
+dependencies = [
+ "anyhow",
+ "but-testsupport",
+ "gix",
+ "serde",
+ "thiserror 2.0.18",
+ "toml 0.9.12+spec-1.1.0",
+]
+
+[[package]]
 name = "but-cherry-apply"
 version = "0.0.0"
 dependencies = [
