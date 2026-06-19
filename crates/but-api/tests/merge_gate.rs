@@ -184,6 +184,59 @@ async fn merge_gate_below_min_approvals_blocked() -> anyhow::Result<()> {
 
 #[tokio::test]
 #[serial_test::serial]
+async fn merge_gate_targetref_only_feature_head_drop_ignored() -> anyhow::Result<()> {
+    let (repo, _tmp) = merge_gated_repo(GateConfig::FeatureHeadDropsRequirement)?;
+    let main_before = ref_id(&repo, MAIN_REF)?;
+    let ctx = context_with_review(&repo, ref_id(&repo, FEAT_REF)?)?;
+
+    temp_env::async_with_vars([("BUT_AGENT_HANDLE", Some("maint"))], async {
+        let denial = assert_gate_denied(
+            but_api::legacy::forge::merge_review(ctx.to_sync(), REVIEW_ID, None).await,
+            "gate.review_required",
+        );
+        assert!(
+            !denial.unmet.is_empty(),
+            "target-ref requirement should still report unmet approvals despite the feature head dropping the gate"
+        );
+        assert!(
+            denial.unmet.iter().any(|entry| entry == "no_approval"),
+            "zero approvals should be blocked by the target-ref min_approvals=1 requirement; a feature-head-reading gate would permit"
+        );
+        Ok::<(), anyhow::Error>(())
+    })
+    .await?;
+
+    assert_eq!(
+        ref_id(&repo, MAIN_REF)?,
+        main_before,
+        "target-ref requirement denial must leave main unchanged"
+    );
+
+    approve_branch(&ctx, "reviewer").await?;
+
+    temp_env::async_with_vars([("BUT_AGENT_HANDLE", Some("maint"))], async {
+        let err = but_api::legacy::forge::merge_review(ctx.to_sync(), REVIEW_ID, None)
+            .await
+            .expect_err("local fixture should reach the forge call and fail outside governance");
+        assert!(
+            classify_error(&err).is_none(),
+            "distinct approval should satisfy the target-ref requirement, not the feature-head drop"
+        );
+        Ok::<(), anyhow::Error>(())
+    })
+    .await?;
+
+    assert_eq!(
+        ref_id(&repo, MAIN_REF)?,
+        main_before,
+        "merge gate test fixture must not mutate the local target ref"
+    );
+
+    Ok(())
+}
+
+#[tokio::test]
+#[serial_test::serial]
 async fn merge_gate_two_group_both_present_proceeds() -> anyhow::Result<()> {
     let (repo, _tmp) = merge_gated_repo(GateConfig::TwoGroup)?;
     let head = ref_id(&repo, FEAT_REF)?;
@@ -528,12 +581,13 @@ enum GateConfig {
     TwoGroup,
     Malformed,
     UndefinedGroup,
+    FeatureHeadDropsRequirement,
 }
 
 fn merge_gated_repo(config: GateConfig) -> anyhow::Result<(gix::Repository, tempfile::TempDir)> {
     let (repo, tmp) = but_testsupport::writable_scenario("checkout-head-info");
     let gates = match config {
-        GateConfig::Single => {
+        GateConfig::Single | GateConfig::FeatureHeadDropsRequirement => {
             r#"
 [[branch]]
 name = "main"
@@ -616,7 +670,10 @@ permissions = ["merge", "reviews:write"]
 members = ["reviewer-b", "maint"]
 "#
         }
-        GateConfig::Single | GateConfig::Malformed | GateConfig::UndefinedGroup => {
+        GateConfig::Single
+        | GateConfig::Malformed
+        | GateConfig::UndefinedGroup
+        | GateConfig::FeatureHeadDropsRequirement => {
             r#"
 [[principal]]
 id = "impl"
@@ -633,6 +690,20 @@ permissions = ["merge"]
         }
     };
 
+    let feature_head_gates = match config {
+        GateConfig::FeatureHeadDropsRequirement => {
+            r#"
+[[branch]]
+name = "main"
+protected = false
+"#
+        }
+        GateConfig::Single
+        | GateConfig::TwoGroup
+        | GateConfig::Malformed
+        | GateConfig::UndefinedGroup => "",
+    };
+
     but_testsupport::invoke_bash(
         &format!(
             r#"
@@ -647,7 +718,9 @@ EOF
 git add .gitbutler/permissions.toml .gitbutler/gates.toml
 git commit -m "governance config"
 git checkout -b feat
-: >.gitbutler/gates.toml
+cat >.gitbutler/gates.toml <<'EOF'
+{feature_head_gates}
+EOF
 echo feat >feat.txt
 git add .gitbutler/gates.toml feat.txt
 git commit -m "feat"

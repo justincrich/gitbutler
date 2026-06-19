@@ -1,0 +1,67 @@
+{
+  "task_id": "GATES-008",
+  "commit_sha": null,
+  "requirement_results": {
+    "AC-1": {
+      "status": "pass",
+      "evidence": ".tmp/GATES-008/test-output.txt",
+      "summary": "Feature-head gates.toml requirement drop is ignored; zero approvals are blocked by gate.review_required and a governed distinct approval proceeds past governance."
+    },
+    "AC-2": {
+      "status": "pass",
+      "evidence": ".tmp/GATES-008/verify-no-production-classification-diff.txt",
+      "summary": "No production merge_gate.rs classification diff was added."
+    },
+    "TC-1": {
+      "status": "pass",
+      "evidence": ".tmp/GATES-008/test-output.txt",
+      "summary": "Zero approvals are blocked by the target-ref requirement despite the feature-head requirement drop."
+    },
+    "TC-2": {
+      "status": "pass",
+      "evidence": ".tmp/GATES-008/test-output.txt",
+      "summary": "A governed distinct approval satisfies the target-ref requirement and the gate proceeds past governance."
+    },
+    "TC-3": {
+      "status": "pass",
+      "evidence": ".tmp/GATES-008/typecheck-output.txt",
+      "summary": "but-api all-targets typecheck passes and the production classification diff check is clean."
+    },
+    "TC-4": {
+      "status": "pass",
+      "evidence": ".tmp/GATES-008/test-output.txt",
+      "summary": "The dedicated standalone test captures the target-ref versus feature-head gates.toml discriminator."
+    }
+  },
+  "typecheck": {
+    "status": "pass",
+    "command": "cargo check -p but-api --all-targets",
+    "evidence": ".tmp/GATES-008/typecheck-output.txt"
+  },
+  "lint": {
+    "status": "pass",
+    "command": "cargo clippy -p but-api --all-targets -- -D warnings",
+    "evidence": ".tmp/GATES-008/lint-output.txt"
+  },
+  "tests": {
+    "status": "pass",
+    "command": "cargo test -p but-api merge_gate_targetref_only_feature_head_drop_ignored",
+    "evidence": ".tmp/GATES-008/test-output.txt"
+  },
+  "red_evidence": {
+    "required": false,
+    "status": "not_required_after_spec_repair",
+    "evidence": ".tmp/GATES-008/red-output.txt",
+    "summary": "RED-FIRST-GATES-008 was not reproducible because the declared test already passed against current production code; SPEC-REPAIR-GATES-008 changed the task to proof_only with requires_red_evidence=false and requires_seeded_evidence=true."
+  },
+  "scope_check": {
+    "status": "pass",
+    "no_production_classification_diff": ".tmp/GATES-008/verify-no-production-classification-diff.txt",
+    "governed_approval_seeding": ".tmp/GATES-008/verify-governed-approval-seeding.txt"
+  },
+  "format": {
+    "status": "pass",
+    "command": "cargo fmt --check",
+    "evidence": ".tmp/GATES-008/fmt-output.txt"
+  }
+}
