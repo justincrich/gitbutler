@@ -2,7 +2,8 @@
   "task_id": "GATES-003",
   "remediation_task_id": "FIX-GATES-003-RED-FIRST-IMPLEMENTATION-1",
   "base_sha": "ae7bde916fcba97e58be06b79b02c364ad736447",
-  "commit_sha": "PENDING_UNTIL_COMMIT",
+  "commit_sha": "f2296c439ebabfcc3a548d845a8a2c630cb38fe4",
+  "commit_sha_note": "This is the implementation commit SHA. The branch-tip SHA is returned in the implementer final JSON because a Git commit cannot contain its own final SHA.",
   "status": "completed",
   "red_evidence": {
     "path": ".tmp/GATES-003/red-output.txt",
