@@ -222,6 +222,80 @@ async fn merge_gate_two_group_both_present_proceeds() -> anyhow::Result<()> {
 
 #[tokio::test]
 #[serial_test::serial]
+async fn merge_gate_two_group_only_one_blocked() -> anyhow::Result<()> {
+    let (repo, _tmp) = merge_gated_repo(GateConfig::TwoGroup)?;
+    let main_before = ref_id(&repo, MAIN_REF)?;
+    let ctx = context_with_review(&repo, ref_id(&repo, FEAT_REF)?)?;
+
+    approve_branch(&ctx, "reviewer-a").await?;
+
+    temp_env::async_with_vars([("BUT_AGENT_HANDLE", Some("maint"))], async {
+        let denial = assert_gate_denied(
+            but_api::legacy::forge::merge_review(ctx.to_sync(), REVIEW_ID, None).await,
+            "gate.review_required",
+        );
+        assert_eq!(
+            denial.unmet,
+            ["require_approval_from_group maintainers: no_approval"],
+            "AI-only approval should report exactly the missing maintainers group"
+        );
+        assert!(
+            !denial
+                .unmet
+                .iter()
+                .any(|entry| entry.starts_with("require_approval_from_group code-reviewers:")),
+            "AI-only approval should omit the satisfied code-reviewers group, got {:?}",
+            denial.unmet
+        );
+        Ok::<(), anyhow::Error>(())
+    })
+    .await?;
+
+    assert_eq!(
+        ref_id(&repo, MAIN_REF)?,
+        main_before,
+        "AI-only denial must leave main unchanged"
+    );
+
+    let (repo, _tmp) = merge_gated_repo(GateConfig::TwoGroup)?;
+    let main_before = ref_id(&repo, MAIN_REF)?;
+    let ctx = context_with_review(&repo, ref_id(&repo, FEAT_REF)?)?;
+
+    approve_branch(&ctx, "reviewer-b").await?;
+
+    temp_env::async_with_vars([("BUT_AGENT_HANDLE", Some("maint"))], async {
+        let denial = assert_gate_denied(
+            but_api::legacy::forge::merge_review(ctx.to_sync(), REVIEW_ID, None).await,
+            "gate.review_required",
+        );
+        assert_eq!(
+            denial.unmet,
+            ["require_approval_from_group code-reviewers: no_approval"],
+            "maintainers-only approval should report exactly the missing code-reviewers group"
+        );
+        assert!(
+            !denial
+                .unmet
+                .iter()
+                .any(|entry| entry.starts_with("require_approval_from_group maintainers:")),
+            "maintainers-only approval should omit the satisfied maintainers group, got {:?}",
+            denial.unmet
+        );
+        Ok::<(), anyhow::Error>(())
+    })
+    .await?;
+
+    assert_eq!(
+        ref_id(&repo, MAIN_REF)?,
+        main_before,
+        "maintainers-only denial must leave main unchanged"
+    );
+
+    Ok(())
+}
+
+#[tokio::test]
+#[serial_test::serial]
 async fn merge_gate_dryrun_and_malformed_failclosed() -> anyhow::Result<()> {
     let (repo, _tmp) = merge_gated_repo(GateConfig::Single)?;
     let main_before = ref_id(&repo, MAIN_REF)?;

@@ -1,146 +1,167 @@
 {
-  "taskId": "GATES-006-GOVERNED-MERGE-CLI",
-  "remediationTaskId": "FIX-GATES-006-BEHAVIORAL-TEST-STRENGTH-3",
-  "baseSha": "404cbb7c308f1541e5996df77417722197b5ea08",
+  "task_id": "GATES-006",
+  "commit_sha": "f096f8d4a2d2a2b5d3307b94d57156f6a7d56cab",
+  "mode": "proof_only",
+  "base_sha": "50efe7e43eceff3754f0d44b0e40d535e1b35831",
+  "requires_tests": true,
+  "requires_red_evidence": false,
+  "requires_seeded_evidence": true,
+  "scope": {
+    "product_code_changed": false,
+    "production_sources_touched": [],
+    "allowed_changed_files": [
+      "crates/but-api/tests/merge_gate.rs",
+      ".tmp/GATES-006/"
+    ]
+  },
+  "seeded_evidence": {
+    "fixture": "merge_gated_repo(GateConfig::TwoGroup)",
+    "approval_path": "approve_branch(&ctx, principal_id) -> but_api::legacy::forge::approve_review",
+    "services": [
+      "real but-api merge gate",
+      "real git",
+      "real but-db"
+    ],
+    "direct_db_writes": false
+  },
+  "canonical_outputs": {
+    "typecheck": ".tmp/GATES-006/typecheck-output.txt",
+    "lint": ".tmp/GATES-006/lint-output.txt",
+    "test": ".tmp/GATES-006/test-output.txt"
+  },
   "requirement_results": [
     {
-      "ac": "AC-1",
-      "requirement": "Parse `but pr merge <selector> --method squash --dry-run` and top-level `review`/`mr` aliases.",
+      "id": "AC-1",
+      "type": "acceptance_criterion",
       "result": "passed",
-      "tests": [
-        "args::tests::pr::parses_merge_method_and_dry_run",
-        "args::tests::pr::parses_merge_through_review_and_mr_aliases"
-      ],
-      "red_evidence": ".tmp/GATES-006/red-parser.txt",
-      "green_evidence": ".tmp/GATES-006/green-parser.txt"
+      "test_tier": "integration",
+      "verification_service": "real but-api merge gate + real git + real but-db",
+      "verify": "cargo test -p but-api merge_gate_two_group_only_one_blocked",
+      "exit_code": 0,
+      "evidence": ".tmp/GATES-006/test-output.txt",
+      "proof": [
+        "The one-group-only strictness test passed.",
+        "The test asserts the code-reviewers-only case is denied with only the maintainers unmet entry.",
+        "The test asserts the maintainers-only case is denied with only the code-reviewers unmet entry."
+      ]
     },
     {
-      "ac": "AC-2",
-      "requirement": "Implementer without `merge` authority is denied through structured merge-gate JSON.",
+      "id": "AC-2",
+      "type": "acceptance_criterion",
       "result": "passed",
-      "tests": [
-        "command::governed_merge_cli::merge_denial_is_structured_for_implementer_without_merge_authority"
-      ],
-      "red_evidence": ".tmp/GATES-006/red-ac2-strengthened.txt",
-      "green_evidence": ".tmp/GATES-006/green-governed-merge-cli-current.txt"
+      "test_tier": "integration",
+      "verification_service": "real but-api merge gate + real git + real but-db",
+      "verify": "cargo test -p but-api merge_gate_two_group_both_present_proceeds",
+      "exit_code": 0,
+      "evidence": ".tmp/GATES-006/test-output.txt",
+      "proof": [
+        "The both-required-groups-present positive control passed.",
+        "The test reaches past the governance gate without a gate.review_required denial."
+      ]
     },
     {
-      "ac": "AC-3",
-      "requirement": "Dry-run uses the production API merge gate and leaves refs/cache unchanged, including fail-closed missing handle behavior.",
+      "id": "AC-3",
+      "type": "acceptance_criterion",
       "result": "passed",
-      "tests": [
-        "command::governed_merge_cli::merge_dry_run_denial_leaves_refs_and_cache_unchanged",
-        "command::governed_merge_cli::merge_dry_run_fails_closed_without_agent_handle"
+      "test_tier": "unit",
+      "unit_test_justified": "Pure structural invariant verified by source grep plus compile; behavioral strictness is proven by AC-1 and AC-2 integration tests.",
+      "verification_service": "source grep + compile",
+      "verify": "! grep -rEni 'is_bot|is_human|\"human\"|\"ai\"|\\bhuman\\b|\\bbot\\b' crates/but-api/src/legacy/review_requirement.rs && ! grep -rEni '\\bimplementer\\b|\\breviewer\\b|\\bmaintainer\\b' crates/but-api/src/legacy/review_requirement.rs",
+      "exit_code": 0,
+      "evidence": [
+        ".tmp/GATES-006/test-output.txt",
+        ".tmp/GATES-006/typecheck-output.txt"
       ],
-      "red_evidence": ".tmp/GATES-006/red-ac3-strengthened.txt",
-      "green_evidence": ".tmp/GATES-006/green-governed-merge-cli-current.txt",
-      "red_evidence_note": "At the base-plus-strengthened-tests baseline, the dry-run test fails because `but pr merge` is rejected as an unrecognized subcommand instead of returning structured `perm.denied` output naming `merge`."
+      "proof": [
+        "The human-vs-AI discriminator grep returned no matches.",
+        "The role-name word-literal grep returned no matches.",
+        "cargo check -p but-api --all-targets passed."
+      ]
     },
     {
-      "ac": "AC-4",
-      "requirement": "Non-dry-run resolves exactly one review and reaches `but_api::legacy::forge::merge_review`, not auto-merge or local merge.",
+      "id": "TC-1",
+      "type": "test_criterion",
+      "maps_to_ac": "AC-1",
       "result": "passed",
-      "tests": [
-        "command::governed_merge_cli::non_dry_run_reaches_forge_merge_boundary_after_gate_passes"
+      "verify": "cargo test -p but-api merge_gate_two_group_only_one_blocked",
+      "exit_code": 0,
+      "evidence": ".tmp/GATES-006/test-output.txt",
+      "proof": "AI-only/code-reviewers approval at head blocks with a missing maintainers unmet entry and no code-reviewers unmet entry."
+    },
+    {
+      "id": "TC-2",
+      "type": "test_criterion",
+      "maps_to_ac": "AC-1",
+      "result": "passed",
+      "verify": "cargo test -p but-api merge_gate_two_group_only_one_blocked",
+      "exit_code": 0,
+      "evidence": ".tmp/GATES-006/test-output.txt",
+      "proof": "Human-only/maintainers approval at head blocks with a missing code-reviewers unmet entry and no maintainers unmet entry."
+    },
+    {
+      "id": "TC-3",
+      "type": "test_criterion",
+      "maps_to_ac": "AC-2",
+      "result": "passed",
+      "verify": "cargo test -p but-api merge_gate_two_group_both_present_proceeds",
+      "exit_code": 0,
+      "evidence": ".tmp/GATES-006/test-output.txt",
+      "proof": "A distinct approval from each required group at head proceeds past the governance gate."
+    },
+    {
+      "id": "TC-4",
+      "type": "test_criterion",
+      "maps_to_ac": "AC-3",
+      "result": "passed",
+      "verify": "cargo check -p but-api --all-targets",
+      "exit_code": 0,
+      "evidence": [
+        ".tmp/GATES-006/test-output.txt",
+        ".tmp/GATES-006/typecheck-output.txt"
       ],
-      "red_evidence": ".tmp/GATES-006/red-ac4-strengthened.txt",
-      "green_evidence": ".tmp/GATES-006/green-governed-merge-cli-current.txt",
-      "red_evidence_note": "At the base-plus-strengthened-tests baseline, the non-dry-run test fails because `but pr merge` is rejected as an unrecognized subcommand instead of reaching the `forge merge_review boundary rejected review 1` error context."
+      "proof": "The structural greps returned no matches and the but-api crate checked successfully."
+    },
+    {
+      "id": "TC-5",
+      "type": "test_criterion",
+      "maps_to_ac": "AC-1",
+      "result": "passed",
+      "verify": "cargo test -p but-api merge_gate_two_group_only_one_blocked",
+      "exit_code": 0,
+      "evidence": ".tmp/GATES-006/test-output.txt",
+      "proof": "The one-group-only strictness test asserts exact require_approval_from_group {group}: {reason} denial.unmet entries for the still-missing group."
     }
   ],
-  "commands": [
+  "command_results": [
     {
-      "command": "cargo test -p but parses_merge_method_and_dry_run",
-      "result": "failed-as-red",
-      "evidence": ".tmp/GATES-006/red-parser.txt"
+      "command": "cargo test -p but-api merge_gate_two_group_only_one_blocked",
+      "exit_code": 0,
+      "evidence": ".tmp/GATES-006/test-output.txt"
     },
     {
-      "command": "cargo test -p but merge_denial_is_structured_for_implementer_without_merge_authority",
-      "worktree": ".kb-run-sprint/worktrees/GATES-006-red-evidence-tt-024",
-      "baseline": "404cbb7c308f1541e5996df77417722197b5ea08 plus strengthened governed_merge_cli tests only",
-      "result": "failed-as-red",
-      "evidence": ".tmp/GATES-006/red-ac2-strengthened.txt"
+      "command": "cargo test -p but-api merge_gate_two_group_both_present_proceeds",
+      "exit_code": 0,
+      "evidence": ".tmp/GATES-006/test-output.txt"
     },
     {
-      "command": "cargo test -p but merge_dry_run_denial_leaves_refs_and_cache_unchanged",
-      "worktree": ".kb-run-sprint/worktrees/GATES-006-red-evidence-tt-024",
-      "baseline": "404cbb7c308f1541e5996df77417722197b5ea08 plus strengthened governed_merge_cli tests only",
-      "result": "failed-as-red",
-      "evidence": ".tmp/GATES-006/red-ac3-strengthened.txt"
+      "command": "! grep -rEni 'is_bot|is_human|\"human\"|\"ai\"|\\bhuman\\b|\\bbot\\b' crates/but-api/src/legacy/review_requirement.rs",
+      "exit_code": 0,
+      "evidence": ".tmp/GATES-006/test-output.txt"
     },
     {
-      "command": "cargo test -p but non_dry_run_reaches_forge_merge_boundary_after_gate_passes",
-      "worktree": ".kb-run-sprint/worktrees/GATES-006-red-evidence-tt-024",
-      "baseline": "404cbb7c308f1541e5996df77417722197b5ea08 plus strengthened governed_merge_cli tests only",
-      "result": "failed-as-red",
-      "evidence": ".tmp/GATES-006/red-ac4-strengthened.txt"
-    },
-    {
-      "command": "cargo test -p but governed_merge_cli",
-      "worktree": ".kb-run-sprint/worktrees/GATES-006-red-evidence-tt-024",
-      "baseline": "404cbb7c308f1541e5996df77417722197b5ea08 plus strengthened governed_merge_cli tests only",
-      "result": "failed-as-red",
-      "evidence": ".tmp/GATES-006/red-governed-merge-cli-strengthened.txt"
-    },
-    {
-      "command": "cargo test -p but governed_merge_cli",
-      "worktree": ".kb-run-sprint/worktrees/GATES-006",
-      "result": "passed",
-      "evidence": ".tmp/GATES-006/green-governed-merge-cli-current.txt"
-    },
-    {
-      "command": "cargo test -p but parses_merge",
-      "worktree": ".kb-run-sprint/worktrees/GATES-006",
-      "result": "passed",
-      "evidence": ".tmp/GATES-006/green-parser.txt"
-    },
-    {
-      "command": "cargo check -p but --all-targets",
-      "result": "passed",
-      "evidence": ".tmp/GATES-006/verify-cargo-check-but.txt"
+      "command": "! grep -rEni '\\bimplementer\\b|\\breviewer\\b|\\bmaintainer\\b' crates/but-api/src/legacy/review_requirement.rs",
+      "exit_code": 0,
+      "evidence": ".tmp/GATES-006/test-output.txt"
     },
     {
       "command": "cargo check -p but-api --all-targets",
-      "result": "passed",
-      "evidence": ".tmp/GATES-006/verify-cargo-check-but-api.txt"
+      "exit_code": 0,
+      "evidence": ".tmp/GATES-006/typecheck-output.txt"
     },
     {
-      "command": "cargo clippy -p but --all-targets -- -D warnings",
-      "result": "passed",
-      "evidence": ".tmp/GATES-006/verify-cargo-clippy-but.txt"
-    },
-    {
-      "command": "cargo clippy -p but-api --all-targets -- -D warnings",
-      "result": "passed",
-      "evidence": ".tmp/GATES-006/verify-cargo-clippy-but-api.txt"
-    },
-    {
-      "command": "cargo fmt --check",
-      "result": "passed",
-      "evidence": ".tmp/GATES-006/verify-cargo-fmt-check.txt"
-    },
-    {
-      "command": "git diff --check master...HEAD",
-      "result": "passed",
-      "evidence": ".tmp/GATES-006/verify-git-diff-check.txt"
-    },
-    {
-      "command": "git status --short",
-      "result": "passed",
-      "evidence": ".tmp/GATES-006/verify-git-status-short.txt"
-    },
-    {
-      "command": "cargo doc --no-deps",
-      "result": "passed-with-existing-warning",
-      "evidence": ".tmp/GATES-006/verify-cargo-doc-no-deps.txt"
+      "command": "cargo clippy -p but-api --all-targets",
+      "exit_code": 0,
+      "evidence": ".tmp/GATES-006/lint-output.txt"
     }
-  ],
-  "anti_stub_notes": [
-    "AC-3 now requires structured `perm.denied` output naming `merge`, so an unrecognized-subcommand failure cannot satisfy it.",
-    "AC-3 fail-closed missing-handle coverage now rejects `unrecognized subcommand` and still requires structured `perm.denied` plus `BUT_AGENT_HANDLE is required`.",
-    "AC-4 now requires the `forge merge_review boundary rejected review 1` context and rejects unrecognized subcommands, auto-merge output, successful merge output, and gate denial.",
-    "The AC-4 fixture now seeds the local approval under the same source-branch key that the production merge gate evaluates, so the positive boundary test reaches the forge seam honestly.",
-    "Non-dry-run CLI dispatch calls `but_api::legacy::forge::merge_review(ctx.to_sync(), review_id, merge_method)` directly.",
-    "Dry-run dispatch calls `but_api::legacy::forge::dry_run_merge_review`, which returns immediately after `merge_gate::enforce_merge_gate` and performs no forge/storage operation."
   ]
 }
