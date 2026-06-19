@@ -1,5 +1,11 @@
 use crate::utils::{CommandExt as _, Sandbox};
 
+// Governance is OPT-IN BY PRESENCE (RF-010 amended): a repo with NO committed
+// `.gitbutler/*.toml` is ungoverned, so a commit lands with no handle and no
+// authorization. This is INTENDED behavior, not a fail-open -- governance
+// activates only once config is committed (proven by the activation transition in
+// `commit_gate_opt_in_activation_denies_after_config` and the governed-deny tests
+// `commit_gate_denies_protected_branch` / `commit_gate_denies_new_branch_without_contents_write`).
 #[test]
 fn commit_gate_allows_non_governed_commit2_flow() -> anyhow::Result<()> {
     let env = Sandbox::init_scenario_with_target_and_default_settings("one-stack")?;
@@ -22,6 +28,65 @@ fn commit_gate_allows_non_governed_commit2_flow() -> anyhow::Result<()> {
 ┴ 0dc3733 (common base) 2000-01-02 add M
 
 Hint: run `but help` for all commands
+
+"#]]);
+
+    Ok(())
+}
+
+// Opt-in ACTIVATION: the SAME repo flips from allowed to denied once governance is
+// committed at the target ref. First an ungoverned commit lands; then committing a
+// governance config that protects branch `A` makes the next direct commit to `A`
+// deny `branch.protected`. This is the transition neither the pure ungoverned nor
+// the pure governed fixtures exercise.
+#[test]
+fn commit_gate_opt_in_activation_denies_after_config() -> anyhow::Result<()> {
+    let env = Sandbox::init_scenario_with_target_and_default_settings("one-stack")?;
+    env.setup_metadata(&["A"])?;
+
+    // 1. Ungoverned: a commit lands (no governance config committed yet).
+    env.file("ordinary.txt", "ordinary");
+    env.but("commit2 -m ordinary").assert().success();
+
+    // 2. Commit a governance config onto branch `A` that protects `A` and grants
+    //    `dev` contents:write (so the denial is branch.protected, not perm.denied).
+    env.invoke_bash(
+        r#"
+base=$(git rev-parse refs/heads/A)
+index=$(mktemp)
+export GIT_INDEX_FILE="$index"
+git read-tree "$base"
+permissions_blob=$(git hash-object -w --stdin <<'EOF'
+[[principal]]
+id = "dev"
+permissions = ["contents:write"]
+EOF
+)
+gates_blob=$(git hash-object -w --stdin <<'EOF'
+[[branch]]
+name = "A"
+protected = true
+EOF
+)
+git update-index --add --cacheinfo 100644 "$permissions_blob" .gitbutler/permissions.toml
+git update-index --add --cacheinfo 100644 "$gates_blob" .gitbutler/gates.toml
+tree=$(git write-tree)
+commit=$(printf 'activate governance\n' | git commit-tree "$tree" -p "$base")
+git update-ref refs/heads/A "$commit"
+rm "$index"
+unset GIT_INDEX_FILE
+"#,
+    );
+
+    // 3. Now governed: a direct commit to protected `A` is denied branch.protected.
+    env.file("after-governance.txt", "after");
+    env.but("--format json commit2 -m after-governance")
+        .allow_json()
+        .env("BUT_AGENT_HANDLE", "dev")
+        .assert()
+        .failure()
+        .stderr_eq(snapbox::str![[r#"
+Error: {"error":{"code":"branch.protected","message":[..]A[..]}}
 
 "#]]);
 

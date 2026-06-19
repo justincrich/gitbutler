@@ -1,5 +1,3 @@
-use std::path::PathBuf;
-
 use bstr::ByteSlice as _;
 use but_authz::{Denial, Principal, load_governance_config};
 use but_rebase::graph_rebase::mutate::RelativeTo;
@@ -59,7 +57,7 @@ pub fn enforce_commit_gate_for_target(
     target: &CommitGateTarget,
 ) -> anyhow::Result<()> {
     let full_name = target.config_ref.as_bstr().to_str()?;
-    if !has_governance_marker(repo, full_name)? {
+    if !but_authz::governance_present(repo, full_name)? {
         return Ok(());
     }
 
@@ -156,36 +154,6 @@ fn find_branch_ref_for_commit(
                 commit_id.to_hex_with_len(7)
             )
         })
-}
-
-fn has_governance_marker(repo: &gix::Repository, target_ref: &str) -> anyhow::Result<bool> {
-    let mut reference = match repo.find_reference(target_ref) {
-        Ok(reference) => reference,
-        Err(_) => return Ok(true),
-    };
-    let commit = match reference.peel_to_commit() {
-        Ok(commit) => commit,
-        Err(_) => return Ok(true),
-    };
-    let tree = match commit.tree() {
-        Ok(tree) => tree,
-        Err(_) => return Ok(true),
-    };
-
-    Ok(
-        has_tree_entry(&tree, governance_path("permissions").as_path())?
-            || has_tree_entry(&tree, governance_path("gates").as_path())?,
-    )
-}
-
-fn has_tree_entry(tree: &gix::Tree<'_>, path: &std::path::Path) -> anyhow::Result<bool> {
-    Ok(tree.lookup_entry_by_path(path)?.is_some())
-}
-
-fn governance_path(stem: &str) -> PathBuf {
-    let directory = [".git", "butler"].concat();
-    let file_name = [stem, ".", "toml"].concat();
-    PathBuf::from(directory).join(file_name)
 }
 
 fn branch_protected(principal: &Principal, branch_name: &str) -> Denial {

@@ -17,11 +17,23 @@ const PERMISSION_CARRIER_PATTERN: &str =
 const AUTHZ_AUTHORIZE: &str = "crates/but-authz/src/authorize.rs";
 const AUTHZ_CONFIG: &str = "crates/but-authz/src/config.rs";
 const COMMIT_GATE: &str = "crates/but-api/src/commit/gate.rs";
+const MERGE_GATE: &str = "crates/but-api/src/legacy/merge_gate.rs";
+const FORGE_GUARD: &str = "crates/but-api/src/legacy/forge.rs";
 
 #[test]
 fn invariant_build_gates() -> anyhow::Result<()> {
     let workspace_root = workspace_root()?;
-    let enforcement_paths = [AUTHZ_AUTHORIZE, AUTHZ_CONFIG, COMMIT_GATE];
+    // The no-role-name / no-human-vs-AI invariants apply to EVERY enforcement
+    // path, including the merge gate and the forge boundary guards (Sprint 01b) --
+    // not just the commit-gate path. Functional `Authority` is the only axis any
+    // gate may branch on.
+    let enforcement_paths = [
+        AUTHZ_AUTHORIZE,
+        AUTHZ_CONFIG,
+        COMMIT_GATE,
+        MERGE_GATE,
+        FORGE_GUARD,
+    ];
     assert_paths_exist_and_non_empty(&workspace_root, &enforcement_paths)?;
 
     assert_grep_has_no_matches(

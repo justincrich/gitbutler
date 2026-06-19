@@ -162,8 +162,9 @@ git commit -m "feature unprotects main"
 
 #[test]
 #[serial_test::serial]
-fn commit_gate_malformed_absent_and_dryrun() -> anyhow::Result<()> {
+fn commit_gate_malformed_partial_and_dryrun() -> anyhow::Result<()> {
     temp_env::with_var("BUT_AGENT_HANDLE", Some("dev"), || -> anyhow::Result<()> {
+        // Malformed governance file at the target ref -> config.invalid (fail closed).
         let (repo, _tmp) = governed_repo();
         checkout(&repo, "feat");
         but_testsupport::invoke_bash(
@@ -187,17 +188,24 @@ git commit -m "malformed feat gates"
         );
         assert_eq!(ref_id(&repo, FEAT_REF)?, feat_before);
 
+        // PARTIAL (incomplete) governance: governance is opted-in (permissions.toml
+        // committed) but the companion gates.toml is missing -> config.invalid (fail
+        // closed on incomplete governance). This is DISTINCT from the fully-absent
+        // case (zero files), which is ungoverned and allowed -- see
+        // `commit_gate_absent_config_is_ungoverned`.
         let (repo, _tmp) = repo_with_partial_governance_config();
         checkout(&repo, "feat");
-        write_file(&repo, "absent.txt", "absent\n")?;
+        write_file(&repo, "partial.txt", "partial\n")?;
         let feat_before = ref_id(&repo, FEAT_REF)?;
         let mut ctx = but_ctx::Context::from_repo(repo.clone())?.with_memory_app_cache();
         assert_commit_denied(
-            commit_to_ref(&mut ctx, FEAT_REF, "absent config", DryRun::No),
+            commit_to_ref(&mut ctx, FEAT_REF, "partial config", DryRun::No),
             "config.invalid",
         );
         assert_eq!(ref_id(&repo, FEAT_REF)?, feat_before);
 
+        // DryRun does not bypass the gate: a denied protected-branch commit still
+        // denies and persists nothing.
         let (repo, _tmp) = governed_repo();
         checkout(&repo, "main");
         write_file(&repo, "denied-dryrun.txt", "denied dry run\n")?;
@@ -213,6 +221,9 @@ git commit -m "malformed feat gates"
             "denied dry run must leave main unchanged"
         );
 
+        // An allowed DryRun previews a commit object but persists nothing: it MUST
+        // still produce a preview commit, and that object MUST be absent from the
+        // live odb (strong assertion -- not vacuously skipped when new_commit None).
         reset_worktree(&repo);
         checkout(&repo, "feat");
         write_file(&repo, "allowed-dryrun.txt", "allowed dry run\n")?;
@@ -224,16 +235,88 @@ git commit -m "malformed feat gates"
             feat_before,
             "allowed dry run must preview without advancing feat"
         );
-        if let Some(new_commit) = outcome.new_commit {
-            assert!(
-                repo.find_object(new_commit).is_err(),
-                "allowed dry run commit object must not be persisted in the live repo"
-            );
-        }
-        println!("malformed and absent config return `config.invalid`");
+        let preview_commit = outcome
+            .new_commit
+            .expect("an allowed DryRun must still preview a commit object");
+        assert!(
+            repo.find_object(preview_commit).is_err(),
+            "allowed dry run commit object must not be persisted in the live repo"
+        );
+        println!("malformed and partial (incomplete) config return `config.invalid`");
         println!("denied and allowed DryRun commits persist no ref/object");
         Ok(())
     })?;
+
+    Ok(())
+}
+
+#[test]
+#[serial_test::serial]
+fn commit_gate_absent_config_is_ungoverned() -> anyhow::Result<()> {
+    // Governance is OPT-IN BY PRESENCE (RF-010 amended): a target ref with NO
+    // committed `.gitbutler/*.toml` is ungoverned -- the gate does not run and the
+    // commit is allowed. Under a governed repo the same inputs would be denied
+    // (an unset handle -> perm.denied; an `ro` handle lacking contents:write ->
+    // perm.denied), so a successful commit here proves the gate was skipped, not
+    // that authorization passed. Landing on a *governed* trunk is still mediated by
+    // the merge gate (Sprint 01b), so opt-in does not weaken a governed branch.
+    for (handle, label) in [(None, "unset"), (Some("ro"), "read-only")] {
+        let (repo, _tmp) = repo_with_no_governance_config();
+        let feat_before = ref_id(&repo, FEAT_REF)?;
+        temp_env::with_var("BUT_AGENT_HANDLE", handle, || -> anyhow::Result<()> {
+            checkout(&repo, "feat");
+            write_file(&repo, &format!("ungoverned-{label}.txt"), label)?;
+            let mut ctx = but_ctx::Context::from_repo(repo.clone())?.with_memory_app_cache();
+            let outcome = commit_to_ref(
+                &mut ctx,
+                FEAT_REF,
+                &format!("ungoverned {label} commit"),
+                DryRun::No,
+            )?;
+            assert!(
+                outcome.new_commit.is_some(),
+                "ungoverned repo ({label} handle) must allow a commit -- no governance config is committed"
+            );
+            assert_ne!(
+                ref_id(&repo, FEAT_REF)?,
+                feat_before,
+                "feat ref should advance in an ungoverned repo ({label} handle)"
+            );
+            Ok(())
+        })?;
+    }
+    println!(
+        "a target ref with no committed governance config is ungoverned: commits are allowed (opt-in by presence)"
+    );
+
+    Ok(())
+}
+
+/// Anti-fakeability harness: the three governance fixtures MUST be structurally
+/// distinct so a future edit cannot silently substitute a partial config for the
+/// truly-absent case (the exact defect this remediation closed). A no-config repo
+/// commits ZERO governance files, a partial repo exactly ONE, a governed repo BOTH.
+#[test]
+fn governance_fixtures_are_structurally_distinct() -> anyhow::Result<()> {
+    let (no_config, _t1) = repo_with_no_governance_config();
+    let (partial, _t2) = repo_with_partial_governance_config();
+    let (governed, _t3) = governed_repo();
+
+    assert_eq!(
+        governance_file_count(&no_config, MAIN_REF)?,
+        0,
+        "the no-config fixture must commit ZERO governance files (a true absent case, not a partial one)"
+    );
+    assert_eq!(
+        governance_file_count(&partial, MAIN_REF)?,
+        1,
+        "the partial fixture must commit EXACTLY ONE governance file (incomplete governance)"
+    );
+    assert_eq!(
+        governance_file_count(&governed, MAIN_REF)?,
+        2,
+        "the governed fixture must commit BOTH governance files"
+    );
 
     Ok(())
 }
@@ -372,6 +455,41 @@ git checkout main
         &repo,
     );
     (repo, tmp)
+}
+
+/// A repo with NO committed `.gitbutler/*.toml` governance config at any target
+/// ref -- the truly-absent (ungoverned) case. Commits the same `feat` branch as
+/// the governed fixtures so `commit_to_ref(FEAT_REF, ..)` is comparable, but
+/// commits zero governance files.
+fn repo_with_no_governance_config() -> (gix::Repository, tempfile::TempDir) {
+    let (repo, tmp) = but_testsupport::writable_scenario("checkout-head-info");
+    but_testsupport::invoke_bash(
+        r#"
+git checkout -b feat
+echo feat-base >feat-base.txt
+git add feat-base.txt
+git commit -m "feat base"
+git checkout main
+"#,
+        &repo,
+    );
+    (repo, tmp)
+}
+
+/// Count how many of the two governance files are committed in `target_ref`'s
+/// tree. Used by the anti-fakeability harness to keep the fixtures distinct.
+fn governance_file_count(repo: &gix::Repository, target_ref: &str) -> anyhow::Result<usize> {
+    let tree = repo.find_reference(target_ref)?.peel_to_commit()?.tree()?;
+    let mut count = 0;
+    for path in [".gitbutler/permissions.toml", ".gitbutler/gates.toml"] {
+        if tree
+            .lookup_entry_by_path(std::path::Path::new(path))?
+            .is_some()
+        {
+            count += 1;
+        }
+    }
+    Ok(count)
 }
 
 fn commit_to_ref(

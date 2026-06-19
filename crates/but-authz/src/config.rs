@@ -28,6 +28,40 @@ pub fn load_governance_config(
     load_governance_config_inner(repo, target_ref).map_err(ConfigError::invalid)
 }
 
+/// Whether governance is opted-in at `target_ref`.
+///
+/// Governance is **opt-in by presence**: a ref is governed once it commits at
+/// least one of `.gitbutler/permissions.toml` / `.gitbutler/gates.toml` into its
+/// tree. This is the gate's discriminator — `false` means the ref is ungoverned
+/// and the gate does not run; `true` means the gate must
+/// [`load_governance_config`], which fails closed `config.invalid` if a
+/// companion file is missing (incomplete governance) or malformed. The working
+/// tree is never consulted; an unresolvable ref/commit/tree is treated as
+/// governed so the loader classifies the fault rather than silently allowing.
+///
+/// This is the single source of truth for the governance file paths — callers
+/// must not re-derive `.gitbutler/*.toml` literals.
+pub fn governance_present(repo: &gix::Repository, target_ref: &str) -> anyhow::Result<bool> {
+    let mut reference = match repo.find_reference(target_ref) {
+        Ok(reference) => reference,
+        Err(_) => return Ok(true),
+    };
+    let commit = match reference.peel_to_commit() {
+        Ok(commit) => commit,
+        Err(_) => return Ok(true),
+    };
+    let tree = match commit.tree() {
+        Ok(tree) => tree,
+        Err(_) => return Ok(true),
+    };
+
+    Ok(tree_has_path(&tree, PERMISSIONS_PATH)? || tree_has_path(&tree, GATES_PATH)?)
+}
+
+fn tree_has_path(tree: &gix::Tree<'_>, path: &str) -> anyhow::Result<bool> {
+    Ok(tree.lookup_entry_by_path(Path::new(path))?.is_some())
+}
+
 /// Governance config normalized for authorization checks.
 ///
 /// Role entries are desugared during load, so consumers only see flat
