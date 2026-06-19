@@ -36,3 +36,12 @@ Refreshed verification on the new baseline:
 RED evidence carried forward from the paused WIP:
 - `.tmp/GRPS-001/red-ac1-group-union.txt`
 - `.tmp/GRPS-001/red-structural-authorize-reunion.txt`
+
+RED reuse note:
+- AC-2, AC-3, and AC-4 reuse `.tmp/GRPS-001/red-structural-authorize-reunion.txt`
+  because it records the pre-change runtime group re-union path in `authorize.rs`
+  (`cfg.groups().filter(...contains(principal.id()))`) that could widen
+  authorization from caller-time principal/group data instead of the folded
+  `principal_authorities` config lookup. No separate historical AC-3/AC-4 RED
+  file exists; their green evidence files verify the delegate-admin positive
+  control, reviewer-only admin denial, and fabricated merge/admin claim denials.

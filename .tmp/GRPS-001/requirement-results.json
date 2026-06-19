@@ -1,0 +1,32 @@
+[
+  {
+    "id": "AC-1",
+    "verify": "cargo test -p but-authz group_union_authorizes_review_denies_merge",
+    "exit_code": 0,
+    "output_file": ".tmp/GRPS-001/ac-1-output.txt"
+  },
+  {
+    "id": "AC-2",
+    "verify": "cargo test -p but-authz union_paths_stay_equal",
+    "exit_code": 0,
+    "output_file": ".tmp/GRPS-001/ac-2-output.txt"
+  },
+  {
+    "id": "AC-3",
+    "verify": "cargo test -p but-authz delegated_admin_ceiling",
+    "exit_code": 0,
+    "output_file": ".tmp/GRPS-001/ac-3-output.txt"
+  },
+  {
+    "id": "AC-4",
+    "verify": "cargo test -p but-authz claims_do_not_widen_union_even_with_group_backing",
+    "exit_code": 0,
+    "output_file": ".tmp/GRPS-001/ac-4-output.txt"
+  },
+  {
+    "id": "TC-8",
+    "verify": "cargo test -p but-authz invariant_build_gates",
+    "exit_code": 0,
+    "output_file": ".tmp/GRPS-001/tc-8-output.txt"
+  }
+]
