@@ -268,11 +268,192 @@ async fn merge_gate_dryrun_and_malformed_failclosed() -> anyhow::Result<()> {
     Ok(())
 }
 
+#[tokio::test]
+#[serial_test::serial]
+async fn merge_gate_unknown_and_no_handle_failclosed() -> anyhow::Result<()> {
+    let (repo, _tmp) = merge_gated_repo(GateConfig::Single)?;
+    let main_before = ref_id(&repo, MAIN_REF)?;
+    let ctx = context_with_review(&repo, ref_id(&repo, FEAT_REF)?)?;
+    approve_branch(&ctx, "reviewer").await?;
+
+    temp_env::async_with_vars([("BUT_AGENT_HANDLE", Some("ghost"))], async {
+        let denial = assert_gate_denied(
+            but_api::legacy::forge::merge_review(ctx.to_sync(), REVIEW_ID, None).await,
+            "perm.denied",
+        );
+        assert!(
+            denial
+                .message
+                .contains("principal \"ghost\" not found in committed governance config"),
+            "unknown principal denial should name the missing handle"
+        );
+        assert!(
+            denial.unmet.is_empty(),
+            "perm.denied should not carry review-requirement unmet entries"
+        );
+        Ok::<(), anyhow::Error>(())
+    })
+    .await?;
+    assert_eq!(
+        ref_id(&repo, MAIN_REF)?,
+        main_before,
+        "unknown-principal denial must leave main unchanged"
+    );
+
+    temp_env::async_with_vars([("BUT_AGENT_HANDLE", None::<&str>)], async {
+        let denial = assert_gate_denied(
+            but_api::legacy::forge::merge_review(ctx.to_sync(), REVIEW_ID, None).await,
+            "perm.denied",
+        );
+        assert!(
+            denial
+                .message
+                .contains("BUT_AGENT_HANDLE is required to resolve a governed principal"),
+            "no-handle denial should name BUT_AGENT_HANDLE"
+        );
+        assert!(
+            denial.unmet.is_empty(),
+            "perm.denied should not carry review-requirement unmet entries"
+        );
+        Ok::<(), anyhow::Error>(())
+    })
+    .await?;
+    assert_eq!(
+        ref_id(&repo, MAIN_REF)?,
+        main_before,
+        "no-handle denial must leave main unchanged"
+    );
+
+    Ok(())
+}
+
+#[tokio::test]
+#[serial_test::serial]
+async fn merge_gate_malformed_config_is_config_invalid() -> anyhow::Result<()> {
+    let (repo, _tmp) = merge_gated_repo(GateConfig::Malformed)?;
+    let main_before = ref_id(&repo, MAIN_REF)?;
+    let ctx = context_with_review(&repo, ref_id(&repo, FEAT_REF)?)?;
+
+    temp_env::async_with_vars([("BUT_AGENT_HANDLE", Some("maint"))], async {
+        let denial = assert_gate_denied(
+            but_api::legacy::forge::merge_review(ctx.to_sync(), REVIEW_ID, None).await,
+            "config.invalid",
+        );
+        assert!(
+            denial.message.contains(".gitbutler/gates.toml"),
+            "malformed target-ref gate config should be identified"
+        );
+        Ok::<(), anyhow::Error>(())
+    })
+    .await?;
+    assert_eq!(
+        ref_id(&repo, MAIN_REF)?,
+        main_before,
+        "malformed-config denial for maint must leave main unchanged"
+    );
+
+    temp_env::async_with_vars([("BUT_AGENT_HANDLE", Some("ghost"))], async {
+        let denial = assert_gate_denied(
+            but_api::legacy::forge::merge_review(ctx.to_sync(), REVIEW_ID, None).await,
+            "config.invalid",
+        );
+        assert!(
+            denial.message.contains(".gitbutler/gates.toml"),
+            "malformed target-ref gate config should win before principal resolution"
+        );
+        Ok::<(), anyhow::Error>(())
+    })
+    .await?;
+    assert_eq!(
+        ref_id(&repo, MAIN_REF)?,
+        main_before,
+        "malformed-config denial for ghost must leave main unchanged"
+    );
+
+    Ok(())
+}
+
+#[tokio::test]
+#[serial_test::serial]
+async fn merge_gate_undefined_required_group_denied() -> anyhow::Result<()> {
+    let (repo, _tmp) = merge_gated_repo(GateConfig::UndefinedGroup)?;
+    let main_before = ref_id(&repo, MAIN_REF)?;
+    let ctx = context_with_review(&repo, ref_id(&repo, FEAT_REF)?)?;
+    approve_branch(&ctx, "reviewer").await?;
+
+    temp_env::async_with_vars([("BUT_AGENT_HANDLE", Some("maint"))], async {
+        let denial = assert_gate_denied(
+            but_api::legacy::forge::merge_review(ctx.to_sync(), REVIEW_ID, None).await,
+            "gate.review_required",
+        );
+        assert!(
+            denial
+                .unmet
+                .iter()
+                .any(|entry| entry == "undefined required group ghost-reviewers"),
+            "undefined required group must be reported as unsatisfiable, got {:?}",
+            denial.unmet
+        );
+        assert!(
+            denial.message.contains("ghost-reviewers"),
+            "undefined group denial should name the required group"
+        );
+        Ok::<(), anyhow::Error>(())
+    })
+    .await?;
+    assert_eq!(
+        ref_id(&repo, MAIN_REF)?,
+        main_before,
+        "undefined-required-group denial must leave main unchanged"
+    );
+
+    Ok(())
+}
+
+#[tokio::test]
+#[serial_test::serial]
+async fn merge_gate_dryrun_unknown_failclosed_persists_nothing() -> anyhow::Result<()> {
+    let (repo, _tmp) = merge_gated_repo(GateConfig::Single)?;
+    let main_before = ref_id(&repo, MAIN_REF)?;
+    let ctx = context_with_review(&repo, ref_id(&repo, FEAT_REF)?)?;
+    approve_branch(&ctx, "reviewer").await?;
+    let verdicts_before = verdict_count(&ctx)?;
+
+    temp_env::async_with_vars([("BUT_AGENT_HANDLE", Some("ghost"))], async {
+        let denial = assert_gate_denied(
+            but_api::legacy::forge::dry_run_merge_review(ctx.to_sync(), REVIEW_ID),
+            "perm.denied",
+        );
+        assert!(
+            denial
+                .message
+                .contains("principal \"ghost\" not found in committed governance config"),
+            "dry-run unknown principal denial should name the missing handle"
+        );
+        Ok::<(), anyhow::Error>(())
+    })
+    .await?;
+
+    assert_eq!(
+        ref_id(&repo, MAIN_REF)?,
+        main_before,
+        "denied dry run must leave main unchanged"
+    );
+    assert_eq!(
+        verdict_count(&ctx)?,
+        verdicts_before,
+        "denied dry run must not mutate local review verdicts"
+    );
+
+    Ok(())
+}
+
 #[derive(Debug, Clone, Copy)]
 enum GateConfig {
     Single,
     TwoGroup,
     Malformed,
+    UndefinedGroup,
 }
 
 fn merge_gated_repo(config: GateConfig) -> anyhow::Result<(gix::Repository, tempfile::TempDir)> {
@@ -312,6 +493,20 @@ name = "main"
 protected = nope
 "#
         }
+        GateConfig::UndefinedGroup => {
+            r#"
+[[branch]]
+name = "main"
+protected = true
+
+[[gate]]
+branch = "main"
+type = "review"
+min_approvals = 1
+require_distinct_from_author = true
+require_approval_from_group = ["ghost-reviewers"]
+"#
+        }
     };
 
     let permissions = match config {
@@ -347,7 +542,7 @@ permissions = ["merge", "reviews:write"]
 members = ["reviewer-b", "maint"]
 "#
         }
-        GateConfig::Single | GateConfig::Malformed => {
+        GateConfig::Single | GateConfig::Malformed | GateConfig::UndefinedGroup => {
             r#"
 [[principal]]
 id = "impl"

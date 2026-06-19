@@ -59,6 +59,22 @@ pub fn enforce_merge_gate(ctx: &but_ctx::Context, review_id: usize) -> anyhow::R
         return Ok(());
     };
 
+    let undefined_groups = undefined_required_groups(requirement, &config.gov);
+    if !undefined_groups.is_empty() {
+        return Err(MergeGateError {
+            code: REVIEW_REQUIRED_CODE,
+            message: format!(
+                "review requirement for {} is not satisfied: {}",
+                review.target_branch,
+                undefined_groups.join("; ")
+            ),
+            remediation_hint: "collect the required approvals at the current review head"
+                .to_owned(),
+            unmet: undefined_groups,
+        }
+        .into());
+    }
+
     let current_head_oid = current_head_oid(&repo, &source_ref)?;
     let author = review
         .author
@@ -160,6 +176,15 @@ fn current_head_oid(repo: &gix::Repository, source_ref: &str) -> anyhow::Result<
         .peel_to_id()
         .with_context(|| format!("peeling {source_ref} to an object id"))?
         .to_string())
+}
+
+fn undefined_required_groups(requirement: &ReviewRequirement, cfg: &GovConfig) -> Vec<String> {
+    requirement
+        .require_approval_from_group
+        .iter()
+        .filter(|group_name| !cfg.groups().contains_key(*group_name))
+        .map(|group_name| format!("undefined required group {}", group_name.as_str()))
+        .collect()
 }
 
 fn load_merge_governance_config(
