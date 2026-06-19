@@ -1,0 +1,68 @@
+{
+  "task_id": "GRPS-001",
+  "baseline_sha": "55fa6829d8ca7a9d2378363bd198f08e88c36887",
+  "worktree_path": "/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/GRPS-001",
+  "worktree_branch": "kb-run-sprint/sprint-03-grps-groups-ref-pin/GRPS-001",
+  "verification_policy": {
+    "requires_tests": true,
+    "requires_red_evidence": true,
+    "requires_seeded_evidence": true
+  },
+  "requirements": [
+    {
+      "id": "AC-1",
+      "verify": "cargo test -p but-authz group_union_authorizes_review_denies_merge",
+      "evidence": ".tmp/GRPS-001/green-ac1-group-union.txt"
+    },
+    {
+      "id": "AC-2",
+      "verify": "cargo test -p but-authz union_paths_stay_equal",
+      "evidence": ".tmp/GRPS-001/green-ac2-union-paths.txt"
+    },
+    {
+      "id": "AC-3",
+      "verify": "cargo test -p but-authz delegated_admin_ceiling",
+      "evidence": ".tmp/GRPS-001/green-ac3-delegated-admin.txt"
+    },
+    {
+      "id": "AC-4",
+      "verify": "cargo test -p but-authz claims_do_not_widen_union_even_with_group_backing",
+      "evidence": ".tmp/GRPS-001/green-ac4-claims.txt"
+    },
+    {
+      "id": "TC-8",
+      "verify": "cargo test -p but-authz invariant_build_gates",
+      "evidence": ".tmp/GRPS-001/verify-invariant-build-gates.txt"
+    }
+  ],
+  "gates": [
+    {
+      "command": "! grep -nE 'principal\\.authorities\\(\\)' crates/but-authz/src/authorize.rs",
+      "evidence": ".tmp/GRPS-001/verify-grep-no-principal-authorities.txt"
+    },
+    {
+      "command": "cargo check -p but-authz --all-targets",
+      "evidence": ".tmp/GRPS-001/verify-cargo-check.txt"
+    },
+    {
+      "command": "cargo clippy -p but-authz --all-targets -- -D warnings",
+      "evidence": ".tmp/GRPS-001/verify-cargo-clippy-deny-warnings.txt"
+    },
+    {
+      "command": "cargo test -p but-authz",
+      "evidence": ".tmp/GRPS-001/verify-cargo-test-but-authz.txt"
+    },
+    {
+      "command": "cargo fmt --check",
+      "evidence": ".tmp/GRPS-001/verify-cargo-fmt-check.txt"
+    },
+    {
+      "command": "cargo doc -p but-authz --no-deps",
+      "evidence": ".tmp/GRPS-001/verify-cargo-doc.txt"
+    }
+  ],
+  "red_evidence": [
+    ".tmp/GRPS-001/red-ac1-group-union.txt",
+    ".tmp/GRPS-001/red-structural-authorize-reunion.txt"
+  ]
+}

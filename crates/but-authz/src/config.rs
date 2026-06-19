@@ -326,6 +326,8 @@ fn normalize_permissions(
     }
 
     let mut principals = BTreeMap::new();
+    // This load-time fold is the single source of truth for effective authority:
+    // direct grants plus groups named by a principal and groups naming a member.
     for principal in &permissions.principal {
         let mut authorities = authority_set_from_wire(
             &principal.permissions,
