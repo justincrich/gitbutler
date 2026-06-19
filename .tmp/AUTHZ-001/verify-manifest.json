@@ -1,0 +1,59 @@
+{
+  "task_id": "AUTHZ-001",
+  "verification_policy": {
+    "requires_tests": true,
+    "requires_red_evidence": true,
+    "requires_seeded_evidence": true
+  },
+  "project_commands": {
+    "typecheck": "cargo check -p but-authz --all-targets",
+    "lint": "cargo clippy -p but-authz --all-targets",
+    "test": "cargo test -p but-authz"
+  },
+  "requirements": [
+    {
+      "id": "AC-1",
+      "verify": "cargo test -p but-authz authority_parse"
+    },
+    {
+      "id": "AC-2",
+      "verify": "cargo test -p but-authz desugar_write_excludes_merge_admin"
+    },
+    {
+      "id": "AC-3",
+      "verify": "cargo test -p but-authz desugar_admin_superuser_and_maintain"
+    },
+    {
+      "id": "AC-4",
+      "verify": "cargo test -p but-authz list_loads_without_role"
+    },
+    {
+      "id": "TC-1",
+      "verify": "cargo test -p but-authz authority_parse"
+    },
+    {
+      "id": "TC-2",
+      "verify": "cargo test -p but-authz authority_parse_unknown_errors"
+    },
+    {
+      "id": "TC-3",
+      "verify": "cargo test -p but-authz desugar_write_excludes_merge_admin"
+    },
+    {
+      "id": "TC-4",
+      "verify": "cargo test -p but-authz desugar_admin_superuser_and_maintain"
+    },
+    {
+      "id": "TC-5",
+      "verify": "cargo test -p but-authz desugar_admin_superuser_and_maintain"
+    },
+    {
+      "id": "TC-6",
+      "verify": "cargo test -p but-authz list_loads_without_role"
+    },
+    {
+      "id": "TC-7",
+      "verify": "cargo test -p but-authz list_equals_role_write"
+    }
+  ]
+}
