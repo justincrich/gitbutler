@@ -644,6 +644,17 @@ pub fn apply(
     ctx: &mut but_ctx::Context,
     existing_branch: &gix::refs::FullNameRef,
 ) -> anyhow::Result<but_workspace::branch::apply::Outcome<'static>> {
+    {
+        let repo = ctx.repo.get()?;
+        let project_meta = ctx.project_meta()?;
+        if let Ok(target_ref) = project_meta.target_ref_or_err() {
+            crate::commit::create::gate::enforce_commit_gate_for_target(
+                &repo,
+                &crate::commit::create::gate::CommitGateTarget::config_only(target_ref.clone()),
+            )?;
+        }
+    }
+
     let mut guard = ctx.exclusive_worktree_access();
     apply_with_perm(ctx, existing_branch, guard.write_permission())
 }
@@ -942,6 +953,17 @@ pub fn apply_branch_integration(
     integration: json::InteractiveIntegration,
     dry_run: DryRun,
 ) -> anyhow::Result<IntegrateBranchResult> {
+    {
+        let repo = ctx.repo.get()?;
+        let project_meta = ctx.project_meta()?;
+        if let Ok(target_ref) = project_meta.target_ref_or_err() {
+            crate::commit::create::gate::enforce_commit_gate_for_target(
+                &repo,
+                &crate::commit::create::gate::CommitGateTarget::config_only(target_ref.clone()),
+            )?;
+        }
+    }
+
     let integration: InteractiveIntegration = integration.try_into()?;
     let mut guard = ctx.exclusive_worktree_access();
     apply_branch_integration_with_perm(ctx, branch, integration, dry_run, guard.write_permission())
