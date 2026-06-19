@@ -1,7 +1,4 @@
-    Blocking waiting for file lock on package cache
-    Blocking waiting for file lock on package cache
-    Blocking waiting for file lock on package cache
-    Finished `test` profile [unoptimized + debuginfo] target(s) in 2.02s
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 2.22s
      Running unittests src/lib.rs (target/debug/deps/but-42661aa15a3020c2)
 
 running 0 tests
@@ -17,13 +14,13 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
      Running tests/but/main.rs (target/debug/deps/but-dfd7207fbf2ead6c)
 
 running 5 tests
+test command::governed_loop::governed_loop_unset_handle_failclosed ... ok
 test command::governed_loop::governed_loop_remediation_traversable ... ok
+test command::governed_loop::governed_loop_dryrun_no_bypass ... ok
 test command::governed_loop::governed_loop_reference_flow_full_loop ... ok
 test command::governed_loop::governed_loop_auto_merge_denied ... ok
-test command::governed_loop::governed_loop_unset_handle_failclosed ... ok
-test command::governed_loop::governed_loop_dryrun_no_bypass ... ok
 
-test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 425 filtered out; finished in 16.53s
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 425 filtered out; finished in 18.50s
 
      Running tests/theme.rs (target/debug/deps/theme-518dc3d978cbc92d)
 

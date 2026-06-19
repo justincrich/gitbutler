@@ -1,0 +1,13 @@
+M  .tmp/LOOP-001/cargo-check-but-all-targets.txt
+M  .tmp/LOOP-001/cargo-clippy-but-all-targets-2.txt
+A  .tmp/LOOP-001/fakeability-assertions-red-evidence.txt
+MM .tmp/LOOP-001/final-governed_loop.txt
+MM .tmp/LOOP-001/final-governed_loop_auto_merge_denied.txt
+MM .tmp/LOOP-001/final-governed_loop_dryrun_no_bypass.txt
+MM .tmp/LOOP-001/final-governed_loop_reference_flow_full_loop.txt
+MM .tmp/LOOP-001/final-governed_loop_remediation_traversable.txt
+MM .tmp/LOOP-001/final-governed_loop_unset_handle_failclosed.txt
+A  .tmp/LOOP-001/git-diff-check-master-head.txt
+AM .tmp/LOOP-001/git-status-short.txt
+M  .tmp/LOOP-001/verification-summary.json
+M  crates/but/tests/but/command/governed_loop.rs

@@ -32,11 +32,7 @@ fn governed_loop_reference_flow_full_loop() -> anyhow::Result<()> {
         .allow_json()
         .env("BUT_AGENT_HANDLE", "implementer")
         .output()?;
-    let pr_new_stderr = String::from_utf8_lossy(&pr_new.stderr);
-    assert!(
-        !pr_new_stderr.contains(r#""code":"perm.denied""#),
-        "implementer has pull_requests:write, so PR publication must not be a governance denial: {pr_new_stderr}"
-    );
+    assert_pr_new_reaches_forge_boundary(&pr_new, "reference-loop PR creation");
 
     assert_merge_denied_for_implementer(&env)?;
     assert_eq!(
@@ -54,8 +50,9 @@ fn governed_loop_reference_flow_full_loop() -> anyhow::Result<()> {
         .output()?;
     assert_denial(
         &reviewer_commit,
-        r#""code":"perm.denied""#,
+        "perm.denied",
         "contents:write",
+        None,
         "reviewer commit must be denied because reviews:write does not imply contents:write",
     );
     assert_eq!(
@@ -71,8 +68,9 @@ fn governed_loop_reference_flow_full_loop() -> anyhow::Result<()> {
         .output()?;
     assert_denial(
         &zero_approval_merge,
-        r#""code":"gate.review_required""#,
+        "gate.review_required",
         "review requirement",
+        Some(&["collect", "approvals", "current review head"]),
         "maintainer merge with no distinct approval must be denied by the review gate",
     );
     assert_eq!(
@@ -114,11 +112,17 @@ fn governed_loop_remediation_traversable() -> anyhow::Result<()> {
         .allow_json()
         .env("BUT_AGENT_HANDLE", "implementer")
         .output()?;
-    assert_denial(
+    let denial = assert_denial(
         &denied_merge,
-        r#""code":"perm.denied""#,
-        "request a reviewed merge",
+        "perm.denied",
+        "merge",
+        Some(&["request a reviewed merge"]),
         "implementer merge denial must carry a traversable remediation hint",
+    );
+    assert!(
+        denial.remediation_hint.contains("reviewed merge"),
+        "remediation rescope uses merge denial, so the structured hint must name the governed reviewed-merge path: {}",
+        denial.remediation_hint
     );
 
     env.file("remediated.txt", "remediated feature\n");
@@ -134,7 +138,7 @@ fn governed_loop_remediation_traversable() -> anyhow::Result<()> {
         .allow_json()
         .env("BUT_AGENT_HANDLE", "implementer")
         .output()?;
-    assert_no_governance_denial(&pr_new, "remediation PR creation");
+    assert_pr_new_reaches_forge_boundary(&pr_new, "remediation PR creation");
 
     env.but("--format json review approve feat")
         .allow_json()
@@ -173,8 +177,9 @@ fn governed_loop_dryrun_no_bypass() -> anyhow::Result<()> {
         .output()?;
     assert_denial(
         &dry_run,
-        r#""code":"perm.denied""#,
+        "perm.denied",
         "merge",
+        Some(&["reviewed merge"]),
         "dry-run merge by an implementer without merge authority must still be denied",
     );
     assert_eq!(
@@ -210,8 +215,9 @@ fn governed_loop_auto_merge_denied() -> anyhow::Result<()> {
         .output()?;
     assert_denial(
         &auto_merge,
-        r#""code":"perm.denied""#,
+        "perm.denied",
         "merge",
+        Some(&["reviewed merge"]),
         "auto-merge must be gated by the same merge authority as explicit merge",
     );
     assert_eq!(
@@ -239,8 +245,9 @@ fn governed_loop_unset_handle_failclosed() -> anyhow::Result<()> {
         let output = cmd.output()?;
         assert_denial(
             &output,
-            r#""code":"perm.denied""#,
+            "perm.denied",
             "BUT_AGENT_HANDLE",
+            Some(&["BUT_AGENT_HANDLE"]),
             &format!("{label} principal handle must fail closed with a structured denial"),
         );
         assert_eq!(
@@ -347,33 +354,96 @@ fn assert_merge_denied_for_implementer(env: &Sandbox) -> anyhow::Result<()> {
         .output()?;
     assert_denial(
         &output,
-        r#""code":"perm.denied""#,
+        "perm.denied",
         "merge",
+        Some(&["reviewed merge"]),
         "implementer lacks merge authority, so explicit merge must be denied",
     );
     Ok(())
 }
 
-fn assert_denial(output: &std::process::Output, code: &str, expected_text: &str, reason: &str) {
-    assert!(!output.status.success(), "{reason}");
-    let stderr = String::from_utf8_lossy(&output.stderr);
-    assert!(
-        stderr.contains(code),
-        "{reason}; expected denial code {code}, got: {stderr}"
+#[derive(Debug, Clone)]
+struct CliErrorEnvelope {
+    code: String,
+    message: String,
+    remediation_hint: String,
+}
+
+fn assert_denial(
+    output: &std::process::Output,
+    code: &str,
+    expected_message_text: &str,
+    expected_hint_terms: Option<&[&str]>,
+    reason: &str,
+) -> CliErrorEnvelope {
+    assert_eq!(
+        output.status.code(),
+        Some(1),
+        "{reason}; denial must exit with code 1. stdout: {}; stderr: {}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let envelope = parse_cli_error_envelope(output, reason);
+    assert_eq!(
+        envelope.code, code,
+        "{reason}; expected exact denial code {code}"
     );
     assert!(
-        stderr.contains(expected_text),
-        "{reason}; expected text {expected_text:?}, got: {stderr}"
+        !envelope.message.trim().is_empty(),
+        "{reason}; structured error.message must be non-empty"
     );
+    assert!(
+        envelope.message.contains(expected_message_text),
+        "{reason}; expected error.message to contain {expected_message_text:?}, got: {}",
+        envelope.message
+    );
+
+    if let Some(expected_hint_terms) = expected_hint_terms {
+        assert!(
+            !envelope.remediation_hint.trim().is_empty(),
+            "{reason}; structured error.remediation_hint must be non-empty"
+        );
+        for expected_hint_term in expected_hint_terms {
+            assert!(
+                envelope.remediation_hint.contains(expected_hint_term),
+                "{reason}; expected error.remediation_hint to contain {expected_hint_term:?}, got: {}",
+                envelope.remediation_hint
+            );
+        }
+    }
+
+    envelope
 }
 
 fn assert_no_governance_denial(output: &std::process::Output, label: &str) {
+    assert!(
+        output.status.code() != Some(1) || parse_cli_error_envelope_opt(output).is_none(),
+        "{label} must not return a structured governance denial envelope: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(
         !stderr.contains(r#""code":"perm.denied""#)
             && !stderr.contains(r#""code":"branch.protected""#)
             && !stderr.contains(r#""code":"gate.review_required""#),
         "{label} must not fail with a governance denial: {stderr}"
+    );
+}
+
+fn assert_pr_new_reaches_forge_boundary(output: &std::process::Output, label: &str) {
+    assert!(
+        !output.status.success(),
+        "{label} runs in a local fixture without forge credentials, so it must fail after the PR gate at the forge boundary"
+    );
+    assert_no_governance_denial(output, label);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains("No authenticated forge users found")
+            || stderr.contains("No authenticated GitHub users found")
+            || stderr.contains("Failed to create pull request")
+            || stderr.contains("No forge could be determined"),
+        "{label} must reach the downstream forge/provider boundary after pull_requests:write authorization, got: {stderr}"
     );
 }
 
@@ -390,6 +460,41 @@ fn assert_forge_boundary_after_gate(output: &std::process::Output, review_id: us
         )),
         "authorized merge must reach the forge merge_review boundary, got: {stderr}"
     );
+}
+
+fn parse_cli_error_envelope(output: &std::process::Output, reason: &str) -> CliErrorEnvelope {
+    parse_cli_error_envelope_opt(output).unwrap_or_else(|| {
+        panic!(
+            "{reason}; stderr must contain a parseable CLI JSON error envelope, got: {}",
+            String::from_utf8_lossy(&output.stderr)
+        )
+    })
+}
+
+fn parse_cli_error_envelope_opt(output: &std::process::Output) -> Option<CliErrorEnvelope> {
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    let json = stderr.lines().find_map(json_object_from_line)?;
+    let value = serde_json::from_str::<serde_json::Value>(json).ok()?;
+    let error = value.get("error")?;
+    let code = error.get("code")?.as_str()?.to_owned();
+    let message = error.get("message")?.as_str()?.to_owned();
+    let remediation_hint = error
+        .get("remediation_hint")
+        .and_then(serde_json::Value::as_str)
+        .unwrap_or_default()
+        .to_owned();
+    Some(CliErrorEnvelope {
+        code,
+        message,
+        remediation_hint,
+    })
+}
+
+fn json_object_from_line(line: &str) -> Option<&str> {
+    let trimmed = line.trim();
+    let start = trimmed.find('{')?;
+    let end = trimmed.rfind('}')?;
+    (start <= end).then_some(&trimmed[start..=end])
 }
 
 fn attach_review_id(env: &Sandbox, branch_name: &str, review_id: usize) -> anyhow::Result<()> {

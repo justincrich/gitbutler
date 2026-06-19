@@ -1,41 +1,47 @@
 {
   "taskId": "LOOP-001",
+  "remediationTaskId": "FIX-LOOP-001-FAKEABILITY-ASSERTIONS-2",
   "baseCommit": "00fe3623c1ad617fd942c070ef45be085fd955e2",
+  "assertion_strengthening": {
+    "denials": "Every governed-loop denial now asserts exit code 1, parses the CLI JSON error envelope, checks exact error.code, and requires non-empty error.message. Merge-gate denials additionally require a non-empty remediation_hint with expected terms.",
+    "positive_pr_new": "Positive `but pr new` paths now assert the command reaches the downstream forge/provider boundary after pull_requests:write authorization, instead of only checking that stderr omits perm.denied.",
+    "remediation_rescope": "The remediation proof honestly follows the implemented merge-denial hint from the governed feature branch. The structured hint names the reviewed-merge path; the subsequent steps are feature commit, PR creation, governed review approval, and maintainer merge gate reach."
+  },
   "requirement_results": [
     {
       "id": "AC-1",
       "status": "passed",
       "test": "governed_loop_reference_flow_full_loop",
       "evidence": ".tmp/LOOP-001/final-governed_loop_reference_flow_full_loop.txt",
-      "notes": "Full implementer, reviewer, maintainer flow is driven through the real but CLI. Positive merge path proves no governance denial and reaches the forge merge_review boundary; local forge landing is not faked."
+      "notes": "Full implementer, reviewer, maintainer flow is driven through the real but CLI. Positive PR creation requires the forge/provider boundary after gate permit; positive merge requires the forge merge_review boundary after gate permit. Denials parse exact structured JSON."
     },
     {
       "id": "AC-2",
       "status": "passed",
       "test": "governed_loop_remediation_traversable",
       "evidence": ".tmp/LOOP-001/final-governed_loop_remediation_traversable.txt",
-      "notes": "Denied implementer follows the remediation route through feature commit, pr new, governed review approve, and maintainer merge gate; forge completion remains out of local scope."
+      "notes": "Remediation uses the implemented merge-denial rescope. The parsed remediation_hint must name `request a reviewed merge`; the test then follows that governed path through feature commit, pr new forge-boundary reach, governed review approve, and maintainer merge-boundary reach."
     },
     {
       "id": "AC-3",
       "status": "passed",
       "test": "governed_loop_dryrun_no_bypass",
       "evidence": ".tmp/LOOP-001/final-governed_loop_dryrun_no_bypass.txt",
-      "notes": "Dry-run merge by implementer is still perm.denied and leaves main, source ref, and git object count unchanged."
+      "notes": "Dry-run merge by implementer is exact structured perm.denied with remediation_hint and leaves main, source ref, and git object count unchanged."
     },
     {
       "id": "AC-4",
       "status": "passed",
       "test": "governed_loop_auto_merge_denied",
       "evidence": ".tmp/LOOP-001/final-governed_loop_auto_merge_denied.txt",
-      "notes": "Auto-merge by implementer is denied with perm.denied naming merge and leaves main unchanged."
+      "notes": "Auto-merge by implementer is exact structured perm.denied with remediation_hint naming reviewed merge and leaves main unchanged."
     },
     {
       "id": "AC-5",
       "status": "passed",
       "test": "governed_loop_unset_handle_failclosed",
       "evidence": ".tmp/LOOP-001/final-governed_loop_unset_handle_failclosed.txt",
-      "notes": "Unset and empty BUT_AGENT_HANDLE both fail closed with structured perm.denied and leave main unchanged."
+      "notes": "Unset and empty BUT_AGENT_HANDLE both fail closed with exit 1, exact structured perm.denied, non-empty message, non-empty remediation_hint, and unchanged main."
     },
     {
       "id": "TC-1",
@@ -73,7 +79,7 @@
       "status": "passed",
       "test": "governed_loop_remediation_traversable",
       "evidence": ".tmp/LOOP-001/final-governed_loop_remediation_traversable.txt",
-      "notes": "Approvals are submitted only through governed `but review approve`; grep guard has no direct DB/raw git bypass assertions."
+      "notes": "Approvals are submitted only through governed `but review approve`; no direct DB/raw git bypass assertion is introduced."
     },
     {
       "id": "TC-7",
@@ -129,38 +135,29 @@
       "evidence": ".tmp/LOOP-001/cargo-fmt-check.txt"
     },
     {
-      "command": "cargo doc -p but --no-deps",
+      "command": "git diff --check master...HEAD",
       "result": "passed",
-      "evidence": ".tmp/LOOP-001/cargo-doc-but-no-deps.txt"
+      "evidence": ".tmp/LOOP-001/git-diff-check-master-head.txt"
     },
     {
-      "command": "! grep -rEn 'local_review_verdicts|INSERT INTO|raw[ _-]?git[ _-]?bypass|direct[ _-]?db' crates/but/tests/but/command/governed_loop.rs",
+      "command": "git status --short",
       "result": "passed",
-      "evidence": ".tmp/LOOP-001/grep-no-direct-db-raw-git-bypass.txt"
-    },
+      "evidence": ".tmp/LOOP-001/git-status-short.txt"
+    }
+  ],
+  "fakeability_red_evidence": [
     {
-      "command": "! grep -rEn 'but_authz::authorize|enforce_commit_gate|enforce_merge_gate|in_memory|inject_principal' crates/but/tests/but/command/governed_loop.rs",
-      "result": "passed",
-      "evidence": ".tmp/LOOP-001/grep-no-inprocess-gate-simulation.txt"
+      "evidence": ".tmp/LOOP-001/fakeability-assertions-red-evidence.txt",
+      "notes": "Records the strengthened assertion failures observed before helper repair: wrong field placement for remediation_hint, too-narrow PR forge-boundary marker, and parser rejection of the one-line Error JSON envelope."
     }
   ],
   "anti_stub_fakeability_notes": [
     "The tests invoke the real `but` binary through Sandbox::but for commits, pr new, review approve, pr merge, pr merge --dry-run, and pr auto-merge.",
     "Governance config is committed into real refs via the sandbox git/bash fixture before CLI commands run.",
+    "Denial assertions parse the CLI JSON envelope instead of matching raw substrings.",
+    "Positive PR-open paths prove gate permit by requiring downstream forge/provider-boundary reach.",
+    "Positive merge paths prove gate permit by requiring downstream forge merge_review-boundary reach.",
     "Reviewer approvals are submitted through governed `but review approve`; no local_review_verdicts write appears in the capstone test file.",
-    "Positive merge paths do not claim remote forge success. They assert no governance denial and the forge-bound `merge_review` boundary error.",
     "The local review cache is seeded only with ForgeReview metadata so the real CLI can select review 77 in a local no-forge fixture."
-  ],
-  "red_evidence": [
-    {
-      "test": "governed_loop_reference_flow_full_loop",
-      "evidence": ".tmp/LOOP-001/red-governed_loop_reference_flow_full_loop-real.txt",
-      "failure": "Initial discovered test failed before fixture repair because the feature branch was not applied."
-    },
-    {
-      "test": "governed_loop_reference_flow_full_loop",
-      "evidence": ".tmp/LOOP-001/green-attempt-governed_loop_reference_flow_full_loop-2.txt",
-      "failure": "Second RED/repair loop failed on incompatible source-branch gates.toml parsing before splitting source and target governance config."
-    }
   ]
 }
