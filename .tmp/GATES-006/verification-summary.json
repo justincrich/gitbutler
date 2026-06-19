@@ -20,26 +20,33 @@
       "tests": [
         "command::governed_merge_cli::merge_denial_is_structured_for_implementer_without_merge_authority"
       ],
-      "evidence": ".tmp/GATES-006/verify-cargo-test-but-governed-merge-cli.txt"
+      "red_evidence": ".tmp/GATES-006/red-governed-merge-cli.txt",
+      "green_evidence": ".tmp/GATES-006/green-governed-merge-cli-current.txt"
     },
     {
       "ac": "AC-3",
       "requirement": "Dry-run uses the production API merge gate and leaves refs/cache unchanged, including fail-closed missing handle behavior.",
-      "result": "passed",
+      "result": "blocked-evidence-invalid",
       "tests": [
         "command::governed_merge_cli::merge_dry_run_denial_leaves_refs_and_cache_unchanged",
         "command::governed_merge_cli::merge_dry_run_fails_closed_without_agent_handle"
       ],
-      "evidence": ".tmp/GATES-006/verify-cargo-test-but-governed-merge-cli.txt"
+      "red_evidence": ".tmp/GATES-006/red-governed-merge-cli.txt",
+      "red_blocker_evidence": ".tmp/GATES-006/red-ac3-dry-run-unchanged-blocked.txt",
+      "red_evidence_note": "The missing-handle test fails at the base-plus-tests red baseline, but merge_dry_run_denial_leaves_refs_and_cache_unchanged passes there because `but pr merge` is rejected before the dry-run behavior is exercised.",
+      "green_evidence": ".tmp/GATES-006/green-governed-merge-cli-current.txt"
     },
     {
       "ac": "AC-4",
       "requirement": "Non-dry-run resolves exactly one review and reaches `but_api::legacy::forge::merge_review`, not auto-merge or local merge.",
-      "result": "passed",
+      "result": "blocked-evidence-invalid",
       "tests": [
         "command::governed_merge_cli::non_dry_run_reaches_forge_merge_boundary_after_gate_passes"
       ],
-      "evidence": ".tmp/GATES-006/verify-cargo-test-but-governed-merge-cli.txt"
+      "red_evidence": ".tmp/GATES-006/red-governed-merge-cli.txt",
+      "red_blocker_evidence": ".tmp/GATES-006/red-ac4-non-dry-run-blocked.txt",
+      "red_evidence_note": "The AC-4 test passes at the base-plus-tests red baseline because the pre-implementation `unrecognized subcommand 'merge'` failure satisfies its current assertions.",
+      "green_evidence": ".tmp/GATES-006/green-governed-merge-cli-current.txt"
     }
   ],
   "commands": [
@@ -57,6 +64,34 @@
       "command": "cargo test -p but governed_merge_cli",
       "result": "passed",
       "evidence": ".tmp/GATES-006/verify-cargo-test-but-governed-merge-cli.txt"
+    },
+    {
+      "command": "cargo test -p but governed_merge_cli",
+      "worktree": ".kb-run-sprint/worktrees/GATES-006-red-evidence-tt-023",
+      "baseline": "404cbb7c308f1541e5996df77417722197b5ea08 plus governed_merge_cli tests only",
+      "result": "failed-as-red-partial",
+      "evidence": ".tmp/GATES-006/red-governed-merge-cli.txt",
+      "note": "AC-2 and AC-3 missing-handle fail. AC-3 unchanged-refs/cache and AC-4 non-dry-run pass at this red baseline."
+    },
+    {
+      "command": "cargo test -p but merge_dry_run_denial_leaves_refs_and_cache_unchanged",
+      "worktree": ".kb-run-sprint/worktrees/GATES-006-red-evidence-tt-023",
+      "baseline": "404cbb7c308f1541e5996df77417722197b5ea08 plus governed_merge_cli tests only",
+      "result": "blocked-passed-at-red-baseline",
+      "evidence": ".tmp/GATES-006/red-ac3-dry-run-unchanged-blocked.txt"
+    },
+    {
+      "command": "cargo test -p but non_dry_run_reaches_forge_merge_boundary_after_gate_passes",
+      "worktree": ".kb-run-sprint/worktrees/GATES-006-red-evidence-tt-023",
+      "baseline": "404cbb7c308f1541e5996df77417722197b5ea08 plus governed_merge_cli tests only",
+      "result": "blocked-passed-at-red-baseline",
+      "evidence": ".tmp/GATES-006/red-ac4-non-dry-run-blocked.txt"
+    },
+    {
+      "command": "cargo test -p but governed_merge_cli",
+      "worktree": ".kb-run-sprint/worktrees/GATES-006",
+      "result": "passed",
+      "evidence": ".tmp/GATES-006/green-governed-merge-cli-current.txt"
     },
     {
       "command": "cargo check -p but --all-targets",
