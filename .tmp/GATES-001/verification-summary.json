@@ -1,0 +1,77 @@
+{
+  "task": "FIX-GATES-001-REVIEW-3",
+  "base_sha": "e831df54ab8cdb78799293108d0cadc2b567123d",
+  "commit_sha": "b53f6d71bfa4dae0e6ccffcbf4ec75c9a9000d87",
+  "status": "completed",
+  "blocker_classification": null,
+  "blocker": null,
+  "reviewer_remediation_notes": [
+    "Split the generated API/N-API commit_create entrypoint so it no longer takes RepoExclusive; it now runs enforce_commit_gate before acquiring exclusive_worktree_access and delegates to a permission-taking implementation.",
+    "Resolved RelativeTo::Commit authorization targets through the current workspace view to find the owning config ref, then applied contents:write with branch protection N/A.",
+    "Kept the legacy but commit caller on a permission-taking helper so existing concurrent commit behavior remains serialized while the generated API/N-API path preserves pre-guard authorization.",
+    "Added a static API wrapper regression test and an API behavior test proving commit-relative protected-branch targets deny ro with perm.denied and allow dev without branch.protected."
+  ],
+  "commands": [
+    {
+      "command": "cargo test -p but-api commit_gate",
+      "status": "passed",
+      "evidence": ".tmp/GATES-001/but-api-commit-gate-output.txt"
+    },
+    {
+      "command": "cargo test -p but --features legacy,but-2 commit_gate",
+      "status": "passed",
+      "evidence": ".tmp/GATES-001/but-cli-commit-gate-legacy-but2-output.txt"
+    },
+    {
+      "command": "cargo test -p but --features legacy,but-2",
+      "status": "passed",
+      "note": "broad reviewer-regression check passed, including the previously regressed concurrent legacy commit test",
+      "evidence": ".tmp/GATES-001/but-broad-legacy-but2-output.txt"
+    },
+    {
+      "command": "cargo check -p but-api -p but --all-targets",
+      "status": "passed",
+      "evidence": ".tmp/GATES-001/check-output.txt"
+    },
+    {
+      "command": "cargo clippy -p but-api -p but --all-targets -- -D warnings",
+      "status": "passed",
+      "evidence": ".tmp/GATES-001/clippy-output.txt"
+    },
+    {
+      "command": "cargo fmt --check",
+      "status": "passed",
+      "evidence": ".tmp/GATES-001/static-gates-output.txt"
+    },
+    {
+      "command": "awk '/#\\[but_api\\(napi/{flag=1} flag{print} /\\) -> anyhow::Result<CommitCreateResult>/{exit}' crates/but-api/src/commit/create.rs | rg -n \"RepoExclusive\"",
+      "status": "passed",
+      "note": "no matches; annotated commit_create does not take RepoExclusive",
+      "evidence": ".tmp/GATES-001/static-gates-output.txt"
+    },
+    {
+      "command": "rg -n \"std::fs|read_to_string|workdir|worktree|\\.gitbutler|permissions\\.toml|gates\\.toml\" crates/but-api/src/commit/gate.rs",
+      "status": "passed",
+      "note": "no matches",
+      "evidence": ".tmp/GATES-001/static-gates-output.txt"
+    },
+    {
+      "command": "rg -n \"write_permission\\(|RepoExclusive\" crates/but-api/src/commit/gate.rs",
+      "status": "passed",
+      "note": "no matches",
+      "evidence": ".tmp/GATES-001/static-gates-output.txt"
+    },
+    {
+      "command": "rg -n \"load_governance_config|branch\\.protected|but_authz::authorize|enforce_commit_gate\" crates/but-workspace/src/commit_engine/mod.rs",
+      "status": "passed",
+      "note": "no matches",
+      "evidence": ".tmp/GATES-001/static-gates-output.txt"
+    },
+    {
+      "command": "cargo doc -p but-api -p but --no-deps",
+      "status": "passed",
+      "note": "rustdoc emitted an existing unresolved-link warning in crates/but-api/src/open/editor.rs",
+      "evidence": ".tmp/GATES-001/doc-output.txt"
+    }
+  ]
+}

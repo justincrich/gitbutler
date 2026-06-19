@@ -10,6 +10,10 @@ use tracing::instrument;
 
 use super::types::CommitCreateResult;
 
+/// Commit authorization gate shared by ref-aware commit entry points.
+#[path = "gate.rs"]
+pub mod gate;
+
 /// Creates a commit from `changes` with `message`, inserted on `side` of
 /// `relative_to`.
 ///
@@ -28,9 +32,11 @@ pub fn commit_create_only(
     message: String,
     dry_run: DryRun,
 ) -> anyhow::Result<CommitCreateResult> {
+    gate::enforce_commit_gate(ctx, &relative_to)?;
+
     let context_lines = ctx.settings.context_lines;
     let mut guard = ctx.exclusive_worktree_access();
-    commit_create_only_impl(
+    commit_create_only_with_perm(
         ctx,
         relative_to,
         side,
@@ -47,7 +53,7 @@ pub fn commit_create_only(
 /// When `dry_run` is enabled, the returned workspace previews the inserted
 /// commit without materializing the rebase.
 #[expect(clippy::too_many_arguments)]
-pub(crate) fn commit_create_only_impl(
+pub(crate) fn commit_create_only_with_perm(
     ctx: &mut but_ctx::Context,
     relative_to: RelativeTo,
     side: InsertSide,
@@ -104,9 +110,63 @@ pub fn commit_create(
     changes: Vec<DiffSpec>,
     message: String,
     dry_run: DryRun,
+) -> anyhow::Result<CommitCreateResult> {
+    gate::enforce_commit_gate(ctx, &relative_to)?;
+
+    let context_lines = ctx.settings.context_lines;
+    let mut guard = ctx.exclusive_worktree_access();
+    commit_create_after_gate_with_perm(
+        ctx,
+        relative_to,
+        side,
+        changes,
+        message,
+        dry_run,
+        context_lines,
+        guard.write_permission(),
+    )
+}
+
+/// Creates a commit while reusing an existing exclusive worktree permission.
+///
+/// Prefer [`commit_create`] for generated API/N-API entrypoints so authorization
+/// runs before the API acquires exclusive access. This helper exists for callers
+/// that already hold the exclusive guard for a larger operation.
+pub fn commit_create_with_perm(
+    ctx: &mut but_ctx::Context,
+    relative_to: RelativeTo,
+    side: InsertSide,
+    changes: Vec<DiffSpec>,
+    message: String,
+    dry_run: DryRun,
     perm: &mut RepoExclusive,
 ) -> anyhow::Result<CommitCreateResult> {
+    gate::enforce_commit_gate(ctx, &relative_to)?;
+
     let context_lines = ctx.settings.context_lines;
+    commit_create_after_gate_with_perm(
+        ctx,
+        relative_to,
+        side,
+        changes,
+        message,
+        dry_run,
+        context_lines,
+        perm,
+    )
+}
+
+#[expect(clippy::too_many_arguments)]
+pub(crate) fn commit_create_after_gate_with_perm(
+    ctx: &mut but_ctx::Context,
+    relative_to: RelativeTo,
+    side: InsertSide,
+    changes: Vec<DiffSpec>,
+    message: String,
+    dry_run: DryRun,
+    context_lines: u32,
+    perm: &mut RepoExclusive,
+) -> anyhow::Result<CommitCreateResult> {
     let maybe_oplog_entry = but_oplog::UnmaterializedOplogSnapshot::from_details_with_perm(
         ctx,
         SnapshotDetails::new(OperationKind::CreateCommit),
@@ -114,7 +174,7 @@ pub fn commit_create(
         dry_run,
     );
 
-    let res = commit_create_only_impl(
+    let res = commit_create_only_with_perm(
         ctx,
         relative_to,
         side,

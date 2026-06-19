@@ -23,7 +23,7 @@ use nonempty::NonEmpty;
 use serde::Serialize;
 
 use crate::{
-    CliId, CliResult, CliResultExt, IdMap,
+    CliError, CliId, CliResult, CliResultExt, IdMap,
     args::{
         atoms::{BranchArg, BranchOrCommit, CliIdArg, Purpose},
         commit2::Platform,
@@ -121,37 +121,6 @@ pub fn commit(
     mut out: IntermediateChannel<'_>,
     args: Platform,
 ) -> CliResult<CommitOutcome> {
-    let guard = ctx.exclusive_worktree_access();
-    let mut meta = ctx.meta()?;
-    let id_map = IdMap::new_from_context(ctx, None, guard.read_permission())?;
-
-    let (mut guard, commit_op, commit_selection, reword_op) = {
-        let head_info = but_api::legacy::workspace::head_info(ctx)?;
-        resolve(guard, ctx, args, &mut out, &head_info, &id_map)?
-    };
-    run(
-        ctx,
-        &mut meta,
-        guard.write_permission(),
-        commit_op,
-        commit_selection,
-        reword_op,
-    )
-}
-
-fn resolve(
-    guard: RepoExclusiveGuard,
-    ctx: &mut Context,
-    args: Platform,
-    out: &mut IntermediateChannel<'_>,
-    head_info: &RefInfo,
-    id_map: &IdMap,
-) -> CliResult<(
-    RepoExclusiveGuard,
-    CommitOperation,
-    CommitSelection,
-    RewordCommitOperation,
-)> {
     let Platform {
         no_message,
         message,
@@ -162,23 +131,76 @@ fn resolve(
         interactive,
         changes,
     } = args;
+    let target_ish = commit_operation_target_ish(branch, above, below)?;
+    let reword_op = reword_operation(no_message, message);
 
-    let target_ish = match (branch, above, below) {
-        (Some(Some(branch)), None, None) => CommitOperationTargetIsh::Branch(branch),
-        (Some(None), None, None) => CommitOperationTargetIsh::UnstackedCannedBranch,
-        (None, Some(cli_id), None) => CommitOperationTargetIsh::Above(cli_id),
-        (None, None, Some(cli_id)) => CommitOperationTargetIsh::Below(cli_id),
-        (None, None, None) => CommitOperationTargetIsh::Default,
-        _ => {
-            return Err(anyhow::anyhow!(
-                "BUG: Should not be able to supply more than one of above, below or branch"
-            )
-            .into());
+    let (commit_op, id_map) = {
+        let guard = ctx.shared_worktree_access();
+        let id_map = IdMap::new_from_context(ctx, None, guard.read_permission())?;
+        let head_info = but_api::legacy::workspace::head_info(ctx)?;
+        let commit_op =
+            route_commit_operation(&*ctx.repo.get()?, &head_info, &mut out, &id_map, target_ish)?;
+        let gate_target = commit_op.gate_target(&head_info)?;
+        {
+            let repo = ctx.repo.get()?;
+            but_api::commit::create::gate::enforce_commit_gate_for_target(&repo, &gate_target)
+                .map_err(commit_gate_cli_error)?;
         }
+        (commit_op, id_map)
     };
 
-    let commit_op = route_commit_operation(&*ctx.repo.get()?, head_info, out, id_map, target_ish)?;
+    let guard = ctx.exclusive_worktree_access();
+    let (mut guard, commit_selection) =
+        resolve_commit_selection(guard, ctx, &mut out, changes, interactive, empty, &id_map)?;
+    let mut meta = ctx.meta()?;
+    run(
+        ctx,
+        &mut meta,
+        guard.write_permission(),
+        commit_op,
+        commit_selection,
+        reword_op,
+    )
+}
 
+fn commit_operation_target_ish(
+    branch: Option<Option<BranchArg>>,
+    above: Option<CliIdArg>,
+    below: Option<CliIdArg>,
+) -> CliResult<CommitOperationTargetIsh> {
+    match (branch, above, below) {
+        (Some(Some(branch)), None, None) => Ok(CommitOperationTargetIsh::Branch(branch)),
+        (Some(None), None, None) => Ok(CommitOperationTargetIsh::UnstackedCannedBranch),
+        (None, Some(cli_id), None) => Ok(CommitOperationTargetIsh::Above(cli_id)),
+        (None, None, Some(cli_id)) => Ok(CommitOperationTargetIsh::Below(cli_id)),
+        (None, None, None) => Ok(CommitOperationTargetIsh::Default),
+        _ => Err(anyhow::anyhow!(
+            "BUG: Should not be able to supply more than one of above, below or branch"
+        )
+        .into()),
+    }
+}
+
+fn reword_operation(no_message: bool, message: Option<Vec<String>>) -> RewordCommitOperation {
+    match (no_message, message) {
+        (true, None) => RewordCommitOperation::NoMessage,
+        (false, None) => RewordCommitOperation::UseEditor,
+        (false, Some(message)) => RewordCommitOperation::Message(message.join("\n\n")),
+        (true, Some(_)) => {
+            unreachable!("--no-message and --message are mutually exclusive")
+        }
+    }
+}
+
+fn resolve_commit_selection(
+    guard: RepoExclusiveGuard,
+    ctx: &mut Context,
+    out: &mut IntermediateChannel<'_>,
+    changes: Vec<CliIdArg>,
+    interactive: bool,
+    empty: bool,
+    id_map: &IdMap,
+) -> CliResult<(RepoExclusiveGuard, CommitSelection)> {
     let (guard, commit_selection) = if !changes.is_empty() {
         let changes = changes
             .into_iter()
@@ -223,16 +245,7 @@ fn resolve(
         (guard, CommitSelection::AllChanges)
     };
 
-    let reword_op = match (no_message, message) {
-        (true, None) => RewordCommitOperation::NoMessage,
-        (false, None) => RewordCommitOperation::UseEditor,
-        (false, Some(message)) => RewordCommitOperation::Message(message.join("\n\n")),
-        (true, Some(_)) => {
-            unreachable!("--no-message and --message are mutually exclusive")
-        }
-    };
-
-    Ok((guard, commit_op, commit_selection, reword_op))
+    Ok((guard, commit_selection))
 }
 
 fn run(
@@ -340,11 +353,11 @@ fn route_commit_operation(
     match target {
         CommitOperationTargetIsh::Above(cli_id) => {
             let position = CommitRelativeToTargetPosition::Above;
-            route_commit_above_or_below(repo, id_map, cli_id, position)
+            route_commit_above_or_below(repo, head_info, id_map, cli_id, position)
         }
         CommitOperationTargetIsh::Below(cli_id) => {
             let position = CommitRelativeToTargetPosition::Below;
-            route_commit_above_or_below(repo, id_map, cli_id, position)
+            route_commit_above_or_below(repo, head_info, id_map, cli_id, position)
         }
         CommitOperationTargetIsh::Branch(branch) => {
             if let Some(segment) = branch.try_resolve_segment(head_info)? {
@@ -432,6 +445,7 @@ fn route_commit_operation(
 
 fn route_commit_above_or_below(
     repo: &gix::Repository,
+    head_info: &RefInfo,
     id_map: &IdMap,
     cli_id: CliIdArg,
     position: CommitRelativeToTargetPosition,
@@ -444,16 +458,51 @@ fn route_commit_above_or_below(
         .into_branch_or_commit()
         .hint("Run `but status` to show applicable targets")?
     {
-        BranchOrCommit::Commit(commit_id) => CommitRelativeToTarget::Commit {
-            commit_id,
-            position,
-        },
+        BranchOrCommit::Commit(commit_id) => {
+            let config_ref = find_branch_ref_for_commit(head_info, commit_id)?;
+            CommitRelativeToTarget::Commit {
+                commit_id,
+                position,
+                config_ref,
+            }
+        }
         BranchOrCommit::Branch(arg) => CommitRelativeToTarget::BranchBucket {
             name: arg.resolve_local_branch_name()?,
             position,
         },
     };
     Ok(CommitOperation::CommitAt(CommitAtOperation { target }))
+}
+
+fn find_branch_ref_for_commit(
+    head_info: &RefInfo,
+    commit_id: gix::ObjectId,
+) -> CliResult<FullName> {
+    head_info
+        .stacks
+        .iter()
+        .flat_map(|stack| stack.segments.iter())
+        .find_map(|segment| {
+            let contains_commit = segment.commits.iter().any(|commit| commit.id == commit_id)
+                || segment
+                    .commits_on_remote
+                    .iter()
+                    .any(|commit| commit.id == commit_id);
+            contains_commit.then(|| {
+                segment
+                    .ref_info
+                    .as_ref()
+                    .map(|ref_info| ref_info.ref_name.clone())
+                    .or_else(|| segment.remote_tracking_ref_name.clone())
+            })?
+        })
+        .ok_or_else(|| {
+            anyhow::anyhow!(
+                "BUG: commit {} resolved from workspace without an owning branch ref",
+                commit_id.to_hex_with_len(7)
+            )
+            .into()
+        })
 }
 
 enum CommitSelection {
@@ -468,6 +517,16 @@ enum CommitOperation {
 }
 
 impl CommitOperation {
+    fn gate_target(
+        &self,
+        head_info: &RefInfo,
+    ) -> anyhow::Result<but_api::commit::create::gate::CommitGateTarget> {
+        match self {
+            CommitOperation::CommitToNewBranch(op) => op.gate_target(head_info),
+            CommitOperation::CommitAt(op) => op.target.gate_target(),
+        }
+    }
+
     fn execute(
         self,
         tx: &mut Transaction<'_, '_, impl RefMetadata>,
@@ -485,6 +544,14 @@ struct CommitToNewBranchOperation {
 }
 
 impl CommitToNewBranchOperation {
+    fn gate_target(
+        &self,
+        head_info: &RefInfo,
+    ) -> anyhow::Result<but_api::commit::create::gate::CommitGateTarget> {
+        let config_ref = default_gate_config_ref(head_info)?;
+        Ok(but_api::commit::create::gate::CommitGateTarget::config_only(config_ref))
+    }
+
     fn execute(
         self,
         tx: &mut Transaction<'_, '_, impl RefMetadata>,
@@ -528,6 +595,7 @@ impl CommitAtOperation {
             CommitRelativeToTarget::Commit {
                 commit_id,
                 position,
+                config_ref: _,
             } => (RelativeTo::Commit(commit_id), position.into(), None),
             CommitRelativeToTarget::BranchBucket { name, position } => {
                 let new_branch_name = but_core::branch::unique_canned_refname(tx.repo())?;
@@ -566,6 +634,7 @@ enum CommitRelativeToTarget {
     Commit {
         commit_id: gix::ObjectId,
         position: CommitRelativeToTargetPosition,
+        config_ref: FullName,
     },
     /// Place the commit at the tip of the branch denoted by this reference, moving the reference to
     /// the new commit. This is effectively the same as committing to a branch.
@@ -577,6 +646,69 @@ enum CommitRelativeToTarget {
         name: FullName,
         position: CommitRelativeToTargetPosition,
     },
+}
+
+impl CommitRelativeToTarget {
+    fn gate_target(&self) -> anyhow::Result<but_api::commit::create::gate::CommitGateTarget> {
+        match self {
+            Self::Commit { config_ref, .. } => Ok(
+                but_api::commit::create::gate::CommitGateTarget::config_only(config_ref.clone()),
+            ),
+            Self::BranchTip { name } => Ok(
+                but_api::commit::create::gate::CommitGateTarget::direct_ref(name.clone()),
+            ),
+            Self::BranchBucket { name, .. } => {
+                Ok(but_api::commit::create::gate::CommitGateTarget::config_only(name.clone()))
+            }
+        }
+    }
+}
+
+fn default_gate_config_ref(head_info: &RefInfo) -> anyhow::Result<FullName> {
+    if let Some(target_ref) = &head_info.target_ref {
+        return Ok(target_ref.ref_name.clone());
+    }
+
+    head_info
+        .stacks
+        .iter()
+        .find_map(|stack| stack.ref_name().cloned())
+        .context("target ref is required to load governance config for commit authorization")
+}
+
+fn commit_gate_cli_error(err: anyhow::Error) -> CliError {
+    if let Some(gate_error) = but_api::commit::create::gate::classify_error(&err) {
+        return anyhow::anyhow!(
+            "{}",
+            serde_json::json!({
+                "error": {
+                    "code": gate_error.code,
+                    "message": gate_error.message,
+                }
+            })
+        )
+        .into();
+    }
+
+    err.into()
+}
+
+#[cfg(test)]
+mod commit_gate_tests {
+    use super::*;
+
+    #[test]
+    fn commit_gate_target_uses_branch_tip_ref() -> anyhow::Result<()> {
+        let main = FullName::try_from("refs/heads/main")?;
+        let target = CommitRelativeToTarget::BranchTip { name: main.clone() }.gate_target()?;
+        assert_eq!(
+            target,
+            but_api::commit::create::gate::CommitGateTarget::direct_ref(main),
+            "CLI branch-tip commits must authorize against the direct target ref"
+        );
+
+        Ok(())
+    }
 }
 
 #[derive(Clone)]

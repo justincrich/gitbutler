@@ -2,7 +2,7 @@ use std::{collections::BTreeMap, fmt::Write as _};
 
 use anyhow::{Context, Result, bail};
 use bstr::{BString, ByteSlice};
-use but_api::{commit::create::commit_create, diff, legacy::repo};
+use but_api::{commit::create::commit_create_with_perm, diff, legacy::repo};
 use but_core::{DryRun, ref_metadata::StackId, sync::RepoExclusive, ui::TreeChange};
 use but_rebase::graph_rebase::mutate::{InsertSide, RelativeTo};
 use gitbutler_repo::hooks;
@@ -505,7 +505,7 @@ pub(crate) fn commit(
     };
 
     // Insert relative to the branch reference itself so only that branch tip is advanced.
-    let outcome = commit_create(
+    let outcome = commit_create_with_perm(
         ctx,
         RelativeTo::Reference(target_branch.reference.clone()),
         InsertSide::Below,
