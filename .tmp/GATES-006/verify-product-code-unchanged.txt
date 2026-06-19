@@ -1,0 +1,26 @@
+$ git diff --name-only -- crates/but-api/src/legacy/review_requirement.rs
+
+$ git diff --name-only
+.tmp/GATES-006/green-governed-merge-cli-current.txt
+.tmp/GATES-006/green-governed-merge-cli.txt
+.tmp/GATES-006/green-parser.txt
+.tmp/GATES-006/red-ac2-strengthened.txt
+.tmp/GATES-006/red-ac3-dry-run-unchanged-blocked.txt
+.tmp/GATES-006/red-ac3-strengthened.txt
+.tmp/GATES-006/red-ac4-non-dry-run-blocked.txt
+.tmp/GATES-006/red-ac4-strengthened.txt
+.tmp/GATES-006/red-governed-merge-cli-strengthened.txt
+.tmp/GATES-006/red-governed-merge-cli.txt
+.tmp/GATES-006/red-parser.txt
+.tmp/GATES-006/verify-cargo-check-but-api.txt
+.tmp/GATES-006/verify-cargo-check-but.txt
+.tmp/GATES-006/verify-cargo-clippy-but-api.txt
+.tmp/GATES-006/verify-cargo-clippy-but.txt
+.tmp/GATES-006/verify-cargo-doc-no-deps.txt
+.tmp/GATES-006/verify-cargo-fmt-check.txt
+.tmp/GATES-006/verify-cargo-test-but-governed-merge-cli.txt
+.tmp/GATES-006/verify-git-diff-check.txt
+.tmp/GATES-006/verify-git-status-short.txt
+crates/but-api/tests/merge_gate.rs
+
+exit_code=0
