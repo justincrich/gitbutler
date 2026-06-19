@@ -1,0 +1,99 @@
+{
+  "taskId": "GATES-006-GOVERNED-MERGE-CLI",
+  "baseSha": "404cbb7c308f1541e5996df77417722197b5ea08",
+  "requirement_results": [
+    {
+      "ac": "AC-1",
+      "requirement": "Parse `but pr merge <selector> --method squash --dry-run` and top-level `review`/`mr` aliases.",
+      "result": "passed",
+      "tests": [
+        "args::tests::pr::parses_merge_method_and_dry_run",
+        "args::tests::pr::parses_merge_through_review_and_mr_aliases"
+      ],
+      "red_evidence": ".tmp/GATES-006/red-parser.txt",
+      "green_evidence": ".tmp/GATES-006/green-parser.txt"
+    },
+    {
+      "ac": "AC-2",
+      "requirement": "Implementer without `merge` authority is denied through structured merge-gate JSON.",
+      "result": "passed",
+      "tests": [
+        "command::governed_merge_cli::merge_denial_is_structured_for_implementer_without_merge_authority"
+      ],
+      "evidence": ".tmp/GATES-006/verify-cargo-test-but-governed-merge-cli.txt"
+    },
+    {
+      "ac": "AC-3",
+      "requirement": "Dry-run uses the production API merge gate and leaves refs/cache unchanged, including fail-closed missing handle behavior.",
+      "result": "passed",
+      "tests": [
+        "command::governed_merge_cli::merge_dry_run_denial_leaves_refs_and_cache_unchanged",
+        "command::governed_merge_cli::merge_dry_run_fails_closed_without_agent_handle"
+      ],
+      "evidence": ".tmp/GATES-006/verify-cargo-test-but-governed-merge-cli.txt"
+    },
+    {
+      "ac": "AC-4",
+      "requirement": "Non-dry-run resolves exactly one review and reaches `but_api::legacy::forge::merge_review`, not auto-merge or local merge.",
+      "result": "passed",
+      "tests": [
+        "command::governed_merge_cli::non_dry_run_reaches_forge_merge_boundary_after_gate_passes"
+      ],
+      "evidence": ".tmp/GATES-006/verify-cargo-test-but-governed-merge-cli.txt"
+    }
+  ],
+  "commands": [
+    {
+      "command": "cargo test -p but parses_merge_method_and_dry_run",
+      "result": "failed-as-red",
+      "evidence": ".tmp/GATES-006/red-parser.txt"
+    },
+    {
+      "command": "cargo test -p but parses_merge",
+      "result": "passed",
+      "evidence": ".tmp/GATES-006/green-parser.txt"
+    },
+    {
+      "command": "cargo test -p but governed_merge_cli",
+      "result": "passed",
+      "evidence": ".tmp/GATES-006/verify-cargo-test-but-governed-merge-cli.txt"
+    },
+    {
+      "command": "cargo check -p but --all-targets",
+      "result": "passed",
+      "evidence": ".tmp/GATES-006/verify-cargo-check-but.txt"
+    },
+    {
+      "command": "cargo check -p but-api --all-targets",
+      "result": "passed",
+      "evidence": ".tmp/GATES-006/verify-cargo-check-but-api.txt"
+    },
+    {
+      "command": "cargo clippy -p but --all-targets -- -D warnings",
+      "result": "passed",
+      "evidence": ".tmp/GATES-006/verify-cargo-clippy-but.txt"
+    },
+    {
+      "command": "cargo clippy -p but-api --all-targets -- -D warnings",
+      "result": "passed",
+      "evidence": ".tmp/GATES-006/verify-cargo-clippy-but-api.txt"
+    },
+    {
+      "command": "cargo fmt --check",
+      "result": "passed",
+      "evidence": ".tmp/GATES-006/verify-cargo-fmt-check.txt"
+    },
+    {
+      "command": "cargo doc --no-deps",
+      "result": "passed-with-existing-warning",
+      "evidence": ".tmp/GATES-006/verify-cargo-doc-no-deps.txt"
+    }
+  ],
+  "anti_stub_notes": [
+    "Non-dry-run CLI dispatch calls `but_api::legacy::forge::merge_review(ctx.to_sync(), review_id, merge_method)` directly.",
+    "Dry-run dispatch calls `but_api::legacy::forge::dry_run_merge_review`, which returns immediately after `merge_gate::enforce_merge_gate` and performs no forge/storage operation.",
+    "The CLI merge route does not call `set_review_auto_merge`.",
+    "The CLI merge route does not invoke the top-level local `but merge` command; tests assert the target ref remains unchanged in the governed forge-merge fixture.",
+    "Merge selection reuses `resolve_review_selection` and rejects zero or multiple selected review IDs instead of silently choosing one."
+  ]
+}

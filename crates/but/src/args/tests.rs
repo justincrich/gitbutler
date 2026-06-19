@@ -797,6 +797,11 @@ mod push {
 mod pr {
     use clap::Parser;
 
+    use crate::args::{
+        Args, Subcommands,
+        forge::pr::{MergeMethod, Platform as PrPlatform, Subcommands as PrCommand},
+    };
+
     #[test]
     fn defaults_to_running_hooks() {
         let args =
@@ -828,6 +833,64 @@ mod pr {
                     ..
                 }) => {
                     assert!(no_hooks);
+                }
+                _ => panic!("unexpected command shape"),
+            }
+        }
+    }
+
+    #[test]
+    fn parses_merge_method_and_dry_run() {
+        let args = Args::try_parse_from([
+            "but",
+            "pr",
+            "merge",
+            "feat",
+            "--method",
+            "squash",
+            "--dry-run",
+        ])
+        .expect("parse args");
+
+        let cmd = args.cmd.expect("subcommand");
+        match cmd {
+            Subcommands::Pr(PrPlatform {
+                cmd:
+                    Some(PrCommand::Merge {
+                        selector,
+                        method,
+                        dry_run,
+                    }),
+                ..
+            }) => {
+                assert_eq!(selector.as_deref(), Some("feat"));
+                assert_eq!(method, Some(MergeMethod::Squash));
+                assert!(dry_run);
+            }
+            _ => panic!("unexpected command shape"),
+        }
+    }
+
+    #[test]
+    fn parses_merge_through_review_and_mr_aliases() {
+        for alias in ["review", "mr"] {
+            let args = Args::try_parse_from(["but", alias, "merge", "feat"])
+                .expect("parse aliased merge args");
+
+            let cmd = args.cmd.expect("subcommand");
+            match cmd {
+                Subcommands::Pr(PrPlatform {
+                    cmd:
+                        Some(PrCommand::Merge {
+                            selector,
+                            method,
+                            dry_run,
+                        }),
+                    ..
+                }) => {
+                    assert_eq!(selector.as_deref(), Some("feat"));
+                    assert_eq!(method, None);
+                    assert!(!dry_run);
                 }
                 _ => panic!("unexpected command shape"),
             }

@@ -1,0 +1,29 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.34s
+     Running unittests src/lib.rs (target/debug/deps/but-42661aa15a3020c2)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 494 filtered out; finished in 0.00s
+
+     Running unittests src/main.rs (target/debug/deps/but-3ca9a7b7565080fe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/but/main.rs (target/debug/deps/but-dfd7207fbf2ead6c)
+
+running 4 tests
+test command::governed_merge_cli::merge_denial_is_structured_for_implementer_without_merge_authority ... ok
+test command::governed_merge_cli::merge_dry_run_denial_leaves_refs_and_cache_unchanged ... ok
+test command::governed_merge_cli::merge_dry_run_fails_closed_without_agent_handle ... ok
+test command::governed_merge_cli::non_dry_run_reaches_forge_merge_boundary_after_gate_passes ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 421 filtered out; finished in 2.57s
+
+     Running tests/theme.rs (target/debug/deps/theme-518dc3d978cbc92d)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 2 filtered out; finished in 0.00s
+

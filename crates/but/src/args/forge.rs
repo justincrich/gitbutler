@@ -1,4 +1,22 @@
 pub mod pr {
+    /// How the forge should merge the selected review.
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, clap::ValueEnum)]
+    pub enum MergeMethod {
+        Merge,
+        Squash,
+        Rebase,
+    }
+
+    impl From<MergeMethod> for but_forge::ReviewMergeMethod {
+        fn from(value: MergeMethod) -> Self {
+            match value {
+                MergeMethod::Merge => Self::Merge,
+                MergeMethod::Squash => Self::Squash,
+                MergeMethod::Rebase => Self::Rebase,
+            }
+        }
+    }
+
     #[derive(Debug, clap::Parser)]
     pub struct Platform {
         #[clap(subcommand)]
@@ -68,6 +86,19 @@ pub mod pr {
             /// The branch whose review should be closed.
             #[clap(value_name = "BRANCH")]
             branch: String,
+        },
+        /// Merge a review after enforcing local governance.
+        Merge {
+            /// The target of this operation.
+            /// This can be a branch name, branch ID, stack ID, or associated review ID.
+            #[clap(value_name = "SELECTOR")]
+            selector: Option<String>,
+            /// Which forge merge method to request.
+            #[clap(long, value_enum)]
+            method: Option<MergeMethod>,
+            /// Check the local merge gate without calling the forge or persisting changes.
+            #[clap(long)]
+            dry_run: bool,
         },
         /// Enable or disable the automatic merging of a review or reviews.
         /// If no reviews are specified, you will be prompted to select one or multiple of the
