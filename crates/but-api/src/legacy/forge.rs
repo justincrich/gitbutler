@@ -442,6 +442,7 @@ pub async fn merge_review(
 ) -> Result<()> {
     let (storage, forge_repo_info, preferred_forge_user) = {
         let ctx = ctx.into_thread_local();
+        crate::legacy::merge_gate::enforce_merge_gate(&ctx, review_id)?;
         let project_meta = ctx.project_meta()?;
         let repo = ctx.repo.get()?;
         let forge_repo_info = but_forge::derive_forge_repo_info(&remote_url(&project_meta, &repo)?);
@@ -473,6 +474,7 @@ pub async fn set_review_auto_merge(
 ) -> Result<()> {
     let (storage, forge_repo_info, preferred_forge_user) = {
         let ctx = ctx.into_thread_local();
+        crate::legacy::merge_gate::enforce_merge_gate(&ctx, review_id)?;
         let project_meta = ctx.project_meta()?;
         let repo = ctx.repo.get()?;
         let forge_repo_info = but_forge::derive_forge_repo_info(&remote_url(&project_meta, &repo)?);

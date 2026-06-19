@@ -1,0 +1,59 @@
+{
+  "task_id": "GATES-003",
+  "remediation_task_id": "FIX-GATES-003-RED-FIRST-IMPLEMENTATION-1",
+  "base_sha": "ae7bde916fcba97e58be06b79b02c364ad736447",
+  "commit_sha": "PENDING_UNTIL_COMMIT",
+  "status": "completed",
+  "red_evidence": {
+    "path": ".tmp/GATES-003/red-output.txt",
+    "summary": "cargo test -p but-api merge_gate failed with four scenario-backed merge_gate tests before production merge-gate implementation returned structured governance errors"
+  },
+  "implementation": {
+    "api_gate_entry_points": [
+      "crates/but-api/src/legacy/forge.rs:merge_review",
+      "crates/but-api/src/legacy/forge.rs:set_review_auto_merge"
+    ],
+    "merge_gate_module": "crates/but-api/src/legacy/merge_gate.rs",
+    "cli_surface": "crates/but/src/command/legacy/forge/review.rs",
+    "tests": [
+      "crates/but-api/tests/merge_gate.rs",
+      "crates/but/tests/but/command/merge_gate.rs"
+    ]
+  },
+  "verification": [
+    {
+      "command": "cargo test -p but-api merge_gate",
+      "status": "passed",
+      "evidence": "4 merge_gate integration tests passed"
+    },
+    {
+      "command": "cargo test -p but merge_gate",
+      "status": "passed",
+      "evidence": "CLI structured auto-merge denial test passed"
+    },
+    {
+      "command": "cargo fmt --check",
+      "status": "passed"
+    },
+    {
+      "command": "cargo clippy -p but-api -p but --all-targets -- -D warnings",
+      "status": "passed"
+    },
+    {
+      "command": "cargo doc -p but-api -p but --no-deps",
+      "status": "passed_with_existing_warning",
+      "evidence": "rustdoc exited 0 and reported a pre-existing unresolved link warning in crates/but-api/src/open/editor.rs"
+    },
+    {
+      "command": "rg -n \"enforce_merge_gate\" crates/but-api/src/legacy/forge.rs crates/but-api/src/legacy/merge_gate.rs",
+      "status": "passed",
+      "evidence": "merge_review and set_review_auto_merge both call enforce_merge_gate"
+    },
+    {
+      "command": "rg -n \"workdir|std::fs::read|read_to_string|write_permission|RepoExclusive|exclusive_worktree_access|Owner|Maintainer|Reviewer|Developer|Admin\" crates/but-api/src/legacy/merge_gate.rs",
+      "status": "passed",
+      "evidence": "no forbidden worktree-read, write-lock, or role-name matches"
+    }
+  ],
+  "blocking_issues": []
+}
