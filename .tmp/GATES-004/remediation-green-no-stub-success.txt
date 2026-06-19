@@ -27,4 +27,3 @@ close_review blocker: close_review cannot report success: no downstream forge or
 test forge_guard_no_stub_success_for_unimplemented_review_actions ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1 filtered out; finished in 0.11s
-

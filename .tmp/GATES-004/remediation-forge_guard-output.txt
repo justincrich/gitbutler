@@ -32,4 +32,3 @@ api approval verdict: principal_id=reviewer, verdict=approved, head_oid=0906d9e2
 test forge_guard_authorizes_comments_and_records_approval ... ok
 
 test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.22s
-
