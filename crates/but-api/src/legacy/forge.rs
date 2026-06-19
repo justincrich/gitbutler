@@ -76,6 +76,13 @@ fn has_governance_config(repo: &gix::Repository, target_ref: &str) -> Result<boo
         .is_some())
 }
 
+fn task_contract_invalid(action: &str, detail: impl AsRef<str>) -> anyhow::Error {
+    anyhow::anyhow!(
+        "{action} cannot report success: no downstream forge or local storage behavior exists for {}. Minimal spec repair: add a real provider/local persistence operation, or change this governed verb contract to return unsupported.",
+        detail.as_ref()
+    )
+}
+
 pub fn remote_url(project_meta: &ProjectMeta, repo: &gix::Repository) -> Result<String> {
     project_meta.remote_url_with_fallback(repo)
 }
@@ -539,8 +546,13 @@ pub async fn request_changes_review(
     let ctx = ctx.into_thread_local();
     let repo = ctx.repo.get()?;
     authorize_branch_action(&repo, &branch, Authority::ReviewsWrite)?;
-    drop(message);
-    Ok(())
+    Err(task_contract_invalid(
+        "request_changes_review",
+        format!(
+            "branch `{branch}` with message_present={}",
+            message.is_some()
+        ),
+    ))
 }
 
 /// Comment on a branch review after enforcing `comments:write`.
@@ -550,8 +562,13 @@ pub async fn comment_review(ctx: ThreadSafeContext, branch: String, message: Str
     let ctx = ctx.into_thread_local();
     let repo = ctx.repo.get()?;
     authorize_branch_action(&repo, &branch, Authority::CommentsWrite)?;
-    drop(message);
-    Ok(())
+    Err(task_contract_invalid(
+        "comment_review",
+        format!(
+            "branch `{branch}` with message_chars={}",
+            message.chars().count()
+        ),
+    ))
 }
 
 /// Close a branch review after enforcing `pull_requests:write`.
@@ -561,7 +578,10 @@ pub async fn close_review(ctx: ThreadSafeContext, branch: String) -> Result<()> 
     let ctx = ctx.into_thread_local();
     let repo = ctx.repo.get()?;
     authorize_branch_action(&repo, &branch, Authority::PullRequestsWrite)?;
-    Ok(())
+    Err(task_contract_invalid(
+        "close_review",
+        format!("branch `{branch}`"),
+    ))
 }
 
 /// Merge a review on the forge.

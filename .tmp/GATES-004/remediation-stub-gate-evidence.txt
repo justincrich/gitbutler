@@ -1,0 +1,7 @@
+79:fn task_contract_invalid(action: &str, detail: impl AsRef<str>) -> anyhow::Error {
+541:pub async fn request_changes_review(
+549:    Err(task_contract_invalid(
+561:pub async fn comment_review(ctx: ThreadSafeContext, branch: String, message: String) -> Result<()> {
+565:    Err(task_contract_invalid(
+577:pub async fn close_review(ctx: ThreadSafeContext, branch: String) -> Result<()> {
+581:    Err(task_contract_invalid(

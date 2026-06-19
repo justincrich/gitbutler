@@ -153,12 +153,16 @@ fn review_guard_comment_comments_write() -> anyhow::Result<()> {
     let reviewer_stderr = String::from_utf8_lossy(&reviewer.stderr);
     println!("AC-3 reviewer comment stderr: {reviewer_stderr}");
     assert!(
-        reviewer.status.success(),
-        "reviewer holds comments:write and comment should succeed, got: {reviewer_stderr}"
+        !reviewer.status.success(),
+        "reviewer holds comments:write but comment must not report success without behavior"
     );
     assert!(
         !reviewer_stderr.contains(r#""code":"perm.denied""#),
         "reviewer holds comments:write and must not be denied by the comment guard, got: {reviewer_stderr}"
+    );
+    assert!(
+        reviewer_stderr.contains("comment_review cannot report success"),
+        "authorized comment should expose the missing downstream behavior, got: {reviewer_stderr}"
     );
 
     Ok(())

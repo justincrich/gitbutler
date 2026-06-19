@@ -1,83 +1,122 @@
 {
   "task_id": "GATES-004",
-  "timestamp": "2026-06-19T09:37:11Z",
-  "commit_sha": "12cf072b9b530e20a6c39344165371e028c717d5",
-  "typecheck": {
-    "exit_code": 0
-  },
-  "lint": {
-    "exit_code": 0,
-    "warnings": 0
-  },
-  "pre_existing_issues": false,
+  "remediation_id": "FIX-GATES-004-STUB-GUARDS-2",
+  "status": "blocked",
+  "blocker_classification": "task_contract_invalid",
+  "timestamp": "2026-06-19T00:00:00Z",
+  "current_branch_base": "a8b140ca37f01cd32076abee44edf9977d496bc3",
+  "final_commit_sha": null,
+  "final_commit_sha_note": "This tracked evidence file cannot contain its own final commit SHA; the final JSON response reports the final commit.",
+  "summary": "Silent no-op successes were removed from request_changes_review, comment_review, and close_review. After authorization, those actions now return explicit task-contract errors because the allowed but-api/but_forge surface has no downstream write behavior for review comments/request-changes, and the branch-based close contract is underspecified relative to the existing numeric-review-id update API.",
   "requirement_results": [
     {
       "id": "AC-1",
-      "verify": "cargo test -p but review_guard_reviews_write_denied",
-      "exit_code": 0,
-      "output_file": ".tmp/GATES-004/ac-1-output.txt",
-      "red_against_start_file": ".tmp/GATES-004/AC-1-red-against-start.txt",
-      "green_file": ".tmp/GATES-004/AC-1-green.txt",
-      "seeded_artifact": ".tmp/GATES-004/AC-1-seeded-artifact.txt",
-      "seeded_value": "perm.denied reviews:write denial, unset/empty handle perm.denied, local_review_verdicts count 0"
+      "result": "passed",
+      "evidence": "cargo test -p but review_guard includes review_guard_reviews_write_denied: dev/unset/empty are perm.denied and no verdict is written."
     },
     {
       "id": "AC-2",
-      "verify": "cargo test -p but review_guard_reviewer_commit_denied_review_accepted",
-      "exit_code": 0,
-      "output_file": ".tmp/GATES-004/ac-2-output.txt",
-      "red_against_start_file": ".tmp/GATES-004/AC-2-red-against-start.txt",
-      "green_file": ".tmp/GATES-004/AC-2-green.txt",
-      "seeded_artifact": ".tmp/GATES-004/AC-2-seeded-artifact.txt",
-      "seeded_value": "contents:write commit denial plus reviewer approved verdict row pinned to feat head"
+      "result": "passed",
+      "evidence": "cargo test -p but review_guard includes review_guard_reviewer_commit_denied_review_accepted: reviewer commit is denied contents:write and approve writes one approved local_review_verdict at feat head."
     },
     {
       "id": "AC-3",
-      "verify": "cargo test -p but review_guard_comment_comments_write",
-      "exit_code": 0,
-      "output_file": ".tmp/GATES-004/ac-3-output.txt",
-      "red_against_start_file": ".tmp/GATES-004/AC-3-red-against-start.txt",
-      "green_file": ".tmp/GATES-004/AC-3-green.txt",
-      "seeded_artifact": ".tmp/GATES-004/AC-3-seeded-artifact.txt",
-      "seeded_value": "ro comment denied comments:write; reviewer comment guard passes"
+      "result": "blocked",
+      "evidence": "ro is still denied comments:write; authorized reviewer is not denied but comment_review returns explicit task-contract error instead of fake success because no downstream comment write behavior exists."
     },
     {
       "id": "AC-4",
-      "verify": "grep -rEn 'Approve|RequestChanges|Comment|Close' crates/but/src/args/forge.rs && grep -rEn 'authorize\\(.*(ReviewsWrite|CommentsWrite|PullRequestsWrite)' crates/but-api/src/legacy/forge.rs",
-      "exit_code": 0,
-      "output_file": ".tmp/GATES-004/ac-4-output.txt",
-      "red_against_start_file": ".tmp/GATES-004/AC-4-red-against-start.txt",
-      "green_file": ".tmp/GATES-004/AC-4-green.txt",
-      "seeded_artifact": ".tmp/GATES-004/AC-4-green.txt",
-      "seeded_value": "Approve/RequestChanges/Comment/Close surface, dispatch, authorize guards, and zero role-name matches"
+      "result": "blocked",
+      "evidence": "Governed verbs and guards exist, but request_changes_review/comment_review/close_review cannot honestly satisfy the required success behavior with the current downstream API contract."
     },
     {
       "id": "TC-1",
-      "verify": "cargo test -p but review_guard_reviews_write_denied",
-      "exit_code": 0,
-      "output_file": ".tmp/GATES-004/tc-1-output.txt"
+      "result": "passed",
+      "evidence": ".tmp/GATES-004/remediation-review_guard-output.txt"
     },
     {
       "id": "TC-2",
-      "verify": "cargo test -p but review_guard_reviewer_commit_denied_review_accepted",
-      "exit_code": 0,
-      "output_file": ".tmp/GATES-004/tc-2-output.txt"
+      "result": "passed",
+      "evidence": ".tmp/GATES-004/remediation-review_guard-output.txt"
     },
     {
       "id": "TC-3",
-      "verify": "cargo test -p but review_guard_comment_comments_write",
-      "exit_code": 0,
-      "output_file": ".tmp/GATES-004/tc-3-output.txt"
+      "result": "blocked",
+      "evidence": ".tmp/GATES-004/remediation-review_guard-output.txt"
     },
     {
       "id": "TC-4",
-      "verify": "grep -rEn 'Approve|RequestChanges|Comment|Close' crates/but/src/args/forge.rs",
-      "exit_code": 0,
-      "output_file": ".tmp/GATES-004/tc-4-output.txt"
+      "result": "blocked",
+      "evidence": ".tmp/GATES-004/remediation-stub-gate-evidence.txt"
     }
   ],
-  "red_evidence": {
-    "required": true,
-    "output_file": ".tmp/GATES-004/red-output.txt"
-  }
+  "validation_commands": [
+    {
+      "command": "cargo test -p but-api forge_guard_no_stub_success_for_unimplemented_review_actions -- --nocapture",
+      "result": "failed_before_fix",
+      "evidence": ".tmp/GATES-004/remediation-red-no-stub-success.txt"
+    },
+    {
+      "command": "cargo test -p but-api forge_guard_no_stub_success_for_unimplemented_review_actions -- --nocapture",
+      "result": "passed",
+      "evidence": ".tmp/GATES-004/remediation-green-no-stub-success.txt"
+    },
+    {
+      "command": "cargo test -p but-api forge_guard -- --nocapture",
+      "result": "passed",
+      "evidence": ".tmp/GATES-004/remediation-forge_guard-output.txt"
+    },
+    {
+      "command": "cargo test -p but review_guard -- --nocapture",
+      "result": "passed",
+      "evidence": ".tmp/GATES-004/remediation-review_guard-output.txt"
+    },
+    {
+      "command": "cargo check -p but-api --all-targets",
+      "result": "passed",
+      "evidence": ".tmp/GATES-004/remediation-check-but-api.txt"
+    },
+    {
+      "command": "cargo check -p but --all-targets",
+      "result": "passed",
+      "evidence": ".tmp/GATES-004/remediation-check-but.txt"
+    },
+    {
+      "command": "cargo fmt --check",
+      "result": "passed",
+      "evidence": ".tmp/GATES-004/remediation-fmt-check.txt"
+    },
+    {
+      "command": "cargo clippy -p but-api -p but --all-targets -- -D warnings",
+      "result": "passed",
+      "evidence": ".tmp/GATES-004/remediation-clippy.txt"
+    },
+    {
+      "command": "cargo doc -p but-api -p but --no-deps",
+      "result": "passed_with_preexisting_warning",
+      "evidence": ".tmp/GATES-004/remediation-doc.txt"
+    }
+  ],
+  "stub_gate_evidence": [
+    {
+      "file": "crates/but-api/src/legacy/forge.rs",
+      "evidence": ".tmp/GATES-004/remediation-stub-gate-evidence.txt",
+      "finding": "request_changes_review, comment_review, and close_review now return task_contract_invalid errors after authorization; drop(message) is absent."
+    },
+    {
+      "file": "crates/but-forge/src/review.rs, crates/but-github/src, crates/but-gitlab/src",
+      "evidence": ".tmp/GATES-004/remediation-downstream-surface-search.txt",
+      "finding": "Search found read-only comment counts/notes only; no downstream create-comment or request-changes write operation exists."
+    },
+    {
+      "file": "crates/but-forge/src/review.rs",
+      "evidence": ".tmp/GATES-004/remediation-existing-forge-surface.txt",
+      "finding": "Existing update_review can update body/state by numeric review id; it does not provide the branch-based request-changes/comment contract required by GATES-004."
+    }
+  ],
+  "minimal_spec_repair": [
+    "Add real but_forge/provider operations for submitting pull-request reviews, requesting changes, and creating review comments, plus tests against those operations.",
+    "Add a local persisted review-comment/request-changes model if these verbs are intended to be local/offline like approve.",
+    "Clarify close_review's selector contract: either take a numeric review id, or define branch-to-review resolution semantics before closing via ReviewState::Closed."
+  ]
 }

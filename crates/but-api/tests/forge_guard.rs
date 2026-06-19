@@ -61,6 +61,89 @@ fn forge_guard_authorizes_comments_and_records_approval() -> anyhow::Result<()> 
     Ok(())
 }
 
+#[test]
+#[serial_test::serial]
+fn forge_guard_no_stub_success_for_unimplemented_review_actions() -> anyhow::Result<()> {
+    let (repo, _tmp) = governed_review_repo();
+    let ctx = but_ctx::Context::from_repo(repo)?.with_memory_app_cache();
+    let runtime = tokio::runtime::Runtime::new()?;
+
+    temp_env::with_var(
+        "BUT_AGENT_HANDLE",
+        Some("reviewer"),
+        || -> anyhow::Result<()> {
+            let err = match runtime.block_on(but_api::legacy::forge::request_changes_review(
+                ctx.to_sync(),
+                "feat".to_owned(),
+                Some("please fix this".to_owned()),
+            )) {
+                Ok(()) => anyhow::bail!("request-changes must not report success without behavior"),
+                Err(err) => err,
+            };
+            let message = err.to_string();
+            assert!(
+                message.contains("request_changes_review"),
+                "request-changes blocker must name the unsupported action, got: {message}"
+            );
+            assert!(
+                message.contains("no downstream"),
+                "request-changes blocker must explain no downstream behavior exists, got: {message}"
+            );
+            println!("request_changes_review blocker: {message}");
+            Ok(())
+        },
+    )?;
+
+    temp_env::with_var(
+        "BUT_AGENT_HANDLE",
+        Some("reviewer"),
+        || -> anyhow::Result<()> {
+            let err = match runtime.block_on(but_api::legacy::forge::comment_review(
+                ctx.to_sync(),
+                "feat".to_owned(),
+                "note".to_owned(),
+            )) {
+                Ok(()) => anyhow::bail!("comment must not report success without behavior"),
+                Err(err) => err,
+            };
+            let message = err.to_string();
+            assert!(
+                message.contains("comment_review"),
+                "comment blocker must name the unsupported action, got: {message}"
+            );
+            assert!(
+                message.contains("no downstream"),
+                "comment blocker must explain no downstream behavior exists, got: {message}"
+            );
+            println!("comment_review blocker: {message}");
+            Ok(())
+        },
+    )?;
+
+    temp_env::with_var("BUT_AGENT_HANDLE", Some("dev"), || -> anyhow::Result<()> {
+        let err = match runtime.block_on(but_api::legacy::forge::close_review(
+            ctx.to_sync(),
+            "feat".to_owned(),
+        )) {
+            Ok(()) => anyhow::bail!("close must not report success without behavior"),
+            Err(err) => err,
+        };
+        let message = err.to_string();
+        assert!(
+            message.contains("close_review"),
+            "close blocker must name the unsupported action, got: {message}"
+        );
+        assert!(
+            message.contains("no downstream"),
+            "close blocker must explain no downstream behavior exists, got: {message}"
+        );
+        println!("close_review blocker: {message}");
+        Ok(())
+    })?;
+
+    Ok(())
+}
+
 fn governed_review_repo() -> (gix::Repository, tempfile::TempDir) {
     let (repo, tmp) = but_testsupport::writable_scenario("checkout-head-info");
     but_testsupport::invoke_bash(
@@ -74,6 +157,10 @@ permissions = ["reviews:write", "comments:write", "contents:read"]
 [[principal]]
 id = "ro"
 permissions = ["contents:read"]
+
+[[principal]]
+id = "dev"
+permissions = ["contents:write", "pull_requests:write"]
 EOF
 
 cat >.gitbutler/gates.toml <<'EOF'

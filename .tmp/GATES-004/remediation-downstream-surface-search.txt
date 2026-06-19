@@ -1,0 +1,3 @@
+crates/but-gitlab/src/client.rs:272:            user_notes_count: i64,
+crates/but-gitlab/src/client.rs:287:            comments_count: body.user_notes_count,
+crates/but-forge/src/review.rs:823:/// merge-button hint and comment count without forcing every review
