@@ -1,5 +1,5 @@
    Compiling but-db v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/GATES-002/crates/but-db)
-    Finished `test` profile [unoptimized + debuginfo] target(s) in 1.67s
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1.40s
      Running unittests src/lib.rs (target/debug/deps/but_db-a1a8a30081c1a0c4)
 
 running 0 tests
@@ -15,16 +15,10 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 1 filtered out; fini
      Running tests/db/main.rs (target/debug/deps/db-d92e675b82f79a84)
 
 running 4 tests
-head_pinning_distinguishes_heads rows=[LocalReviewVerdict { id: "h1", target: "refs/heads/feat", principal_id: "rust-reviewer", verdict: "approved", head_oid: "1111111111111111111111111111111111111111", created_at: 1970-01-12T13:46:40 }, LocalReviewVerdict { id: "h2", target: "refs/heads/feat", principal_id: "rust-reviewer", verdict: "approved", head_oid: "2222222222222222222222222222222222222222", created_at: 1970-01-12T13:46:42 }]
-test table::local_review_verdicts::head_pinning_distinguishes_heads ... ok
-insert_and_query_by_target rows=[LocalReviewVerdict { id: "v1", target: "refs/heads/feat", principal_id: "rust-reviewer", verdict: "approved", head_oid: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", created_at: 1970-01-12T13:46:40 }]
 test table::local_review_verdicts::insert_and_query_by_target ... ok
-empty_target_initial rows=[]
-empty_target_other rows=[LocalReviewVerdict { id: "o1", target: "refs/heads/other", principal_id: "rust-reviewer", verdict: "approved", head_oid: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", created_at: 1970-01-12T13:46:40 }]
-empty_target_filtered rows=[]
-distinct_principals_both_returned rows=[LocalReviewVerdict { id: "v1", target: "refs/heads/feat", principal_id: "rust-reviewer", verdict: "approved", head_oid: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", created_at: 1970-01-12T13:46:40 }, LocalReviewVerdict { id: "v2", target: "refs/heads/feat", principal_id: "justin", verdict: "approved", head_oid: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", created_at: 1970-01-12T13:46:41 }]
-test table::local_review_verdicts::empty_target_returns_empty ... ok
 test table::local_review_verdicts::distinct_principals_both_returned ... ok
+test table::local_review_verdicts::head_pinning_distinguishes_heads ... ok
+test table::local_review_verdicts::empty_target_returns_empty ... ok
 
 test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 122 filtered out; finished in 0.03s
 
