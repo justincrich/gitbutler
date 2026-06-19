@@ -18,6 +18,10 @@ e2e/web/test-results/
 
 .env
 .env.*
+*.pem
+*.key
+.tmp/
+.kb-run-sprint/
 node_modules
 .direnv/
 
