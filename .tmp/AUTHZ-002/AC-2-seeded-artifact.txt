@@ -1,0 +1,2 @@
+after working-tree edit, branch main protected == true
+after the uncommitted permissions.toml edit, ro effective set excludes Authority::ContentsWrite

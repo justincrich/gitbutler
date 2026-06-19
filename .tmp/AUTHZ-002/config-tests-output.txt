@@ -1,0 +1,37 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.20s
+     Running unittests src/lib.rs (target/debug/deps/but_authz-1c208a5fcd383d5b)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/authority.rs (target/debug/deps/authority-d638f77d6ce4df96)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 6 filtered out; finished in 0.00s
+
+     Running tests/config.rs (target/debug/deps/config-7f2bb036623e494d)
+
+running 5 tests
+dev effective set contains Authority::ContentsWrite
+ro effective set excludes Authority::ContentsWrite
+branch main protected == true
+test config_loads_from_target_ref ... ok
+after working-tree edit, branch main protected == true
+release-bot set contains Authority::Merge
+release-bot set contains Authority::AdministrationRead
+release-bot set excludes Authority::AdministrationWrite
+after the uncommitted permissions.toml edit, ro effective set excludes Authority::ContentsWrite
+test config_role_entry_desugars ... ok
+test config_ignores_working_tree_edit ... ok
+malformed gates.toml returns Err(ConfigError)
+error code == "config.invalid"
+branch main protected == true (read from refs/heads/main, not the feature head)
+test config_loads_from_target_not_head ... ok
+malformed permissions.toml returns Err(ConfigError)
+error code == "config.invalid"
+test config_malformed_fails_closed ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.17s
+

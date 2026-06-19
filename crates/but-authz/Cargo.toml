@@ -11,7 +11,15 @@ description = "Pure functional authorization catalog and authority-set primitive
 doctest = false
 
 [dependencies]
+anyhow.workspace = true
+gix.workspace = true
+serde.workspace = true
 thiserror.workspace = true
+toml.workspace = true
+
+[dev-dependencies]
+anyhow.workspace = true
+but-testsupport.workspace = true
 
 [lints]
 workspace = true

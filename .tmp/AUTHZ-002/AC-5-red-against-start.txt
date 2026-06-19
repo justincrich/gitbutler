@@ -1,0 +1,39 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.18s
+     Running unittests src/lib.rs (target/debug/deps/but_authz-1c208a5fcd383d5b)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/authority.rs (target/debug/deps/authority-d638f77d6ce4df96)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 6 filtered out; finished in 0.00s
+
+     Running tests/config.rs (target/debug/deps/config-7f2bb036623e494d)
+
+running 1 test
+
+thread 'config_loads_from_target_not_head' (65071169) panicked at crates/but-testsupport/src/lib.rs:91:5:
+cd "/var/folders/rt/8_hh9gmj43x4763f7_l_nk3c0000gn/T/.tmp3pEs0f" && env -u AI_AGENT -u ANTIGRAVITY_AGENT -u AUGMENT_AGENT -u CLAUDECODE -u CLAUDE_CODE -u CLAUDE_CODE_IS_COWORK -u CODEX_CI -u CODEX_SANDBOX -u CODEX_SHELL -u CODEX_THREAD_ID -u COPILOT_ALLOW_ALL -u COPILOT_GITHUB_TOKEN -u COPILOT_MODEL -u CURSOR_AGENT -u CURSOR_TRACE_ID -u EDITOR -u GEMINI_CLI -u GIT_ALTERNATE_OBJECT_DIRECTORIES -u GIT_ASKPASS -u GIT_COMMON_DIR -u GIT_DIR -u GIT_EDITOR -u GIT_INDEX_FILE -u GIT_OBJECT_DIRECTORY -u GIT_WORK_TREE -u OPENCODE_CLIENT -u REPL_ID -u SSH_ASKPASS -u VISUAL GIT_AUTHOR_DATE="2000-01-01 00:00:00 +0000" GIT_AUTHOR_EMAIL="author@example.com" GIT_AUTHOR_NAME="author" GIT_COMMITTER_DATE="2000-01-02 00:00:00 +0000" GIT_COMMITTER_EMAIL="committer@example.com" GIT_COMMITTER_NAME="committer" GIT_CONFIG_COUNT="4" GIT_CONFIG_GLOBAL="/dev/null" GIT_CONFIG_KEY_0="commit.gpgsign" GIT_CONFIG_KEY_1="tag.gpgsign" GIT_CONFIG_KEY_2="init.defaultBranch" GIT_CONFIG_KEY_3="protocol.file.allow" GIT_CONFIG_NOSYSTEM="1" GIT_CONFIG_VALUE_0="false" GIT_CONFIG_VALUE_1="false" GIT_CONFIG_VALUE_2="main" GIT_CONFIG_VALUE_3="always" GIT_TERMINAL_PROMPT="false" MSYS=" winsymlinks:nativestrict" RUST_BACKTRACE="0" TZ="UTC0" "bash" failed: On branch feat
+nothing to commit, working tree clean
+
+
+Switched to a new branch 'feat'
+bash: line 3: .gitbutler/gates.toml: No such file or directory
+fatal: pathspec '.gitbutler/gates.toml' did not match any files
+
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test config_loads_from_target_not_head ... FAILED
+
+failures:
+
+failures:
+    config_loads_from_target_not_head
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 4 filtered out; finished in 0.04s
+
+error: test failed, to rerun pass `-p but-authz --test config`
+
+exit_code=101

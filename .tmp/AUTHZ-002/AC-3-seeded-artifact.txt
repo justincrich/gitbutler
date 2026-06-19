@@ -1,0 +1,4 @@
+malformed gates.toml returns Err(ConfigError)
+error code == "config.invalid"
+malformed permissions.toml returns Err(ConfigError)
+error code == "config.invalid"

@@ -1,0 +1,241 @@
+use but_authz::{Authority, AuthoritySet, ConfigError, PrincipalId, load_governance_config};
+
+const TARGET_REF: &str = "refs/heads/main";
+
+#[test]
+fn config_loads_from_target_ref() -> anyhow::Result<()> {
+    let (repo, _tmp) = governed_repo();
+
+    let config = load_governance_config(&repo, TARGET_REF)?;
+    let dev = config
+        .principal_authorities(&PrincipalId::new("dev"))
+        .ok_or_else(|| anyhow::anyhow!("dev principal must load from permissions.toml"))?;
+    let ro = config
+        .principal_authorities(&PrincipalId::new("ro"))
+        .ok_or_else(|| anyhow::anyhow!("ro principal must load from permissions.toml"))?;
+    let main = config
+        .branch("main")
+        .ok_or_else(|| anyhow::anyhow!("main branch protection must load from gates.toml"))?;
+
+    assert!(
+        dev.contains(Authority::ContentsWrite),
+        "dev's committed permission set must include contents:write"
+    );
+    assert!(
+        !ro.contains(Authority::ContentsWrite),
+        "ro's committed permission set must not include contents:write"
+    );
+    assert!(
+        main.protected(),
+        "main branch must be protected by the target-ref gates.toml blob"
+    );
+
+    println!("dev effective set contains Authority::ContentsWrite");
+    println!("ro effective set excludes Authority::ContentsWrite");
+    println!("branch main protected == true");
+
+    Ok(())
+}
+
+#[test]
+fn config_ignores_working_tree_edit() -> anyhow::Result<()> {
+    let (repo, _tmp) = governed_repo();
+
+    but_testsupport::invoke_bash(
+        r#"
+cat >.gitbutler/gates.toml <<'EOF'
+[[branch]]
+name = "main"
+protected = false
+EOF
+"#,
+        &repo,
+    );
+
+    let config = load_governance_config(&repo, TARGET_REF)?;
+    let main = config
+        .branch("main")
+        .ok_or_else(|| anyhow::anyhow!("main branch protection must load from gates.toml"))?;
+    assert!(
+        main.protected(),
+        "uncommitted gates.toml edits must not affect target-ref config"
+    );
+    println!("after working-tree edit, branch main protected == true");
+
+    but_testsupport::invoke_bash(
+        r#"
+cat >.gitbutler/permissions.toml <<'EOF'
+[[principal]]
+id = "ro"
+permissions = ["contents:read", "contents:write"]
+EOF
+"#,
+        &repo,
+    );
+
+    let config = load_governance_config(&repo, TARGET_REF)?;
+    let ro = config
+        .principal_authorities(&PrincipalId::new("ro"))
+        .ok_or_else(|| anyhow::anyhow!("ro principal must load from permissions.toml"))?;
+    assert!(
+        !ro.contains(Authority::ContentsWrite),
+        "uncommitted permissions.toml edits must not widen ro's target-ref set"
+    );
+    println!(
+        "after the uncommitted permissions.toml edit, ro effective set excludes Authority::ContentsWrite"
+    );
+
+    Ok(())
+}
+
+#[test]
+fn config_malformed_fails_closed() {
+    let (repo, _tmp) = governed_repo();
+    but_testsupport::invoke_bash(
+        r#"
+cat >.gitbutler/gates.toml <<'EOF'
+[[branch]
+name = "main"
+protected = nope
+EOF
+git add .gitbutler/gates.toml
+git commit -m "malformed gates"
+"#,
+        &repo,
+    );
+
+    assert_config_invalid(load_governance_config(&repo, TARGET_REF));
+    println!("malformed gates.toml returns Err(ConfigError)");
+    println!("error code == \"config.invalid\"");
+
+    let (repo, _tmp) = governed_repo();
+    but_testsupport::invoke_bash(
+        r#"
+cat >.gitbutler/permissions.toml <<'EOF'
+[[principal]]
+id = "dev"
+permissions = ["contents:bogus"]
+EOF
+git add .gitbutler/permissions.toml
+git commit -m "malformed permissions"
+"#,
+        &repo,
+    );
+
+    assert_config_invalid(load_governance_config(&repo, TARGET_REF));
+    println!("malformed permissions.toml returns Err(ConfigError)");
+    println!("error code == \"config.invalid\"");
+}
+
+#[test]
+fn config_role_entry_desugars() -> anyhow::Result<()> {
+    let (repo, _tmp) = governed_repo();
+
+    let config = load_governance_config(&repo, TARGET_REF)?;
+    let release_bot = config
+        .principal_authorities(&PrincipalId::new("release-bot"))
+        .ok_or_else(|| anyhow::anyhow!("release-bot principal must load from permissions.toml"))?;
+    let maintain = AuthoritySet::from_role("maintain")?;
+
+    assert_eq!(
+        release_bot, &maintain,
+        "role=maintain must desugar to the same AuthoritySet as from_role"
+    );
+    assert!(
+        release_bot.contains(Authority::Merge),
+        "maintain role must include merge"
+    );
+    assert!(
+        release_bot.contains(Authority::AdministrationRead),
+        "maintain role must include administration:read"
+    );
+    assert!(
+        !release_bot.contains(Authority::AdministrationWrite),
+        "maintain role must not include administration:write"
+    );
+
+    println!("release-bot set contains Authority::Merge");
+    println!("release-bot set contains Authority::AdministrationRead");
+    println!("release-bot set excludes Authority::AdministrationWrite");
+
+    Ok(())
+}
+
+#[test]
+fn config_loads_from_target_not_head() -> anyhow::Result<()> {
+    let (repo, _tmp) = governed_repo();
+    but_testsupport::invoke_bash(
+        r#"
+git checkout -b feat
+cat >.gitbutler/gates.toml <<'EOF'
+[[branch]]
+name = "main"
+protected = false
+EOF
+git add .gitbutler/gates.toml
+git commit -m "unprotect on feature"
+"#,
+        &repo,
+    );
+
+    let config = load_governance_config(&repo, TARGET_REF)?;
+    let main = config
+        .branch("main")
+        .ok_or_else(|| anyhow::anyhow!("main branch protection must load from gates.toml"))?;
+    assert!(
+        main.protected(),
+        "target ref must govern even when HEAD points at a feature branch"
+    );
+
+    println!("branch main protected == true (read from refs/heads/main, not the feature head)");
+
+    Ok(())
+}
+
+fn governed_repo() -> (gix::Repository, impl std::fmt::Debug) {
+    let (repo, tmp) = but_testsupport::writable_scenario("governance-base");
+    if std::env::var_os("AUTHZ_EMPTY_START").is_some() {
+        return (repo, tmp);
+    }
+
+    but_testsupport::invoke_bash(
+        r#"
+mkdir -p .gitbutler
+cat >.gitbutler/permissions.toml <<'EOF'
+[[principal]]
+id = "dev"
+permissions = ["contents:write"]
+
+[[principal]]
+id = "ro"
+permissions = ["contents:read"]
+
+[[principal]]
+id = "release-bot"
+role = "maintain"
+EOF
+
+cat >.gitbutler/gates.toml <<'EOF'
+[[branch]]
+name = "main"
+protected = true
+EOF
+
+git add .gitbutler/permissions.toml .gitbutler/gates.toml
+git commit -m "governance config"
+"#,
+        &repo,
+    );
+    (repo, tmp)
+}
+
+fn assert_config_invalid(result: Result<but_authz::GovConfig, ConfigError>) {
+    let Err(error) = result else {
+        panic!("malformed target-ref config must fail closed");
+    };
+    assert_eq!(
+        error.code(),
+        "config.invalid",
+        "malformed config must have the stable config.invalid classification"
+    );
+}
