@@ -1,4 +1,4 @@
-use but_db::{ForgeReview, LocalReviewVerdict};
+use but_db::ForgeReview;
 use serde::Serialize;
 
 const MAIN_REF: &str = "refs/heads/main";
@@ -7,11 +7,107 @@ const REVIEW_ID: usize = 1;
 
 #[tokio::test]
 #[serial_test::serial]
+async fn merge_gate_self_and_stale_dismissed() -> anyhow::Result<()> {
+    let (repo, _tmp) = merge_gated_repo(GateConfig::Single)?;
+    let main_before = ref_id(&repo, MAIN_REF)?;
+    let head = ref_id(&repo, FEAT_REF)?;
+    let ctx = context_with_review(&repo, head)?;
+
+    approve_branch(&ctx, "impl").await?;
+    temp_env::async_with_vars([("BUT_AGENT_HANDLE", Some("maint"))], async {
+        let denial = assert_gate_denied(
+            but_api::legacy::forge::merge_review(ctx.to_sync(), REVIEW_ID, None).await,
+            "gate.review_required",
+        );
+        assert!(
+            denial.unmet.iter().any(|entry| entry == "no_approval"),
+            "self-approval denial should report the no_approval discriminator"
+        );
+        Ok::<(), anyhow::Error>(())
+    })
+    .await?;
+    assert_eq!(
+        ref_id(&repo, MAIN_REF)?,
+        main_before,
+        "self-approval denial must leave main unchanged"
+    );
+
+    let (repo, _tmp) = merge_gated_repo(GateConfig::Single)?;
+    let head_h1 = ref_id(&repo, FEAT_REF)?;
+    let ctx = context_with_review(&repo, head_h1)?;
+
+    approve_branch(&ctx, "reviewer").await?;
+    advance_feature_head(&repo)?;
+    let head_h2 = ref_id(&repo, FEAT_REF)?;
+    assert_ne!(
+        head_h1, head_h2,
+        "stale-approval fixture must advance feat from H1 to H2"
+    );
+
+    temp_env::async_with_vars([("BUT_AGENT_HANDLE", Some("maint"))], async {
+        let denial = assert_gate_denied(
+            but_api::legacy::forge::merge_review(ctx.to_sync(), REVIEW_ID, None).await,
+            "gate.review_required",
+        );
+        assert!(
+            denial
+                .unmet
+                .iter()
+                .any(|entry| entry == "approval_stale_at_head"),
+            "stale approval denial should report approval_stale_at_head"
+        );
+        Ok::<(), anyhow::Error>(())
+    })
+    .await?;
+
+    approve_branch(&ctx, "reviewer").await?;
+    temp_env::async_with_vars([("BUT_AGENT_HANDLE", Some("maint"))], async {
+        let err = but_api::legacy::forge::merge_review(ctx.to_sync(), REVIEW_ID, None)
+            .await
+            .expect_err("local fixture should reach the forge call and fail outside governance");
+        assert!(
+            classify_error(&err).is_none(),
+            "fresh re-approval at H2 should satisfy the merge gate"
+        );
+        Ok::<(), anyhow::Error>(())
+    })
+    .await?;
+
+    Ok(())
+}
+
+#[tokio::test]
+#[serial_test::serial]
+async fn merge_gate_distinct_current_head_satisfies() -> anyhow::Result<()> {
+    let (repo, _tmp) = merge_gated_repo(GateConfig::Single)?;
+    let head = ref_id(&repo, FEAT_REF)?;
+    let ctx = context_with_review(&repo, head)?;
+
+    approve_branch(&ctx, "reviewer").await?;
+
+    temp_env::async_with_vars([("BUT_AGENT_HANDLE", Some("maint"))], async {
+        let err = but_api::legacy::forge::merge_review(ctx.to_sync(), REVIEW_ID, None)
+            .await
+            .expect_err("local fixture should reach the forge call and fail outside governance");
+        assert!(
+            classify_error(&err).is_none(),
+            "distinct current-head approval should satisfy the merge gate"
+        );
+        Ok::<(), anyhow::Error>(())
+    })
+    .await?;
+
+    Ok(())
+}
+
+#[tokio::test]
+#[serial_test::serial]
 async fn merge_gate_authorize_and_review_requirement() -> anyhow::Result<()> {
     let (repo, _tmp) = merge_gated_repo(GateConfig::Single)?;
     let main_before = ref_id(&repo, MAIN_REF)?;
     let head = ref_id(&repo, FEAT_REF)?;
-    let ctx = context_with_review(&repo, "reviewer", head, true)?;
+    let ctx = context_with_review(&repo, head)?;
+    approve_branch(&ctx, "reviewer").await?;
 
     temp_env::async_with_vars([("BUT_AGENT_HANDLE", Some("impl"))], async {
         let denial = assert_gate_denied(
@@ -62,7 +158,7 @@ async fn merge_gate_authorize_and_review_requirement() -> anyhow::Result<()> {
 async fn merge_gate_below_min_approvals_blocked() -> anyhow::Result<()> {
     let (repo, _tmp) = merge_gated_repo(GateConfig::Single)?;
     let main_before = ref_id(&repo, MAIN_REF)?;
-    let ctx = context_with_review(&repo, "reviewer", ref_id(&repo, FEAT_REF)?, false)?;
+    let ctx = context_with_review(&repo, ref_id(&repo, FEAT_REF)?)?;
 
     temp_env::async_with_vars([("BUT_AGENT_HANDLE", Some("maint"))], async {
         let denial = assert_gate_denied(
@@ -91,7 +187,7 @@ async fn merge_gate_below_min_approvals_blocked() -> anyhow::Result<()> {
 async fn merge_gate_two_group_both_present_proceeds() -> anyhow::Result<()> {
     let (repo, _tmp) = merge_gated_repo(GateConfig::TwoGroup)?;
     let head = ref_id(&repo, FEAT_REF)?;
-    let mut ctx = context_with_review(&repo, "reviewer-a", head, false)?;
+    let ctx = context_with_review(&repo, head)?;
 
     temp_env::async_with_vars([("BUT_AGENT_HANDLE", Some("maint"))], async {
         let denial = assert_gate_denied(
@@ -106,8 +202,8 @@ async fn merge_gate_two_group_both_present_proceeds() -> anyhow::Result<()> {
     })
     .await?;
 
-    seed_verdict(&mut ctx, "reviewer-a", head, 1)?;
-    seed_verdict(&mut ctx, "reviewer-b", head, 2)?;
+    approve_branch(&ctx, "reviewer-a").await?;
+    approve_branch(&ctx, "reviewer-b").await?;
 
     temp_env::async_with_vars([("BUT_AGENT_HANDLE", Some("maint"))], async {
         let err = but_api::legacy::forge::merge_review(ctx.to_sync(), REVIEW_ID, None)
@@ -129,7 +225,8 @@ async fn merge_gate_two_group_both_present_proceeds() -> anyhow::Result<()> {
 async fn merge_gate_dryrun_and_malformed_failclosed() -> anyhow::Result<()> {
     let (repo, _tmp) = merge_gated_repo(GateConfig::Single)?;
     let main_before = ref_id(&repo, MAIN_REF)?;
-    let ctx = context_with_review(&repo, "reviewer", ref_id(&repo, FEAT_REF)?, true)?;
+    let ctx = context_with_review(&repo, ref_id(&repo, FEAT_REF)?)?;
+    approve_branch(&ctx, "reviewer").await?;
     let verdicts_before = verdict_count(&ctx)?;
 
     temp_env::async_with_vars([("BUT_AGENT_HANDLE", Some("impl"))], async {
@@ -157,7 +254,7 @@ async fn merge_gate_dryrun_and_malformed_failclosed() -> anyhow::Result<()> {
     );
 
     let (repo, _tmp) = merge_gated_repo(GateConfig::Malformed)?;
-    let ctx = context_with_review(&repo, "reviewer", ref_id(&repo, FEAT_REF)?, true)?;
+    let ctx = context_with_review(&repo, ref_id(&repo, FEAT_REF)?)?;
 
     temp_env::async_with_vars([("BUT_AGENT_HANDLE", Some("maint"))], async {
         assert_gate_denied(
@@ -222,7 +319,7 @@ protected = nope
             r#"
 [[principal]]
 id = "impl"
-permissions = ["contents:write", "pull_requests:write"]
+permissions = ["contents:write", "pull_requests:write", "reviews:write"]
 
 [[principal]]
 id = "reviewer-a"
@@ -254,7 +351,7 @@ members = ["reviewer-b", "maint"]
             r#"
 [[principal]]
 id = "impl"
-permissions = ["contents:write", "pull_requests:write"]
+permissions = ["contents:write", "pull_requests:write", "reviews:write"]
 
 [[principal]]
 id = "reviewer"
@@ -281,8 +378,9 @@ EOF
 git add .gitbutler/permissions.toml .gitbutler/gates.toml
 git commit -m "governance config"
 git checkout -b feat
+: >.gitbutler/gates.toml
 echo feat >feat.txt
-git add feat.txt
+git add .gitbutler/gates.toml feat.txt
 git commit -m "feat"
 git checkout main
 "#
@@ -295,15 +393,10 @@ git checkout main
 
 fn context_with_review(
     repo: &gix::Repository,
-    reviewer: &str,
     head: gix::ObjectId,
-    approved: bool,
 ) -> anyhow::Result<but_ctx::Context> {
     let mut ctx = but_ctx::Context::from_repo(repo.clone())?.with_memory_app_cache();
     seed_review(&mut ctx, head)?;
-    if approved {
-        seed_verdict(&mut ctx, reviewer, head, 1)?;
-    }
     Ok(ctx)
 }
 
@@ -340,26 +433,6 @@ fn seed_review(ctx: &mut but_ctx::Context, head: gix::ObjectId) -> anyhow::Resul
     Ok(())
 }
 
-fn seed_verdict(
-    ctx: &mut but_ctx::Context,
-    principal_id: &str,
-    head: gix::ObjectId,
-    index: i64,
-) -> anyhow::Result<()> {
-    ctx.db
-        .get_cache_mut()?
-        .local_review_verdicts_mut()
-        .insert(LocalReviewVerdict {
-            id: format!("{principal_id}-{index}"),
-            target: FEAT_REF.to_owned(),
-            principal_id: principal_id.to_owned(),
-            verdict: "approved".to_owned(),
-            head_oid: head.to_string(),
-            created_at: fixed_time(index),
-        })?;
-    Ok(())
-}
-
 fn fixed_time(seconds: i64) -> chrono::NaiveDateTime {
     chrono::DateTime::from_timestamp(1_735_689_600 + seconds, 0)
         .expect("fixed timestamp is valid")
@@ -379,10 +452,32 @@ fn verdict_count(ctx: &but_ctx::Context) -> anyhow::Result<usize> {
         .len())
 }
 
+async fn approve_branch(ctx: &but_ctx::Context, principal_id: &str) -> anyhow::Result<()> {
+    temp_env::async_with_vars([("BUT_AGENT_HANDLE", Some(principal_id))], async {
+        but_api::legacy::forge::approve_review(ctx.to_sync(), "feat".to_owned()).await
+    })
+    .await
+}
+
+fn advance_feature_head(repo: &gix::Repository) -> anyhow::Result<()> {
+    but_testsupport::invoke_bash(
+        r#"
+git checkout feat
+echo H2 >>feat.txt
+git add feat.txt
+git commit -m "advance feat"
+git checkout main
+"#,
+        repo,
+    );
+    Ok(())
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 struct GateErrorPayload {
     code: &'static str,
     message: String,
+    unmet: Vec<String>,
 }
 
 fn classify_error(err: &anyhow::Error) -> Option<GateErrorPayload> {
@@ -390,6 +485,7 @@ fn classify_error(err: &anyhow::Error) -> Option<GateErrorPayload> {
         return Some(GateErrorPayload {
             code: error.code,
             message: error.message.clone(),
+            unmet: error.unmet.clone(),
         });
     }
 
@@ -397,6 +493,7 @@ fn classify_error(err: &anyhow::Error) -> Option<GateErrorPayload> {
         return Some(GateErrorPayload {
             code: denial.code,
             message: denial.message.clone(),
+            unmet: Vec::new(),
         });
     }
 
@@ -404,6 +501,7 @@ fn classify_error(err: &anyhow::Error) -> Option<GateErrorPayload> {
         .map(|error| GateErrorPayload {
             code: error.code(),
             message: error.to_string(),
+            unmet: Vec::new(),
         })
 }
 
