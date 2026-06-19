@@ -1,9 +1,13 @@
 {
   "task": "GATES-001",
   "base_sha": "220686834207ecd95d4b029e7589d1dea5b15db1",
-  "status": "blocked",
-  "blocker_classification": "recoverable_dependency_missing",
-  "blocker": "The in-scope implementation requires adding but-authz as a direct but-api dependency. Cargo updates Cargo.lock for that dependency, but Cargo.lock is outside the GATES-001 write scope, so the lockfile update must be owned by a separate dependency task.",
+  "commit_sha": "f0c234a8dc7165272dcafdac03a0c63ba0d97d9e",
+  "status": "completed",
+  "blocker_classification": null,
+  "blocker": null,
+  "notes": [
+    "Orchestrator lockfile probe found no Cargo.lock diff; implementation commit f0c234a8dc7165272dcafdac03a0c63ba0d97d9e is reviewable."
+  ],
   "commands": [
     {
       "command": "cargo test -p but-api commit_gate_feature_ok_protected_rejected",
