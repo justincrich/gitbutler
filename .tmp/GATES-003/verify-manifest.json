@@ -1,0 +1,55 @@
+{
+  "project_commands": {
+    "lint": "cargo clippy -p but-api -p but --all-targets && cargo fmt --check",
+    "test": "cargo test -p but-api merge_gate && cargo test -p but merge_gate",
+    "typecheck": "cargo check -p but-api -p but --all-targets"
+  },
+  "requirements": [
+    {
+      "id": "AC-1",
+      "verify": "cargo test -p but-api merge_gate_authorize_and_review_requirement"
+    },
+    {
+      "id": "AC-2",
+      "verify": "cargo test -p but-api merge_gate_below_min_approvals_blocked"
+    },
+    {
+      "id": "AC-3",
+      "verify": "cargo test -p but-api merge_gate_two_group_both_present_proceeds"
+    },
+    {
+      "id": "AC-4",
+      "verify": "cargo test -p but-api merge_gate_dryrun_and_malformed_failclosed"
+    },
+    {
+      "id": "TC-1",
+      "verify": "cargo test -p but-api merge_gate_authorize_and_review_requirement"
+    },
+    {
+      "id": "TC-2",
+      "verify": "cargo test -p but-api merge_gate_below_min_approvals_blocked"
+    },
+    {
+      "id": "TC-3",
+      "verify": "cargo test -p but-api merge_gate_two_group_both_present_proceeds"
+    },
+    {
+      "id": "TC-4",
+      "verify": "cargo test -p but-api merge_gate_dryrun_and_malformed_failclosed"
+    },
+    {
+      "id": "TC-5",
+      "verify": "cargo test -p but-api merge_gate_authorize_and_review_requirement"
+    },
+    {
+      "id": "TC-6",
+      "verify": "cargo test -p but-api merge_gate_two_group_both_present_proceeds"
+    }
+  ],
+  "task_id": "GATES-003",
+  "verification_policy": {
+    "requires_red_evidence": true,
+    "requires_seeded_evidence": true,
+    "requires_tests": true
+  }
+}
