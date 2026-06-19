@@ -1,7 +1,7 @@
 {
   "task_id": "GRPS-001",
-  "timestamp": "2026-06-19T17:39:27Z",
-  "commit_sha": "81a155de9c818b25553819734dd360ad8c4fb2f5",
+  "timestamp": "2026-06-19T18:00:00Z",
+  "commit_sha": "e814be6ae559e369b663b62b702a94faa49e3304",
   "typecheck": {
     "exit_code": 0
   },
@@ -16,36 +16,44 @@
       "verify": "cargo test -p but-authz group_union_authorizes_review_denies_merge",
       "exit_code": 0,
       "output_file": ".tmp/GRPS-001/ac-1-output.txt",
-      "red_against_start_file": ".tmp/GRPS-001/red-ac1-group-union.txt",
+      "red_against_start_file": null,
       "green_file": ".tmp/GRPS-001/green-ac1-group-union.txt",
-      "seeded_value": "reviews:write is allowed through group union while merge is denied with perm.denied"
+      "seeded_value": "reviews:write is allowed through group union while merge is denied with perm.denied",
+      "baseline_overlay_output_file": ".tmp/GRPS-001/AC-1-baseline-overlay-output.txt",
+      "baseline_overlay_exit_code": 0
     },
     {
       "id": "AC-2",
       "verify": "cargo test -p but-authz union_paths_stay_equal",
       "exit_code": 0,
       "output_file": ".tmp/GRPS-001/ac-2-output.txt",
-      "red_against_start_file": ".tmp/GRPS-001/red-structural-authorize-reunion.txt",
+      "red_against_start_file": null,
       "green_file": ".tmp/GRPS-001/green-ac2-union-paths.txt",
-      "seeded_value": "effective_authority equals principal_authorities and both reviewer paths expose exactly the reviews:write permission set"
+      "seeded_value": "effective_authority equals principal_authorities and both reviewer paths expose exactly the reviews:write permission set",
+      "baseline_overlay_output_file": ".tmp/GRPS-001/AC-2-baseline-overlay-output.txt",
+      "baseline_overlay_exit_code": 0
     },
     {
       "id": "AC-3",
       "verify": "cargo test -p but-authz delegated_admin_ceiling",
       "exit_code": 0,
       "output_file": ".tmp/GRPS-001/ac-3-output.txt",
-      "red_against_start_file": ".tmp/GRPS-001/red-structural-authorize-reunion.txt",
+      "red_against_start_file": null,
       "green_file": ".tmp/GRPS-001/green-ac3-delegated-admin.txt",
-      "seeded_value": "delegated admin is allowed while reviewer-only administration:write is denied"
+      "seeded_value": "delegated admin is allowed while reviewer-only administration:write is denied",
+      "baseline_overlay_output_file": ".tmp/GRPS-001/AC-3-baseline-overlay-output.txt",
+      "baseline_overlay_exit_code": 0
     },
     {
       "id": "AC-4",
       "verify": "cargo test -p but-authz claims_do_not_widen_union_even_with_group_backing",
       "exit_code": 0,
       "output_file": ".tmp/GRPS-001/ac-4-output.txt",
-      "red_against_start_file": ".tmp/GRPS-001/red-structural-authorize-reunion.txt",
+      "red_against_start_file": null,
       "green_file": ".tmp/GRPS-001/green-ac4-claims.txt",
-      "seeded_value": "fabricated merge/admin caller claims are denied by cfg principal_authorities lookup"
+      "seeded_value": "fabricated merge/admin caller claims are denied by cfg principal_authorities lookup",
+      "baseline_overlay_output_file": ".tmp/GRPS-001/AC-4-baseline-overlay-output.txt",
+      "baseline_overlay_exit_code": 0
     },
     {
       "id": "TC-1",
@@ -97,6 +105,13 @@
     }
   ],
   "red_evidence": {
-    "required": true
+    "required": true,
+    "available": false,
+    "status": "blocked",
+    "blocker_classification": "task_contract_invalid",
+    "proof_file": ".tmp/GRPS-001/red-evidence-impossibility.md",
+    "baseline_sha": "55fa6829d8ca7a9d2378363bd198f08e88c36887",
+    "baseline_overlay_dir": "/tmp/grps-001-baseline-evidence",
+    "reason": "Final watched AC tests pass on the required baseline overlay, so truthful RED evidence cannot be produced."
   }
 }
