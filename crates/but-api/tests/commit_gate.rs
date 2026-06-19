@@ -371,6 +371,214 @@ fn commit_gate_commit_relative_checks_contents_write_without_branch_protection()
 }
 
 #[test]
+#[serial_test::serial]
+fn commit_gate_worktree_integrate_protected_rejected() -> anyhow::Result<()> {
+    let (repo, _tmp) = governed_repo();
+    let main_before = ref_id(&repo, MAIN_REF)?;
+    let feature_target = gix::refs::FullName::try_from(FEAT_REF)?;
+    let protected_target = gix::refs::FullName::try_from(MAIN_REF)?;
+
+    temp_env::with_var("BUT_AGENT_HANDLE", Some("dev"), || -> anyhow::Result<()> {
+        let mut ctx = but_ctx::Context::from_repo(repo.clone())?.with_memory_app_cache();
+        let worktree_id = but_worktrees::WorktreeId::generate();
+        let protected_result =
+            but_api::legacy::worktree::worktree_integrate(&mut ctx, worktree_id, protected_target);
+        let denial = assert_governance_denied(protected_result, "branch.protected");
+        assert!(
+            denial.message.contains("main"),
+            "branch.protected message should name the protected main branch"
+        );
+        assert_eq!(
+            ref_id(&repo, MAIN_REF)?,
+            main_before,
+            "main ref must remain unchanged after protected worktree integration denial"
+        );
+
+        let mut ctx = but_ctx::Context::from_repo(repo.clone())?.with_memory_app_cache();
+        let worktree_id = but_worktrees::WorktreeId::generate();
+        let feature_result =
+            but_api::legacy::worktree::worktree_integrate(&mut ctx, worktree_id, feature_target);
+        assert_no_governance_denial(feature_result, "feature-target worktree integration");
+
+        Ok(())
+    })?;
+
+    Ok(())
+}
+
+#[test]
+#[serial_test::serial]
+fn commit_gate_apply_integrate_readonly_denied() -> anyhow::Result<()> {
+    let (repo, _tmp) = governed_repo();
+    let feat = gix::refs::FullName::try_from(FEAT_REF)?;
+    let feat_before = ref_id(&repo, FEAT_REF)?;
+
+    {
+        let mut ctx = but_ctx::Context::from_repo(repo.clone())?.with_memory_app_cache();
+        set_default_target_to_origin_main(&mut ctx, &repo)?;
+    }
+
+    temp_env::with_var("BUT_AGENT_HANDLE", Some("ro"), || -> anyhow::Result<()> {
+        let mut ctx = but_ctx::Context::from_repo(repo.clone())?.with_memory_app_cache();
+        let apply_denial = assert_governance_denied(
+            but_api::branch::apply(&mut ctx, feat.as_ref()),
+            "perm.denied",
+        );
+        assert!(
+            apply_denial.message.contains("contents:write"),
+            "branch::apply denial should name the missing contents:write permission"
+        );
+        assert_eq!(
+            ref_id(&repo, FEAT_REF)?,
+            feat_before,
+            "readonly branch::apply denial must leave feat unchanged"
+        );
+
+        let mut ctx = but_ctx::Context::from_repo(repo.clone())?.with_memory_app_cache();
+        let integration = integration_plan_for_branch(&ctx, feat.as_ref())?;
+        let integrate_denial = assert_governance_denied(
+            but_api::branch::apply_branch_integration(
+                &mut ctx,
+                feat.as_ref(),
+                integration,
+                DryRun::No,
+            ),
+            "perm.denied",
+        );
+        assert!(
+            integrate_denial.message.contains("contents:write"),
+            "apply_branch_integration denial should name the missing contents:write permission"
+        );
+        assert_eq!(
+            ref_id(&repo, FEAT_REF)?,
+            feat_before,
+            "readonly apply_branch_integration denial must leave feat unchanged"
+        );
+
+        Ok(())
+    })?;
+
+    reset_worktree(&repo);
+
+    temp_env::with_var("BUT_AGENT_HANDLE", Some("dev"), || -> anyhow::Result<()> {
+        let mut ctx = but_ctx::Context::from_repo(repo.clone())?.with_memory_app_cache();
+        assert_no_governance_denial(
+            but_api::branch::apply(&mut ctx, feat.as_ref()),
+            "contents:write branch::apply",
+        );
+
+        let mut ctx = but_ctx::Context::from_repo(repo.clone())?.with_memory_app_cache();
+        let integration = integration_plan_for_branch(&ctx, feat.as_ref())?;
+        assert_no_governance_denial(
+            but_api::branch::apply_branch_integration(
+                &mut ctx,
+                feat.as_ref(),
+                integration,
+                DryRun::No,
+            ),
+            "contents:write apply_branch_integration",
+        );
+
+        Ok(())
+    })?;
+
+    Ok(())
+}
+
+#[test]
+#[serial_test::serial]
+fn commit_gate_apply_integrate_no_target_ungoverned() -> anyhow::Result<()> {
+    let (repo, _tmp) = repo_with_no_governance_config();
+    let feat = gix::refs::FullName::try_from(FEAT_REF)?;
+
+    temp_env::with_var("BUT_AGENT_HANDLE", Some("ro"), || -> anyhow::Result<()> {
+        let mut ctx = but_ctx::Context::from_repo(repo.clone())?.with_memory_app_cache();
+        clear_default_target(&mut ctx)?;
+        assert_no_governance_denial(
+            but_api::branch::apply(&mut ctx, feat.as_ref()),
+            "no-target branch::apply",
+        );
+
+        let mut ctx = but_ctx::Context::from_repo(repo.clone())?.with_memory_app_cache();
+        clear_default_target(&mut ctx)?;
+        let integration = empty_body_integration_plan(&repo)?;
+        assert_no_governance_denial(
+            but_api::branch::apply_branch_integration(
+                &mut ctx,
+                feat.as_ref(),
+                integration,
+                DryRun::No,
+            ),
+            "no-target apply_branch_integration",
+        );
+
+        Ok(())
+    })?;
+
+    Ok(())
+}
+
+#[test]
+#[serial_test::serial]
+fn commit_gate_apply_integrate_dryrun_targetref_pinned() -> anyhow::Result<()> {
+    let (repo, _tmp) = governed_repo();
+    let feat = gix::refs::FullName::try_from(FEAT_REF)?;
+    let feat_before = ref_id(&repo, FEAT_REF)?;
+
+    {
+        let mut ctx = but_ctx::Context::from_repo(repo.clone())?.with_memory_app_cache();
+        set_default_target_to_origin_main(&mut ctx, &repo)?;
+    }
+
+    temp_env::with_var("BUT_AGENT_HANDLE", Some("ro"), || -> anyhow::Result<()> {
+        let mut ctx = but_ctx::Context::from_repo(repo.clone())?.with_memory_app_cache();
+        let integration = integration_plan_for_branch(&ctx, feat.as_ref())?;
+        let dryrun_denial = assert_governance_denied(
+            but_api::branch::apply_branch_integration(
+                &mut ctx,
+                feat.as_ref(),
+                integration,
+                DryRun::Yes,
+            ),
+            "perm.denied",
+        );
+        assert!(
+            dryrun_denial.message.contains("contents:write"),
+            "DryRun integrate denial should name the missing contents:write permission"
+        );
+        assert_eq!(
+            ref_id(&repo, FEAT_REF)?,
+            feat_before,
+            "denied DryRun apply_branch_integration must leave feat unchanged"
+        );
+
+        reset_worktree(&repo);
+        weaken_worktree_governance(&repo);
+        let mut ctx = but_ctx::Context::from_repo(repo.clone())?.with_memory_app_cache();
+        let apply_denial = assert_governance_denied(
+            but_api::branch::apply(&mut ctx, feat.as_ref()),
+            "perm.denied",
+        );
+        assert!(
+            apply_denial.message.contains("contents:write"),
+            "working-tree governance edits must not grant contents:write"
+        );
+        assert_eq!(
+            ref_id(&repo, FEAT_REF)?,
+            feat_before,
+            "working-tree governance edit must not let readonly apply advance feat"
+        );
+
+        Ok(())
+    })?;
+
+    assert_gate_helper_call_count("src/branch.rs", 2)?;
+    assert_gate_helper_call_count("src/legacy/worktree.rs", 1)?;
+
+    Ok(())
+}
+
+#[test]
 fn commit_gate_generated_entrypoint_authorizes_before_exclusive_guard() -> anyhow::Result<()> {
     let source =
         std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/src/commit/create.rs"))?;
@@ -476,6 +684,127 @@ git checkout main
     (repo, tmp)
 }
 
+fn set_default_target_to_origin_main(
+    ctx: &mut but_ctx::Context,
+    repo: &gix::Repository,
+) -> anyhow::Result<()> {
+    but_testsupport::invoke_bash(
+        "git update-ref refs/remotes/origin/main refs/heads/main",
+        repo,
+    );
+    let target = gix::refs::FullName::try_from("refs/remotes/origin/main")?;
+    but_api::branch::set_default_target(ctx, target.as_ref(), Some("origin".to_owned()))?;
+    Ok(())
+}
+
+fn clear_default_target(ctx: &mut but_ctx::Context) -> anyhow::Result<()> {
+    let mut project_meta = ctx.project_meta()?;
+    project_meta.target_ref = None;
+    project_meta.target_commit_id = None;
+    ctx.set_project_meta(project_meta)?;
+    Ok(())
+}
+
+fn integration_plan_for_branch(
+    ctx: &but_ctx::Context,
+    branch: &gix::refs::FullNameRef,
+) -> anyhow::Result<but_api::branch::json::InteractiveIntegration> {
+    let initial = but_api::branch::get_initial_branch_integration(
+        ctx,
+        branch,
+        Some(but_api::branch::json::BranchIntegrationStrategy::PullRebase),
+    );
+    match initial {
+        Ok(initial) => Ok(workspace_integration_to_json(initial.integration)),
+        Err(_) => {
+            let repo = ctx.repo.get()?;
+            empty_body_integration_plan(&repo)
+        }
+    }
+}
+
+fn empty_body_integration_plan(
+    repo: &gix::Repository,
+) -> anyhow::Result<but_api::branch::json::InteractiveIntegration> {
+    let merge_base = ref_id(repo, MAIN_REF)?;
+    Ok(but_api::branch::json::InteractiveIntegration {
+        merge_base: merge_base.into(),
+        first_local_not_integrated: None,
+        steps: vec![but_api::branch::json::InteractiveIntegrationStep::Pick {
+            commit_id: ref_id(repo, FEAT_REF)?.into(),
+        }],
+    })
+}
+
+fn workspace_integration_to_json(
+    integration: but_workspace::branch::integrate_branch_upstream::InteractiveIntegration,
+) -> but_api::branch::json::InteractiveIntegration {
+    but_api::branch::json::InteractiveIntegration {
+        merge_base: integration.merge_base.into(),
+        first_local_not_integrated: integration.first_local_not_integrated.map(Into::into),
+        steps: integration
+            .steps
+            .into_iter()
+            .map(|step| match step {
+                but_workspace::branch::InteractiveIntegrationStep::Pick { commit_id } => {
+                    but_api::branch::json::InteractiveIntegrationStep::Pick {
+                        commit_id: commit_id.into(),
+                    }
+                }
+                but_workspace::branch::InteractiveIntegrationStep::Squash { commits, message } => {
+                    but_api::branch::json::InteractiveIntegrationStep::Squash {
+                        commits: commits.into_iter().map(Into::into).collect(),
+                        message,
+                    }
+                }
+                but_workspace::branch::InteractiveIntegrationStep::Merge { commit_id } => {
+                    but_api::branch::json::InteractiveIntegrationStep::Merge {
+                        commit_id: commit_id.into(),
+                    }
+                }
+            })
+            .collect(),
+    }
+}
+
+fn weaken_worktree_governance(repo: &gix::Repository) {
+    but_testsupport::invoke_bash(
+        r#"
+cat >.gitbutler/permissions.toml <<'EOF'
+[[principal]]
+id = "ro"
+permissions = ["contents:write"]
+EOF
+
+cat >.gitbutler/gates.toml <<'EOF'
+[[branch]]
+name = "main"
+protected = false
+
+[[branch]]
+name = "feat"
+protected = false
+EOF
+"#,
+        repo,
+    );
+}
+
+fn assert_gate_helper_call_count(
+    relative_path: &str,
+    expected_minimum: usize,
+) -> anyhow::Result<()> {
+    let source = std::fs::read_to_string(
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join(relative_path),
+    )?;
+    let count = source.matches("enforce_commit_gate_for_target").count();
+    assert!(
+        count >= expected_minimum,
+        "{relative_path} should call enforce_commit_gate_for_target at least {expected_minimum} time(s), found {count}"
+    );
+    Ok(())
+}
+
 /// Count how many of the two governance files are committed in `target_ref`'s
 /// tree. Used by the anti-fakeability harness to keep the fixtures distinct.
 fn governance_file_count(repo: &gix::Repository, target_ref: &str) -> anyhow::Result<usize> {
@@ -571,5 +900,36 @@ fn assert_commit_denied(
             );
             gate_error
         }
+    }
+}
+
+fn assert_governance_denied<T>(
+    result: anyhow::Result<T>,
+    code: &'static str,
+) -> but_api::commit::create::gate::CommitGateError {
+    match result {
+        Ok(_) => panic!("operation should be denied by the commit gate with {code}"),
+        Err(err) => {
+            let gate_error =
+                but_api::commit::create::gate::classify_error(&err).unwrap_or_else(|| {
+                    panic!(
+                        "operation should fail with a structured commit gate denial, got: {err:#}"
+                    )
+                });
+            assert_eq!(
+                gate_error.code, code,
+                "commit gate should return the expected stable code"
+            );
+            gate_error
+        }
+    }
+}
+
+fn assert_no_governance_denial<T>(result: anyhow::Result<T>, label: &str) {
+    if let Err(err) = result {
+        assert!(
+            but_api::commit::create::gate::classify_error(&err).is_none(),
+            "{label} should not be rejected by the commit gate, got: {err:#}"
+        );
     }
 }

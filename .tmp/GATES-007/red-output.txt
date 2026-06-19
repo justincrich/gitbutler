@@ -1,0 +1,45 @@
+   Compiling but-api v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/GATES-007/crates/but-api)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.74s
+     Running tests/commit_gate.rs (target/debug/deps/commit_gate-b8643f2d47fcfee4)
+
+running 12 tests
+test commit_gate_generated_entrypoint_authorizes_before_exclusive_guard ... ok
+test commit_gate_apply_integrate_dryrun_targetref_pinned ... FAILED
+test governance_fixtures_are_structurally_distinct ... ok
+test commit_gate_apply_integrate_readonly_denied ... FAILED
+test commit_gate_absent_config_is_ungoverned ... ok
+test commit_gate_readonly_and_bad_handle_denied ... ok
+test commit_gate_apply_integrate_no_target_ungoverned ... ok
+test commit_gate_feature_ok_protected_rejected ... ok
+test commit_gate_malformed_partial_and_dryrun ... ok
+test commit_gate_commit_relative_checks_contents_write_without_branch_protection ... ok
+test commit_gate_edit_cannot_unprotect ... ok
+test commit_gate_worktree_integrate_protected_rejected ... FAILED
+
+failures:
+
+---- commit_gate_apply_integrate_dryrun_targetref_pinned stdout ----
+
+thread 'commit_gate_apply_integrate_dryrun_targetref_pinned' (81220106) panicked at crates/but-api/tests/commit_gate.rs:915:21:
+operation should fail with a structured commit gate denial, got: Branch 'refs/heads/feat' has no tracking branch
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- commit_gate_apply_integrate_readonly_denied stdout ----
+
+thread 'commit_gate_apply_integrate_readonly_denied' (81220108) panicked at crates/but-api/tests/commit_gate.rs:911:18:
+operation should be denied by the commit gate with perm.denied
+
+---- commit_gate_worktree_integrate_protected_rejected stdout ----
+
+thread 'commit_gate_worktree_integrate_protected_rejected' (81220115) panicked at crates/but-api/tests/commit_gate.rs:915:21:
+operation should fail with a structured commit gate denial, got: Worktree '8408b47c-b5a9-4a7c-85ee-91950f484672' not found
+
+
+failures:
+    commit_gate_apply_integrate_dryrun_targetref_pinned
+    commit_gate_apply_integrate_readonly_denied
+    commit_gate_worktree_integrate_protected_rejected
+
+test result: FAILED. 9 passed; 3 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.33s
+
+error: test failed, to rerun pass `-p but-api --test commit_gate`
