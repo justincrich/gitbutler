@@ -1,0 +1,109 @@
+{
+  "task_id": "AUTHZ-003",
+  "commit_sha": "b1d734bc5e00d359f0ddfeddad9176fc54a04c9b",
+  "requirement_results": [
+    {
+      "id": "AC-1",
+      "verify": "cargo test -p but-authz authorize_held_vs_missing",
+      "exit_code": 0,
+      "output": ".tmp/AUTHZ-003/verify-authorize_held_vs_missing.txt",
+      "seeded": ".tmp/AUTHZ-003/seeded-ac1-authorize_held_vs_missing.txt",
+      "RED": ".tmp/AUTHZ-003/red-ac1-authorize_held_vs_missing.txt",
+      "GREEN": ".tmp/AUTHZ-003/green-ac1-authorize_held_vs_missing.txt"
+    },
+    {
+      "id": "AC-2",
+      "verify": "cargo test -p but-authz resolve_no_handle_rejected",
+      "exit_code": 0,
+      "output": ".tmp/AUTHZ-003/verify-resolve_no_handle_rejected.txt",
+      "seeded": ".tmp/AUTHZ-003/seeded-ac2-resolve_no_handle_rejected.txt",
+      "RED": ".tmp/AUTHZ-003/red-ac2-resolve_no_handle_rejected.txt",
+      "GREEN": ".tmp/AUTHZ-003/green-ac2-resolve_no_handle_rejected.txt"
+    },
+    {
+      "id": "AC-3",
+      "verify": "cargo test -p but-authz resolve_unknown_principal_denied",
+      "exit_code": 0,
+      "output": ".tmp/AUTHZ-003/verify-resolve_unknown_principal_denied.txt",
+      "seeded": ".tmp/AUTHZ-003/seeded-ac3-resolve_unknown_principal_denied.txt",
+      "RED": ".tmp/AUTHZ-003/red-ac3-resolve_unknown_principal_denied.txt",
+      "GREEN": ".tmp/AUTHZ-003/green-ac3-resolve_unknown_principal_denied.txt"
+    },
+    {
+      "id": "AC-4",
+      "verify": "cargo test -p but-authz effective_authority_union",
+      "exit_code": 0,
+      "output": ".tmp/AUTHZ-003/verify-effective_authority_union.txt",
+      "seeded": ".tmp/AUTHZ-003/seeded-ac4-effective_authority_union.txt",
+      "RED": ".tmp/AUTHZ-003/red-ac4-effective_authority_union.txt",
+      "GREEN": ".tmp/AUTHZ-003/green-ac4-effective_authority_union.txt"
+    },
+    {
+      "id": "AC-5",
+      "verify": "cargo test -p but-authz authority_only_from_config",
+      "exit_code": 0,
+      "output": ".tmp/AUTHZ-003/verify-authority_only_from_config.txt",
+      "seeded": ".tmp/AUTHZ-003/seeded-ac5-authority_only_from_config.txt",
+      "RED": ".tmp/AUTHZ-003/red-ac5-authority_only_from_config.txt",
+      "GREEN": ".tmp/AUTHZ-003/green-ac5-authority_only_from_config.txt"
+    },
+    {
+      "id": "TC-1",
+      "verify": "cargo test -p but-authz authorize_held_vs_missing",
+      "exit_code": 0,
+      "output": ".tmp/AUTHZ-003/verify-authorize_held_vs_missing.txt"
+    },
+    {
+      "id": "TC-2",
+      "verify": "cargo test -p but-authz authorize_held_vs_missing",
+      "exit_code": 0,
+      "output": ".tmp/AUTHZ-003/verify-authorize_held_vs_missing.txt"
+    },
+    {
+      "id": "TC-3",
+      "verify": "cargo test -p but-authz resolve_no_handle_rejected",
+      "exit_code": 0,
+      "output": ".tmp/AUTHZ-003/verify-resolve_no_handle_rejected.txt"
+    },
+    {
+      "id": "TC-4",
+      "verify": "cargo test -p but-authz resolve_unknown_principal_denied",
+      "exit_code": 0,
+      "output": ".tmp/AUTHZ-003/verify-resolve_unknown_principal_denied.txt"
+    },
+    {
+      "id": "TC-5",
+      "verify": "cargo test -p but-authz effective_authority_union",
+      "exit_code": 0,
+      "output": ".tmp/AUTHZ-003/verify-effective_authority_union.txt"
+    },
+    {
+      "id": "TC-6",
+      "verify": "cargo test -p but-authz authority_only_from_config",
+      "exit_code": 0,
+      "output": ".tmp/AUTHZ-003/verify-authority_only_from_config.txt"
+    }
+  ],
+  "tests": {
+    "command": "cargo test -p but-authz authorize",
+    "output": ".tmp/AUTHZ-003/test-output.txt",
+    "exit_code": 0
+  },
+  "typecheck": {
+    "command": "cargo check -p but-authz --all-targets",
+    "output": ".tmp/AUTHZ-003/typecheck-output.txt",
+    "exit_code": 0
+  },
+  "lint": {
+    "command": "cargo clippy -p but-authz --all-targets",
+    "output": ".tmp/AUTHZ-003/lint-output.txt",
+    "exit_code": 0
+  },
+  "additional_verification": [
+    {
+      "command": "! grep -rEn '== \"(read|triage|write|maintain|admin)\"|\"(read|triage|write|maintain|admin)\" *=>|from_role\\(' crates/but-authz/src/authorize.rs",
+      "output": ".tmp/AUTHZ-003/verify-authorize-role-string-scan.txt",
+      "exit_code": 0
+    }
+  ]
+}
