@@ -1,0 +1,89 @@
+{
+  "task_id": "GATES-002",
+  "timestamp": "2026-06-19T08:33:46Z",
+  "commit_sha": "bd07178faffdbff2dd36b4e32da803a360d6720d",
+  "typecheck": {
+    "exit_code": 0
+  },
+  "lint": {
+    "exit_code": 0,
+    "warnings": 0
+  },
+  "pre_existing_issues": false,
+  "requirement_results": [
+    {
+      "id": "AC-1",
+      "verify": "cargo test -p but-db local_review_verdicts::insert_and_query_by_target",
+      "exit_code": 0,
+      "output_file": ".tmp/GATES-002/ac-1-output.txt",
+      "red_against_start_file": ".tmp/GATES-002/AC-1-red-against-start.txt",
+      "green_file": ".tmp/GATES-002/AC-1-green.txt",
+      "seeded_artifact_file": ".tmp/GATES-002/AC-1-seeded-artifact.txt",
+      "seeded_value": "insert_and_query_by_target returned one row with id v1, principal_id rust-reviewer, verdict approved, and head_oid aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    {
+      "id": "AC-2",
+      "verify": "cargo test -p but-db local_review_verdicts::head_pinning_distinguishes_heads",
+      "exit_code": 0,
+      "output_file": ".tmp/GATES-002/ac-2-output.txt",
+      "red_against_start_file": ".tmp/GATES-002/AC-2-red-against-start.txt",
+      "green_file": ".tmp/GATES-002/AC-2-green.txt",
+      "seeded_artifact_file": ".tmp/GATES-002/AC-2-seeded-artifact.txt",
+      "seeded_value": "head_pinning_distinguishes_heads returned rows for head_oid 1111111111111111111111111111111111111111 and 2222222222222222222222222222222222222222"
+    },
+    {
+      "id": "AC-3",
+      "verify": "cargo test -p but-db local_review_verdicts::empty_target_returns_empty",
+      "exit_code": 0,
+      "output_file": ".tmp/GATES-002/ac-3-output.txt",
+      "red_against_start_file": ".tmp/GATES-002/AC-3-red-against-start.txt",
+      "green_file": ".tmp/GATES-002/AC-3-green.txt",
+      "seeded_artifact_file": ".tmp/GATES-002/AC-3-seeded-artifact.txt",
+      "seeded_value": "empty_target_returns_empty returned rows=[] for refs/heads/feat before and after storing o1 on refs/heads/other"
+    },
+    {
+      "id": "AC-4",
+      "verify": "cargo test -p but-db local_review_verdicts::distinct_principals_both_returned",
+      "exit_code": 0,
+      "output_file": ".tmp/GATES-002/ac-4-output.txt",
+      "red_against_start_file": ".tmp/GATES-002/AC-4-red-against-start.txt",
+      "green_file": ".tmp/GATES-002/AC-4-green.txt",
+      "seeded_artifact_file": ".tmp/GATES-002/AC-4-seeded-artifact.txt",
+      "seeded_value": "distinct_principals_both_returned returned rust-reviewer at 1000000 before justin at 1000001"
+    },
+    {
+      "id": "TC-1",
+      "verify": "cargo test -p but-db local_review_verdicts::insert_and_query_by_target",
+      "exit_code": 0,
+      "output_file": ".tmp/GATES-002/tc-1-output.txt"
+    },
+    {
+      "id": "TC-2",
+      "verify": "cargo test -p but-db local_review_verdicts::head_pinning_distinguishes_heads",
+      "exit_code": 0,
+      "output_file": ".tmp/GATES-002/tc-2-output.txt"
+    },
+    {
+      "id": "TC-3",
+      "verify": "cargo test -p but-db local_review_verdicts::empty_target_returns_empty",
+      "exit_code": 0,
+      "output_file": ".tmp/GATES-002/tc-3-output.txt"
+    },
+    {
+      "id": "TC-4",
+      "verify": "cargo test -p but-db local_review_verdicts::distinct_principals_both_returned",
+      "exit_code": 0,
+      "output_file": ".tmp/GATES-002/tc-4-output.txt"
+    },
+    {
+      "id": "TC-5",
+      "verify": "cargo test -p but-db local_review_verdicts",
+      "exit_code": 0,
+      "output_file": ".tmp/GATES-002/tc-5-output.txt"
+    }
+  ],
+  "red_evidence": {
+    "required": true,
+    "output_file": ".tmp/GATES-002/red-output.txt"
+  }
+}
