@@ -8,13 +8,100 @@ use serde::{Deserialize, Serialize};
 use tracing::instrument;
 
 use crate::{
-    CliId, IdMap,
+    CliError, CliId, IdMap,
     id::parser::parse_sources,
     legacy::workspace::HeadInfoStack,
     theme::{self, Paint},
     tui::get_text::{self, HTML_COMMENT_END_MARKER, HTML_COMMENT_START_MARKER},
     utils::{Confirm, ConfirmDefault, OutputChannel},
 };
+
+/// Approve a branch review locally after the forge boundary authorizes the actor.
+pub async fn approve(
+    ctx: &mut Context,
+    branch: String,
+    out: &mut OutputChannel,
+) -> anyhow::Result<(), CliError> {
+    but_api::legacy::forge::approve_review(ctx.to_sync(), branch.clone())
+        .await
+        .map_err(review_gate_cli_error)?;
+
+    if let Some(out) = out.for_human() {
+        writeln!(out, "Approved review for {branch}")?;
+    }
+
+    Ok(())
+}
+
+/// Request changes on a branch review after the forge boundary authorizes the actor.
+pub async fn request_changes(
+    ctx: &mut Context,
+    branch: String,
+    message: Option<String>,
+    out: &mut OutputChannel,
+) -> anyhow::Result<(), CliError> {
+    but_api::legacy::forge::request_changes_review(ctx.to_sync(), branch.clone(), message)
+        .await
+        .map_err(review_gate_cli_error)?;
+
+    if let Some(out) = out.for_human() {
+        writeln!(out, "Requested changes for {branch}")?;
+    }
+
+    Ok(())
+}
+
+/// Comment on a branch review after the forge boundary authorizes the actor.
+pub async fn comment(
+    ctx: &mut Context,
+    branch: String,
+    message: String,
+    out: &mut OutputChannel,
+) -> anyhow::Result<(), CliError> {
+    but_api::legacy::forge::comment_review(ctx.to_sync(), branch.clone(), message)
+        .await
+        .map_err(review_gate_cli_error)?;
+
+    if let Some(out) = out.for_human() {
+        writeln!(out, "Commented on review for {branch}")?;
+    }
+
+    Ok(())
+}
+
+/// Close a branch review after the forge boundary authorizes the actor.
+pub async fn close(
+    ctx: &mut Context,
+    branch: String,
+    out: &mut OutputChannel,
+) -> anyhow::Result<(), CliError> {
+    but_api::legacy::forge::close_review(ctx.to_sync(), branch.clone())
+        .await
+        .map_err(review_gate_cli_error)?;
+
+    if let Some(out) = out.for_human() {
+        writeln!(out, "Closed review for {branch}")?;
+    }
+
+    Ok(())
+}
+
+fn review_gate_cli_error(err: anyhow::Error) -> CliError {
+    if let Some(gate_error) = but_api::legacy::forge::classify_error(&err) {
+        return anyhow::anyhow!(
+            "{}",
+            serde_json::json!({
+                "error": {
+                    "code": gate_error.code,
+                    "message": gate_error.message,
+                }
+            })
+        )
+        .into();
+    }
+
+    err.into()
+}
 
 /// Automatically merge the review once all prerequisites are met.
 pub async fn enable_auto_merge(

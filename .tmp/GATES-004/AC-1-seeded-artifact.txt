@@ -1,0 +1,4 @@
+AC-1 dev denial stderr: Error: {"error":{"code":"perm.denied","message":"action requires reviews:write; authorization denied (held permissions: contents:write, pull_requests:write)"}}
+AC-1 unset handle denial stderr: Error: {"error":{"code":"perm.denied","message":"BUT_AGENT_HANDLE is required to resolve a governed principal"}}
+AC-1 empty handle denial stderr: Error: {"error":{"code":"perm.denied","message":"BUT_AGENT_HANDLE is required to resolve a governed principal"}}
+AC-1 denied verdict count: 0

@@ -1050,7 +1050,7 @@ async fn match_subcommand(
             };
 
             maybe_run_status_after(status_after, &result, &mut ctx, out).await;
-            result
+            result.map_err(command::legacy::commit::commit_gate_cli_error)
         }
         #[cfg(all(feature = "legacy", feature = "but-2"))]
         Subcommands::Commit2(commit_args) => {
@@ -1306,6 +1306,26 @@ async fn match_subcommand(
                     .context("Failed to set forge review template.")
                     .emit_metrics(metrics_ctx)
                     .map_err(CliError::from)
+                }
+                Some(forge::pr::Subcommands::Approve { branch }) => {
+                    command::legacy::forge::review::approve(&mut ctx, branch, out)
+                        .await
+                        .emit_metrics(metrics_ctx)
+                }
+                Some(forge::pr::Subcommands::RequestChanges { branch, message }) => {
+                    command::legacy::forge::review::request_changes(&mut ctx, branch, message, out)
+                        .await
+                        .emit_metrics(metrics_ctx)
+                }
+                Some(forge::pr::Subcommands::Comment { branch, message }) => {
+                    command::legacy::forge::review::comment(&mut ctx, branch, message, out)
+                        .await
+                        .emit_metrics(metrics_ctx)
+                }
+                Some(forge::pr::Subcommands::Close { branch }) => {
+                    command::legacy::forge::review::close(&mut ctx, branch, out)
+                        .await
+                        .emit_metrics(metrics_ctx)
                 }
                 Some(forge::pr::Subcommands::AutoMerge { selector, off }) => {
                     command::legacy::forge::review::enable_auto_merge(&mut ctx, selector, off, out)

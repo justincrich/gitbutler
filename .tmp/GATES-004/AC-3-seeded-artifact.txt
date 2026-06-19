@@ -1,0 +1,2 @@
+AC-3 ro comment denial stderr: Error: {"error":{"code":"perm.denied","message":"action requires comments:write; authorization denied (held permissions: contents:read)"}}
+AC-3 reviewer comment stderr:

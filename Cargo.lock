@@ -982,6 +982,7 @@ dependencies = [
  "but-testsupport",
  "but-workspace",
  "but-worktrees",
+ "chrono",
  "futures",
  "gitbutler-branch",
  "gitbutler-branch-actions",
@@ -1013,6 +1014,7 @@ dependencies = [
  "tokio",
  "tracing",
  "url",
+ "uuid",
  "which",
 ]
 

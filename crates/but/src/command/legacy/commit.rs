@@ -9,7 +9,7 @@ use gitbutler_repo::hooks;
 
 use super::{ShowDiffInEditor, estimate_diff_blob_size};
 use crate::{
-    CliId, CliResult, IdMap,
+    CliError, CliId, CliResult, IdMap,
     args::atoms::{BranchArg, BranchOrCommit, CliIdArg, Priority, Purpose, ResolvedCliIdArg},
     bad_input,
     command::legacy::status::assignment::{CLIHunkAssignment, FileAssignment},
@@ -573,6 +573,27 @@ pub(crate) fn commit(
     }
 
     Ok(())
+}
+
+pub(crate) fn commit_gate_cli_error(err: CliError) -> CliError {
+    let CliError::Internal(error) = err else {
+        return err;
+    };
+
+    if let Some(gate_error) = but_api::commit::create::gate::classify_error(&error) {
+        return anyhow::anyhow!(
+            "{}",
+            serde_json::json!({
+                "error": {
+                    "code": gate_error.code,
+                    "message": gate_error.message,
+                }
+            })
+        )
+        .into();
+    }
+
+    error.into()
 }
 
 fn create_independent_branch(
