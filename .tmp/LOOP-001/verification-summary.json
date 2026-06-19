@@ -1,0 +1,163 @@
+{
+  "taskId": "LOOP-001",
+  "remediationTaskId": "FIX-LOOP-001-FAKEABILITY-ASSERTIONS-2",
+  "baseCommit": "00fe3623c1ad617fd942c070ef45be085fd955e2",
+  "assertion_strengthening": {
+    "denials": "Every governed-loop denial now asserts exit code 1, parses the CLI JSON error envelope, checks exact error.code, and requires non-empty error.message. Merge-gate denials additionally require a non-empty remediation_hint with expected terms.",
+    "positive_pr_new": "Positive `but pr new` paths now assert the command reaches the downstream forge/provider boundary after pull_requests:write authorization, instead of only checking that stderr omits perm.denied.",
+    "remediation_rescope": "The remediation proof honestly follows the implemented merge-denial hint from the governed feature branch. The structured hint names the reviewed-merge path; the subsequent steps are feature commit, PR creation, governed review approval, and maintainer merge gate reach."
+  },
+  "requirement_results": [
+    {
+      "id": "AC-1",
+      "status": "passed",
+      "test": "governed_loop_reference_flow_full_loop",
+      "evidence": ".tmp/LOOP-001/final-governed_loop_reference_flow_full_loop.txt",
+      "notes": "Full implementer, reviewer, maintainer flow is driven through the real but CLI. Positive PR creation requires the forge/provider boundary after gate permit; positive merge requires the forge merge_review boundary after gate permit. Denials parse exact structured JSON."
+    },
+    {
+      "id": "AC-2",
+      "status": "passed",
+      "test": "governed_loop_remediation_traversable",
+      "evidence": ".tmp/LOOP-001/final-governed_loop_remediation_traversable.txt",
+      "notes": "Remediation uses the implemented merge-denial rescope. The parsed remediation_hint must name `request a reviewed merge`; the test then follows that governed path through feature commit, pr new forge-boundary reach, governed review approve, and maintainer merge-boundary reach."
+    },
+    {
+      "id": "AC-3",
+      "status": "passed",
+      "test": "governed_loop_dryrun_no_bypass",
+      "evidence": ".tmp/LOOP-001/final-governed_loop_dryrun_no_bypass.txt",
+      "notes": "Dry-run merge by implementer is exact structured perm.denied with remediation_hint and leaves main, source ref, and git object count unchanged."
+    },
+    {
+      "id": "AC-4",
+      "status": "passed",
+      "test": "governed_loop_auto_merge_denied",
+      "evidence": ".tmp/LOOP-001/final-governed_loop_auto_merge_denied.txt",
+      "notes": "Auto-merge by implementer is exact structured perm.denied with remediation_hint naming reviewed merge and leaves main unchanged."
+    },
+    {
+      "id": "AC-5",
+      "status": "passed",
+      "test": "governed_loop_unset_handle_failclosed",
+      "evidence": ".tmp/LOOP-001/final-governed_loop_unset_handle_failclosed.txt",
+      "notes": "Unset and empty BUT_AGENT_HANDLE both fail closed with exit 1, exact structured perm.denied, non-empty message, non-empty remediation_hint, and unchanged main."
+    },
+    {
+      "id": "TC-1",
+      "status": "passed",
+      "test": "governed_loop_reference_flow_full_loop",
+      "evidence": ".tmp/LOOP-001/final-governed_loop_reference_flow_full_loop.txt"
+    },
+    {
+      "id": "TC-2",
+      "status": "passed",
+      "test": "governed_loop_remediation_traversable",
+      "evidence": ".tmp/LOOP-001/final-governed_loop_remediation_traversable.txt"
+    },
+    {
+      "id": "TC-3",
+      "status": "passed",
+      "test": "governed_loop_dryrun_no_bypass",
+      "evidence": ".tmp/LOOP-001/final-governed_loop_dryrun_no_bypass.txt"
+    },
+    {
+      "id": "TC-4",
+      "status": "passed",
+      "test": "governed_loop_auto_merge_denied",
+      "evidence": ".tmp/LOOP-001/final-governed_loop_auto_merge_denied.txt"
+    },
+    {
+      "id": "TC-5",
+      "status": "passed",
+      "test": "governed_loop_reference_flow_full_loop",
+      "evidence": ".tmp/LOOP-001/final-governed_loop_reference_flow_full_loop.txt",
+      "notes": "Principals use functional permissions only; reviewer and maintainer authorities are group-granted."
+    },
+    {
+      "id": "TC-6",
+      "status": "passed",
+      "test": "governed_loop_remediation_traversable",
+      "evidence": ".tmp/LOOP-001/final-governed_loop_remediation_traversable.txt",
+      "notes": "Approvals are submitted only through governed `but review approve`; no direct DB/raw git bypass assertion is introduced."
+    },
+    {
+      "id": "TC-7",
+      "status": "passed",
+      "test": "governed_loop_unset_handle_failclosed",
+      "evidence": ".tmp/LOOP-001/final-governed_loop_unset_handle_failclosed.txt"
+    }
+  ],
+  "commands": [
+    {
+      "command": "cargo test -p but governed_loop_reference_flow_full_loop",
+      "result": "passed",
+      "evidence": ".tmp/LOOP-001/final-governed_loop_reference_flow_full_loop.txt"
+    },
+    {
+      "command": "cargo test -p but governed_loop_remediation_traversable",
+      "result": "passed",
+      "evidence": ".tmp/LOOP-001/final-governed_loop_remediation_traversable.txt"
+    },
+    {
+      "command": "cargo test -p but governed_loop_dryrun_no_bypass",
+      "result": "passed",
+      "evidence": ".tmp/LOOP-001/final-governed_loop_dryrun_no_bypass.txt"
+    },
+    {
+      "command": "cargo test -p but governed_loop_auto_merge_denied",
+      "result": "passed",
+      "evidence": ".tmp/LOOP-001/final-governed_loop_auto_merge_denied.txt"
+    },
+    {
+      "command": "cargo test -p but governed_loop_unset_handle_failclosed",
+      "result": "passed",
+      "evidence": ".tmp/LOOP-001/final-governed_loop_unset_handle_failclosed.txt"
+    },
+    {
+      "command": "cargo test -p but governed_loop",
+      "result": "passed",
+      "evidence": ".tmp/LOOP-001/final-governed_loop.txt"
+    },
+    {
+      "command": "cargo check -p but --all-targets",
+      "result": "passed",
+      "evidence": ".tmp/LOOP-001/cargo-check-but-all-targets.txt"
+    },
+    {
+      "command": "cargo clippy -p but --all-targets -- -D warnings",
+      "result": "passed",
+      "evidence": ".tmp/LOOP-001/cargo-clippy-but-all-targets-2.txt"
+    },
+    {
+      "command": "cargo fmt --check",
+      "result": "passed",
+      "evidence": ".tmp/LOOP-001/cargo-fmt-check.txt"
+    },
+    {
+      "command": "git diff --check master...HEAD",
+      "result": "passed",
+      "evidence": ".tmp/LOOP-001/git-diff-check-master-head.txt"
+    },
+    {
+      "command": "git status --short",
+      "result": "passed",
+      "evidence": ".tmp/LOOP-001/git-status-short.txt"
+    }
+  ],
+  "fakeability_red_evidence": [
+    {
+      "evidence": ".tmp/LOOP-001/fakeability-assertions-red-evidence.txt",
+      "notes": "Records the strengthened assertion failures observed before helper repair: wrong field placement for remediation_hint, too-narrow PR forge-boundary marker, and parser rejection of the one-line Error JSON envelope."
+    }
+  ],
+  "anti_stub_fakeability_notes": [
+    "The tests invoke the real `but` binary through Sandbox::but for commits, pr new, review approve, pr merge, pr merge --dry-run, and pr auto-merge.",
+    "Governance config is committed into real refs via the sandbox git/bash fixture before CLI commands run.",
+    "Denial assertions parse the CLI JSON envelope instead of matching raw substrings.",
+    "Positive PR-open paths prove gate permit by requiring downstream forge/provider-boundary reach.",
+    "Positive merge paths prove gate permit by requiring downstream forge merge_review-boundary reach.",
+    "Reviewer approvals are submitted through governed `but review approve`; no local_review_verdicts write appears in the capstone test file.",
+    "The local review cache is seeded only with ForgeReview metadata so the real CLI can select review 77 in a local no-forge fixture."
+  ]
+}
