@@ -1,0 +1,100 @@
+{
+  "task_id": "GRPS-002",
+  "timestamp": "2026-06-19T18:33:53Z",
+  "commit_sha": "d6ff466a64ca7b588d2718e941994d8e494f1800",
+  "typecheck": {
+    "exit_code": 0
+  },
+  "lint": {
+    "exit_code": 0,
+    "warnings": 0
+  },
+  "pre_existing_issues": false,
+  "requirement_results": [
+    {
+      "id": "AC-1",
+      "verify": "cargo test -p but-api self_add_to_maintainers_on_feature_head_still_denied_merge",
+      "exit_code": 0,
+      "output_file": ".tmp/GRPS-002/ac-1-output.txt",
+      "green_file": ".tmp/GRPS-002/ac1-primary-green.txt",
+      "seeded_value": "Feature branch feat self-adds feat-author to the merge-holding maintainers group, but refs/heads/main keeps maintainers=[maint]; enforce_merge_gate returns perm.denied at Authority::Merge and refs/heads/main remains unchanged."
+    },
+    {
+      "id": "AC-2",
+      "verify": "cargo test -p but-api landed_membership_clears_merge_authority_step",
+      "exit_code": 0,
+      "output_file": ".tmp/GRPS-002/ac-2-output.txt",
+      "green_file": ".tmp/GRPS-002/ac2-landed-membership.txt",
+      "seeded_value": "After feat-author membership is committed to refs/heads/main, the target ref SHA advances; the same merge no longer returns perm.denied at Authority::Merge and reaches the expected residual gate.review_required step."
+    },
+    {
+      "id": "AC-3",
+      "verify": "cargo test -p but-authz self_grant_admin_inert_until_landed",
+      "exit_code": 0,
+      "output_file": ".tmp/GRPS-002/ac-3-output.txt",
+      "green_file": ".tmp/GRPS-002/ac3-self-grant-admin-green.txt",
+      "seeded_value": "Feature branch feat-admin self-grants administration:write, but loading governance from refs/heads/main denies before landing; after committing the grant to refs/heads/main and advancing the SHA, authorize(AdministrationWrite) succeeds."
+    },
+    {
+      "id": "AC-4",
+      "verify": "cargo test -p but-authz membership_read_only_from_target_ref",
+      "exit_code": 0,
+      "output_file": ".tmp/GRPS-002/ac-4-output.txt",
+      "green_file": ".tmp/GRPS-002/ac4-target-ref-membership.txt",
+      "seeded_value": "With HEAD on feat and an uncommitted permissions.toml edit adding feat-author to maintainers, load_governance_config(repo, refs/heads/main) still reads the target-ref blob: maintainers includes maint, excludes feat-author, and feat-author has no merge authority."
+    },
+    {
+      "id": "TC-1",
+      "verify": "cargo test -p but-api self_add_to_maintainers_on_feature_head_still_denied_merge",
+      "exit_code": 0,
+      "output_file": ".tmp/GRPS-002/tc-1-output.txt"
+    },
+    {
+      "id": "TC-2",
+      "verify": "cargo test -p but-api self_add_to_maintainers_on_feature_head_still_denied_merge",
+      "exit_code": 0,
+      "output_file": ".tmp/GRPS-002/tc-2-output.txt"
+    },
+    {
+      "id": "TC-3",
+      "verify": "cargo test -p but-api landed_membership_clears_merge_authority_step",
+      "exit_code": 0,
+      "output_file": ".tmp/GRPS-002/tc-3-output.txt"
+    },
+    {
+      "id": "TC-4",
+      "verify": "cargo test -p but-api landed_membership_clears_merge_authority_step",
+      "exit_code": 0,
+      "output_file": ".tmp/GRPS-002/tc-4-output.txt"
+    },
+    {
+      "id": "TC-5",
+      "verify": "cargo test -p but-authz self_grant_admin_inert_until_landed",
+      "exit_code": 0,
+      "output_file": ".tmp/GRPS-002/tc-5-output.txt"
+    },
+    {
+      "id": "TC-6",
+      "verify": "cargo test -p but-authz self_grant_admin_inert_until_landed",
+      "exit_code": 0,
+      "output_file": ".tmp/GRPS-002/tc-6-output.txt"
+    },
+    {
+      "id": "TC-7",
+      "verify": "cargo test -p but-authz membership_read_only_from_target_ref",
+      "exit_code": 0,
+      "output_file": ".tmp/GRPS-002/tc-7-output.txt"
+    },
+    {
+      "id": "TC-8",
+      "verify": "cargo test -p but-authz membership_read_only_from_target_ref",
+      "exit_code": 0,
+      "output_file": ".tmp/GRPS-002/tc-8-output.txt"
+    }
+  ],
+  "red_evidence": {
+    "required": true,
+    "available": false,
+    "why_not_wired": "No true RED-against-start evidence exists in .tmp/GRPS-002. Existing failure captures are setup/build failures, while the implementation commit changes only test files and the harvested final verification passes against unchanged product behavior."
+  }
+}
