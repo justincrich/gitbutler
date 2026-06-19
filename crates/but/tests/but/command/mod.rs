@@ -17,6 +17,8 @@ mod commit2;
 mod commit_gate;
 mod config;
 #[cfg(feature = "legacy")]
+mod confinement;
+#[cfg(feature = "legacy")]
 mod diff;
 #[cfg(feature = "legacy")]
 mod discard;
