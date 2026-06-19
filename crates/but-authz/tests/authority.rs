@@ -164,3 +164,29 @@ fn list_equals_role_write() {
 
     println!("AuthoritySet::parse(<full write token list>) == AuthoritySet::from_role(\"write\")");
 }
+
+#[test]
+fn optional_role_desugar_preserves_role_behavior() -> Result<(), ParseAuthorityError> {
+    let empty = AuthoritySet::from_optional_role(None)?;
+    assert!(
+        empty.is_empty(),
+        "missing role must contribute no authorities"
+    );
+
+    let maintain = AuthoritySet::from_optional_role(Some("maintain"))?;
+    assert_eq!(
+        maintain,
+        AuthoritySet::from_role("maintain")?,
+        "optional role desugar must match the existing role catalog exactly"
+    );
+
+    assert!(
+        matches!(
+            AuthoritySet::from_optional_role(Some("bogus")),
+            Err(ParseAuthorityError::UnknownRole(role)) if role == "bogus"
+        ),
+        "unknown optional role must fail with the existing UnknownRole error"
+    );
+
+    Ok(())
+}
