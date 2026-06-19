@@ -1,18 +1,38 @@
 {
   "task_id": "GATES-003",
-  "remediation_task_id": "FIX-GATES-003-RED-FIRST-IMPLEMENTATION-1",
-  "base_sha": "ae7bde916fcba97e58be06b79b02c364ad736447",
-  "commit_sha": "f2296c439ebabfcc3a548d845a8a2c630cb38fe4",
-  "commit_sha_note": "This is the implementation commit SHA. The branch-tip SHA is returned in the implementer final JSON because a Git commit cannot contain its own final SHA.",
+  "remediation_task_id": "FIX-GATES-003-EVIDENCE-PACKAGE-2",
   "status": "completed",
-  "red_evidence": {
-    "path": ".tmp/GATES-003/red-output.txt",
-    "summary": "cargo test -p but-api merge_gate failed with four scenario-backed merge_gate tests before production merge-gate implementation returned structured governance errors"
+  "worktree": {
+    "path": "/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/GATES-003",
+    "branch": "kb-run-sprint/sprint-01b-governed-loop-reference-flow/GATES-003",
+    "base_sha": "ae7bde916fcba97e58be06b79b02c364ad736447",
+    "red_evidence_sha": "ae7bde916fcba97e58be06b79b02c364ad736447",
+    "implementation_sha": "f2296c439ebabfcc3a548d845a8a2c630cb38fe4",
+    "evidence_refresh_parent_sha": "e06a1c55002f7f1af131a25cf3c55f5f4c114587",
+    "final_commit_sha": null,
+    "commit_sha_note": "This tracked evidence file intentionally does not claim to contain its own final commit SHA. The final remediation commit SHA is returned by the worker final JSON after the commit is created."
+  },
+  "scope_amendment": {
+    "source": "tt-016 approved the GATES-003 scope repair for three paths outside the original writeAllowed list.",
+    "approved_paths": [
+      {
+        "path": "Cargo.lock",
+        "limit": "Only dependency resolution caused by required crates/but-api/Cargo.toml changes for GATES-003."
+      },
+      {
+        "path": "crates/but-api/src/legacy/mod.rs",
+        "limit": "Only merge_gate module registration/export."
+      },
+      {
+        "path": "crates/but/tests/but/command/mod.rs",
+        "limit": "Only legacy merge_gate CLI test registration."
+      }
+    ]
   },
   "implementation": {
     "api_gate_entry_points": [
-      "crates/but-api/src/legacy/forge.rs:merge_review",
-      "crates/but-api/src/legacy/forge.rs:set_review_auto_merge"
+      "crates/but-api/src/legacy/forge.rs:445 merge_review calls enforce_merge_gate before the forge await",
+      "crates/but-api/src/legacy/forge.rs:477 set_review_auto_merge calls enforce_merge_gate before the forge await"
     ],
     "merge_gate_module": "crates/but-api/src/legacy/merge_gate.rs",
     "cli_surface": "crates/but/src/command/legacy/forge/review.rs",
@@ -21,40 +41,165 @@
       "crates/but/tests/but/command/merge_gate.rs"
     ]
   },
+  "requirement_results": [
+    {
+      "id": "AC-1",
+      "satisfied": true,
+      "evidence": "crates/but-api/tests/merge_gate.rs:10 merge_gate_authorize_and_review_requirement asserts impl is denied perm.denied through merge_review and set_review_auto_merge, and maint with a distinct approval reaches the forge call without a governance denial.",
+      "verify": "cargo test -p but-api merge_gate_authorize_and_review_requirement",
+      "red_evidence": ".tmp/GATES-003/red-output.txt:60 shows merge_gate_authorize_and_review_requirement failed before implementation with unstructured merge gate errors.",
+      "notes": "The positive maint path proves the local gate decision and execution past the gate; actual forge-network merge completion is structural/out-of-local-scope for this local fixture."
+    },
+    {
+      "id": "AC-2",
+      "satisfied": true,
+      "evidence": "crates/but-api/tests/merge_gate.rs:62 merge_gate_below_min_approvals_blocked asserts a maint merge with zero approving verdicts is denied gate.review_required and names the approval shortfall, while main remains unchanged.",
+      "verify": "cargo test -p but-api merge_gate_below_min_approvals_blocked",
+      "red_evidence": ".tmp/GATES-003/red-output.txt:61 and .tmp/GATES-003/red-output.txt:78 show the below-min-approvals test failed before implementation.",
+      "notes": null
+    },
+    {
+      "id": "AC-3",
+      "satisfied": true,
+      "evidence": "crates/but-api/tests/merge_gate.rs:91 merge_gate_two_group_both_present_proceeds first proves missing code-reviewers and maintainers approvals are denied, then seeds one approval from each group at head and asserts no governance denial.",
+      "verify": "cargo test -p but-api merge_gate_two_group_both_present_proceeds",
+      "red_evidence": ".tmp/GATES-003/red-output.txt:62 and .tmp/GATES-003/red-output.txt:83 show the two-group test failed before implementation.",
+      "notes": "The both-present positive path proves the local gate decision and execution past the gate; actual forge-network merge completion is structural/out-of-local-scope for this local fixture."
+    },
+    {
+      "id": "AC-4",
+      "satisfied": true,
+      "evidence": "crates/but-api/tests/merge_gate.rs:129 merge_gate_dryrun_and_malformed_failclosed asserts the dry-run-equivalent denied merge still requires merge authority and mutates neither main nor verdicts, then asserts malformed target-ref gates.toml returns config.invalid.",
+      "verify": "cargo test -p but-api merge_gate_dryrun_and_malformed_failclosed",
+      "red_evidence": ".tmp/GATES-003/red-output.txt:61 and .tmp/GATES-003/red-output.txt:73 show the dryrun/malformed test failed before implementation.",
+      "notes": null
+    },
+    {
+      "id": "TC-1",
+      "satisfied": true,
+      "evidence": "crates/but-api/tests/merge_gate.rs:10 covers impl merge_review perm.denied, impl set_review_auto_merge perm.denied, and maint with distinct approval permitted by the gate.",
+      "verify": "cargo test -p but-api merge_gate_authorize_and_review_requirement",
+      "red_evidence": ".tmp/GATES-003/red-output.txt:60 shows the AC-1/TC-1 test failed before implementation.",
+      "notes": "Positive forge completion is structural/out-of-local-scope; the test asserts no governance denial after the gate."
+    },
+    {
+      "id": "TC-2",
+      "satisfied": true,
+      "evidence": "crates/but-api/tests/merge_gate.rs:62 covers gate.review_required with a non-empty unmet approval shortfall for below min_approvals.",
+      "verify": "cargo test -p but-api merge_gate_below_min_approvals_blocked",
+      "red_evidence": ".tmp/GATES-003/red-output.txt:78 shows the AC-2/TC-2 test failed before implementation.",
+      "notes": null
+    },
+    {
+      "id": "TC-3",
+      "satisfied": true,
+      "evidence": "crates/but-api/tests/merge_gate.rs:91 covers two-group parsing/enforcement from the target-ref gates.toml and the both-groups-approve-at-head permitted decision.",
+      "verify": "cargo test -p but-api merge_gate_two_group_both_present_proceeds",
+      "red_evidence": ".tmp/GATES-003/red-output.txt:83 shows the AC-3/TC-3 test failed before implementation.",
+      "notes": "Positive forge completion is structural/out-of-local-scope; the test asserts no governance denial after both required groups approve."
+    },
+    {
+      "id": "TC-4",
+      "satisfied": true,
+      "evidence": "crates/but-api/tests/merge_gate.rs:129 covers dry-run-no-bypass behavior, unchanged refs/verdicts after denial, and config.invalid for malformed target-ref governance config.",
+      "verify": "cargo test -p but-api merge_gate_dryrun_and_malformed_failclosed",
+      "red_evidence": ".tmp/GATES-003/red-output.txt:73 shows the AC-4/TC-4 test failed before implementation.",
+      "notes": null
+    },
+    {
+      "id": "TC-5",
+      "satisfied": true,
+      "evidence": "crates/but-api/src/legacy/forge.rs:445 and crates/but-api/src/legacy/forge.rs:477 call enforce_merge_gate before the inner forge .await; function-scoped greps returned 1 for each entry point.",
+      "verify": "grep -A 25 'fn merge_review' crates/but-api/src/legacy/forge.rs | grep -c enforce_merge_gate && grep -A 25 'fn set_review_auto_merge' crates/but-api/src/legacy/forge.rs | grep -c enforce_merge_gate",
+      "red_evidence": ".tmp/GATES-003/red-output.txt:60 shows the both-entry-point authorization test failed before implementation.",
+      "notes": null
+    },
+    {
+      "id": "TC-6",
+      "satisfied": true,
+      "evidence": "crates/but-api/src/legacy/merge_gate.rs:151 load_merge_governance_config reads permissions and gates through read_config_blob(repo, target_ref, ...); crates/but-api/src/legacy/merge_gate.rs:168 resolves the target ref and reads blobs from that commit tree. The working-tree read negative grep returned no matches.",
+      "verify": "cargo test -p but-api merge_gate_two_group_both_present_proceeds && ! grep -rEn 'workdir|std::fs::read|read_to_string' crates/but-api/src/legacy/merge_gate.rs",
+      "red_evidence": ".tmp/GATES-003/red-output.txt:83 shows the two-group/target-ref plumbing test failed before implementation.",
+      "notes": null
+    }
+  ],
   "verification": [
     {
       "command": "cargo test -p but-api merge_gate",
-      "status": "passed",
-      "evidence": "4 merge_gate integration tests passed"
+      "result": "passed",
+      "evidence": "4 merge_gate integration tests passed: merge_gate_authorize_and_review_requirement, merge_gate_below_min_approvals_blocked, merge_gate_two_group_both_present_proceeds, merge_gate_dryrun_and_malformed_failclosed."
     },
     {
       "command": "cargo test -p but merge_gate",
-      "status": "passed",
-      "evidence": "CLI structured auto-merge denial test passed"
+      "result": "passed",
+      "evidence": "1 CLI test passed: command::merge_gate::merge_gate_auto_merge_denial_is_structured."
+    },
+    {
+      "command": "cargo check -p but-api -p but --all-targets",
+      "result": "passed",
+      "evidence": "Finished dev profile for both target crates."
     },
     {
       "command": "cargo fmt --check",
-      "status": "passed"
+      "result": "passed",
+      "evidence": "No formatting diff reported."
     },
     {
       "command": "cargo clippy -p but-api -p but --all-targets -- -D warnings",
-      "status": "passed"
+      "result": "passed",
+      "evidence": "Finished dev profile with zero clippy warnings."
     },
     {
       "command": "cargo doc -p but-api -p but --no-deps",
-      "status": "passed_with_existing_warning",
-      "evidence": "rustdoc exited 0 and reported a pre-existing unresolved link warning in crates/but-api/src/open/editor.rs"
+      "result": "passed",
+      "evidence": "rustdoc exited 0; it reported a pre-existing unresolved intra-doc link warning in crates/but-api/src/open/editor.rs:227."
+    },
+    {
+      "command": "grep -A 25 'fn merge_review' crates/but-api/src/legacy/forge.rs | grep -c enforce_merge_gate",
+      "result": "passed",
+      "evidence": "Output: 1."
+    },
+    {
+      "command": "grep -A 25 'fn set_review_auto_merge' crates/but-api/src/legacy/forge.rs | grep -c enforce_merge_gate",
+      "result": "passed",
+      "evidence": "Output: 1."
     },
     {
       "command": "rg -n \"enforce_merge_gate\" crates/but-api/src/legacy/forge.rs crates/but-api/src/legacy/merge_gate.rs",
-      "status": "passed",
-      "evidence": "merge_review and set_review_auto_merge both call enforce_merge_gate"
+      "result": "passed",
+      "evidence": "crates/but-api/src/legacy/forge.rs:445, crates/but-api/src/legacy/forge.rs:477, and crates/but-api/src/legacy/merge_gate.rs:37."
     },
     {
-      "command": "rg -n \"workdir|std::fs::read|read_to_string|write_permission|RepoExclusive|exclusive_worktree_access|Owner|Maintainer|Reviewer|Developer|Admin\" crates/but-api/src/legacy/merge_gate.rs",
-      "status": "passed",
-      "evidence": "no forbidden worktree-read, write-lock, or role-name matches"
+      "command": "if grep -rEn 'workdir|std::fs::read|read_to_string' crates/but-api/src/legacy/merge_gate.rs; then exit 1; else printf 'no matches\\n'; fi",
+      "result": "passed",
+      "evidence": "No working-tree config read matches."
+    },
+    {
+      "command": "if grep -rEn 'write_permission\\(|RepoExclusive|exclusive_worktree_access' crates/but-api/src/legacy/merge_gate.rs; then exit 1; else printf 'no matches\\n'; fi",
+      "result": "passed",
+      "evidence": "No write-permission lock overload matches."
+    },
+    {
+      "command": "if grep -rEni 'implementer|reviewer|maintainer' crates/but-api/src/legacy/merge_gate.rs; then exit 1; else printf 'no matches\\n'; fi",
+      "result": "passed",
+      "evidence": "No role-name hardcoding matches."
     }
   ],
+  "stub_gate": {
+    "status": "passed",
+    "evidence": [
+      "crates/but-api/src/legacy/forge.rs:445 calls enforce_merge_gate inside merge_review before the forge merge_review .await.",
+      "crates/but-api/src/legacy/forge.rs:477 calls enforce_merge_gate inside set_review_auto_merge before the forge set_review_auto_merge_state .await.",
+      "crates/but-api/tests/merge_gate.rs:10 denies impl on both entry points and permits maint only after review requirements are satisfied.",
+      "crates/but-api/tests/merge_gate.rs:62 denies below-min approvals with gate.review_required.",
+      "crates/but-api/tests/merge_gate.rs:91 denies missing group approvals and permits both-required-groups approvals at head.",
+      "crates/but-api/tests/merge_gate.rs:129 denies dry-run-equivalent unauthorized merges and fails closed on malformed target-ref config.",
+      "Negative greps found no working-tree config read, no write-permission lock overload, and no role-name hardcoding in crates/but-api/src/legacy/merge_gate.rs."
+    ]
+  },
+  "red_evidence": {
+    "path": ".tmp/GATES-003/red-output.txt",
+    "summary": "cargo test -p but-api merge_gate failed with all four merge_gate tests before production implementation returned structured governance errors."
+  },
   "blocking_issues": []
 }
