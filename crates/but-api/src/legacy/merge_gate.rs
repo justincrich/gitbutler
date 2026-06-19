@@ -1,4 +1,4 @@
-use std::{collections::BTreeMap, collections::BTreeSet, path::Path, str};
+use std::{collections::BTreeMap, path::Path, str};
 
 use anyhow::{Context as _, anyhow};
 use but_authz::{
@@ -6,6 +6,9 @@ use but_authz::{
     PrincipalId,
 };
 use serde::{Deserialize, Serialize};
+
+#[path = "review_requirement.rs"]
+mod review_requirement;
 
 const PERMISSIONS_PATH: &str = ".gitbutler/permissions.toml";
 const GATES_PATH: &str = ".gitbutler/gates.toml";
@@ -56,23 +59,38 @@ pub fn enforce_merge_gate(ctx: &but_ctx::Context, review_id: usize) -> anyhow::R
         return Ok(());
     };
 
-    let approvals = approved_principals_at_head(ctx, &source_ref, &review.sha)?;
-    let unmet = evaluate_requirement(requirement, &config.gov, &approvals)?;
-    if unmet.is_empty() {
-        return Ok(());
-    }
+    let current_head_oid = current_head_oid(&repo, &source_ref)?;
+    let author = review
+        .author
+        .as_ref()
+        .map(|author| PrincipalId::new(author.clone()))
+        .ok_or_else(|| anyhow!("review {review_id} has no author for review requirement"))?;
+    let verdicts = review_verdicts(ctx, &review.source_branch)?;
 
-    Err(MergeGateError {
-        code: REVIEW_REQUIRED_CODE,
-        message: format!(
-            "review requirement for {} is not satisfied: {}",
-            review.target_branch,
-            unmet.join("; ")
-        ),
-        remediation_hint: "collect the required approvals at the current review head".to_owned(),
-        unmet,
+    match review_requirement::evaluate(
+        requirement,
+        &verdicts,
+        &current_head_oid,
+        &author,
+        &config.gov,
+    ) {
+        Ok(()) => Ok(()),
+        Err(unmet) => {
+            let unmet = unmet.into_entries();
+            Err(MergeGateError {
+                code: REVIEW_REQUIRED_CODE,
+                message: format!(
+                    "review requirement for {} is not satisfied: {}",
+                    review.target_branch,
+                    unmet.join("; ")
+                ),
+                remediation_hint: "collect the required approvals at the current review head"
+                    .to_owned(),
+                unmet,
+            }
+            .into())
+        }
     }
-    .into())
 }
 
 /// Extract a structured merge-gate payload from an error chain.
@@ -107,6 +125,7 @@ impl MergeGovernanceConfig {
 struct ReviewRequirement {
     branch: BranchName,
     min_approvals: usize,
+    require_distinct_from_author: bool,
     require_approval_from_group: Vec<GroupName>,
 }
 
@@ -121,59 +140,26 @@ fn review_for_id(ctx: &but_ctx::Context, review_id: usize) -> anyhow::Result<but
         .ok_or_else(|| anyhow!("review {review_id} is not present in the local forge cache"))
 }
 
-fn approved_principals_at_head(
+fn review_verdicts(
     ctx: &but_ctx::Context,
     target: &str,
-    head_oid: &str,
-) -> anyhow::Result<BTreeSet<PrincipalId>> {
-    let approvals = ctx
+) -> anyhow::Result<Vec<but_db::LocalReviewVerdict>> {
+    let verdicts = ctx
         .db
         .get_cache()?
         .local_review_verdicts()
-        .list_by_target(target)?
-        .into_iter()
-        .filter(|row| row.verdict == "approved" && row.head_oid == head_oid)
-        .map(|row| PrincipalId::new(row.principal_id))
-        .collect();
+        .list_by_target(target)?;
 
-    Ok(approvals)
+    Ok(verdicts)
 }
 
-fn evaluate_requirement(
-    requirement: &ReviewRequirement,
-    cfg: &GovConfig,
-    approvals: &BTreeSet<PrincipalId>,
-) -> anyhow::Result<Vec<String>> {
-    let mut unmet = Vec::new();
-
-    if approvals.len() < requirement.min_approvals {
-        unmet.push(format!(
-            "min_approvals requires {} approval(s), found {}",
-            requirement.min_approvals,
-            approvals.len()
-        ));
-    }
-
-    for group_name in &requirement.require_approval_from_group {
-        let group = cfg.groups().get(group_name).ok_or_else(|| {
-            config_invalid(format!(
-                "gate for {} references undefined group {}",
-                requirement.branch.as_str(),
-                group_name.as_str()
-            ))
-        })?;
-        if !approvals
-            .iter()
-            .any(|principal_id| group.members().contains(principal_id))
-        {
-            unmet.push(format!(
-                "require_approval_from_group missing approval from {}",
-                group_name.as_str()
-            ));
-        }
-    }
-
-    Ok(unmet)
+fn current_head_oid(repo: &gix::Repository, source_ref: &str) -> anyhow::Result<String> {
+    Ok(repo
+        .find_reference(source_ref)
+        .with_context(|| format!("resolving source ref {source_ref}"))?
+        .peel_to_id()
+        .with_context(|| format!("peeling {source_ref} to an object id"))?
+        .to_string())
 }
 
 fn load_merge_governance_config(
@@ -319,6 +305,7 @@ fn normalize_gates(
         requirements.push(ReviewRequirement {
             branch: BranchName::new(gate.branch),
             min_approvals: gate.min_approvals,
+            require_distinct_from_author: gate.require_distinct_from_author,
             require_approval_from_group: gate
                 .require_approval_from_group
                 .into_iter()
@@ -421,6 +408,5 @@ struct GateWire {
     #[serde(default)]
     require_approval_from_group: Vec<String>,
     #[serde(default)]
-    #[serde(rename = "require_distinct_from_author")]
-    _require_distinct_from_author: bool,
+    require_distinct_from_author: bool,
 }
