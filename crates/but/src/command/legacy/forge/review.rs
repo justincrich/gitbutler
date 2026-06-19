@@ -23,9 +23,6 @@ pub async fn enable_auto_merge(
     off: bool,
     out: &mut OutputChannel,
 ) -> anyhow::Result<()> {
-    // Fail fast if no forge user is authenticated, before pushing or prompting.
-    ensure_forge_authentication(ctx).await?;
-
     let review_ids = resolve_review_selection(ctx, selector, out)?;
 
     if review_ids.is_empty() {
@@ -80,7 +77,9 @@ pub async fn enable_auto_merge(
             writeln!(out, "Auto-merge {action} for review {review_id}")?;
         }
 
-        but_api::legacy::forge::set_review_auto_merge(ctx.to_sync(), review_id, !off).await?;
+        but_api::legacy::forge::set_review_auto_merge(ctx.to_sync(), review_id, !off)
+            .await
+            .map_err(merge_gate_cli_error)?;
     }
 
     if let Some(out) = out.for_human() {
@@ -108,6 +107,24 @@ pub async fn enable_auto_merge(
     }
 
     Ok(())
+}
+
+fn merge_gate_cli_error(err: anyhow::Error) -> anyhow::Error {
+    if let Some(gate_error) = but_api::legacy::merge_gate::classify_error(&err) {
+        return anyhow::anyhow!(
+            "{}",
+            serde_json::json!({
+                "error": {
+                    "code": gate_error.code,
+                    "message": gate_error.message,
+                    "remediation_hint": gate_error.remediation_hint,
+                    "unmet": gate_error.unmet,
+                }
+            })
+        );
+    }
+
+    err
 }
 
 /// Set the draftiness of or or multiple reviews.
@@ -1169,6 +1186,9 @@ fn resolve_review_selection(
             .flat_map(review_ids_for_stack)
             .collect::<Vec<_>>();
         let mut unique_review_ids = parse_review_ids(&selector, &review_ids);
+        if unique_review_ids.is_empty() {
+            unique_review_ids.extend(extract_valid_ids(&selector));
+        }
         // Concatenate any review IDs associated with the selected CliIDs.
         unique_review_ids.extend(resolve_cli_ids_to_review_ids(
             ctx,

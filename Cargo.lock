@@ -982,6 +982,7 @@ dependencies = [
  "but-testsupport",
  "but-workspace",
  "but-worktrees",
+ "chrono",
  "futures",
  "gitbutler-branch",
  "gitbutler-branch-actions",
@@ -1011,6 +1012,7 @@ dependencies = [
  "temp-env",
  "tempfile",
  "tokio",
+ "toml 0.9.12+spec-1.1.0",
  "tracing",
  "url",
  "which",
@@ -10423,6 +10425,7 @@ version = "0.3.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "96374855068f47402c3121c6eed88d29cb1de8f3ab27090e273e420bdabcf050"
 dependencies = [
+ "futures",
  "parking_lot",
 ]
 

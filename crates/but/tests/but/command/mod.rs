@@ -28,6 +28,8 @@ mod help;
 #[cfg(feature = "legacy")]
 mod merge;
 #[cfg(feature = "legacy")]
+mod merge_gate;
+#[cfg(feature = "legacy")]
 mod r#move;
 mod onboarding;
 #[cfg(feature = "legacy")]

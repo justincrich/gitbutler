@@ -1,0 +1,422 @@
+use but_db::{ForgeReview, LocalReviewVerdict};
+use serde::Serialize;
+
+const MAIN_REF: &str = "refs/heads/main";
+const FEAT_REF: &str = "refs/heads/feat";
+const REVIEW_ID: usize = 1;
+
+#[tokio::test]
+#[serial_test::serial]
+async fn merge_gate_authorize_and_review_requirement() -> anyhow::Result<()> {
+    let (repo, _tmp) = merge_gated_repo(GateConfig::Single)?;
+    let main_before = ref_id(&repo, MAIN_REF)?;
+    let head = ref_id(&repo, FEAT_REF)?;
+    let ctx = context_with_review(&repo, "reviewer", head, true)?;
+
+    temp_env::async_with_vars([("BUT_AGENT_HANDLE", Some("impl"))], async {
+        let denial = assert_gate_denied(
+            but_api::legacy::forge::merge_review(ctx.to_sync(), REVIEW_ID, None).await,
+            "perm.denied",
+        );
+        assert!(
+            denial.message.contains("merge"),
+            "perm.denied should name the missing merge authority"
+        );
+
+        let denial = assert_gate_denied(
+            but_api::legacy::forge::set_review_auto_merge(ctx.to_sync(), REVIEW_ID, true).await,
+            "perm.denied",
+        );
+        assert!(
+            denial.message.contains("merge"),
+            "auto-merge denial should name the missing merge authority"
+        );
+
+        anyhow::Ok(())
+    })
+    .await?;
+
+    temp_env::async_with_vars([("BUT_AGENT_HANDLE", Some("maint"))], async {
+        let err = but_api::legacy::forge::merge_review(ctx.to_sync(), REVIEW_ID, None)
+            .await
+            .expect_err("local fixture should reach the forge call and fail outside governance");
+        assert!(
+            classify_error(&err).is_none(),
+            "authorized reviewed merge should not fail with a governance denial"
+        );
+        Ok::<(), anyhow::Error>(())
+    })
+    .await?;
+
+    assert_eq!(
+        ref_id(&repo, MAIN_REF)?,
+        main_before,
+        "merge gate tests must not mutate the local target ref"
+    );
+
+    Ok(())
+}
+
+#[tokio::test]
+#[serial_test::serial]
+async fn merge_gate_below_min_approvals_blocked() -> anyhow::Result<()> {
+    let (repo, _tmp) = merge_gated_repo(GateConfig::Single)?;
+    let main_before = ref_id(&repo, MAIN_REF)?;
+    let ctx = context_with_review(&repo, "reviewer", ref_id(&repo, FEAT_REF)?, false)?;
+
+    temp_env::async_with_vars([("BUT_AGENT_HANDLE", Some("maint"))], async {
+        let denial = assert_gate_denied(
+            but_api::legacy::forge::merge_review(ctx.to_sync(), REVIEW_ID, None).await,
+            "gate.review_required",
+        );
+        assert!(
+            denial.message.contains("min_approvals") || denial.message.contains("approval"),
+            "gate.review_required should name the unmet approval shortfall"
+        );
+        Ok::<(), anyhow::Error>(())
+    })
+    .await?;
+
+    assert_eq!(
+        ref_id(&repo, MAIN_REF)?,
+        main_before,
+        "below-min-approval denial must leave main unchanged"
+    );
+
+    Ok(())
+}
+
+#[tokio::test]
+#[serial_test::serial]
+async fn merge_gate_two_group_both_present_proceeds() -> anyhow::Result<()> {
+    let (repo, _tmp) = merge_gated_repo(GateConfig::TwoGroup)?;
+    let head = ref_id(&repo, FEAT_REF)?;
+    let mut ctx = context_with_review(&repo, "reviewer-a", head, false)?;
+
+    temp_env::async_with_vars([("BUT_AGENT_HANDLE", Some("maint"))], async {
+        let denial = assert_gate_denied(
+            but_api::legacy::forge::merge_review(ctx.to_sync(), REVIEW_ID, None).await,
+            "gate.review_required",
+        );
+        assert!(
+            denial.message.contains("code-reviewers") && denial.message.contains("maintainers"),
+            "two-group denial should name both missing approval groups"
+        );
+        Ok::<(), anyhow::Error>(())
+    })
+    .await?;
+
+    seed_verdict(&mut ctx, "reviewer-a", head, 1)?;
+    seed_verdict(&mut ctx, "reviewer-b", head, 2)?;
+
+    temp_env::async_with_vars([("BUT_AGENT_HANDLE", Some("maint"))], async {
+        let err = but_api::legacy::forge::merge_review(ctx.to_sync(), REVIEW_ID, None)
+            .await
+            .expect_err("local fixture should reach the forge call and fail outside governance");
+        assert!(
+            classify_error(&err).is_none(),
+            "both required groups approving at head should satisfy the merge gate"
+        );
+        Ok::<(), anyhow::Error>(())
+    })
+    .await?;
+
+    Ok(())
+}
+
+#[tokio::test]
+#[serial_test::serial]
+async fn merge_gate_dryrun_and_malformed_failclosed() -> anyhow::Result<()> {
+    let (repo, _tmp) = merge_gated_repo(GateConfig::Single)?;
+    let main_before = ref_id(&repo, MAIN_REF)?;
+    let ctx = context_with_review(&repo, "reviewer", ref_id(&repo, FEAT_REF)?, true)?;
+    let verdicts_before = verdict_count(&ctx)?;
+
+    temp_env::async_with_vars([("BUT_AGENT_HANDLE", Some("impl"))], async {
+        let denial = assert_gate_denied(
+            but_api::legacy::forge::merge_review(ctx.to_sync(), REVIEW_ID, None).await,
+            "perm.denied",
+        );
+        assert!(
+            denial.message.contains("merge"),
+            "dry-run-equivalent merge path should still require merge authority"
+        );
+        Ok::<(), anyhow::Error>(())
+    })
+    .await?;
+
+    assert_eq!(
+        ref_id(&repo, MAIN_REF)?,
+        main_before,
+        "denied dry-run-equivalent merge must leave main unchanged"
+    );
+    assert_eq!(
+        verdict_count(&ctx)?,
+        verdicts_before,
+        "denied merge must not mutate local review verdicts"
+    );
+
+    let (repo, _tmp) = merge_gated_repo(GateConfig::Malformed)?;
+    let ctx = context_with_review(&repo, "reviewer", ref_id(&repo, FEAT_REF)?, true)?;
+
+    temp_env::async_with_vars([("BUT_AGENT_HANDLE", Some("maint"))], async {
+        assert_gate_denied(
+            but_api::legacy::forge::merge_review(ctx.to_sync(), REVIEW_ID, None).await,
+            "config.invalid",
+        );
+        Ok::<(), anyhow::Error>(())
+    })
+    .await?;
+
+    Ok(())
+}
+
+#[derive(Debug, Clone, Copy)]
+enum GateConfig {
+    Single,
+    TwoGroup,
+    Malformed,
+}
+
+fn merge_gated_repo(config: GateConfig) -> anyhow::Result<(gix::Repository, tempfile::TempDir)> {
+    let (repo, tmp) = but_testsupport::writable_scenario("checkout-head-info");
+    let gates = match config {
+        GateConfig::Single => {
+            r#"
+[[branch]]
+name = "main"
+protected = true
+
+[[gate]]
+branch = "main"
+type = "review"
+min_approvals = 1
+require_distinct_from_author = true
+"#
+        }
+        GateConfig::TwoGroup => {
+            r#"
+[[branch]]
+name = "main"
+protected = true
+
+[[gate]]
+branch = "main"
+type = "review"
+min_approvals = 1
+require_distinct_from_author = true
+require_approval_from_group = ["code-reviewers", "maintainers"]
+"#
+        }
+        GateConfig::Malformed => {
+            r#"
+[[branch]
+name = "main"
+protected = nope
+"#
+        }
+    };
+
+    let permissions = match config {
+        GateConfig::TwoGroup => {
+            r#"
+[[principal]]
+id = "impl"
+permissions = ["contents:write", "pull_requests:write"]
+
+[[principal]]
+id = "reviewer-a"
+permissions = ["reviews:write"]
+groups = ["code-reviewers"]
+
+[[principal]]
+id = "reviewer-b"
+permissions = ["reviews:write"]
+groups = ["maintainers"]
+
+[[principal]]
+id = "maint"
+permissions = ["merge", "reviews:write"]
+groups = ["maintainers"]
+
+[[group]]
+name = "code-reviewers"
+permissions = ["reviews:write"]
+members = ["reviewer-a"]
+
+[[group]]
+name = "maintainers"
+permissions = ["merge", "reviews:write"]
+members = ["reviewer-b", "maint"]
+"#
+        }
+        GateConfig::Single | GateConfig::Malformed => {
+            r#"
+[[principal]]
+id = "impl"
+permissions = ["contents:write", "pull_requests:write"]
+
+[[principal]]
+id = "reviewer"
+permissions = ["reviews:write"]
+
+[[principal]]
+id = "maint"
+permissions = ["merge"]
+"#
+        }
+    };
+
+    but_testsupport::invoke_bash(
+        &format!(
+            r#"
+git remote add origin https://github.com/gitbutler/merge-gate-fixture.git
+mkdir -p .gitbutler
+cat >.gitbutler/permissions.toml <<'EOF'
+{permissions}
+EOF
+cat >.gitbutler/gates.toml <<'EOF'
+{gates}
+EOF
+git add .gitbutler/permissions.toml .gitbutler/gates.toml
+git commit -m "governance config"
+git checkout -b feat
+echo feat >feat.txt
+git add feat.txt
+git commit -m "feat"
+git checkout main
+"#
+        ),
+        &repo,
+    );
+
+    Ok((repo, tmp))
+}
+
+fn context_with_review(
+    repo: &gix::Repository,
+    reviewer: &str,
+    head: gix::ObjectId,
+    approved: bool,
+) -> anyhow::Result<but_ctx::Context> {
+    let mut ctx = but_ctx::Context::from_repo(repo.clone())?.with_memory_app_cache();
+    seed_review(&mut ctx, head)?;
+    if approved {
+        seed_verdict(&mut ctx, reviewer, head, 1)?;
+    }
+    Ok(ctx)
+}
+
+fn seed_review(ctx: &mut but_ctx::Context, head: gix::ObjectId) -> anyhow::Result<()> {
+    ctx.db
+        .get_cache_mut()?
+        .forge_reviews_mut()?
+        .upsert(ForgeReview {
+            html_url: "https://github.com/gitbutler/merge-gate-fixture/pull/1".to_owned(),
+            number: REVIEW_ID.try_into()?,
+            title: "Merge gate fixture".to_owned(),
+            body: None,
+            author: Some("impl".to_owned()),
+            labels: "[]".to_owned(),
+            draft: false,
+            source_branch: "feat".to_owned(),
+            target_branch: "main".to_owned(),
+            sha: head.to_string(),
+            created_at: None,
+            modified_at: None,
+            merged_at: None,
+            closed_at: None,
+            repository_ssh_url: None,
+            repository_https_url: Some(
+                "https://github.com/gitbutler/merge-gate-fixture.git".to_owned(),
+            ),
+            repo_owner: Some("gitbutler".to_owned()),
+            head_repo_is_fork: false,
+            reviewers: "[]".to_owned(),
+            unit_symbol: "#".to_owned(),
+            last_sync_at: fixed_time(0),
+            struct_version: but_forge::ForgeReview::struct_version(),
+        })?;
+    Ok(())
+}
+
+fn seed_verdict(
+    ctx: &mut but_ctx::Context,
+    principal_id: &str,
+    head: gix::ObjectId,
+    index: i64,
+) -> anyhow::Result<()> {
+    ctx.db
+        .get_cache_mut()?
+        .local_review_verdicts_mut()
+        .insert(LocalReviewVerdict {
+            id: format!("{principal_id}-{index}"),
+            target: FEAT_REF.to_owned(),
+            principal_id: principal_id.to_owned(),
+            verdict: "approved".to_owned(),
+            head_oid: head.to_string(),
+            created_at: fixed_time(index),
+        })?;
+    Ok(())
+}
+
+fn fixed_time(seconds: i64) -> chrono::NaiveDateTime {
+    chrono::DateTime::from_timestamp(1_735_689_600 + seconds, 0)
+        .expect("fixed timestamp is valid")
+        .naive_utc()
+}
+
+fn ref_id(repo: &gix::Repository, ref_name: &str) -> anyhow::Result<gix::ObjectId> {
+    Ok(repo.find_reference(ref_name)?.peel_to_id()?.detach())
+}
+
+fn verdict_count(ctx: &but_ctx::Context) -> anyhow::Result<usize> {
+    Ok(ctx
+        .db
+        .get_cache()?
+        .local_review_verdicts()
+        .list_by_target(FEAT_REF)?
+        .len())
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+struct GateErrorPayload {
+    code: &'static str,
+    message: String,
+}
+
+fn classify_error(err: &anyhow::Error) -> Option<GateErrorPayload> {
+    if let Some(error) = err.downcast_ref::<but_api::legacy::merge_gate::MergeGateError>() {
+        return Some(GateErrorPayload {
+            code: error.code,
+            message: error.message.clone(),
+        });
+    }
+
+    if let Some(denial) = err.downcast_ref::<but_authz::Denial>() {
+        return Some(GateErrorPayload {
+            code: denial.code,
+            message: denial.message.clone(),
+        });
+    }
+
+    err.downcast_ref::<but_authz::ConfigError>()
+        .map(|error| GateErrorPayload {
+            code: error.code(),
+            message: error.to_string(),
+        })
+}
+
+fn assert_gate_denied(result: anyhow::Result<()>, code: &'static str) -> GateErrorPayload {
+    match result {
+        Ok(()) => panic!("merge should be denied with {code}"),
+        Err(err) => {
+            let gate_error = classify_error(&err).expect("merge gate errors should be structured");
+            assert_eq!(
+                gate_error.code, code,
+                "merge gate should return the expected stable code"
+            );
+            gate_error
+        }
+    }
+}

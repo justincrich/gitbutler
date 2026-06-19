@@ -1,0 +1,97 @@
+   Compiling temp-env v0.3.6
+   Compiling but-api v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/GATES-003/crates/but-api)
+warning: variable does not need to be mutable
+  --> crates/but-api/tests/merge_gate.rs:14:9
+   |
+14 |     let mut ctx = context_with_review(&repo, "reviewer", head, true)?;
+   |         ----^^^
+   |         |
+   |         help: remove this `mut`
+   |
+   = note: `#[warn(unused_mut)]` (part of `#[warn(unused)]`) on by default
+
+warning: variable does not need to be mutable
+  --> crates/but-api/tests/merge_gate.rs:65:9
+   |
+65 |     let mut ctx = context_with_review(&repo, "reviewer", ref_id(&repo, FEAT_REF)?, false)?;
+   |         ----^^^
+   |         |
+   |         help: remove this `mut`
+
+warning: variable does not need to be mutable
+   --> crates/but-api/tests/merge_gate.rs:133:9
+    |
+133 |     let mut ctx = context_with_review(&repo, "reviewer", ref_id(&repo, FEAT_REF)?, true)?;
+    |         ----^^^
+    |         |
+    |         help: remove this `mut`
+
+warning: variable does not need to be mutable
+   --> crates/but-api/tests/merge_gate.rs:160:9
+    |
+160 |     let mut ctx = context_with_review(&repo, "reviewer", ref_id(&repo, FEAT_REF)?, true)?;
+    |         ----^^^
+    |         |
+    |         help: remove this `mut`
+
+warning: `but-api` (test "merge_gate") generated 4 warnings (run `cargo fix --test "merge_gate" -p but-api` to apply 4 suggestions)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 3.69s
+     Running unittests src/lib.rs (target/debug/deps/but_api-21eb92b297b4d327)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 27 filtered out; finished in 0.00s
+
+     Running tests/api/main.rs (target/debug/deps/api-8d3f3938b8c1f2bf)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 2 filtered out; finished in 0.00s
+
+     Running tests/commit_gate.rs (target/debug/deps/commit_gate-2782394dd83b3e92)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 6 filtered out; finished in 0.00s
+
+     Running tests/merge_gate.rs (target/debug/deps/merge_gate-ecc63ef1ac923b3f)
+
+running 4 tests
+test merge_gate_authorize_and_review_requirement ... FAILED
+test merge_gate_dryrun_and_malformed_failclosed ... FAILED
+test merge_gate_below_min_approvals_blocked ... FAILED
+test merge_gate_two_group_both_present_proceeds ... FAILED
+
+failures:
+
+---- merge_gate_authorize_and_review_requirement stdout ----
+
+thread 'merge_gate_authorize_and_review_requirement' (71580092) panicked at crates/but-api/tests/merge_gate.rs:400:51:
+merge gate errors should be structured
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- merge_gate_dryrun_and_malformed_failclosed stdout ----
+
+thread 'merge_gate_dryrun_and_malformed_failclosed' (71580094) panicked at crates/but-api/tests/merge_gate.rs:400:51:
+merge gate errors should be structured
+
+---- merge_gate_below_min_approvals_blocked stdout ----
+
+thread 'merge_gate_below_min_approvals_blocked' (71580093) panicked at crates/but-api/tests/merge_gate.rs:400:51:
+merge gate errors should be structured
+
+---- merge_gate_two_group_both_present_proceeds stdout ----
+
+thread 'merge_gate_two_group_both_present_proceeds' (71580095) panicked at crates/but-api/tests/merge_gate.rs:400:51:
+merge gate errors should be structured
+
+
+failures:
+    merge_gate_authorize_and_review_requirement
+    merge_gate_below_min_approvals_blocked
+    merge_gate_dryrun_and_malformed_failclosed
+    merge_gate_two_group_both_present_proceeds
+
+test result: FAILED. 0 passed; 4 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.60s
+
+error: test failed, to rerun pass `-p but-api --test merge_gate`
