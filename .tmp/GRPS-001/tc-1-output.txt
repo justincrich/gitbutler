@@ -1,4 +1,4 @@
-    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.28s
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.32s
      Running unittests src/lib.rs (target/debug/deps/but_authz-1c208a5fcd383d5b)
 
 running 0 tests
@@ -26,7 +26,7 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 5 filtered out; fini
      Running tests/grps_union.rs (target/debug/deps/grps_union-655e33f7841c42ee)
 
 running 1 test
-test claims_do_not_widen_union_even_with_group_backing ... ok
+test group_union_authorizes_review_denies_merge ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 3 filtered out; finished in 0.07s
 

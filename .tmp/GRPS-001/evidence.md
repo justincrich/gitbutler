@@ -10,6 +10,7 @@ Implementation summary:
 - Added `grps_union.rs` integration coverage for group-only review authority, equality with loaded principal authorities, delegated admin ceiling, and caller-claim non-widening.
 
 Refreshed verification on the new baseline:
+- `verification-summary.json.commit_sha` records `81a155de9c818b25553819734dd360ad8c4fb2f5`, the commit under test before this evidence-only completion-package repair commit. The final repair commit only changes `.tmp/GRPS-001/` evidence files.
 - `! grep -nE 'principal\.authorities\(\)' crates/but-authz/src/authorize.rs`
   - Evidence: `.tmp/GRPS-001/verify-grep-no-principal-authorities.txt`
 - `cargo test -p but-authz group_union_authorizes_review_denies_merge`

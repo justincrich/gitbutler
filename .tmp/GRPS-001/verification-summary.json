@@ -1,7 +1,7 @@
 {
   "task_id": "GRPS-001",
-  "timestamp": "2026-06-19T17:32:38Z",
-  "commit_sha": "e2c5618c755b78d560290f54b4b3daca75c98cd3",
+  "timestamp": "2026-06-19T17:39:27Z",
+  "commit_sha": "81a155de9c818b25553819734dd360ad8c4fb2f5",
   "typecheck": {
     "exit_code": 0
   },
@@ -18,7 +18,7 @@
       "output_file": ".tmp/GRPS-001/ac-1-output.txt",
       "red_against_start_file": ".tmp/GRPS-001/red-ac1-group-union.txt",
       "green_file": ".tmp/GRPS-001/green-ac1-group-union.txt",
-      "seeded_value": "reviewer-only is authorized for reviews:write through group union while merge is denied with perm.denied and a merge denial message"
+      "seeded_value": "reviews:write is allowed through group union while merge is denied with perm.denied"
     },
     {
       "id": "AC-2",
@@ -27,7 +27,7 @@
       "output_file": ".tmp/GRPS-001/ac-2-output.txt",
       "red_against_start_file": ".tmp/GRPS-001/red-structural-authorize-reunion.txt",
       "green_file": ".tmp/GRPS-001/green-ac2-union-paths.txt",
-      "seeded_value": "effective_authority equals principal_authorities for reviewer-only, reviewer-byref, and ro; both reviewer paths contain exactly reviews:write, while ro excludes reviews:write"
+      "seeded_value": "effective_authority equals principal_authorities and both reviewer paths expose exactly the reviews:write permission set"
     },
     {
       "id": "AC-3",
@@ -36,7 +36,7 @@
       "output_file": ".tmp/GRPS-001/ac-3-output.txt",
       "red_against_start_file": ".tmp/GRPS-001/red-structural-authorize-reunion.txt",
       "green_file": ".tmp/GRPS-001/green-ac3-delegated-admin.txt",
-      "seeded_value": "delegate is authorized for administration:write from cfg lookup while reviewer-only is denied administration:write with perm.denied"
+      "seeded_value": "delegated admin is allowed while reviewer-only administration:write is denied"
     },
     {
       "id": "AC-4",
@@ -45,7 +45,49 @@
       "output_file": ".tmp/GRPS-001/ac-4-output.txt",
       "red_against_start_file": ".tmp/GRPS-001/red-structural-authorize-reunion.txt",
       "green_file": ".tmp/GRPS-001/green-ac4-claims.txt",
-      "seeded_value": "fabricated merge and administration:write caller claims for reviewer-only are denied with perm.denied because authorization uses cfg principal_authorities lookup"
+      "seeded_value": "fabricated merge/admin caller claims are denied by cfg principal_authorities lookup"
+    },
+    {
+      "id": "TC-1",
+      "verify": "cargo test -p but-authz group_union_authorizes_review_denies_merge",
+      "exit_code": 0,
+      "output_file": ".tmp/GRPS-001/tc-1-output.txt"
+    },
+    {
+      "id": "TC-2",
+      "verify": "cargo test -p but-authz group_union_authorizes_review_denies_merge",
+      "exit_code": 0,
+      "output_file": ".tmp/GRPS-001/tc-2-output.txt"
+    },
+    {
+      "id": "TC-3",
+      "verify": "cargo test -p but-authz union_paths_stay_equal",
+      "exit_code": 0,
+      "output_file": ".tmp/GRPS-001/tc-3-output.txt"
+    },
+    {
+      "id": "TC-4",
+      "verify": "cargo test -p but-authz union_paths_stay_equal",
+      "exit_code": 0,
+      "output_file": ".tmp/GRPS-001/tc-4-output.txt"
+    },
+    {
+      "id": "TC-5",
+      "verify": "cargo test -p but-authz delegated_admin_ceiling",
+      "exit_code": 0,
+      "output_file": ".tmp/GRPS-001/tc-5-output.txt"
+    },
+    {
+      "id": "TC-6",
+      "verify": "cargo test -p but-authz delegated_admin_ceiling",
+      "exit_code": 0,
+      "output_file": ".tmp/GRPS-001/tc-6-output.txt"
+    },
+    {
+      "id": "TC-7",
+      "verify": "cargo test -p but-authz claims_do_not_widen_union_even_with_group_backing",
+      "exit_code": 0,
+      "output_file": ".tmp/GRPS-001/tc-7-output.txt"
     },
     {
       "id": "TC-8",

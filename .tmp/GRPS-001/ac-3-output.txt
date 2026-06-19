@@ -1,4 +1,4 @@
-    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.30s
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.32s
      Running unittests src/lib.rs (target/debug/deps/but_authz-1c208a5fcd383d5b)
 
 running 0 tests

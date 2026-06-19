@@ -1,4 +1,4 @@
-    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.36s
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.30s
      Running unittests src/lib.rs (target/debug/deps/but_authz-1c208a5fcd383d5b)
 
 running 0 tests
@@ -28,7 +28,7 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 5 filtered out; fini
 running 1 test
 test union_paths_stay_equal ... ok
 
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 3 filtered out; finished in 0.08s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 3 filtered out; finished in 0.07s
 
      Running tests/invariant_build_gates.rs (target/debug/deps/invariant_build_gates-3449f8339e66909b)
 

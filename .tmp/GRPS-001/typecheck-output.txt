@@ -1,1 +1,1 @@
-(skipped — no typecheck command)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.75s
