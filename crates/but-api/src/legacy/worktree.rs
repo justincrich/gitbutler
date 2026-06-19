@@ -56,6 +56,14 @@ pub fn worktree_integrate(
     id: WorktreeId,
     target: gix::refs::FullName,
 ) -> Result<()> {
+    {
+        let repo = ctx.repo.get()?;
+        crate::commit::create::gate::enforce_commit_gate_for_target(
+            &repo,
+            &crate::commit::create::gate::CommitGateTarget::direct_ref(target.clone()),
+        )?;
+    }
+
     let mut guard = ctx.exclusive_worktree_access();
     let mut meta = ctx.meta()?;
     let (repo, mut ws, _) = ctx.workspace_mut_and_db_with_perm(guard.write_permission())?;
