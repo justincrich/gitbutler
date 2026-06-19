@@ -1,159 +1,167 @@
 {
-  "taskId": "GATES-006",
+  "task_id": "GATES-006",
+  "commit_sha": "d8a98161f581571612ac8d6fcac8eb32a13f89f1",
   "mode": "proof_only",
-  "baseSha": "50efe7e43eceff3754f0d44b0e40d535e1b35831",
-  "requiresTests": true,
-  "requiresRedEvidence": false,
-  "requiresSeededEvidence": true,
+  "base_sha": "50efe7e43eceff3754f0d44b0e40d535e1b35831",
+  "requires_tests": true,
+  "requires_red_evidence": false,
+  "requires_seeded_evidence": true,
   "scope": {
-    "productCodeChanged": false,
-    "productionSourcesTouched": [],
-    "evidence": ".tmp/GATES-006/verify-product-code-unchanged.txt",
-    "allowedChangedFiles": [
+    "product_code_changed": false,
+    "production_sources_touched": [],
+    "allowed_changed_files": [
       "crates/but-api/tests/merge_gate.rs",
       ".tmp/GATES-006/"
     ]
   },
-  "seededEvidence": {
+  "seeded_evidence": {
     "fixture": "merge_gated_repo(GateConfig::TwoGroup)",
-    "approvalPath": "approve_branch(&ctx, principal_id) -> but_api::legacy::forge::approve_review",
+    "approval_path": "approve_branch(&ctx, principal_id) -> but_api::legacy::forge::approve_review",
     "services": [
       "real but-api merge gate",
       "real git",
       "real but-db"
     ],
-    "directDbWrites": false
+    "direct_db_writes": false
   },
-  "requirementResults": [
+  "canonical_outputs": {
+    "typecheck": ".tmp/GATES-006/typecheck-output.txt",
+    "lint": ".tmp/GATES-006/lint-output.txt",
+    "test": ".tmp/GATES-006/test-output.txt"
+  },
+  "requirement_results": [
     {
       "id": "AC-1",
-      "description": "Only one required group approving blocks, order-independent, with denial.unmet naming only the still-missing group.",
+      "type": "acceptance_criterion",
       "result": "passed",
-      "testTier": "integration",
-      "verificationService": "real but-api merge gate + real git + real but-db",
-      "test": "merge_gate_two_group_only_one_blocked",
-      "evidence": ".tmp/GATES-006/verify-cargo-test-but-api-merge-gate-two-group-only-one-blocked.txt",
+      "test_tier": "integration",
+      "verification_service": "real but-api merge gate + real git + real but-db",
+      "verify": "cargo test -p but-api merge_gate_two_group_only_one_blocked",
+      "exit_code": 0,
+      "evidence": ".tmp/GATES-006/test-output.txt",
       "proof": [
-        "reviewer-a/code-reviewers only approval is denied with denial.unmet exactly [\"require_approval_from_group maintainers: no_approval\"]",
-        "reviewer-b/maintainers only approval is denied with denial.unmet exactly [\"require_approval_from_group code-reviewers: no_approval\"]",
-        "each denial leaves main unchanged"
+        "The one-group-only strictness test passed.",
+        "The test asserts the code-reviewers-only case is denied with only the maintainers unmet entry.",
+        "The test asserts the maintainers-only case is denied with only the code-reviewers unmet entry."
       ]
     },
     {
       "id": "AC-2",
-      "description": "A distinct approval from each required group at head proceeds past the gate.",
+      "type": "acceptance_criterion",
       "result": "passed",
-      "testTier": "integration",
-      "verificationService": "real but-api merge gate + real git + real but-db",
-      "test": "merge_gate_two_group_both_present_proceeds",
-      "evidence": ".tmp/GATES-006/verify-cargo-test-but-api-merge-gate-two-group-both-present-proceeds.txt",
+      "test_tier": "integration",
+      "verification_service": "real but-api merge gate + real git + real but-db",
+      "verify": "cargo test -p but-api merge_gate_two_group_both_present_proceeds",
+      "exit_code": 0,
+      "evidence": ".tmp/GATES-006/test-output.txt",
       "proof": [
-        "reviewer-a/code-reviewers and reviewer-b/maintainers approvals are seeded through approve_branch",
-        "classify_error(&err).is_none() after merge_review reaches the forge boundary, proving no gate.review_required governance denial"
+        "The both-required-groups-present positive control passed.",
+        "The test reaches past the governance gate without a gate.review_required denial."
       ]
     },
     {
       "id": "AC-3",
-      "description": "Two-tier behavior remains pure config, with no human-vs-AI branch or role-name literal in review_requirement.rs.",
+      "type": "acceptance_criterion",
       "result": "passed",
-      "testTier": "unit",
-      "unitTestJustified": "Structural source invariant verified by grep plus compile; behavioral strictness is covered by AC-1 and AC-2 integration tests.",
-      "verificationService": "source grep + compile",
+      "test_tier": "unit",
+      "unit_test_justified": "Pure structural invariant verified by source grep plus compile; behavioral strictness is proven by AC-1 and AC-2 integration tests.",
+      "verification_service": "source grep + compile",
+      "verify": "! grep -rEni 'is_bot|is_human|\"human\"|\"ai\"|\\bhuman\\b|\\bbot\\b' crates/but-api/src/legacy/review_requirement.rs && ! grep -rEni '\\bimplementer\\b|\\breviewer\\b|\\bmaintainer\\b' crates/but-api/src/legacy/review_requirement.rs",
+      "exit_code": 0,
       "evidence": [
-        ".tmp/GATES-006/verify-grep-no-human-ai-branch.txt",
-        ".tmp/GATES-006/verify-grep-no-role-labels.txt",
-        ".tmp/GATES-006/verify-cargo-check-but-api-all-targets.txt"
+        ".tmp/GATES-006/test-output.txt",
+        ".tmp/GATES-006/typecheck-output.txt"
       ],
       "proof": [
-        "no matches for is_bot, is_human, quoted human/ai, or human/bot word-boundary discriminators",
-        "no matches for implementer, reviewer, or maintainer word-boundary literals",
-        "cargo check -p but-api --all-targets passed"
+        "The human-vs-AI discriminator grep returned no matches.",
+        "The role-name word-literal grep returned no matches.",
+        "cargo check -p but-api --all-targets passed."
       ]
     },
     {
       "id": "TC-1",
-      "mapsTo": "AC-1",
-      "description": "AI-only/code-reviewers approval at head blocks with missing maintainers unmet entry and no code-reviewers unmet entry.",
+      "type": "test_criterion",
+      "maps_to_ac": "AC-1",
       "result": "passed",
-      "evidence": ".tmp/GATES-006/verify-cargo-test-but-api-merge-gate-two-group-only-one-blocked.txt"
+      "verify": "cargo test -p but-api merge_gate_two_group_only_one_blocked",
+      "exit_code": 0,
+      "evidence": ".tmp/GATES-006/test-output.txt",
+      "proof": "AI-only/code-reviewers approval at head blocks with a missing maintainers unmet entry and no code-reviewers unmet entry."
     },
     {
       "id": "TC-2",
-      "mapsTo": "AC-1",
-      "description": "Human-only/maintainers approval at head blocks with missing code-reviewers unmet entry and no maintainers unmet entry.",
+      "type": "test_criterion",
+      "maps_to_ac": "AC-1",
       "result": "passed",
-      "evidence": ".tmp/GATES-006/verify-cargo-test-but-api-merge-gate-two-group-only-one-blocked.txt"
+      "verify": "cargo test -p but-api merge_gate_two_group_only_one_blocked",
+      "exit_code": 0,
+      "evidence": ".tmp/GATES-006/test-output.txt",
+      "proof": "Human-only/maintainers approval at head blocks with a missing code-reviewers unmet entry and no maintainers unmet entry."
     },
     {
       "id": "TC-3",
-      "mapsTo": "AC-2",
-      "description": "One distinct approval from each required group at head proceeds past governance.",
+      "type": "test_criterion",
+      "maps_to_ac": "AC-2",
       "result": "passed",
-      "evidence": ".tmp/GATES-006/verify-cargo-test-but-api-merge-gate-two-group-both-present-proceeds.txt"
+      "verify": "cargo test -p but-api merge_gate_two_group_both_present_proceeds",
+      "exit_code": 0,
+      "evidence": ".tmp/GATES-006/test-output.txt",
+      "proof": "A distinct approval from each required group at head proceeds past the governance gate."
     },
     {
       "id": "TC-4",
-      "mapsTo": "AC-3",
-      "description": "No human-vs-AI enforcement branch and no role/group-name word literal in the evaluator.",
+      "type": "test_criterion",
+      "maps_to_ac": "AC-3",
       "result": "passed",
+      "verify": "cargo check -p but-api --all-targets",
+      "exit_code": 0,
       "evidence": [
-        ".tmp/GATES-006/verify-grep-no-human-ai-branch.txt",
-        ".tmp/GATES-006/verify-grep-no-role-labels.txt"
-      ]
+        ".tmp/GATES-006/test-output.txt",
+        ".tmp/GATES-006/typecheck-output.txt"
+      ],
+      "proof": "The structural greps returned no matches and the but-api crate checked successfully."
     },
     {
       "id": "TC-5",
-      "mapsTo": "AC-1",
-      "description": "Per-group denial.unmet entries use the exact require_approval_from_group {group}: {reason} form naming the specific missing group.",
+      "type": "test_criterion",
+      "maps_to_ac": "AC-1",
       "result": "passed",
-      "evidence": ".tmp/GATES-006/verify-cargo-test-but-api-merge-gate-two-group-only-one-blocked.txt"
+      "verify": "cargo test -p but-api merge_gate_two_group_only_one_blocked",
+      "exit_code": 0,
+      "evidence": ".tmp/GATES-006/test-output.txt",
+      "proof": "The one-group-only strictness test asserts exact require_approval_from_group {group}: {reason} denial.unmet entries for the still-missing group."
     }
   ],
-  "commands": [
+  "command_results": [
     {
       "command": "cargo test -p but-api merge_gate_two_group_only_one_blocked",
-      "result": "passed",
-      "evidence": ".tmp/GATES-006/verify-cargo-test-but-api-merge-gate-two-group-only-one-blocked.txt"
+      "exit_code": 0,
+      "evidence": ".tmp/GATES-006/test-output.txt"
     },
     {
       "command": "cargo test -p but-api merge_gate_two_group_both_present_proceeds",
-      "result": "passed",
-      "evidence": ".tmp/GATES-006/verify-cargo-test-but-api-merge-gate-two-group-both-present-proceeds.txt"
+      "exit_code": 0,
+      "evidence": ".tmp/GATES-006/test-output.txt"
     },
     {
       "command": "! grep -rEni 'is_bot|is_human|\"human\"|\"ai\"|\\bhuman\\b|\\bbot\\b' crates/but-api/src/legacy/review_requirement.rs",
-      "result": "passed",
-      "evidence": ".tmp/GATES-006/verify-grep-no-human-ai-branch.txt"
+      "exit_code": 0,
+      "evidence": ".tmp/GATES-006/test-output.txt"
     },
     {
       "command": "! grep -rEni '\\bimplementer\\b|\\breviewer\\b|\\bmaintainer\\b' crates/but-api/src/legacy/review_requirement.rs",
-      "result": "passed",
-      "evidence": ".tmp/GATES-006/verify-grep-no-role-labels.txt"
+      "exit_code": 0,
+      "evidence": ".tmp/GATES-006/test-output.txt"
     },
     {
       "command": "cargo check -p but-api --all-targets",
-      "result": "passed",
-      "evidence": ".tmp/GATES-006/verify-cargo-check-but-api-all-targets.txt"
+      "exit_code": 0,
+      "evidence": ".tmp/GATES-006/typecheck-output.txt"
     },
     {
       "command": "cargo clippy -p but-api --all-targets",
-      "result": "passed",
-      "evidence": ".tmp/GATES-006/verify-cargo-clippy-but-api-all-targets.txt"
-    },
-    {
-      "command": "cargo fmt --check",
-      "result": "passed",
-      "evidence": ".tmp/GATES-006/verify-cargo-fmt-check.txt"
-    },
-    {
-      "command": "cargo clippy -p but-api --all-targets -- -D warnings",
-      "result": "passed",
-      "evidence": ".tmp/GATES-006/verify-cargo-clippy-but-api-all-targets-deny-warnings.txt"
-    },
-    {
-      "command": "git diff --name-only -- crates/but-api/src/legacy/review_requirement.rs",
-      "result": "passed",
-      "evidence": ".tmp/GATES-006/verify-product-code-unchanged.txt"
+      "exit_code": 0,
+      "evidence": ".tmp/GATES-006/lint-output.txt"
     }
   ]
 }

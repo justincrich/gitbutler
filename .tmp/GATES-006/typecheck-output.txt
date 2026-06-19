@@ -1,0 +1,6 @@
+===== cargo check -p but-api --all-targets =====
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 3.21s
+EXIT_CODE=0
