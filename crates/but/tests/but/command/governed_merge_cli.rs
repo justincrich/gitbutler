@@ -39,11 +39,28 @@ fn merge_dry_run_denial_leaves_refs_and_cache_unchanged() -> anyhow::Result<()> 
     let review_count_before = review_count(&env)?;
     let verdict_count_before = verdict_count(&env)?;
 
-    env.but("--format json pr merge 1 --dry-run")
+    let output = env
+        .but("--format json pr merge 1 --dry-run")
         .allow_json()
         .env("BUT_AGENT_HANDLE", "impl")
-        .assert()
-        .failure();
+        .output()?;
+    assert!(
+        !output.status.success(),
+        "implementer dry-run merge without merge authority must fail"
+    );
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains(r#""code":"perm.denied""#),
+        "dry-run denial must be structured as perm.denied, got: {stderr}"
+    );
+    assert!(
+        stderr.contains("action requires merge"),
+        "dry-run denial must name the missing merge authority, got: {stderr}"
+    );
+    assert!(
+        !stderr.contains("unrecognized subcommand"),
+        "dry-run denial must prove the merge subcommand parsed, got: {stderr}"
+    );
 
     assert_eq!(
         ref_id(&repo, "refs/heads/main")?,
@@ -95,6 +112,10 @@ fn merge_dry_run_fails_closed_without_agent_handle() -> anyhow::Result<()> {
             stderr.contains("BUT_AGENT_HANDLE is required"),
             "{label} denial must name the missing governed principal handle, got: {stderr}"
         );
+        assert!(
+            !stderr.contains("unrecognized subcommand"),
+            "{label} handle denial must prove the merge subcommand parsed, got: {stderr}"
+        );
     }
 
     Ok(())
@@ -119,12 +140,24 @@ fn non_dry_run_reaches_forge_merge_boundary_after_gate_passes() -> anyhow::Resul
     );
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(
+        stderr.contains("forge merge_review boundary rejected review 1"),
+        "authorized non-dry-run merge must reach the forge merge_review boundary, got: {stderr}"
+    );
+    assert!(
         !stderr.contains(r#""code":"perm.denied""#),
         "maint has merge authority and current approval, so failure must not be a gate denial: {stderr}"
     );
     assert!(
+        !stderr.contains("unrecognized subcommand"),
+        "authorized non-dry-run merge must prove the merge subcommand parsed, got: {stderr}"
+    );
+    assert!(
         !stderr.contains("Failed to set the auto-merge state"),
         "governed merge must not dispatch to auto-merge: {stderr}"
+    );
+    assert!(
+        !stderr.contains("Merged review"),
+        "fixture without forge credentials must not report a successful forge merge: {stderr}"
     );
     assert_eq!(
         ref_id(&repo, "refs/heads/main")?,
@@ -226,7 +259,7 @@ fn seed_review_cache(env: &Sandbox) -> anyhow::Result<()> {
         .local_review_verdicts_mut()
         .insert(LocalReviewVerdict {
             id: "reviewer-approval".to_owned(),
-            target: "refs/heads/A".to_owned(),
+            target: "A".to_owned(),
             principal_id: "reviewer".to_owned(),
             verdict: "approved".to_owned(),
             head_oid: head.to_string(),
@@ -246,7 +279,7 @@ fn verdict_count(env: &Sandbox) -> anyhow::Result<usize> {
         .db
         .get_cache()?
         .local_review_verdicts()
-        .list_by_target("refs/heads/A")?
+        .list_by_target("A")?
         .len())
 }
 

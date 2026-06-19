@@ -1,5 +1,6 @@
 {
   "taskId": "GATES-006-GOVERNED-MERGE-CLI",
+  "remediationTaskId": "FIX-GATES-006-BEHAVIORAL-TEST-STRENGTH-3",
   "baseSha": "404cbb7c308f1541e5996df77417722197b5ea08",
   "requirement_results": [
     {
@@ -20,33 +21,31 @@
       "tests": [
         "command::governed_merge_cli::merge_denial_is_structured_for_implementer_without_merge_authority"
       ],
-      "red_evidence": ".tmp/GATES-006/red-governed-merge-cli.txt",
+      "red_evidence": ".tmp/GATES-006/red-ac2-strengthened.txt",
       "green_evidence": ".tmp/GATES-006/green-governed-merge-cli-current.txt"
     },
     {
       "ac": "AC-3",
       "requirement": "Dry-run uses the production API merge gate and leaves refs/cache unchanged, including fail-closed missing handle behavior.",
-      "result": "blocked-evidence-invalid",
+      "result": "passed",
       "tests": [
         "command::governed_merge_cli::merge_dry_run_denial_leaves_refs_and_cache_unchanged",
         "command::governed_merge_cli::merge_dry_run_fails_closed_without_agent_handle"
       ],
-      "red_evidence": ".tmp/GATES-006/red-governed-merge-cli.txt",
-      "red_blocker_evidence": ".tmp/GATES-006/red-ac3-dry-run-unchanged-blocked.txt",
-      "red_evidence_note": "The missing-handle test fails at the base-plus-tests red baseline, but merge_dry_run_denial_leaves_refs_and_cache_unchanged passes there because `but pr merge` is rejected before the dry-run behavior is exercised.",
-      "green_evidence": ".tmp/GATES-006/green-governed-merge-cli-current.txt"
+      "red_evidence": ".tmp/GATES-006/red-ac3-strengthened.txt",
+      "green_evidence": ".tmp/GATES-006/green-governed-merge-cli-current.txt",
+      "red_evidence_note": "At the base-plus-strengthened-tests baseline, the dry-run test fails because `but pr merge` is rejected as an unrecognized subcommand instead of returning structured `perm.denied` output naming `merge`."
     },
     {
       "ac": "AC-4",
       "requirement": "Non-dry-run resolves exactly one review and reaches `but_api::legacy::forge::merge_review`, not auto-merge or local merge.",
-      "result": "blocked-evidence-invalid",
+      "result": "passed",
       "tests": [
         "command::governed_merge_cli::non_dry_run_reaches_forge_merge_boundary_after_gate_passes"
       ],
-      "red_evidence": ".tmp/GATES-006/red-governed-merge-cli.txt",
-      "red_blocker_evidence": ".tmp/GATES-006/red-ac4-non-dry-run-blocked.txt",
-      "red_evidence_note": "The AC-4 test passes at the base-plus-tests red baseline because the pre-implementation `unrecognized subcommand 'merge'` failure satisfies its current assertions.",
-      "green_evidence": ".tmp/GATES-006/green-governed-merge-cli-current.txt"
+      "red_evidence": ".tmp/GATES-006/red-ac4-strengthened.txt",
+      "green_evidence": ".tmp/GATES-006/green-governed-merge-cli-current.txt",
+      "red_evidence_note": "At the base-plus-strengthened-tests baseline, the non-dry-run test fails because `but pr merge` is rejected as an unrecognized subcommand instead of reaching the `forge merge_review boundary rejected review 1` error context."
     }
   ],
   "commands": [
@@ -56,42 +55,44 @@
       "evidence": ".tmp/GATES-006/red-parser.txt"
     },
     {
-      "command": "cargo test -p but parses_merge",
-      "result": "passed",
-      "evidence": ".tmp/GATES-006/green-parser.txt"
-    },
-    {
-      "command": "cargo test -p but governed_merge_cli",
-      "result": "passed",
-      "evidence": ".tmp/GATES-006/verify-cargo-test-but-governed-merge-cli.txt"
-    },
-    {
-      "command": "cargo test -p but governed_merge_cli",
-      "worktree": ".kb-run-sprint/worktrees/GATES-006-red-evidence-tt-023",
-      "baseline": "404cbb7c308f1541e5996df77417722197b5ea08 plus governed_merge_cli tests only",
-      "result": "failed-as-red-partial",
-      "evidence": ".tmp/GATES-006/red-governed-merge-cli.txt",
-      "note": "AC-2 and AC-3 missing-handle fail. AC-3 unchanged-refs/cache and AC-4 non-dry-run pass at this red baseline."
+      "command": "cargo test -p but merge_denial_is_structured_for_implementer_without_merge_authority",
+      "worktree": ".kb-run-sprint/worktrees/GATES-006-red-evidence-tt-024",
+      "baseline": "404cbb7c308f1541e5996df77417722197b5ea08 plus strengthened governed_merge_cli tests only",
+      "result": "failed-as-red",
+      "evidence": ".tmp/GATES-006/red-ac2-strengthened.txt"
     },
     {
       "command": "cargo test -p but merge_dry_run_denial_leaves_refs_and_cache_unchanged",
-      "worktree": ".kb-run-sprint/worktrees/GATES-006-red-evidence-tt-023",
-      "baseline": "404cbb7c308f1541e5996df77417722197b5ea08 plus governed_merge_cli tests only",
-      "result": "blocked-passed-at-red-baseline",
-      "evidence": ".tmp/GATES-006/red-ac3-dry-run-unchanged-blocked.txt"
+      "worktree": ".kb-run-sprint/worktrees/GATES-006-red-evidence-tt-024",
+      "baseline": "404cbb7c308f1541e5996df77417722197b5ea08 plus strengthened governed_merge_cli tests only",
+      "result": "failed-as-red",
+      "evidence": ".tmp/GATES-006/red-ac3-strengthened.txt"
     },
     {
       "command": "cargo test -p but non_dry_run_reaches_forge_merge_boundary_after_gate_passes",
-      "worktree": ".kb-run-sprint/worktrees/GATES-006-red-evidence-tt-023",
-      "baseline": "404cbb7c308f1541e5996df77417722197b5ea08 plus governed_merge_cli tests only",
-      "result": "blocked-passed-at-red-baseline",
-      "evidence": ".tmp/GATES-006/red-ac4-non-dry-run-blocked.txt"
+      "worktree": ".kb-run-sprint/worktrees/GATES-006-red-evidence-tt-024",
+      "baseline": "404cbb7c308f1541e5996df77417722197b5ea08 plus strengthened governed_merge_cli tests only",
+      "result": "failed-as-red",
+      "evidence": ".tmp/GATES-006/red-ac4-strengthened.txt"
+    },
+    {
+      "command": "cargo test -p but governed_merge_cli",
+      "worktree": ".kb-run-sprint/worktrees/GATES-006-red-evidence-tt-024",
+      "baseline": "404cbb7c308f1541e5996df77417722197b5ea08 plus strengthened governed_merge_cli tests only",
+      "result": "failed-as-red",
+      "evidence": ".tmp/GATES-006/red-governed-merge-cli-strengthened.txt"
     },
     {
       "command": "cargo test -p but governed_merge_cli",
       "worktree": ".kb-run-sprint/worktrees/GATES-006",
       "result": "passed",
       "evidence": ".tmp/GATES-006/green-governed-merge-cli-current.txt"
+    },
+    {
+      "command": "cargo test -p but parses_merge",
+      "worktree": ".kb-run-sprint/worktrees/GATES-006",
+      "result": "passed",
+      "evidence": ".tmp/GATES-006/green-parser.txt"
     },
     {
       "command": "cargo check -p but --all-targets",
@@ -119,16 +120,27 @@
       "evidence": ".tmp/GATES-006/verify-cargo-fmt-check.txt"
     },
     {
+      "command": "git diff --check master...HEAD",
+      "result": "passed",
+      "evidence": ".tmp/GATES-006/verify-git-diff-check.txt"
+    },
+    {
+      "command": "git status --short",
+      "result": "passed",
+      "evidence": ".tmp/GATES-006/verify-git-status-short.txt"
+    },
+    {
       "command": "cargo doc --no-deps",
       "result": "passed-with-existing-warning",
       "evidence": ".tmp/GATES-006/verify-cargo-doc-no-deps.txt"
     }
   ],
   "anti_stub_notes": [
+    "AC-3 now requires structured `perm.denied` output naming `merge`, so an unrecognized-subcommand failure cannot satisfy it.",
+    "AC-3 fail-closed missing-handle coverage now rejects `unrecognized subcommand` and still requires structured `perm.denied` plus `BUT_AGENT_HANDLE is required`.",
+    "AC-4 now requires the `forge merge_review boundary rejected review 1` context and rejects unrecognized subcommands, auto-merge output, successful merge output, and gate denial.",
+    "The AC-4 fixture now seeds the local approval under the same source-branch key that the production merge gate evaluates, so the positive boundary test reaches the forge seam honestly.",
     "Non-dry-run CLI dispatch calls `but_api::legacy::forge::merge_review(ctx.to_sync(), review_id, merge_method)` directly.",
-    "Dry-run dispatch calls `but_api::legacy::forge::dry_run_merge_review`, which returns immediately after `merge_gate::enforce_merge_gate` and performs no forge/storage operation.",
-    "The CLI merge route does not call `set_review_auto_merge`.",
-    "The CLI merge route does not invoke the top-level local `but merge` command; tests assert the target ref remains unchanged in the governed forge-merge fixture.",
-    "Merge selection reuses `resolve_review_selection` and rejects zero or multiple selected review IDs instead of silently choosing one."
+    "Dry-run dispatch calls `but_api::legacy::forge::dry_run_merge_review`, which returns immediately after `merge_gate::enforce_merge_gate` and performs no forge/storage operation."
   ]
 }

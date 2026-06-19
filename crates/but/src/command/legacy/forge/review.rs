@@ -217,6 +217,7 @@ pub async fn merge(
 
     but_api::legacy::forge::merge_review(ctx.to_sync(), review_id, merge_method)
         .await
+        .with_context(|| format!("forge merge_review boundary rejected review {review_id}"))
         .map_err(merge_gate_cli_error)?;
 
     if let Some(out) = out.for_human() {
