@@ -18,35 +18,42 @@ const AUTHZ_AUTHORIZE: &str = "crates/but-authz/src/authorize.rs";
 const AUTHZ_CONFIG: &str = "crates/but-authz/src/config.rs";
 const COMMIT_GATE: &str = "crates/but-api/src/commit/gate.rs";
 const MERGE_GATE: &str = "crates/but-api/src/legacy/merge_gate.rs";
+const CONFIG_MUTATE: &str = "crates/but-api/src/legacy/config_mutate.rs";
 const FORGE_GUARD: &str = "crates/but-api/src/legacy/forge.rs";
+const ENFORCEMENT_PATHS: &[&str] = &[
+    AUTHZ_AUTHORIZE,
+    AUTHZ_CONFIG,
+    COMMIT_GATE,
+    MERGE_GATE,
+    CONFIG_MUTATE,
+    FORGE_GUARD,
+];
+const SPRINT_02_ENFORCEMENT_PATHS: &[&str] = &[MERGE_GATE, CONFIG_MUTATE];
 
 #[test]
 fn invariant_build_gates() -> anyhow::Result<()> {
     let workspace_root = workspace_root()?;
     // The no-role-name / no-human-vs-AI invariants apply to EVERY enforcement
-    // path, including the merge gate and the forge boundary guards (Sprint 01b) --
-    // not just the commit-gate path. Functional `Authority` is the only axis any
-    // gate may branch on.
-    let enforcement_paths = [
-        AUTHZ_AUTHORIZE,
-        AUTHZ_CONFIG,
-        COMMIT_GATE,
-        MERGE_GATE,
-        FORGE_GUARD,
-    ];
-    assert_paths_exist_and_non_empty(&workspace_root, &enforcement_paths)?;
+    // path, including the merge gate, admin-write guard, and forge boundary
+    // guards -- not just the commit-gate path. Functional `Authority` is the
+    // only axis any gate may branch on.
+    assert!(
+        ENFORCEMENT_PATHS.len() >= 5,
+        "Sprint-02 enforcement coverage must include the Sprint-01a trio plus merge and admin-write surfaces"
+    );
+    assert_paths_exist_and_non_empty(&workspace_root, ENFORCEMENT_PATHS)?;
 
     assert_grep_has_no_matches(
         "role-preset branch invariant",
         &workspace_root,
         ROLE_BRANCH_PATTERN,
-        &enforcement_paths,
+        ENFORCEMENT_PATHS,
     )?;
     assert_grep_has_no_matches(
         "human-vs-AI or role-label branch invariant",
         &workspace_root,
         HUMAN_OR_LABEL_BRANCH_PATTERN,
-        &enforcement_paths,
+        ENFORCEMENT_PATHS,
     )?;
     assert_grep_has_matches(
         "commit gate must use the but-authz Authority axis",
@@ -54,11 +61,29 @@ fn invariant_build_gates() -> anyhow::Result<()> {
         AUTHORITY_POSITIVE_PATTERN,
         &[COMMIT_GATE],
     )?;
+    assert_grep_has_matches(
+        "merge gate must use the but-authz Authority axis",
+        &workspace_root,
+        AUTHORITY_POSITIVE_PATTERN,
+        &[MERGE_GATE],
+    )?;
+    assert_grep_has_matches(
+        "admin-write gate must use the but-authz Authority axis",
+        &workspace_root,
+        AUTHORITY_POSITIVE_PATTERN,
+        &[CONFIG_MUTATE],
+    )?;
     assert_grep_has_no_matches(
         "commit gate must not use GitButler Permission as authz carrier",
         &workspace_root,
         PERMISSION_CARRIER_PATTERN,
         &[COMMIT_GATE],
+    )?;
+    assert_grep_has_no_matches(
+        "Sprint-02 gates must not use GitButler Permission as authz carrier",
+        &workspace_root,
+        PERMISSION_CARRIER_PATTERN,
+        SPRINT_02_ENFORCEMENT_PATHS,
     )?;
 
     assert_seeded_controls_fire()?;
