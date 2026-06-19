@@ -16,8 +16,8 @@ fn forge_guard_gates_toml_only_repo_is_governed() -> anyhow::Result<()> {
     let gate_error = but_api::legacy::forge::classify_error(&gates_error)
         .context("gates-only governance failure should be structured")?;
     assert_eq!(
-        gate_error.code, "config.invalid",
-        "gates-only repos are governed and fail closed through the canonical loader"
+        gate_error.code, "perm.denied",
+        "gates-only repos are governed and deny unauthorized approval"
     );
     assert_no_verdicts(&gates_ctx, "feat")?;
     println!(
@@ -62,8 +62,8 @@ fn forge_guard_permissions_and_both_still_governed() -> anyhow::Result<()> {
     let permissions_gate_error = but_api::legacy::forge::classify_error(&permissions_error)
         .context("permissions-only governance failure should be structured")?;
     assert_eq!(
-        permissions_gate_error.code, "config.invalid",
-        "permissions-only repos are governed and fail closed through the canonical loader"
+        permissions_gate_error.code, "perm.denied",
+        "permissions-only repos are governed and deny unauthorized approval"
     );
     assert_no_verdicts(&permissions_ctx, "feat")?;
     println!(

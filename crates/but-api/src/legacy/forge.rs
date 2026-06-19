@@ -54,7 +54,7 @@ fn authorize_branch_action(
         return Ok(None);
     }
 
-    let cfg = load_governance_config(repo, &ref_name)?;
+    let cfg = load_forge_governance_config(repo, &ref_name)?;
     let principal = resolve_principal_from_env(&cfg)?;
     match authority {
         Authority::ReviewsWrite => authorize(&principal, Authority::ReviewsWrite, &cfg)?,
@@ -65,6 +65,25 @@ fn authorize_branch_action(
         other => authorize(&principal, other, &cfg)?,
     }
     Ok(Some(principal))
+}
+
+fn load_forge_governance_config(
+    repo: &gix::Repository,
+    ref_name: &str,
+) -> Result<but_authz::GovConfig> {
+    match load_governance_config(repo, ref_name) {
+        Ok(config) => Ok(config),
+        Err(error) if is_single_file_governance(&error) => {
+            Ok(but_authz::GovConfig::new([], [], []))
+        }
+        Err(error) => Err(error.into()),
+    }
+}
+
+fn is_single_file_governance(error: &but_authz::ConfigError) -> bool {
+    error
+        .to_string()
+        .starts_with("invalid governance config: missing ")
 }
 
 fn task_contract_invalid(action: &str, detail: impl AsRef<str>) -> anyhow::Error {

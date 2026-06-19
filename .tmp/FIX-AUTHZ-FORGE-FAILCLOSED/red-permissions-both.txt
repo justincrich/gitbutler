@@ -1,4 +1,4 @@
-    Finished `test` profile [unoptimized + debuginfo] target(s) in 1.16s
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.60s
      Running unittests src/lib.rs (target/debug/deps/but_api-b39b2d81e53be874)
 
 running 0 tests
@@ -32,15 +32,19 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 2 filtered out; fini
      Running tests/forge_guard.rs (target/debug/deps/forge_guard-957b48013fabacec)
 
 running 1 test
-permissions-only approval denied with `perm.denied` and no verdict was written
-both-files approval denied with `perm.denied` naming `reviews:write`
-test forge_guard_permissions_and_both_still_governed ... ok
 
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 3 filtered out; finished in 0.54s
+thread 'forge_guard_permissions_and_both_still_governed' (80395183) panicked at crates/but-api/tests/forge_guard.rs:64:5:
+assertion `left == right` failed: permissions-only repos are governed and deny unauthorized approval
+  left: "config.invalid"
+ right: "perm.denied"
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test forge_guard_permissions_and_both_still_governed ... FAILED
 
-     Running tests/merge_gate.rs (target/debug/deps/merge_gate-a9a7eef08cb3c05c)
+failures:
 
-running 0 tests
+failures:
+    forge_guard_permissions_and_both_still_governed
 
-test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 10 filtered out; finished in 0.00s
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 3 filtered out; finished in 0.11s
 
+error: test failed, to rerun pass `-p but-api --test forge_guard`
