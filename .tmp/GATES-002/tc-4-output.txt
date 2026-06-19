@@ -1,0 +1,26 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.15s
+     Running unittests src/lib.rs (target/debug/deps/but_db-a1a8a30081c1a0c4)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 5 filtered out; finished in 0.00s
+
+     Running tests/cross_process_migrations.rs (target/debug/deps/cross_process_migrations-321a951837f9b186)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 1 filtered out; finished in 0.00s
+
+     Running tests/db/main.rs (target/debug/deps/db-d92e675b82f79a84)
+
+running 1 test
+test table::local_review_verdicts::distinct_principals_both_returned ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 125 filtered out; finished in 0.00s
+
+     Running tests/open_rela_path.rs (target/debug/deps/open_rela_path-4580c1e08005c690)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 1 filtered out; finished in 0.00s
+
