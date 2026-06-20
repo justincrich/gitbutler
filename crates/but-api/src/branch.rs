@@ -644,21 +644,18 @@ pub fn apply(
     ctx: &mut but_ctx::Context,
     existing_branch: &gix::refs::FullNameRef,
 ) -> anyhow::Result<but_workspace::branch::apply::Outcome<'static>> {
-    enforce_commit_gate_for_workspace_config(ctx)?;
+    {
+        let repo = ctx.repo.get()?;
+        if let Some(config_ref) = workspace_config_ref(ctx, &repo)? {
+            crate::commit::create::gate::enforce_commit_gate_for_target(
+                &repo,
+                &crate::commit::create::gate::CommitGateTarget::config_only(config_ref),
+            )?;
+        }
+    }
 
     let mut guard = ctx.exclusive_worktree_access();
     apply_with_perm(ctx, existing_branch, guard.write_permission())
-}
-
-fn enforce_commit_gate_for_workspace_config(ctx: &Context) -> anyhow::Result<()> {
-    let repo = ctx.repo.get()?;
-    if let Some(config_ref) = workspace_config_ref(ctx, &repo)? {
-        crate::commit::create::gate::enforce_commit_gate_for_target(
-            &repo,
-            &crate::commit::create::gate::CommitGateTarget::config_only(config_ref),
-        )?;
-    }
-    Ok(())
 }
 
 fn workspace_config_ref(
@@ -979,7 +976,15 @@ pub fn apply_branch_integration(
     integration: json::InteractiveIntegration,
     dry_run: DryRun,
 ) -> anyhow::Result<IntegrateBranchResult> {
-    enforce_commit_gate_for_workspace_config(ctx)?;
+    {
+        let repo = ctx.repo.get()?;
+        if let Some(config_ref) = workspace_config_ref(ctx, &repo)? {
+            crate::commit::create::gate::enforce_commit_gate_for_target(
+                &repo,
+                &crate::commit::create::gate::CommitGateTarget::config_only(config_ref),
+            )?;
+        }
+    }
 
     let integration: InteractiveIntegration = integration.try_into()?;
     let mut guard = ctx.exclusive_worktree_access();

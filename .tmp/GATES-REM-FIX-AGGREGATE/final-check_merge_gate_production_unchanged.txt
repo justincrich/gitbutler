@@ -1,0 +1,1 @@
+OK: crates/but-api/src/legacy/merge_gate.rs is unchanged from AUTHZ-004 baseline a80ce888a894ae3568ee8127866e987e89d6c092
