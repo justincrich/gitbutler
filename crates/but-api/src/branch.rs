@@ -644,19 +644,45 @@ pub fn apply(
     ctx: &mut but_ctx::Context,
     existing_branch: &gix::refs::FullNameRef,
 ) -> anyhow::Result<but_workspace::branch::apply::Outcome<'static>> {
-    {
-        let repo = ctx.repo.get()?;
-        let project_meta = ctx.project_meta()?;
-        if let Ok(target_ref) = project_meta.target_ref_or_err() {
-            crate::commit::create::gate::enforce_commit_gate_for_target(
-                &repo,
-                &crate::commit::create::gate::CommitGateTarget::config_only(target_ref.clone()),
-            )?;
-        }
-    }
+    enforce_commit_gate_for_workspace_config(ctx)?;
 
     let mut guard = ctx.exclusive_worktree_access();
     apply_with_perm(ctx, existing_branch, guard.write_permission())
+}
+
+fn enforce_commit_gate_for_workspace_config(ctx: &Context) -> anyhow::Result<()> {
+    let repo = ctx.repo.get()?;
+    if let Some(config_ref) = workspace_config_ref(ctx, &repo)? {
+        crate::commit::create::gate::enforce_commit_gate_for_target(
+            &repo,
+            &crate::commit::create::gate::CommitGateTarget::config_only(config_ref),
+        )?;
+    }
+    Ok(())
+}
+
+fn workspace_config_ref(
+    ctx: &Context,
+    repo: &gix::Repository,
+) -> anyhow::Result<Option<gix::refs::FullName>> {
+    let project_meta = ctx.project_meta()?;
+    match project_meta.target_ref_or_err() {
+        Ok(target_ref) => Ok(Some(target_ref.clone())),
+        Err(_) => first_governed_ref(repo),
+    }
+}
+
+fn first_governed_ref(repo: &gix::Repository) -> anyhow::Result<Option<gix::refs::FullName>> {
+    for prefix in ["refs/heads/", "refs/remotes/"] {
+        for reference in repo.references()?.prefixed(prefix)?.filter_map(Result::ok) {
+            let ref_name = reference.name().to_owned();
+            if but_authz::governance_present(repo, ref_name.as_bstr().to_str()?)? {
+                return Ok(Some(ref_name));
+            }
+        }
+    }
+
+    Ok(None)
 }
 
 /// Apply `existing_branch` to the workspace under caller-held exclusive
@@ -953,16 +979,7 @@ pub fn apply_branch_integration(
     integration: json::InteractiveIntegration,
     dry_run: DryRun,
 ) -> anyhow::Result<IntegrateBranchResult> {
-    {
-        let repo = ctx.repo.get()?;
-        let project_meta = ctx.project_meta()?;
-        if let Ok(target_ref) = project_meta.target_ref_or_err() {
-            crate::commit::create::gate::enforce_commit_gate_for_target(
-                &repo,
-                &crate::commit::create::gate::CommitGateTarget::config_only(target_ref.clone()),
-            )?;
-        }
-    }
+    enforce_commit_gate_for_workspace_config(ctx)?;
 
     let integration: InteractiveIntegration = integration.try_into()?;
     let mut guard = ctx.exclusive_worktree_access();
