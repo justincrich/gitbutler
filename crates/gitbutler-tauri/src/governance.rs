@@ -3,6 +3,7 @@
 use std::{
     collections::{BTreeMap, BTreeSet},
     fs,
+    str::FromStr as _,
 };
 
 use anyhow::{Context as _, anyhow};
@@ -17,12 +18,16 @@ use but_authz::{
     Authority, AuthoritySet, BranchName, BranchProtection, GovConfig, Group, GroupName,
     PermissionsWire, PrincipalId, load_governance_config, permissions_path,
 };
+use but_core::RepositoryExt as _;
 use but_ctx::{Context, ProjectHandleOrLegacyProjectId};
+use gix::{bstr::ByteSlice as _, object::tree::EntryKind};
 use serde::{Deserialize, Serialize};
 
 const GATES_PATH: &str = ".gitbutler/gates.toml";
+const GOVERNANCE_COMMIT_MESSAGE: &str = "chore: update governance config";
 type PrincipalAuthorityRows = Vec<(PrincipalId, AuthoritySet)>;
 type GroupRows = Vec<(GroupName, Group)>;
+const GOVERNANCE_COMMIT_PATHS: [&str; 2] = [GATES_PATH, ".gitbutler/permissions.toml"];
 
 /// Read-only working-tree-vs-target-ref governance diff.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -63,6 +68,18 @@ pub struct GovernancePendingToken {
     /// Direction of the pending change.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub change: Option<GovernancePendingChange>,
+}
+
+/// Result of committing pending governance config files to the target ref.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GovernanceCommitOutcome {
+    /// Newly created governance commit id.
+    pub commit_id: String,
+    /// Fixed governance commit message used by the desktop contract.
+    pub message: &'static str,
+    /// Governance paths included in the commit.
+    pub committed_paths: Vec<String>,
 }
 
 /// Direction of a pending authority-token change.
@@ -325,6 +342,92 @@ pub fn governance_pending_for_project(
     let ctx = context_for_project(project_id, &target_ref).map_err(json::Error::from)?;
     let repo = ctx.repo.get().map_err(json::Error::from)?;
     governance_pending_with_repo(&repo, &target_ref).map_err(json::Error::from)
+}
+
+/// Commit pending governance config files to the target ref.
+pub fn governance_commit_for_project(
+    project_id: ProjectHandleOrLegacyProjectId,
+    target_ref: String,
+) -> Result<GovernanceCommitOutcome, json::Error> {
+    let ctx = context_for_project(project_id, &target_ref).map_err(json::Error::from)?;
+    let repo = ctx.repo.get().map_err(json::Error::from)?;
+    governance_commit_with_repo(&repo, &target_ref).map_err(json::Error::from)
+}
+
+/// Commit only governance config files from the worktree onto the target ref.
+pub fn governance_commit_with_repo(
+    repo: &gix::Repository,
+    target_ref: &str,
+) -> anyhow::Result<GovernanceCommitOutcome> {
+    load_worktree_governance_config(repo)?;
+    let parent_id = ref_id(repo, target_ref)?;
+    let parent = repo.find_commit(parent_id)?;
+    let parent_tree_id = parent.tree_id()?.detach();
+    let mut tree = repo.edit_tree(parent_tree_id)?;
+    let committed_paths = upsert_changed_governance_paths(repo, parent_tree_id, &mut tree)?;
+    if committed_paths.is_empty() {
+        return Err(anyhow!("no pending governance config changes to commit"));
+    }
+
+    let tree_id = tree.write()?.detach();
+    let (author, committer) = repo.commit_signatures()?;
+    let update_ref = gitbutler_reference::Refname::from_str(target_ref)
+        .with_context(|| format!("parsing target ref {target_ref}"))?;
+    let commit_id = gitbutler_repo::commit_with_signature_gix(
+        repo,
+        Some(&update_ref),
+        author,
+        committer,
+        GOVERNANCE_COMMIT_MESSAGE.as_bytes().as_bstr(),
+        tree_id,
+        &[parent_id],
+        None,
+    )?;
+
+    Ok(GovernanceCommitOutcome {
+        commit_id: commit_id.to_string(),
+        message: GOVERNANCE_COMMIT_MESSAGE,
+        committed_paths,
+    })
+}
+
+fn upsert_changed_governance_paths(
+    repo: &gix::Repository,
+    parent_tree_id: gix::ObjectId,
+    tree: &mut gix::object::tree::Editor<'_>,
+) -> anyhow::Result<Vec<String>> {
+    let mut committed_paths = Vec::new();
+    for path in GOVERNANCE_COMMIT_PATHS {
+        let worktree = read_worktree_governance_file(repo, path)?;
+        if committed_file_bytes(repo, parent_tree_id, path)?.as_deref() == Some(worktree.as_slice())
+        {
+            continue;
+        }
+        let blob_id = repo.write_blob(&worktree)?;
+        tree.upsert(path.as_bytes().as_bstr(), EntryKind::Blob, blob_id)?;
+        committed_paths.push(path.to_owned());
+    }
+    Ok(committed_paths)
+}
+
+fn read_worktree_governance_file(repo: &gix::Repository, path: &str) -> anyhow::Result<Vec<u8>> {
+    let workdir = repo
+        .workdir()
+        .ok_or_else(|| anyhow!("governance commits require a non-bare repository"))?;
+    fs::read(workdir.join(path)).with_context(|| format!("reading working-tree {path}"))
+}
+
+fn committed_file_bytes(
+    repo: &gix::Repository,
+    tree_id: gix::ObjectId,
+    path: &str,
+) -> anyhow::Result<Option<Vec<u8>>> {
+    let tree = repo.find_tree(tree_id)?;
+    let Some(entry) = tree.lookup_entry_by_path(gix::path::from_bstr(path.as_bytes().as_bstr()))?
+    else {
+        return Ok(None);
+    };
+    Ok(Some(entry.object()?.into_blob().data.clone()))
 }
 
 /// Return the read-only pending governance authority diff for a repository.
@@ -669,6 +772,20 @@ pub mod tauri_governance_pending {
         target_ref: String,
     ) -> Result<GovernancePending, json::Error> {
         super::governance_pending_for_project(project_id, target_ref)
+    }
+}
+
+/// Tauri command wrapper for committing pending governance config.
+pub mod tauri_governance_commit {
+    use super::{GovernanceCommitOutcome, ProjectHandleOrLegacyProjectId, json};
+
+    /// Commit pending governance config files to the target ref.
+    #[tauri::command]
+    pub fn governance_commit(
+        project_id: ProjectHandleOrLegacyProjectId,
+        target_ref: String,
+    ) -> Result<GovernanceCommitOutcome, json::Error> {
+        super::governance_commit_for_project(project_id, target_ref)
     }
 }
 

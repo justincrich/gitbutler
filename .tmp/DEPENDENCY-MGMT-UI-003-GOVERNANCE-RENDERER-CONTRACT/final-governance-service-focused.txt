@@ -1,0 +1,10 @@
+
+ RUN  v3.2.6 /Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-003-GOVERNANCE-RENDERER-CONTRACT/apps/desktop
+
+ ✓ src/lib/governance/governanceService.test.ts (3 tests) 1ms
+
+ Test Files  1 passed (1)
+      Tests  3 passed (3)
+   Start at  11:31:34
+   Duration  667ms (transform 168ms, setup 304ms, collect 9ms, tests 1ms, environment 180ms, prepare 33ms)
+

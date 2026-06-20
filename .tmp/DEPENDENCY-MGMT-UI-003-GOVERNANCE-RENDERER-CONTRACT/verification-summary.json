@@ -1,0 +1,127 @@
+{
+  "task_id": "DEPENDENCY-MGMT-UI-003-GOVERNANCE-RENDERER-CONTRACT",
+  "status": "completed",
+  "commit_note": "Final remediation commit SHA is reported in the handoff JSON.",
+  "typecheck": {
+    "status": "passed",
+    "exit_code": 0,
+    "verify": "pnpm -F @gitbutler/desktop check",
+    "output_file": ".tmp/DEPENDENCY-MGMT-UI-003-GOVERNANCE-RENDERER-CONTRACT/final-desktop-check.txt"
+  },
+  "lint": {
+    "status": "passed",
+    "exit_code": 0,
+    "verify": "cargo clippy -p gitbutler-tauri --all-targets -- -D warnings",
+    "output_file": ".tmp/DEPENDENCY-MGMT-UI-003-GOVERNANCE-RENDERER-CONTRACT/cargo-clippy-gitbutler-tauri.txt"
+  },
+  "requirement_results": [
+    {
+      "id": "AC-1",
+      "status": "passed",
+      "exit_code": 0,
+      "verify": "pnpm -F @gitbutler/desktop check",
+      "output_file": ".tmp/DEPENDENCY-MGMT-UI-003-GOVERNANCE-RENDERER-CONTRACT/final-desktop-check.txt",
+      "summary": "Renderer contract exposes typed readPending() backed by governance_pending and returning pendingCount."
+    },
+    {
+      "id": "AC-2",
+      "status": "passed",
+      "exit_code": 0,
+      "verify": "pnpm -F @gitbutler/desktop check",
+      "output_file": ".tmp/DEPENDENCY-MGMT-UI-003-GOVERNANCE-RENDERER-CONTRACT/final-desktop-check.txt",
+      "summary": "Renderer contract exposes readAccess() and derives hasAdminWrite/isReadOnly from governance_status_read authorities."
+    },
+    {
+      "id": "AC-3",
+      "status": "passed",
+      "exit_code": 0,
+      "verify": "cargo test -p gitbutler-tauri --test mgmt_ipc_003_governance_commands --test mgmt_ipc_005_governance_pending --test tt_022_governance_commit",
+      "output_file": ".tmp/DEPENDENCY-MGMT-UI-003-GOVERNANCE-RENDERER-CONTRACT/final-governance-rust-tests.txt",
+      "summary": "Renderer contract exposes commitPending(); backend governance_commit creates a real target-ref commit with message chore: update governance config."
+    },
+    {
+      "id": "AC-4",
+      "status": "passed",
+      "exit_code": 0,
+      "verify": "grep -rn 'gitbutler.*\\.toml\\|writeFile\\|fs.write' apps/desktop/src/components/governance/ apps/desktop/src/lib/governance/ apps/desktop/src/components/settings/GovernanceSettings.svelte 2>/dev/null | grep -v 'but-sdk\\|SDK\\|import' | wc -l",
+      "output_file": ".tmp/DEPENDENCY-MGMT-UI-003-GOVERNANCE-RENDERER-CONTRACT/ac4-raw-count.txt",
+      "summary": "No renderer direct governance TOML write path introduced; raw grep count is zero. On this BSD wc host the raw output is padded."
+    },
+    {
+      "id": "TC-1",
+      "status": "passed",
+      "exit_code": 0,
+      "verify": "pnpm --dir apps/desktop exec vitest run --mode development src/lib/governance/governanceService.test.ts",
+      "output_file": ".tmp/DEPENDENCY-MGMT-UI-003-GOVERNANCE-RENDERER-CONTRACT/final-governance-service-focused.txt",
+      "summary": "Vitest proves pendingCount and hasAdminWrite are available through the typed renderer service without production stubs."
+    },
+    {
+      "id": "TC-2",
+      "status": "passed",
+      "exit_code": 0,
+      "verify": "cargo test -p gitbutler-tauri --test tt_022_governance_commit governance_commit_commits_only_pending_governance_files && pnpm --dir apps/desktop exec vitest run --mode development src/lib/governance/governanceService.test.ts",
+      "output_file": ".tmp/DEPENDENCY-MGMT-UI-003-GOVERNANCE-RENDERER-CONTRACT/final-governance-rust-tests.txt",
+      "summary": "Rust IPC test proves commit action reaches a real Tauri command and commits only governance config files; Vitest proves renderer calls governance_commit."
+    }
+  ],
+  "red_evidence": [
+    {
+      "status": "failed_as_expected",
+      "exit_code": 101,
+      "verify": "cargo test -p gitbutler-tauri --test tt_022_governance_commit governance_commit_commits_only_pending_governance_files",
+      "output_file": ".tmp/DEPENDENCY-MGMT-UI-003-GOVERNANCE-RENDERER-CONTRACT/red-governance-commit.txt",
+      "summary": "Failed before implementation because Command governance_commit was not found."
+    }
+  ],
+  "green_evidence": [
+    {
+      "status": "passed",
+      "exit_code": 0,
+      "verify": "cargo test -p gitbutler-tauri --test mgmt_ipc_003_governance_commands --test mgmt_ipc_005_governance_pending --test tt_022_governance_commit",
+      "output_file": ".tmp/DEPENDENCY-MGMT-UI-003-GOVERNANCE-RENDERER-CONTRACT/final-governance-rust-tests.txt"
+    },
+    {
+      "status": "passed",
+      "exit_code": 0,
+      "verify": "pnpm --dir apps/desktop exec vitest run --mode development src/lib/governance/governanceService.test.ts",
+      "output_file": ".tmp/DEPENDENCY-MGMT-UI-003-GOVERNANCE-RENDERER-CONTRACT/final-governance-service-focused.txt"
+    },
+    {
+      "status": "passed",
+      "exit_code": 0,
+      "verify": "pnpm -F @gitbutler/desktop check",
+      "output_file": ".tmp/DEPENDENCY-MGMT-UI-003-GOVERNANCE-RENDERER-CONTRACT/final-desktop-check.txt"
+    },
+    {
+      "status": "passed",
+      "exit_code": 0,
+      "verify": "cargo check -p gitbutler-tauri --all-targets",
+      "output_file": ".tmp/DEPENDENCY-MGMT-UI-003-GOVERNANCE-RENDERER-CONTRACT/cargo-check-gitbutler-tauri.txt"
+    },
+    {
+      "status": "passed",
+      "exit_code": 0,
+      "verify": "cargo clippy -p gitbutler-tauri --all-targets -- -D warnings",
+      "output_file": ".tmp/DEPENDENCY-MGMT-UI-003-GOVERNANCE-RENDERER-CONTRACT/cargo-clippy-gitbutler-tauri.txt"
+    },
+    {
+      "status": "passed",
+      "exit_code": 0,
+      "verify": "cargo fmt --check",
+      "output_file": ".tmp/DEPENDENCY-MGMT-UI-003-GOVERNANCE-RENDERER-CONTRACT/cargo-fmt-check.txt"
+    },
+    {
+      "status": "passed",
+      "exit_code": 0,
+      "verify": "grep -rn 'gitbutler.*\\.toml\\|writeFile\\|fs.write' apps/desktop/src/components/governance/ apps/desktop/src/lib/governance/ apps/desktop/src/components/settings/GovernanceSettings.svelte 2>/dev/null | grep -v 'but-sdk\\|SDK\\|import' | wc -l",
+      "output_file": ".tmp/DEPENDENCY-MGMT-UI-003-GOVERNANCE-RENDERER-CONTRACT/ac4-raw-count.txt"
+    }
+  ],
+  "dependency_notes": [
+    "crates/gitbutler-tauri/Cargo.toml and Cargo.lock add gitbutler-reference and gitbutler-repo because the real governance_commit command updates the target ref through gitbutler_repo::commit_with_signature_gix and needs gitbutler_reference::Refname for the existing commit API.",
+    "The implementation validates and loads real worktree governance config before committing, then writes only changed governance config blobs into a new commit on the target ref.",
+    "pnpm install --frozen-lockfile was required because this fresh sprint worktree had no node_modules.",
+    "pnpm -F @gitbutler/shared package and pnpm -F @gitbutler/ui package were required before desktop check because those workspace packages export dist files.",
+    "A broad pnpm -F @gitbutler/desktop test -- src/lib/governance/governanceService.test.ts run executed unrelated desktop tests and failed on pre-existing workspace package resolution before package dist builds; the direct focused Vitest command passed."
+  ]
+}
