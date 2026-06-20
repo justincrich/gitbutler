@@ -29,6 +29,24 @@ export type GovernancePending = {
 	pendingCount: number;
 };
 
+export type GovernanceInheritedGrant = {
+	authority: string;
+	sourceLabel: string;
+};
+
+export type PrincipalListEntry = {
+	principalId: string;
+	ownGrants: string[];
+	inheritedGrants: GovernanceInheritedGrant[];
+	groupMemberships: string[];
+	pending: boolean;
+	isCurrentUser?: boolean;
+};
+
+export type GovernancePrincipalsList = {
+	principals: PrincipalListEntry[];
+};
+
 export type GovernanceAccess = {
 	authorities: string[];
 	hasAdminWrite: boolean;
@@ -43,6 +61,7 @@ export type GovernanceCommitOutcome = {
 
 export type GovernanceRendererContract = {
 	readPending(target: GovernanceTarget): Promise<GovernancePending>;
+	readPrincipals(target: GovernanceTarget): Promise<GovernancePrincipalsList>;
 	readAccess(projectId: string): Promise<GovernanceAccess>;
 	commitPending(target: GovernanceTarget): Promise<GovernanceCommitOutcome>;
 };
@@ -55,6 +74,9 @@ export function createGovernanceRendererContract(
 	return {
 		readPending(target) {
 			return backend.invoke<GovernancePending>("governance_pending", target);
+		},
+		readPrincipals(target) {
+			return backend.invoke<GovernancePrincipalsList>("governance_principals_list", target);
 		},
 		async readAccess(projectId) {
 			const status = await backend.invoke<GovernanceStatus>("governance_status_read", {
