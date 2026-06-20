@@ -1,0 +1,94 @@
+{
+  "task_id": "CLI-REM-001",
+  "timestamp": "2026-06-20T06:02:30Z",
+  "commit_sha": "60376aad19a9d8ab01016b660f6cc5ee6d99453c",
+  "typecheck": {
+    "exit_code": 0
+  },
+  "lint": {
+    "exit_code": 0,
+    "warnings": 0
+  },
+  "pre_existing_issues": false,
+  "requirement_results": [
+    {
+      "id": "AC-1",
+      "verify": "cargo test -p but-api group_ops_non_admin_denied_all_mutating_verbs",
+      "exit_code": 0,
+      "output_file": ".tmp/CLI-REM-001/ac-1-output.txt",
+      "red_against_start_file": ".tmp/CLI-REM-001/AC-1-red-against-start.txt",
+      "green_file": ".tmp/CLI-REM-001/AC-1-green.txt",
+      "seeded_value": ".tmp/CLI-REM-001/AC-1-seeded-artifact.txt"
+    },
+    {
+      "id": "AC-2",
+      "verify": "cargo test -p but-api group_remove_member_writes_worktree_inert_until_committed",
+      "exit_code": 0,
+      "output_file": ".tmp/CLI-REM-001/ac-2-output.txt",
+      "red_against_start_file": ".tmp/CLI-REM-001/AC-2-red-against-start.txt",
+      "green_file": ".tmp/CLI-REM-001/AC-2-green.txt",
+      "seeded_value": ".tmp/CLI-REM-001/AC-2-seeded-artifact.txt"
+    },
+    {
+      "id": "AC-3",
+      "verify": "cargo test -p but-api group_grant_administration_write_delegates_admin_inert_until_committed",
+      "exit_code": 0,
+      "output_file": ".tmp/CLI-REM-001/ac-3-output.txt",
+      "red_against_start_file": ".tmp/CLI-REM-001/AC-3-red-against-start.txt",
+      "green_file": ".tmp/CLI-REM-001/AC-3-green.txt",
+      "seeded_value": ".tmp/CLI-REM-001/AC-3-seeded-artifact.txt"
+    },
+    {
+      "id": "AC-4",
+      "verify": "cargo test -p but-api group_create_duplicate_errs_without_overwrite",
+      "exit_code": 0,
+      "output_file": ".tmp/CLI-REM-001/ac-4-output.txt",
+      "red_against_start_file": ".tmp/CLI-REM-001/AC-4-red-against-start.txt",
+      "green_file": ".tmp/CLI-REM-001/AC-4-green.txt",
+      "seeded_value": ".tmp/CLI-REM-001/AC-4-seeded-artifact.txt"
+    },
+    {
+      "id": "AC-5",
+      "verify": "cargo test -p but group_no_delete_surface_in_sprint_05",
+      "exit_code": 0,
+      "output_file": ".tmp/CLI-REM-001/ac-5-output.txt",
+      "red_against_start_file": ".tmp/CLI-REM-001/AC-5-red-against-start.txt",
+      "green_file": ".tmp/CLI-REM-001/AC-5-green.txt",
+      "seeded_value": ".tmp/CLI-REM-001/AC-5-seeded-artifact.txt"
+    },
+    {
+      "id": "TC-1",
+      "verify": "cargo test -p but-api group_ops_non_admin_denied_all_mutating_verbs",
+      "exit_code": 0,
+      "output_file": ".tmp/CLI-REM-001/tc-1-output.txt"
+    },
+    {
+      "id": "TC-2",
+      "verify": "cargo test -p but-api group_remove_member_writes_worktree_inert_until_committed",
+      "exit_code": 0,
+      "output_file": ".tmp/CLI-REM-001/tc-2-output.txt"
+    },
+    {
+      "id": "TC-3",
+      "verify": "cargo test -p but-api group_grant_administration_write_delegates_admin_inert_until_committed",
+      "exit_code": 0,
+      "output_file": ".tmp/CLI-REM-001/tc-3-output.txt"
+    },
+    {
+      "id": "TC-4",
+      "verify": "cargo test -p but-api group_create_duplicate_errs_without_overwrite",
+      "exit_code": 0,
+      "output_file": ".tmp/CLI-REM-001/tc-4-output.txt"
+    },
+    {
+      "id": "TC-5",
+      "verify": "cargo test -p but group_no_delete_surface_in_sprint_05",
+      "exit_code": 0,
+      "output_file": ".tmp/CLI-REM-001/tc-5-output.txt"
+    }
+  ],
+  "red_evidence": {
+    "required": true,
+    "output_file": ".tmp/CLI-REM-001/red-output.txt"
+  }
+}

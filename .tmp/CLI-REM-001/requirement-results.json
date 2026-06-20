@@ -1,0 +1,62 @@
+[
+  {
+    "id": "AC-1",
+    "verify": "cargo test -p but-api group_ops_non_admin_denied_all_mutating_verbs",
+    "exit_code": 0,
+    "output_file": ".tmp/CLI-REM-001/ac-1-output.txt"
+  },
+  {
+    "id": "AC-2",
+    "verify": "cargo test -p but-api group_remove_member_writes_worktree_inert_until_committed",
+    "exit_code": 0,
+    "output_file": ".tmp/CLI-REM-001/ac-2-output.txt"
+  },
+  {
+    "id": "AC-3",
+    "verify": "cargo test -p but-api group_grant_administration_write_delegates_admin_inert_until_committed",
+    "exit_code": 0,
+    "output_file": ".tmp/CLI-REM-001/ac-3-output.txt"
+  },
+  {
+    "id": "AC-4",
+    "verify": "cargo test -p but-api group_create_duplicate_errs_without_overwrite",
+    "exit_code": 0,
+    "output_file": ".tmp/CLI-REM-001/ac-4-output.txt"
+  },
+  {
+    "id": "AC-5",
+    "verify": "cargo test -p but group_no_delete_surface_in_sprint_05",
+    "exit_code": 0,
+    "output_file": ".tmp/CLI-REM-001/ac-5-output.txt"
+  },
+  {
+    "id": "TC-1",
+    "verify": "cargo test -p but-api group_ops_non_admin_denied_all_mutating_verbs",
+    "exit_code": 0,
+    "output_file": ".tmp/CLI-REM-001/tc-1-output.txt"
+  },
+  {
+    "id": "TC-2",
+    "verify": "cargo test -p but-api group_remove_member_writes_worktree_inert_until_committed",
+    "exit_code": 0,
+    "output_file": ".tmp/CLI-REM-001/tc-2-output.txt"
+  },
+  {
+    "id": "TC-3",
+    "verify": "cargo test -p but-api group_grant_administration_write_delegates_admin_inert_until_committed",
+    "exit_code": 0,
+    "output_file": ".tmp/CLI-REM-001/tc-3-output.txt"
+  },
+  {
+    "id": "TC-4",
+    "verify": "cargo test -p but-api group_create_duplicate_errs_without_overwrite",
+    "exit_code": 0,
+    "output_file": ".tmp/CLI-REM-001/tc-4-output.txt"
+  },
+  {
+    "id": "TC-5",
+    "verify": "cargo test -p but group_no_delete_surface_in_sprint_05",
+    "exit_code": 0,
+    "output_file": ".tmp/CLI-REM-001/tc-5-output.txt"
+  }
+]
