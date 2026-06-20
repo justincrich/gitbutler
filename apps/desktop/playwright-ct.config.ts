@@ -15,6 +15,11 @@ export default defineConfig({
 		ctViteConfig: {
 			resolve: {
 				alias: {
+					"$app/environment": resolve("./tests/mocks/app-environment.ts"),
+					"$app/navigation": resolve("./tests/mocks/app-navigation.ts"),
+					"$app/state": resolve("./tests/mocks/app-state.ts"),
+					"$app/stores": resolve("./tests/mocks/app-stores.ts"),
+					"$env/static/public": resolve("./tests/mocks/env-static-public.ts"),
 					$components: resolve("./src/components"),
 					$lib: resolve("./src/lib"),
 				},

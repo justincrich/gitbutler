@@ -1,0 +1,14 @@
+.tmp/SPEC-REPAIR-DESKTOP-CT-SVELTEKIT-NAVIGATION/build-output.txt
+.tmp/SPEC-REPAIR-DESKTOP-CT-SVELTEKIT-NAVIGATION/ct-output.txt
+.tmp/SPEC-REPAIR-DESKTOP-CT-SVELTEKIT-NAVIGATION/diff-scope.txt
+.tmp/SPEC-REPAIR-DESKTOP-CT-SVELTEKIT-NAVIGATION/prettier-output.txt
+.tmp/SPEC-REPAIR-DESKTOP-CT-SVELTEKIT-NAVIGATION/typecheck-output.txt
+.tmp/SPEC-REPAIR-DESKTOP-CT-SVELTEKIT-NAVIGATION/verification-summary.json
+apps/desktop/playwright-ct.config.ts
+apps/desktop/tests/governance/ProjectSettingsModalContentCtHarness.spec.ts
+apps/desktop/tests/governance/ProjectSettingsModalContentCtHarness.svelte
+apps/desktop/tests/mocks/app-environment.ts
+apps/desktop/tests/mocks/app-navigation.ts
+apps/desktop/tests/mocks/app-state.ts
+apps/desktop/tests/mocks/app-stores.ts
+apps/desktop/tests/mocks/env-static-public.ts
