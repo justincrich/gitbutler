@@ -275,6 +275,82 @@ async fn merge_gate_two_group_both_present_proceeds() -> anyhow::Result<()> {
 
 #[tokio::test]
 #[serial_test::serial]
+async fn merge_gate_two_required_groups_require_each_group() -> anyhow::Result<()> {
+    let (repo, _tmp) = merge_gated_repo(GateConfig::TwoGroup)?;
+    let head = ref_id(&repo, FEAT_REF)?;
+    let ctx = context_with_review(&repo, head)?;
+
+    approve_branch(&ctx, "reviewer-a").await?;
+
+    temp_env::async_with_vars([("BUT_AGENT_HANDLE", Some("maint"))], async {
+        let denial = assert_gate_denied(
+            but_api::legacy::forge::merge_review(ctx.to_sync(), REVIEW_ID, None).await,
+            "gate.review_required",
+        );
+        assert_eq!(
+            denial.unmet,
+            ["require_approval_from_group maintainers: no_approval"],
+            "one required group approval must not satisfy the disjoint group requirement"
+        );
+        Ok::<(), anyhow::Error>(())
+    })
+    .await?;
+
+    approve_branch(&ctx, "reviewer-b").await?;
+
+    temp_env::async_with_vars([("BUT_AGENT_HANDLE", Some("maint"))], async {
+        let err = but_api::legacy::forge::merge_review(ctx.to_sync(), REVIEW_ID, None)
+            .await
+            .expect_err("local fixture should reach the forge call and fail outside governance");
+        assert!(
+            classify_error(&err).is_none(),
+            "one approval from each required group should satisfy the merge gate"
+        );
+        Ok::<(), anyhow::Error>(())
+    })
+    .await?;
+
+    Ok(())
+}
+
+#[tokio::test]
+#[serial_test::serial]
+async fn merge_gate_overlapping_required_groups_policy() -> anyhow::Result<()> {
+    let (repo, _tmp) = merge_gated_repo(GateConfig::TwoGroupOverlap)?;
+    let main_before = ref_id(&repo, MAIN_REF)?;
+    let ctx = context_with_review(&repo, ref_id(&repo, FEAT_REF)?)?;
+
+    approve_branch(&ctx, "reviewer-x").await?;
+
+    temp_env::async_with_vars([("BUT_AGENT_HANDLE", Some("maint"))], async {
+        let denial = assert_gate_denied(
+            but_api::legacy::forge::merge_review(ctx.to_sync(), REVIEW_ID, None).await,
+            "gate.review_required",
+        );
+        assert!(
+            denial.message.contains("distinct"),
+            "overlap denial should explain that required groups need distinct approvals"
+        );
+        assert_eq!(
+            denial.unmet,
+            ["require_approval_from_group maintainers: no_distinct_approval"],
+            "a single overlapping principal must not satisfy every required group"
+        );
+        Ok::<(), anyhow::Error>(())
+    })
+    .await?;
+
+    assert_eq!(
+        ref_id(&repo, MAIN_REF)?,
+        main_before,
+        "overlap-policy denial must leave main unchanged"
+    );
+
+    Ok(())
+}
+
+#[tokio::test]
+#[serial_test::serial]
 async fn merge_gate_two_group_only_one_blocked() -> anyhow::Result<()> {
     let (repo, _tmp) = merge_gated_repo(GateConfig::TwoGroup)?;
     let main_before = ref_id(&repo, MAIN_REF)?;
@@ -579,6 +655,7 @@ async fn merge_gate_dryrun_unknown_failclosed_persists_nothing() -> anyhow::Resu
 enum GateConfig {
     Single,
     TwoGroup,
+    TwoGroupOverlap,
     Malformed,
     UndefinedGroup,
     FeatureHeadDropsRequirement,
@@ -601,6 +678,20 @@ require_distinct_from_author = true
 "#
         }
         GateConfig::TwoGroup => {
+            r#"
+[[branch]]
+name = "main"
+protected = true
+
+[[gate]]
+branch = "main"
+type = "review"
+min_approvals = 1
+require_distinct_from_author = true
+require_approval_from_group = ["code-reviewers", "maintainers"]
+"#
+        }
+        GateConfig::TwoGroupOverlap => {
             r#"
 [[branch]]
 name = "main"
@@ -670,6 +761,33 @@ permissions = ["merge", "reviews:write"]
 members = ["reviewer-b", "maint"]
 "#
         }
+        GateConfig::TwoGroupOverlap => {
+            r#"
+[[principal]]
+id = "impl"
+permissions = ["contents:write", "pull_requests:write", "reviews:write"]
+
+[[principal]]
+id = "reviewer-x"
+permissions = ["reviews:write"]
+groups = ["code-reviewers", "maintainers"]
+
+[[principal]]
+id = "maint"
+permissions = ["merge", "reviews:write"]
+groups = ["maintainers"]
+
+[[group]]
+name = "code-reviewers"
+permissions = ["reviews:write"]
+members = ["reviewer-x"]
+
+[[group]]
+name = "maintainers"
+permissions = ["merge", "reviews:write"]
+members = ["reviewer-x", "maint"]
+"#
+        }
         GateConfig::Single
         | GateConfig::Malformed
         | GateConfig::UndefinedGroup
@@ -700,6 +818,7 @@ protected = false
         }
         GateConfig::Single
         | GateConfig::TwoGroup
+        | GateConfig::TwoGroupOverlap
         | GateConfig::Malformed
         | GateConfig::UndefinedGroup => "",
     };

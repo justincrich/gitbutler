@@ -1,0 +1,116 @@
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on artifact directory
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 2m 58s
+     Running unittests src/lib.rs (target/debug/deps/but_api-b39b2d81e53be874)
+
+running 27 tests
+test json::hex_hash::tests::hex_hash ... ok
+test json::maybe_lossy_full_name_ref_tests::maybe_lossy_full_name_ref ... ok
+test json::error::tests::find_context ... ok
+test json::error::tests::find_context_without_message ... ok
+test json::error::tests::no_context_or_code_shows_root_error ... ok
+test json::maybe_lossy_full_name_ref_tests::full_name_bytes ... ok
+test legacy::forge::tests::missing_review_template_returns_empty_content ... ok
+test json::error::tests::find_code_after_cause ... ok
+test json::error::tests::find_nested_code ... ok
+test json::error::tests::find_code ... ok
+test json::error::tests::multiple_codes ... ok
+test legacy::forge::tests::binary_review_template_errors_as_non_utf8 ... ok
+test open::wsl_tests::unsupported_editor_scheme_falls_back_to_url_handler ... ok
+test legacy::virtual_branches::tests::stack_order_updates_reject_unapplied_stacks ... ok
+test open::wsl_tests::vscode_project_url_becomes_new_window_cli_invocation ... ok
+test open::wsl_tests::editor_url_paths_are_percent_decoded ... ok
+test open::wsl_tests::cursor_editor_url_becomes_goto_cli_invocation ... ok
+test legacy::virtual_branches::tests::stack_order_updates_reorder_workspace_metadata ... ok
+test legacy::projects::tests::delete_project_is_idempotent ... ok
+test json::error::tests::error_chain_display_without_context_or_code ... ok
+test branch::tests::checkout_branch_rejects_remote_refs ... ok
+test branch::tests::set_default_target_rejects_local_branch_refs ... ok
+test branch::tests::branch_checkout_new_rejects_existing_explicit_name ... ok
+test branch::tests::set_default_target_accepts_remote_tracking_ref_and_persists_metadata ... ok
+test branch::tests::branch_checkout_new_creates_named_branch_at_target_and_checks_it_out ... ok
+test branch::tests::checkout_branch_switches_head_and_returns_workspace ... ok
+test branch::tests::set_default_target_uses_merge_base_not_target_tip ... ok
+
+test result: ok. 27 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.35s
+
+     Running tests/admin_write_guard.rs (target/debug/deps/admin_write_guard-c678a85d6ea277c7)
+
+running 2 tests
+test admin_write_guard_denies_non_admin_allows_admin ... ok
+test admin_write_guard_malformed_config_invalid ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.13s
+
+     Running tests/api/main.rs (target/debug/deps/api-d8e5b7608d4ddca4)
+
+running 2 tests
+test branch_checkout::checkout_new_returns_head_info_matching_fresh_head_info ... ok
+test branch_checkout::checkout_returns_head_info_matching_fresh_head_info ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.13s
+
+     Running tests/commit_gate.rs (target/debug/deps/commit_gate-b8643f2d47fcfee4)
+
+running 12 tests
+test commit_gate_generated_entrypoint_authorizes_before_exclusive_guard ... ok
+test commit_gate_absent_config_is_ungoverned ... ok
+test governance_fixtures_are_structurally_distinct ... ok
+test commit_gate_apply_integrate_dryrun_targetref_pinned ... ok
+test commit_gate_edit_cannot_unprotect ... ok
+test commit_gate_readonly_and_bad_handle_denied ... ok
+test commit_gate_apply_integrate_no_target_ungoverned ... ok
+test commit_gate_malformed_partial_and_dryrun ... ok
+test commit_gate_worktree_integrate_protected_rejected ... ok
+test commit_gate_apply_integrate_readonly_denied ... ok
+test commit_gate_feature_ok_protected_rejected ... ok
+test commit_gate_commit_relative_checks_contents_write_without_branch_protection ... ok
+
+test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.50s
+
+     Running tests/confinement.rs (target/debug/deps/confinement-7eaf4816e3d8361a)
+
+running 2 tests
+test confinement_authority_from_config_not_claim ... ok
+test confinement_reviewer_denied_other_merge_and_self_grant ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.43s
+
+     Running tests/forge_guard.rs (target/debug/deps/forge_guard-957b48013fabacec)
+
+running 4 tests
+test forge_guard_no_stub_success_for_unimplemented_review_actions ... ok
+test forge_guard_permissions_and_both_still_governed ... ok
+test forge_guard_authorizes_comments_and_records_approval ... ok
+test forge_guard_gates_toml_only_repo_is_governed ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.82s
+
+     Running tests/merge_gate.rs (target/debug/deps/merge_gate-a9a7eef08cb3c05c)
+
+running 14 tests
+test merge_gate_malformed_config_is_config_invalid ... ok
+test merge_gate_distinct_current_head_satisfies ... ok
+test merge_gate_two_group_both_present_proceeds ... ok
+test merge_gate_two_group_only_one_blocked ... ok
+test merge_gate_self_and_stale_dismissed ... ok
+test merge_gate_two_required_groups_require_each_group ... ok
+test merge_gate_targetref_only_feature_head_drop_ignored ... ok
+test merge_gate_overlapping_required_groups_policy ... ok
+test merge_gate_authorize_and_review_requirement ... ok
+test merge_gate_dryrun_unknown_failclosed_persists_nothing ... ok
+test merge_gate_below_min_approvals_blocked ... ok
+test merge_gate_undefined_required_group_denied ... ok
+test merge_gate_dryrun_and_malformed_failclosed ... ok
+test merge_gate_unknown_and_no_handle_failclosed ... ok
+
+test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.31s
+
+     Running tests/merge_gate_self_escalation.rs (target/debug/deps/merge_gate_self_escalation-9d28f44a80d77c31)
+
+running 2 tests
+test self_add_to_maintainers_on_feature_head_still_denied_merge ... ok
+test landed_membership_clears_merge_authority_step ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.41s
