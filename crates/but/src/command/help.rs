@@ -362,6 +362,7 @@ Other Commands:
   update       Manage GitButler CLI and app updates
   alias        Manage command aliases
   config       View and manage GitButler configuration
+  perm         Manage governed functional permissions
   skill        Manage AI agent skills for GitButler
 
 To add command completion, add this to your shell rc: (for example ~/.zshrc)
