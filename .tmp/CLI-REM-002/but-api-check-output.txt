@@ -1,23 +1,5 @@
-    Checking but-api v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/CLI-REM-002/crates/but-api)
-error[E0432]: unresolved imports `but_api::legacy::governance::governance_status_read`, `but_api::legacy::governance::group_add_member_cmd`, `but_api::legacy::governance::perm_grant_cmd`
- --> crates/but-api/tests/governance_api.rs:2:21
-  |
-2 |     REF_PIN_CAVEAT, governance_status_read, group_add_member_cmd, perm_grant_cmd,
-  |                     ^^^^^^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^ no `perm_grant_cmd` in `legacy::governance`
-  |                     |                       |
-  |                     |                       no `group_add_member_cmd` in `legacy::governance`
-  |                     no `governance_status_read` in `legacy::governance`
-  |
-help: a similar name exists in the module
-  |
-2 -     REF_PIN_CAVEAT, governance_status_read, group_add_member_cmd, perm_grant_cmd,
-2 +     REF_PIN_CAVEAT, governance_status_read, group_add_member, perm_grant_cmd,
-  |
-help: a similar name exists in the module
-  |
-2 -     REF_PIN_CAVEAT, governance_status_read, group_add_member_cmd, perm_grant_cmd,
-2 +     REF_PIN_CAVEAT, governance_status_read, group_add_member_cmd, perm_grant,
-  |
-
-For more information about this error, try `rustc --explain E0432`.
-error: could not compile `but-api` (test "governance_api") due to 1 previous error
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on build directory
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1.59s

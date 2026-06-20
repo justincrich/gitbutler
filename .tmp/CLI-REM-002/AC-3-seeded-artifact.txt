@@ -10,4 +10,3 @@ seeded list denial: code=perm.denied, message=BUT_AGENT_HANDLE is required to re
 test perm_list_fail_closed_unset_handle ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 11 filtered out; finished in 0.07s
-

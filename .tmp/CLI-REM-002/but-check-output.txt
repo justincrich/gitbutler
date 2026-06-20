@@ -1,2 +1,4 @@
-    Checking but v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/CLI-REM-002/crates/but)
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 6.50s
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1.45s
