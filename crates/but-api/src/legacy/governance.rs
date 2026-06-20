@@ -361,7 +361,26 @@ pub fn branch_gates_update_with_repo(
     protection: BranchProtectionInput,
 ) -> anyhow::Result<BranchGatesOutcome> {
     enforce_administration_write_gate(repo, target_ref)?;
+    branch_gates_update_authorized(repo, target_ref, branch, protection)
+}
 
+/// Update one branch gate entry after the desktop fleet-owner boundary has
+/// asserted unconditional administration-write authority.
+pub fn branch_gates_update_with_repo_as_fleet_owner(
+    repo: &gix::Repository,
+    target_ref: &str,
+    branch: &str,
+    protection: BranchProtectionInput,
+) -> anyhow::Result<BranchGatesOutcome> {
+    branch_gates_update_authorized(repo, target_ref, branch, protection)
+}
+
+fn branch_gates_update_authorized(
+    repo: &gix::Repository,
+    target_ref: &str,
+    branch: &str,
+    protection: BranchProtectionInput,
+) -> anyhow::Result<BranchGatesOutcome> {
     let mut gates = load_gates_for_write(repo, target_ref)?;
     if let Some(existing) = gates.branch.iter_mut().find(|entry| entry.name == branch) {
         existing.protected = protection.protected;
@@ -414,7 +433,27 @@ pub fn group_create_with_repo(
 ) -> anyhow::Result<GroupWriteOutcome> {
     let parsed = parse_authorities(authorities)?;
     enforce_administration_write_gate(repo, target_ref)?;
+    group_create_authorized(repo, target_ref, group, &parsed)
+}
 
+/// Create a governed group after the desktop fleet-owner boundary has asserted
+/// unconditional administration-write authority.
+pub fn group_create_with_repo_as_fleet_owner(
+    repo: &gix::Repository,
+    target_ref: &str,
+    group: &str,
+    authorities: &[&str],
+) -> anyhow::Result<GroupWriteOutcome> {
+    let parsed = parse_authorities(authorities)?;
+    group_create_authorized(repo, target_ref, group, &parsed)
+}
+
+fn group_create_authorized(
+    repo: &gix::Repository,
+    target_ref: &str,
+    group: &str,
+    parsed: &[Authority],
+) -> anyhow::Result<GroupWriteOutcome> {
     let mut permissions = load_permissions_for_write(repo, target_ref)?;
     let exists = permissions.group.iter().any(|entry| entry.name == group);
     if exists {
@@ -437,7 +476,7 @@ pub fn group_create_with_repo(
     });
     write_worktree_permissions(repo, &permissions)?;
 
-    Ok(group_write_outcome(group, &parsed, None))
+    Ok(group_write_outcome(group, parsed, None))
 }
 
 /// Grant functional permissions to a governed group in the working-tree config.
@@ -449,11 +488,32 @@ pub fn group_grant_with_repo(
 ) -> anyhow::Result<GroupWriteOutcome> {
     let parsed = parse_authorities(authorities)?;
     enforce_administration_write_gate(repo, target_ref)?;
+    group_grant_authorized(repo, target_ref, group, &parsed)
+}
 
+/// Grant functional permissions to a governed group after the desktop
+/// fleet-owner boundary has asserted unconditional administration-write
+/// authority.
+pub fn group_grant_with_repo_as_fleet_owner(
+    repo: &gix::Repository,
+    target_ref: &str,
+    group: &str,
+    authorities: &[&str],
+) -> anyhow::Result<GroupWriteOutcome> {
+    let parsed = parse_authorities(authorities)?;
+    group_grant_authorized(repo, target_ref, group, &parsed)
+}
+
+fn group_grant_authorized(
+    repo: &gix::Repository,
+    target_ref: &str,
+    group: &str,
+    parsed: &[Authority],
+) -> anyhow::Result<GroupWriteOutcome> {
     let mut permissions = load_permissions_for_write(repo, target_ref)?;
     let group_wire = existing_group_entry_mut(&mut permissions, group)?;
     let mut changed = false;
-    for authority in &parsed {
+    for authority in parsed {
         let token = authority.name();
         if !group_wire
             .permissions
@@ -469,7 +529,7 @@ pub fn group_grant_with_repo(
         write_worktree_permissions(repo, &permissions)?;
     }
 
-    Ok(group_write_outcome(group, &parsed, None))
+    Ok(group_write_outcome(group, parsed, None))
 }
 
 /// Add a principal to a governed group in the working-tree config.
@@ -480,7 +540,26 @@ pub fn group_add_member_with_repo(
     member: &str,
 ) -> anyhow::Result<GroupWriteOutcome> {
     enforce_administration_write_gate(repo, target_ref)?;
+    group_add_member_authorized(repo, target_ref, group, member)
+}
 
+/// Add a principal to a governed group after the desktop fleet-owner boundary
+/// has asserted unconditional administration-write authority.
+pub fn group_add_member_with_repo_as_fleet_owner(
+    repo: &gix::Repository,
+    target_ref: &str,
+    group: &str,
+    member: &str,
+) -> anyhow::Result<GroupWriteOutcome> {
+    group_add_member_authorized(repo, target_ref, group, member)
+}
+
+fn group_add_member_authorized(
+    repo: &gix::Repository,
+    target_ref: &str,
+    group: &str,
+    member: &str,
+) -> anyhow::Result<GroupWriteOutcome> {
     let mut permissions = load_permissions_for_write(repo, target_ref)?;
     let group_wire = existing_group_entry_mut(&mut permissions, group)?;
     let changed = if group_wire.members.iter().any(|existing| existing == member) {
@@ -505,7 +584,26 @@ pub fn group_remove_member_with_repo(
     member: &str,
 ) -> anyhow::Result<GroupWriteOutcome> {
     enforce_administration_write_gate(repo, target_ref)?;
+    group_remove_member_authorized(repo, target_ref, group, member)
+}
 
+/// Remove a principal from a governed group after the desktop fleet-owner
+/// boundary has asserted unconditional administration-write authority.
+pub fn group_remove_member_with_repo_as_fleet_owner(
+    repo: &gix::Repository,
+    target_ref: &str,
+    group: &str,
+    member: &str,
+) -> anyhow::Result<GroupWriteOutcome> {
+    group_remove_member_authorized(repo, target_ref, group, member)
+}
+
+fn group_remove_member_authorized(
+    repo: &gix::Repository,
+    target_ref: &str,
+    group: &str,
+    member: &str,
+) -> anyhow::Result<GroupWriteOutcome> {
     let mut permissions = load_permissions_for_write(repo, target_ref)?;
     let group_wire = existing_group_entry_mut(&mut permissions, group)?;
     let before_len = group_wire.members.len();
@@ -525,7 +623,24 @@ pub fn group_delete_with_repo(
     group: &str,
 ) -> anyhow::Result<GroupWriteOutcome> {
     enforce_administration_write_gate(repo, target_ref)?;
+    group_delete_authorized(repo, target_ref, group)
+}
 
+/// Delete a governed group after the desktop fleet-owner boundary has asserted
+/// unconditional administration-write authority.
+pub fn group_delete_with_repo_as_fleet_owner(
+    repo: &gix::Repository,
+    target_ref: &str,
+    group: &str,
+) -> anyhow::Result<GroupWriteOutcome> {
+    group_delete_authorized(repo, target_ref, group)
+}
+
+fn group_delete_authorized(
+    repo: &gix::Repository,
+    target_ref: &str,
+    group: &str,
+) -> anyhow::Result<GroupWriteOutcome> {
     let mut permissions = load_permissions_for_write(repo, target_ref)?;
     let before_len = permissions.group.len();
     permissions.group.retain(|entry| entry.name != group);
@@ -661,14 +776,34 @@ pub fn perm_revoke_with_repo(
 ) -> anyhow::Result<PermWriteOutcome> {
     let parsed = parse_authorities(authorities)?;
     enforce_administration_write_gate(repo, target_ref)?;
+    perm_revoke_authorized(repo, target_ref, principal, &parsed)
+}
 
+/// Revoke direct permissions after the desktop fleet-owner boundary has
+/// asserted unconditional administration-write authority.
+pub fn perm_revoke_with_repo_as_fleet_owner(
+    repo: &gix::Repository,
+    target_ref: &str,
+    principal: &str,
+    authorities: &[&str],
+) -> anyhow::Result<PermWriteOutcome> {
+    let parsed = parse_authorities(authorities)?;
+    perm_revoke_authorized(repo, target_ref, principal, &parsed)
+}
+
+fn perm_revoke_authorized(
+    repo: &gix::Repository,
+    target_ref: &str,
+    principal: &str,
+    parsed: &[Authority],
+) -> anyhow::Result<PermWriteOutcome> {
     let mut permissions = load_permissions_for_write(repo, target_ref)?;
     let Some(principal_wire) = permissions
         .principal
         .iter_mut()
         .find(|entry| entry.id == principal)
     else {
-        return Ok(write_outcome(principal, &parsed));
+        return Ok(write_outcome(principal, parsed));
     };
 
     let revoke_tokens = parsed
@@ -684,7 +819,7 @@ pub fn perm_revoke_with_repo(
         write_worktree_permissions(repo, &permissions)?;
     }
 
-    Ok(write_outcome(principal, &parsed))
+    Ok(write_outcome(principal, parsed))
 }
 
 fn group_write_outcome(

@@ -86,6 +86,7 @@ tauri-plugin-trafficlights-positioner = { git = "https://github.com/gitbutlerapp
 [dev-dependencies]
 but-testsupport.workspace = true
 serial_test = "3.2.0"
+tauri = { version = "^2.11.1", features = ["test"] }
 temp-env = "0.3"
 tempfile.workspace = true
 

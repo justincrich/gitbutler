@@ -73,6 +73,24 @@ pub const GOVERNANCE_COMMANDS: &[&str] = &[
 /// Returns a `tauri::ipc::InvokeHandler`-shaped closure built from the real
 /// macro; callers feed it straight to
 /// [`tauri::Builder::invoke_handler`](tauri::Builder::invoke_handler).
+pub fn governance_invoke_handler<R: tauri::Runtime>()
+-> impl Fn(tauri::ipc::Invoke<R>) -> bool + Send + Sync + 'static {
+    tauri::generate_handler![
+        legacy::governance::tauri_group_list::group_list,
+        governance::tauri_group_create::group_create,
+        governance::tauri_group_grant::group_grant,
+        governance::tauri_group_add_member::group_add_member,
+        governance::tauri_group_remove_member::group_remove_member,
+        governance::tauri_group_delete::group_delete,
+        legacy::governance::tauri_perm_list::perm_list,
+        governance::tauri_perm_grant::perm_grant,
+        governance::tauri_perm_revoke::perm_revoke,
+        legacy::governance::tauri_branch_gates_read::branch_gates_read,
+        governance::tauri_branch_gates_update::branch_gates_update,
+        legacy::governance::tauri_governance_status_read::governance_status_read,
+    ]
+}
+
 pub fn invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Send + Sync + 'static {
     tauri::generate_handler![
         github::tauri_init_github_device_oauth::init_github_device_oauth,
@@ -216,16 +234,16 @@ pub fn invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Sen
         #[cfg(unix)]
         legacy::workspace::tauri_show_graph_svg::show_graph_svg,
         legacy::governance::tauri_group_list::group_list,
-        legacy::governance::tauri_group_create::group_create,
-        legacy::governance::tauri_group_grant::group_grant,
-        legacy::governance::tauri_group_add_member::group_add_member,
-        legacy::governance::tauri_group_remove_member::group_remove_member,
-        legacy::governance::tauri_group_delete::group_delete,
+        governance::tauri_group_create::group_create,
+        governance::tauri_group_grant::group_grant,
+        governance::tauri_group_add_member::group_add_member,
+        governance::tauri_group_remove_member::group_remove_member,
+        governance::tauri_group_delete::group_delete,
         legacy::governance::tauri_perm_list::perm_list,
         governance::tauri_perm_grant::perm_grant,
-        legacy::governance::tauri_perm_revoke::perm_revoke,
+        governance::tauri_perm_revoke::perm_revoke,
         legacy::governance::tauri_branch_gates_read::branch_gates_read,
-        legacy::governance::tauri_branch_gates_update::branch_gates_update,
+        governance::tauri_branch_gates_update::branch_gates_update,
         legacy::governance::tauri_governance_status_read::governance_status_read,
         action::list_actions,
         action::handle_changes,
