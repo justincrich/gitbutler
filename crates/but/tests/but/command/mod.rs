@@ -38,6 +38,8 @@ mod merge_gate;
 mod r#move;
 mod onboarding;
 #[cfg(feature = "legacy")]
+mod perm;
+#[cfg(feature = "legacy")]
 mod pick;
 #[cfg(feature = "legacy")]
 mod push;
