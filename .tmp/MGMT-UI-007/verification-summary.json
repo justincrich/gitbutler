@@ -1,0 +1,129 @@
+{
+	"task_id": "MGMT-UI-007",
+	"status": "complete",
+	"commit_sha": "3eabef6150bcaa61e763cf2a4e0efbc50c925ffc",
+	"files_changed": [
+		"apps/desktop/src/components/governance/PrincipalEditor.svelte",
+		"apps/desktop/tests/governance/PrincipalEditor.spec.ts",
+		"apps/desktop/tests/governance/PrincipalEditorInheritedReadOnly-PrincipalEditorLocalState-PrincipalEditorBatchSave-PrincipalEditorPreset-PrincipalEditorGroupChip-PrincipalEditorSelfEscalation.spec.ts",
+		".tmp/MGMT-UI-007/verification-summary.json"
+	],
+	"tests": [
+		{
+			"command": "pnpm -F @gitbutler/desktop test:ct:desktop -- PrincipalEditorInheritedReadOnly",
+			"red_exit_code": 1,
+			"red_artifact": ".tmp/MGMT-UI-007/red-PrincipalEditorInheritedReadOnly.txt",
+			"green_exit_code": 0,
+			"green_artifact": ".tmp/MGMT-UI-007/green-PrincipalEditorInheritedReadOnly.txt"
+		},
+		{
+			"command": "pnpm -F @gitbutler/desktop test:ct:desktop -- PrincipalEditorLocalState",
+			"red_exit_code": 1,
+			"red_artifact": ".tmp/MGMT-UI-007/red-PrincipalEditorLocalState.txt",
+			"green_exit_code": 0,
+			"green_artifact": ".tmp/MGMT-UI-007/green-PrincipalEditorLocalState.txt"
+		},
+		{
+			"command": "pnpm -F @gitbutler/desktop test:ct:desktop -- PrincipalEditorBatchSave",
+			"red_exit_code": 1,
+			"red_artifact": ".tmp/MGMT-UI-007/red-PrincipalEditorBatchSave.txt",
+			"green_exit_code": 0,
+			"green_artifact": ".tmp/MGMT-UI-007/green-PrincipalEditorBatchSave.txt"
+		},
+		{
+			"command": "pnpm -F @gitbutler/desktop test:ct:desktop -- PrincipalEditorPreset",
+			"red_exit_code": 1,
+			"red_artifact": ".tmp/MGMT-UI-007/red-PrincipalEditorPreset.txt",
+			"green_exit_code": 0,
+			"green_artifact": ".tmp/MGMT-UI-007/green-PrincipalEditorPreset.txt"
+		},
+		{
+			"command": "pnpm -F @gitbutler/desktop test:ct:desktop -- PrincipalEditorGroupChip",
+			"red_exit_code": 1,
+			"red_artifact": ".tmp/MGMT-UI-007/red-PrincipalEditorGroupChip.txt",
+			"green_exit_code": 0,
+			"green_artifact": ".tmp/MGMT-UI-007/green-PrincipalEditorGroupChip.txt"
+		},
+		{
+			"command": "pnpm -F @gitbutler/desktop test:ct:desktop -- PrincipalEditorSelfEscalation",
+			"red_exit_code": 1,
+			"red_artifact": ".tmp/MGMT-UI-007/red-PrincipalEditorSelfEscalation.txt",
+			"green_exit_code": 0,
+			"green_artifact": ".tmp/MGMT-UI-007/green-PrincipalEditorSelfEscalation.txt"
+		},
+		{
+			"command": "pnpm -F @gitbutler/desktop check",
+			"exit_code": 0,
+			"artifact": ".tmp/MGMT-UI-007/check-desktop.txt"
+		},
+		{
+			"command": "rg \"\\.toml|\\.gitbutler|readFile|writeFile|writeTextFile|readTextFile|@tauri-apps/plugin-fs|node:fs|from ['\\\"]fs['\\\"]|invoke\\(\\s*['\\\"](?:read|write|fs)\" apps/desktop/src/components/governance/PrincipalEditor.svelte apps/desktop/tests/governance/PrincipalEditor.spec.ts apps/desktop/tests/governance/PrincipalEditorInheritedReadOnly-PrincipalEditorLocalState-PrincipalEditorBatchSave-PrincipalEditorPreset-PrincipalEditorGroupChip-PrincipalEditorSelfEscalation.spec.ts",
+			"exit_code": 1,
+			"artifact": ".tmp/MGMT-UI-007/structural-grep-no-fs-toml.txt",
+			"note": "rg exit 1 means no prohibited direct toml/fs write patterns were found"
+		},
+		{
+			"command": "pnpm -F @gitbutler/desktop build",
+			"exit_code": 0,
+			"artifact": ".tmp/MGMT-UI-007/build-desktop.txt"
+		}
+	],
+	"requirements": {
+		"AC-1": {
+			"satisfied": true,
+			"evidence": ".tmp/MGMT-UI-007/green-PrincipalEditorInheritedReadOnly.txt"
+		},
+		"AC-2": {
+			"satisfied": true,
+			"evidence": ".tmp/MGMT-UI-007/green-PrincipalEditorLocalState.txt"
+		},
+		"AC-3": {
+			"satisfied": true,
+			"evidence": ".tmp/MGMT-UI-007/green-PrincipalEditorBatchSave.txt"
+		},
+		"AC-4": {
+			"satisfied": true,
+			"evidence": ".tmp/MGMT-UI-007/green-PrincipalEditorPreset.txt"
+		},
+		"AC-5": {
+			"satisfied": true,
+			"evidence": ".tmp/MGMT-UI-007/green-PrincipalEditorGroupChip.txt"
+		},
+		"AC-6": {
+			"satisfied": true,
+			"evidence": ".tmp/MGMT-UI-007/green-PrincipalEditorSelfEscalation.txt"
+		},
+		"TC-1": {
+			"satisfied": true,
+			"evidence": ".tmp/MGMT-UI-007/green-PrincipalEditorInheritedReadOnly.txt"
+		},
+		"TC-2": {
+			"satisfied": true,
+			"evidence": ".tmp/MGMT-UI-007/green-PrincipalEditorLocalState.txt"
+		},
+		"TC-3": {
+			"satisfied": true,
+			"evidence": ".tmp/MGMT-UI-007/green-PrincipalEditorBatchSave.txt"
+		},
+		"TC-4": {
+			"satisfied": true,
+			"evidence": ".tmp/MGMT-UI-007/green-PrincipalEditorPreset.txt"
+		},
+		"TC-5": {
+			"satisfied": true,
+			"evidence": ".tmp/MGMT-UI-007/green-PrincipalEditorGroupChip.txt"
+		},
+		"TC-6": {
+			"satisfied": true,
+			"evidence": ".tmp/MGMT-UI-007/green-PrincipalEditorSelfEscalation.txt"
+		},
+		"TC-7": {
+			"satisfied": true,
+			"evidence": ".tmp/MGMT-UI-007/check-desktop.txt"
+		}
+	},
+	"residual_risks": [
+		"Root pnpm lint was not run because this sprint has known unrelated .spec/prettier noise per task instructions.",
+		"The exact CT filter commands require a filename match, so a tiny alias spec imports the centralized PrincipalEditor.spec.ts assertions."
+	]
+}
