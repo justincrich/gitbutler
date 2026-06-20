@@ -11,7 +11,7 @@ use but_authz::{
     load_governance_config, permissions_path,
 };
 use but_ctx::Context;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use crate::json::ConfigInvalid;
 
@@ -135,6 +135,33 @@ pub struct GroupListOutcome {
     pub groups: Vec<GroupListEntry>,
 }
 
+/// Repository-relative path of the working-tree branch gates file.
+const GATES_PATH: &str = ".gitbutler/gates.toml";
+
+/// Caller-supplied branch protection update payload.
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct BranchProtectionInput {
+    /// Whether the branch requires administration:write to mutate.
+    pub protected: bool,
+}
+
+/// One branch gate entry returned through the API boundary.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct BranchGateEntry {
+    /// Branch name.
+    pub name: String,
+    /// Whether the branch is protected.
+    pub protected: bool,
+}
+
+/// Result of reading or updating branch gates.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct BranchGatesOutcome {
+    /// Branch gate entries from the working-tree `gates.toml`.
+    pub branches: Vec<BranchGateEntry>,
+}
+
 /// Structured governance error payload for CLI and API callers.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct GovernanceErrorPayload {
@@ -164,15 +191,15 @@ impl std::fmt::Debug for GroupListOutcome {
 
 /// List governed groups through the but-api boundary.
 #[but_api]
-pub fn group_list_cmd(ctx: &Context) -> anyhow::Result<GroupListOutcome> {
+pub fn group_list(ctx: &Context) -> anyhow::Result<GroupListOutcome> {
     let repo = ctx.repo.get()?;
     let target_ref = target_ref_from_ctx(ctx, None)?;
-    group_list(&repo, &target_ref)
+    group_list_with_repo(&repo, &target_ref)
 }
 
 /// Create a governed group through the but-api boundary.
 #[but_api]
-pub fn group_create_cmd(
+pub fn group_create(
     ctx: &Context,
     target_ref: String,
     group: String,
@@ -181,12 +208,12 @@ pub fn group_create_cmd(
     let repo = ctx.repo.get()?;
     let target_ref = target_ref_from_ctx(ctx, Some(&target_ref))?;
     let authorities = authority_slices(&authorities);
-    group_create(&repo, &target_ref, &group, &authorities)
+    group_create_with_repo(&repo, &target_ref, &group, &authorities)
 }
 
 /// Grant governed group permissions through the but-api boundary.
 #[but_api]
-pub fn group_grant_cmd(
+pub fn group_grant(
     ctx: &Context,
     target_ref: String,
     group: String,
@@ -195,12 +222,12 @@ pub fn group_grant_cmd(
     let repo = ctx.repo.get()?;
     let target_ref = target_ref_from_ctx(ctx, Some(&target_ref))?;
     let authorities = authority_slices(&authorities);
-    group_grant(&repo, &target_ref, &group, &authorities)
+    group_grant_with_repo(&repo, &target_ref, &group, &authorities)
 }
 
 /// Add a principal to a governed group through the but-api boundary.
 #[but_api]
-pub fn group_add_member_cmd(
+pub fn group_add_member(
     ctx: &Context,
     target_ref: String,
     group: String,
@@ -208,12 +235,12 @@ pub fn group_add_member_cmd(
 ) -> anyhow::Result<GroupWriteOutcome> {
     let repo = ctx.repo.get()?;
     let target_ref = target_ref_from_ctx(ctx, Some(&target_ref))?;
-    group_add_member(&repo, &target_ref, &group, &member)
+    group_add_member_with_repo(&repo, &target_ref, &group, &member)
 }
 
 /// Remove a principal from a governed group through the but-api boundary.
 #[but_api]
-pub fn group_remove_member_cmd(
+pub fn group_remove_member(
     ctx: &Context,
     target_ref: String,
     group: String,
@@ -221,20 +248,32 @@ pub fn group_remove_member_cmd(
 ) -> anyhow::Result<GroupWriteOutcome> {
     let repo = ctx.repo.get()?;
     let target_ref = target_ref_from_ctx(ctx, Some(&target_ref))?;
-    group_remove_member(&repo, &target_ref, &group, &member)
+    group_remove_member_with_repo(&repo, &target_ref, &group, &member)
+}
+
+/// Delete a governed group through the but-api boundary.
+#[but_api]
+pub fn group_delete(
+    ctx: &Context,
+    target_ref: String,
+    group: String,
+) -> anyhow::Result<GroupWriteOutcome> {
+    let repo = ctx.repo.get()?;
+    let target_ref = target_ref_from_ctx(ctx, Some(&target_ref))?;
+    group_delete_with_repo(&repo, &target_ref, &group)
 }
 
 /// List governed direct permissions through the but-api boundary.
 #[but_api]
-pub fn perm_list_cmd(ctx: &Context, principal: Option<String>) -> anyhow::Result<PermListOutcome> {
+pub fn perm_list(ctx: &Context, principal: Option<String>) -> anyhow::Result<PermListOutcome> {
     let repo = ctx.repo.get()?;
     let target_ref = target_ref_from_ctx(ctx, None)?;
-    perm_list(&repo, &target_ref, principal.as_deref())
+    perm_list_with_repo(&repo, &target_ref, principal.as_deref())
 }
 
 /// Grant governed direct permissions through the but-api boundary.
 #[but_api]
-pub fn perm_grant_cmd(
+pub fn perm_grant(
     ctx: &Context,
     target_ref: String,
     principal: String,
@@ -243,12 +282,12 @@ pub fn perm_grant_cmd(
     let repo = ctx.repo.get()?;
     let target_ref = target_ref_from_ctx(ctx, Some(&target_ref))?;
     let authorities = authority_slices(&authorities);
-    Ok(perm_grant(&repo, &target_ref, &principal, &authorities)?.into())
+    Ok(perm_grant_with_repo(&repo, &target_ref, &principal, &authorities)?.into())
 }
 
 /// Revoke governed direct permissions through the but-api boundary.
 #[but_api]
-pub fn perm_revoke_cmd(
+pub fn perm_revoke(
     ctx: &Context,
     target_ref: String,
     principal: String,
@@ -257,7 +296,7 @@ pub fn perm_revoke_cmd(
     let repo = ctx.repo.get()?;
     let target_ref = target_ref_from_ctx(ctx, Some(&target_ref))?;
     let authorities = authority_slices(&authorities);
-    perm_revoke(&repo, &target_ref, &principal, &authorities)
+    perm_revoke_with_repo(&repo, &target_ref, &principal, &authorities)
 }
 
 /// Return the caller's own effective governance authorities.
@@ -270,8 +309,83 @@ pub fn governance_status_read(ctx: &Context) -> anyhow::Result<AuthoritySet> {
     Ok(but_authz::effective_authority(&caller, &config))
 }
 
+/// Read branch gates (`gates.toml`) for the target ref through the but-api boundary.
+#[but_api]
+pub fn branch_gates_read(ctx: &Context, target_ref: String) -> anyhow::Result<BranchGatesOutcome> {
+    let repo = ctx.repo.get()?;
+    let target_ref = target_ref_from_ctx(ctx, Some(&target_ref))?;
+    branch_gates_read_with_repo(&repo, &target_ref)
+}
+
+/// Update one branch gate entry (`gates.toml`) through the but-api boundary.
+#[but_api]
+pub fn branch_gates_update(
+    ctx: &Context,
+    target_ref: String,
+    branch: String,
+    protection: BranchProtectionInput,
+) -> anyhow::Result<BranchGatesOutcome> {
+    let repo = ctx.repo.get()?;
+    let target_ref = target_ref_from_ctx(ctx, Some(&target_ref))?;
+    branch_gates_update_with_repo(&repo, &target_ref, &branch, protection)
+}
+
+/// Read branch gates under administration-read authority.
+pub fn branch_gates_read_with_repo(
+    repo: &gix::Repository,
+    target_ref: &str,
+) -> anyhow::Result<BranchGatesOutcome> {
+    let config = load_governance_config(repo, target_ref)?;
+    let caller = but_authz::resolve_principal_from_env(&config)?;
+    let held = but_authz::effective_authority(&caller, &config);
+    if !held.contains(Authority::AdministrationRead)
+        && !held.contains(Authority::AdministrationWrite)
+    {
+        return Err(Denial::missing_permission(Authority::AdministrationRead, &held).into());
+    }
+
+    let gates = load_gates_for_write(repo, target_ref)?;
+    let branches = gates
+        .branch
+        .into_iter()
+        .map(BranchGateEntry::from)
+        .collect();
+    Ok(BranchGatesOutcome { branches })
+}
+
+/// Update one branch gate entry under administration-write authority.
+pub fn branch_gates_update_with_repo(
+    repo: &gix::Repository,
+    target_ref: &str,
+    branch: &str,
+    protection: BranchProtectionInput,
+) -> anyhow::Result<BranchGatesOutcome> {
+    enforce_administration_write_gate(repo, target_ref)?;
+
+    let mut gates = load_gates_for_write(repo, target_ref)?;
+    if let Some(existing) = gates.branch.iter_mut().find(|entry| entry.name == branch) {
+        existing.protected = protection.protected;
+    } else {
+        gates.branch.push(GatesBranchWire {
+            name: branch.to_owned(),
+            protected: protection.protected,
+        });
+    }
+    write_worktree_gates(repo, &gates)?;
+
+    let branches = gates
+        .branch
+        .into_iter()
+        .map(BranchGateEntry::from)
+        .collect();
+    Ok(BranchGatesOutcome { branches })
+}
+
 /// List governed groups under administration-read authority.
-pub fn group_list(repo: &gix::Repository, target_ref: &str) -> anyhow::Result<GroupListOutcome> {
+pub fn group_list_with_repo(
+    repo: &gix::Repository,
+    target_ref: &str,
+) -> anyhow::Result<GroupListOutcome> {
     let config = load_governance_config(repo, target_ref)?;
     let caller = but_authz::resolve_principal_from_env(&config)?;
     let held = but_authz::effective_authority(&caller, &config);
@@ -292,7 +406,7 @@ pub fn group_list(repo: &gix::Repository, target_ref: &str) -> anyhow::Result<Gr
 }
 
 /// Create a governed group in the working-tree governance config.
-pub fn group_create(
+pub fn group_create_with_repo(
     repo: &gix::Repository,
     target_ref: &str,
     group: &str,
@@ -327,7 +441,7 @@ pub fn group_create(
 }
 
 /// Grant functional permissions to a governed group in the working-tree config.
-pub fn group_grant(
+pub fn group_grant_with_repo(
     repo: &gix::Repository,
     target_ref: &str,
     group: &str,
@@ -359,7 +473,7 @@ pub fn group_grant(
 }
 
 /// Add a principal to a governed group in the working-tree config.
-pub fn group_add_member(
+pub fn group_add_member_with_repo(
     repo: &gix::Repository,
     target_ref: &str,
     group: &str,
@@ -384,7 +498,7 @@ pub fn group_add_member(
 }
 
 /// Remove a principal from a governed group in the working-tree config.
-pub fn group_remove_member(
+pub fn group_remove_member_with_repo(
     repo: &gix::Repository,
     target_ref: &str,
     group: &str,
@@ -404,8 +518,27 @@ pub fn group_remove_member(
     Ok(group_write_outcome(group, &[], Some(member)))
 }
 
+/// Delete a governed group from the working-tree governance config.
+pub fn group_delete_with_repo(
+    repo: &gix::Repository,
+    target_ref: &str,
+    group: &str,
+) -> anyhow::Result<GroupWriteOutcome> {
+    enforce_administration_write_gate(repo, target_ref)?;
+
+    let mut permissions = load_permissions_for_write(repo, target_ref)?;
+    let before_len = permissions.group.len();
+    permissions.group.retain(|entry| entry.name != group);
+
+    if permissions.group.len() != before_len {
+        write_worktree_permissions(repo, &permissions)?;
+    }
+
+    Ok(group_write_outcome(group, &[], None))
+}
+
 /// List committed permissions plus working-tree pending grants for a principal.
-pub fn perm_list(
+pub fn perm_list_with_repo(
     repo: &gix::Repository,
     target_ref: &str,
     principal: Option<&str>,
@@ -464,7 +597,7 @@ pub fn perm_list(
 }
 
 /// Grant direct functional permissions in the working-tree governance config.
-pub fn perm_grant(
+pub fn perm_grant_with_repo(
     repo: &gix::Repository,
     target_ref: &str,
     principal: &str,
@@ -496,7 +629,7 @@ pub fn perm_grant(
 }
 
 /// Revoke direct functional permissions from the working-tree governance config.
-pub fn perm_revoke(
+pub fn perm_revoke_with_repo(
     repo: &gix::Repository,
     target_ref: &str,
     principal: &str,
@@ -750,6 +883,100 @@ fn read_committed_permissions(repo: &gix::Repository, target_ref: &str) -> anyho
         .with_context(|| format!("reading {} blob at {target_ref}", permissions_path()))?;
     let content = std::str::from_utf8(&blob.data)
         .with_context(|| format!("decoding {} at {target_ref} as UTF-8", permissions_path()))?;
+    Ok(content.to_owned())
+}
+
+/// Working-tree `gates.toml` wire format.
+///
+/// Mirrors the `[[branch]]` shape parsed by `but_authz` so round-tripping the
+/// file preserves the on-disk layout exactly.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+struct GatesFile {
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    branch: Vec<GatesBranchWire>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+struct GatesBranchWire {
+    name: String,
+    protected: bool,
+}
+
+impl From<GatesBranchWire> for BranchGateEntry {
+    fn from(branch: GatesBranchWire) -> Self {
+        Self {
+            name: branch.name,
+            protected: branch.protected,
+        }
+    }
+}
+
+fn load_gates_for_write(repo: &gix::Repository, target_ref: &str) -> anyhow::Result<GatesFile> {
+    if let Ok(worktree) = read_worktree_gates(repo) {
+        return Ok(worktree);
+    }
+    let committed = read_committed_gates(repo, target_ref)?;
+    parse_gates_text(&committed)
+}
+
+fn read_worktree_gates(repo: &gix::Repository) -> anyhow::Result<GatesFile> {
+    let path = worktree_gates_path(repo)?;
+    if !path.is_file() {
+        return Ok(GatesFile::default());
+    }
+    let text =
+        fs::read_to_string(&path).with_context(|| format!("reading working-tree {GATES_PATH}"))?;
+    parse_gates_text(&text)
+}
+
+fn parse_gates_text(text: &str) -> anyhow::Result<GatesFile> {
+    if text.trim().is_empty() {
+        return Ok(GatesFile::default());
+    }
+    toml::from_str::<GatesFile>(text).with_context(|| format!("parsing working-tree {GATES_PATH}"))
+}
+
+fn write_worktree_gates(repo: &gix::Repository, gates: &GatesFile) -> anyhow::Result<()> {
+    let path = worktree_gates_path(repo)?;
+    let parent = path
+        .parent()
+        .ok_or_else(|| anyhow!("{GATES_PATH} must have a parent directory"))?;
+    fs::create_dir_all(parent)
+        .with_context(|| format!("creating working-tree {}", parent.display()))?;
+    let encoded =
+        toml::to_string(gates).with_context(|| format!("serializing working-tree {GATES_PATH}"))?;
+    fs::write(&path, encoded).with_context(|| format!("writing working-tree {GATES_PATH}"))?;
+    Ok(())
+}
+
+fn worktree_gates_path(repo: &gix::Repository) -> anyhow::Result<PathBuf> {
+    let workdir = repo
+        .workdir()
+        .ok_or_else(|| anyhow!("governance gates writes require a non-bare repository"))?;
+    Ok(workdir.join(GATES_PATH))
+}
+
+fn read_committed_gates(repo: &gix::Repository, target_ref: &str) -> anyhow::Result<String> {
+    let mut reference = repo
+        .find_reference(target_ref)
+        .with_context(|| format!("resolving target ref {target_ref}"))?;
+    let commit = reference
+        .peel_to_commit()
+        .with_context(|| format!("peeling {target_ref} to a commit"))?;
+    let tree = commit
+        .tree()
+        .with_context(|| format!("reading tree for {target_ref}"))?;
+    let Some(entry) = tree
+        .lookup_entry_by_path(Path::new(GATES_PATH))
+        .with_context(|| format!("looking up {GATES_PATH} in {target_ref}"))?
+    else {
+        return Ok(String::new());
+    };
+    let blob = repo
+        .find_blob(entry.id())
+        .with_context(|| format!("reading {GATES_PATH} blob at {target_ref}"))?;
+    let content = std::str::from_utf8(&blob.data)
+        .with_context(|| format!("decoding {GATES_PATH} at {target_ref} as UTF-8"))?;
     Ok(content.to_owned())
 }
 

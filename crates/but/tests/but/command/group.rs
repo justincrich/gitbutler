@@ -3,7 +3,7 @@ use crate::utils::Sandbox;
 const REF_PIN_CAVEAT: &str = "takes effect once committed to the target branch";
 
 #[test]
-fn group_no_delete_surface_in_sprint_05() -> anyhow::Result<()> {
+fn group_no_delete_cli_verb_surface() -> anyhow::Result<()> {
     let manifest_dir = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     let group_args = std::fs::read_to_string(manifest_dir.join("src/args/group.rs"))?;
     let group_command = std::fs::read_to_string(manifest_dir.join("src/command/group.rs"))?;
@@ -15,13 +15,14 @@ fn group_no_delete_surface_in_sprint_05() -> anyhow::Result<()> {
             .join("crates/but-api/src/legacy/governance.rs"),
     )?;
 
+    // SPEC-REPAIR-IPC-003 re-added the `group_delete` but-api fn (the Tauri
+    // command backing UI-008); that capability is now behaviorally proven by
+    // crates/but-api/tests/group_governance.rs. This guard therefore covers the
+    // CLI surface only: the `but group delete` VERB is intentionally still
+    // absent, since IPC-003 registers a Tauri command, not a CLI verb.
     assert!(
         !group_args.contains("Delete"),
-        "Sprint 05 must not expose a group Delete clap variant"
-    );
-    assert!(
-        !governance.contains("group_delete"),
-        "Sprint 05 must not expose a group_delete API function"
+        "the `but group` clap parser must not expose a Delete variant"
     );
     for (path, source) in [
         ("crates/but/src/args/group.rs", group_args.as_str()),
@@ -33,11 +34,11 @@ fn group_no_delete_surface_in_sprint_05() -> anyhow::Result<()> {
     ] {
         assert!(
             !source.contains("todo!()") && !source.contains("unimplemented!()"),
-            "{path} must not contain a group deletion placeholder"
+            "{path} must not contain a group surface placeholder"
         );
     }
 
-    println!("Sprint 05 group surface has no delete variant, API, or placeholder");
+    println!("`but group delete` CLI verb is absent and group surfaces have no placeholders");
     Ok(())
 }
 

@@ -1,5 +1,5 @@
 use but_api::legacy::governance::{
-    REF_PIN_CAVEAT, governance_status_read, group_add_member_cmd, perm_grant_cmd,
+    REF_PIN_CAVEAT, governance_status_read, group_add_member, perm_grant,
 };
 use but_authz::Authority;
 use serde_json::Value;
@@ -16,7 +16,7 @@ fn governance_api_perm_grant_admin_lands_inert() -> anyhow::Result<()> {
     let main_before = ref_id(&repo, MAIN_REF)?;
 
     let outcome = temp_env::with_var("BUT_AGENT_HANDLE", Some("admin"), || {
-        perm_grant_cmd(
+        perm_grant(
             &ctx,
             TARGET_REF.to_owned(),
             "rust-implementer".to_owned(),
@@ -28,7 +28,7 @@ fn governance_api_perm_grant_admin_lands_inert() -> anyhow::Result<()> {
     let rust_implementer = principal_block(&worktree_permissions, "rust-implementer")?;
     assert!(
         rust_implementer.contains("reviews:write"),
-        "admin perm_grant_cmd must write reviews:write to rust-implementer's working-tree permissions"
+        "admin perm_grant must write reviews:write to rust-implementer's working-tree permissions"
     );
 
     let serialized = serde_json::to_value(outcome)?;
@@ -40,7 +40,7 @@ fn governance_api_perm_grant_admin_lands_inert() -> anyhow::Result<()> {
     assert_eq!(
         ref_id(&repo, MAIN_REF)?,
         main_before,
-        "perm_grant_cmd must leave refs/heads/main unmoved so the working-tree grant is inert"
+        "perm_grant must leave refs/heads/main unmoved so the working-tree grant is inert"
     );
     Ok(())
 }
@@ -53,7 +53,7 @@ fn governance_api_perm_grant_non_admin_denied_with_hint() -> anyhow::Result<()> 
     let before = worktree_permissions_bytes(&repo)?;
 
     let result = temp_env::with_var("BUT_AGENT_HANDLE", Some("rust-implementer"), || {
-        perm_grant_cmd(
+        perm_grant(
             &ctx,
             TARGET_REF.to_owned(),
             "rust-implementer".to_owned(),
@@ -62,7 +62,7 @@ fn governance_api_perm_grant_non_admin_denied_with_hint() -> anyhow::Result<()> 
     });
 
     let error = match result {
-        Ok(_) => anyhow::bail!("non-admin self-grant through perm_grant_cmd must be denied"),
+        Ok(_) => anyhow::bail!("non-admin self-grant through perm_grant must be denied"),
         Err(error) => error,
     };
     let error = json_error_value(error)?;
@@ -70,7 +70,7 @@ fn governance_api_perm_grant_non_admin_denied_with_hint() -> anyhow::Result<()> 
     assert_eq!(
         worktree_permissions_bytes(&repo)?,
         before,
-        "denied non-admin perm_grant_cmd must leave permissions.toml byte-for-byte unchanged"
+        "denied non-admin perm_grant must leave permissions.toml byte-for-byte unchanged"
     );
     Ok(())
 }
@@ -108,7 +108,7 @@ fn governance_api_group_add_member_non_admin_denied_with_hint() -> anyhow::Resul
     let before = worktree_permissions_bytes(&repo)?;
 
     let result = temp_env::with_var("BUT_AGENT_HANDLE", Some("rust-reviewer"), || {
-        group_add_member_cmd(
+        group_add_member(
             &ctx,
             TARGET_REF.to_owned(),
             "eng".to_owned(),
@@ -117,7 +117,7 @@ fn governance_api_group_add_member_non_admin_denied_with_hint() -> anyhow::Resul
     });
 
     let error = match result {
-        Ok(_) => anyhow::bail!("non-admin group_add_member_cmd must be denied"),
+        Ok(_) => anyhow::bail!("non-admin group_add_member must be denied"),
         Err(error) => error,
     };
     let error = json_error_value(error)?;
@@ -125,7 +125,7 @@ fn governance_api_group_add_member_non_admin_denied_with_hint() -> anyhow::Resul
     assert_eq!(
         worktree_permissions_bytes(&repo)?,
         before,
-        "denied non-admin group_add_member_cmd must leave permissions.toml byte-for-byte unchanged"
+        "denied non-admin group_add_member must leave permissions.toml byte-for-byte unchanged"
     );
     Ok(())
 }

@@ -1,8 +1,8 @@
 use but_api::legacy::{
     config_mutate::{AdminWriteGateError, classify_error},
     governance::{
-        REF_PIN_CAVEAT, group_add_member, group_create, group_grant, group_list,
-        group_remove_member,
+        REF_PIN_CAVEAT, group_add_member_with_repo, group_create_with_repo, group_delete_with_repo,
+        group_grant_with_repo, group_list_with_repo, group_remove_member_with_repo,
     },
 };
 use but_authz::{
@@ -22,25 +22,25 @@ fn group_ops_non_admin_denied_all_mutating_verbs() -> anyhow::Result<()> {
         (
             "group_create",
             temp_env::with_var("BUT_AGENT_HANDLE", Some("rust-reviewer"), || {
-                group_create(&repo, MAIN_REF, "new-team", &["reviews:write"])
+                group_create_with_repo(&repo, MAIN_REF, "new-team", &["reviews:write"])
             }),
         ),
         (
             "group_grant",
             temp_env::with_var("BUT_AGENT_HANDLE", Some("rust-reviewer"), || {
-                group_grant(&repo, MAIN_REF, "maintainers", &["comments:write"])
+                group_grant_with_repo(&repo, MAIN_REF, "maintainers", &["comments:write"])
             }),
         ),
         (
             "group_add_member",
             temp_env::with_var("BUT_AGENT_HANDLE", Some("rust-reviewer"), || {
-                group_add_member(&repo, MAIN_REF, "maintainers", "rust-implementer")
+                group_add_member_with_repo(&repo, MAIN_REF, "maintainers", "rust-implementer")
             }),
         ),
         (
             "group_remove_member",
             temp_env::with_var("BUT_AGENT_HANDLE", Some("rust-reviewer"), || {
-                group_remove_member(&repo, MAIN_REF, "maintainers", "maint")
+                group_remove_member_with_repo(&repo, MAIN_REF, "maintainers", "maint")
             }),
         ),
     ];
@@ -85,25 +85,25 @@ fn group_denials_include_remediation_hint() -> anyhow::Result<()> {
         (
             "group_create",
             temp_env::with_var("BUT_AGENT_HANDLE", Some("rust-reviewer"), || {
-                group_create(&repo, MAIN_REF, "new-team", &["reviews:write"])
+                group_create_with_repo(&repo, MAIN_REF, "new-team", &["reviews:write"])
             }),
         ),
         (
             "group_grant",
             temp_env::with_var("BUT_AGENT_HANDLE", Some("rust-reviewer"), || {
-                group_grant(&repo, MAIN_REF, "maintainers", &["comments:write"])
+                group_grant_with_repo(&repo, MAIN_REF, "maintainers", &["comments:write"])
             }),
         ),
         (
             "group_add_member",
             temp_env::with_var("BUT_AGENT_HANDLE", Some("rust-reviewer"), || {
-                group_add_member(&repo, MAIN_REF, "maintainers", "rust-implementer")
+                group_add_member_with_repo(&repo, MAIN_REF, "maintainers", "rust-implementer")
             }),
         ),
         (
             "group_remove_member",
             temp_env::with_var("BUT_AGENT_HANDLE", Some("rust-reviewer"), || {
-                group_remove_member(&repo, MAIN_REF, "maintainers", "maint")
+                group_remove_member_with_repo(&repo, MAIN_REF, "maintainers", "maint")
             }),
         ),
     ];
@@ -144,7 +144,7 @@ fn group_remove_member_writes_worktree_inert_until_committed() -> anyhow::Result
     let main_before = ref_id(&repo, MAIN_REF)?;
 
     let remove = temp_env::with_var("BUT_AGENT_HANDLE", Some("admin"), || {
-        group_remove_member(&repo, MAIN_REF, "maintainers", "rust-reviewer")
+        group_remove_member_with_repo(&repo, MAIN_REF, "maintainers", "rust-reviewer")
     })?;
 
     let worktree_permissions = worktree_permissions(&repo)?;
@@ -190,7 +190,7 @@ fn group_grant_administration_write_delegates_admin_inert_until_committed() -> a
     let main_before = ref_id(&repo, MAIN_REF)?;
 
     temp_env::with_var("BUT_AGENT_HANDLE", Some("admin"), || {
-        group_grant(&repo, MAIN_REF, "maintainers", &["administration:write"])
+        group_grant_with_repo(&repo, MAIN_REF, "maintainers", &["administration:write"])
     })?;
 
     let worktree_permissions = worktree_permissions(&repo)?;
@@ -225,7 +225,7 @@ fn group_create_duplicate_errs_without_overwrite() -> anyhow::Result<()> {
     let before = worktree_permissions(&repo)?;
 
     let result = temp_env::with_var("BUT_AGENT_HANDLE", Some("admin"), || {
-        group_create(&repo, MAIN_REF, "maintainers", &["reviews:write"])
+        group_create_with_repo(&repo, MAIN_REF, "maintainers", &["reviews:write"])
     });
     let denial = structured_denial(result, "duplicate group_create")?;
     assert_eq!(
@@ -274,7 +274,7 @@ fn group_add_member_writes_worktree_inert_until_committed() -> anyhow::Result<()
     );
 
     let add = temp_env::with_var("BUT_AGENT_HANDLE", Some("admin"), || {
-        group_add_member(&repo, MAIN_REF, "code-reviewers", "rust-implementer")
+        group_add_member_with_repo(&repo, MAIN_REF, "code-reviewers", "rust-implementer")
     })?;
 
     let worktree_permissions = worktree_permissions(&repo)?;
@@ -327,7 +327,7 @@ fn group_create_grant_writes_worktree() -> anyhow::Result<()> {
     let (repo, _tmp) = group_governance_base(true);
 
     let create = temp_env::with_var("BUT_AGENT_HANDLE", Some("admin"), || {
-        group_create(&repo, MAIN_REF, "release-captains", &["reviews:write"])
+        group_create_with_repo(&repo, MAIN_REF, "release-captains", &["reviews:write"])
     })?;
     assert_eq!(
         create.authorities,
@@ -345,7 +345,7 @@ fn group_create_grant_writes_worktree() -> anyhow::Result<()> {
     );
 
     temp_env::with_var("BUT_AGENT_HANDLE", Some("admin"), || {
-        group_grant(&repo, MAIN_REF, "release-captains", &["comments:write"])
+        group_grant_with_repo(&repo, MAIN_REF, "release-captains", &["comments:write"])
     })?;
 
     let final_permissions = worktree_permissions(&repo)?;
@@ -359,7 +359,7 @@ fn group_create_grant_writes_worktree() -> anyhow::Result<()> {
         "group_grant must write the later authority into the created group block"
     );
     let duplicate_create = temp_env::with_var("BUT_AGENT_HANDLE", Some("admin"), || {
-        group_create(&repo, MAIN_REF, "release-captains", &["statuses:write"])
+        group_create_with_repo(&repo, MAIN_REF, "release-captains", &["statuses:write"])
     });
     assert!(
         duplicate_create.is_err(),
@@ -390,7 +390,7 @@ fn group_ops_non_admin_denied() -> anyhow::Result<()> {
     let before = worktree_permissions(&repo)?;
 
     let create_error = temp_env::with_var("BUT_AGENT_HANDLE", Some("rust-implementer"), || {
-        classified_error(group_create(
+        classified_error(group_create_with_repo(
             &repo,
             MAIN_REF,
             "release-captains",
@@ -405,7 +405,7 @@ fn group_ops_non_admin_denied() -> anyhow::Result<()> {
     );
 
     let grant_error = temp_env::with_var("BUT_AGENT_HANDLE", Some("rust-implementer"), || {
-        classified_error(group_grant(
+        classified_error(group_grant_with_repo(
             &repo,
             MAIN_REF,
             "code-reviewers",
@@ -420,7 +420,7 @@ fn group_ops_non_admin_denied() -> anyhow::Result<()> {
     );
 
     let add_error = temp_env::with_var("BUT_AGENT_HANDLE", Some("rust-implementer"), || {
-        classified_error(group_add_member(
+        classified_error(group_add_member_with_repo(
             &repo,
             MAIN_REF,
             "code-reviewers",
@@ -435,7 +435,7 @@ fn group_ops_non_admin_denied() -> anyhow::Result<()> {
     );
 
     let remove_error = temp_env::with_var("BUT_AGENT_HANDLE", Some("rust-implementer"), || {
-        classified_error(group_remove_member(
+        classified_error(group_remove_member_with_repo(
             &repo,
             MAIN_REF,
             "code-reviewers",
@@ -459,7 +459,7 @@ fn group_grant_fail_closed_undefined_group_bad_token_and_unset_handle() -> anyho
     let (repo, _tmp) = group_governance_base(false);
     let before_undefined = worktree_permissions(&repo)?;
     let undefined = temp_env::with_var("BUT_AGENT_HANDLE", Some("admin"), || {
-        group_grant(&repo, MAIN_REF, "undefined-group", &["reviews:write"])
+        group_grant_with_repo(&repo, MAIN_REF, "undefined-group", &["reviews:write"])
     });
     assert!(
         undefined.is_err(),
@@ -473,7 +473,7 @@ fn group_grant_fail_closed_undefined_group_bad_token_and_unset_handle() -> anyho
 
     let before_bad_token = worktree_permissions(&repo)?;
     let bad_token = temp_env::with_var("BUT_AGENT_HANDLE", Some("admin"), || {
-        group_grant(&repo, MAIN_REF, "code-reviewers", &["badtoken"])
+        group_grant_with_repo(&repo, MAIN_REF, "code-reviewers", &["badtoken"])
     });
     assert!(
         bad_token.is_err(),
@@ -487,7 +487,7 @@ fn group_grant_fail_closed_undefined_group_bad_token_and_unset_handle() -> anyho
 
     let before_unset_handle = worktree_permissions(&repo)?;
     let unset_handle_error = temp_env::with_var("BUT_AGENT_HANDLE", None::<&str>, || {
-        classified_error(group_grant(
+        classified_error(group_grant_with_repo(
             &repo,
             MAIN_REF,
             "code-reviewers",
@@ -514,7 +514,7 @@ fn group_list_under_admin_read() -> anyhow::Result<()> {
     let (repo, _tmp) = group_governance_base(true);
 
     let list = temp_env::with_var("BUT_AGENT_HANDLE", Some("admin-reader"), || {
-        group_list(&repo, MAIN_REF)
+        group_list_with_repo(&repo, MAIN_REF)
     })?;
     let list_text = format!("{list:?}");
     assert!(
@@ -531,7 +531,7 @@ fn group_list_under_admin_read() -> anyhow::Result<()> {
     );
 
     let denied = temp_env::with_var("BUT_AGENT_HANDLE", Some("rust-implementer"), || {
-        classified_error(group_list(&repo, MAIN_REF))
+        classified_error(group_list_with_repo(&repo, MAIN_REF))
     })?;
     assert_eq!(
         denied.code, "perm.denied",
@@ -543,6 +543,105 @@ fn group_list_under_admin_read() -> anyhow::Result<()> {
     );
 
     println!("group list showed groups/grants/members under administration:read and denied others");
+    Ok(())
+}
+
+#[test]
+#[serial_test::serial]
+fn group_delete_removes_group_under_admin_write() -> anyhow::Result<()> {
+    let (repo, _tmp) = group_contract_base();
+    let main_before = ref_id(&repo, MAIN_REF)?;
+
+    let outcome = temp_env::with_var("BUT_AGENT_HANDLE", Some("admin"), || {
+        group_delete_with_repo(&repo, MAIN_REF, "maintainers")
+    })?;
+
+    let after = worktree_permissions(&repo)?;
+    assert!(
+        !after.contains(r#"name = "maintainers""#),
+        "admin group_delete must remove the maintainers block from permissions.toml"
+    );
+    assert!(
+        after.contains(r#"id = "admin""#),
+        "admin group_delete must preserve the admin principal block"
+    );
+    assert!(
+        format!("{outcome:?}").contains(REF_PIN_CAVEAT),
+        "group_delete result must include the ref-pin caveat"
+    );
+    assert_eq!(
+        ref_id(&repo, MAIN_REF)?,
+        main_before,
+        "group_delete must not commit or move refs/heads/main"
+    );
+
+    let committed_after = load_governance_config(&repo, MAIN_REF)?;
+    assert!(
+        committed_after
+            .groups()
+            .contains_key(&GroupName::new("maintainers")),
+        "target-ref membership must remain unchanged until the working-tree delete is committed"
+    );
+
+    println!("admin group_delete removed maintainers from the working tree only");
+    Ok(())
+}
+
+#[test]
+#[serial_test::serial]
+fn group_delete_non_admin_denied_writes_nothing() -> anyhow::Result<()> {
+    let (repo, _tmp) = group_contract_base();
+    let before = worktree_permissions(&repo)?;
+
+    let result = temp_env::with_var("BUT_AGENT_HANDLE", Some("rust-reviewer"), || {
+        group_delete_with_repo(&repo, MAIN_REF, "maintainers")
+    });
+
+    let denial = structured_denial(result, "group_delete")?;
+    assert_eq!(
+        denial.code,
+        Denial::PERM_DENIED_CODE,
+        "group_delete must return the stable perm.denied code"
+    );
+    assert!(
+        denial.message.contains("administration:write"),
+        "group_delete denial must name the missing administration:write authority"
+    );
+    assert!(
+        !denial.remediation_hint.is_empty(),
+        "group_delete denial must include an actionable remediation hint"
+    );
+    assert_eq!(
+        worktree_permissions(&repo)?,
+        before,
+        "denied group_delete must leave permissions.toml byte-for-byte unchanged"
+    );
+
+    println!("non-admin group_delete denied with remediation hint and wrote nothing");
+    Ok(())
+}
+
+#[test]
+#[serial_test::serial]
+fn group_delete_missing_group_is_idempotent_noop() -> anyhow::Result<()> {
+    let (repo, _tmp) = group_contract_base();
+    let before = worktree_permissions(&repo)?;
+
+    let outcome = temp_env::with_var("BUT_AGENT_HANDLE", Some("admin"), || {
+        group_delete_with_repo(&repo, MAIN_REF, "never-existed")
+    })?;
+
+    assert_eq!(
+        worktree_permissions(&repo)?,
+        before,
+        "deleting an undefined group must be an idempotent byte-stable no-op"
+    );
+    assert!(
+        format!("{outcome:?}").contains(REF_PIN_CAVEAT),
+        "idempotent group_delete must still return the ref-pin caveat"
+    );
+
+    println!("deleting an undefined group was byte-stable");
     Ok(())
 }
 

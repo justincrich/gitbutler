@@ -17,13 +17,13 @@ pub async fn exec(
 
     match cmd.unwrap_or(Subcommands::List) {
         Subcommands::List => {
-            let list = but_api::legacy::governance::group_list(&repo, &target_ref)
+            let list = but_api::legacy::governance::group_list_with_repo(&repo, &target_ref)
                 .map_err(governance_cli_error)?;
             write_list(out, &list).map_err(CliError::from)
         }
         Subcommands::Create { name, authorities } => {
             let authority_refs = authorities.iter().map(String::as_str).collect::<Vec<_>>();
-            let create = but_api::legacy::governance::group_create(
+            let create = but_api::legacy::governance::group_create_with_repo(
                 &repo,
                 &target_ref,
                 &name,
@@ -34,7 +34,7 @@ pub async fn exec(
         }
         Subcommands::Grant { name, authorities } => {
             let authority_refs = authorities.iter().map(String::as_str).collect::<Vec<_>>();
-            let grant = but_api::legacy::governance::group_grant(
+            let grant = but_api::legacy::governance::group_grant_with_repo(
                 &repo,
                 &target_ref,
                 &name,
@@ -44,13 +44,17 @@ pub async fn exec(
             write_mutation(out, "granted", &grant).map_err(CliError::from)
         }
         Subcommands::AddMember { name, member } => {
-            let add =
-                but_api::legacy::governance::group_add_member(&repo, &target_ref, &name, &member)
-                    .map_err(governance_cli_error)?;
+            let add = but_api::legacy::governance::group_add_member_with_repo(
+                &repo,
+                &target_ref,
+                &name,
+                &member,
+            )
+            .map_err(governance_cli_error)?;
             write_mutation(out, "added member", &add).map_err(CliError::from)
         }
         Subcommands::RemoveMember { name, member } => {
-            let remove = but_api::legacy::governance::group_remove_member(
+            let remove = but_api::legacy::governance::group_remove_member_with_repo(
                 &repo,
                 &target_ref,
                 &name,

@@ -17,9 +17,12 @@ pub async fn exec(
 
     match cmd.unwrap_or(Subcommands::List { principal: None }) {
         Subcommands::List { principal } => {
-            let list =
-                but_api::legacy::governance::perm_list(&repo, &target_ref, principal.as_deref())
-                    .map_err(governance_cli_error)?;
+            let list = but_api::legacy::governance::perm_list_with_repo(
+                &repo,
+                &target_ref,
+                principal.as_deref(),
+            )
+            .map_err(governance_cli_error)?;
             write_list(out, &list).map_err(CliError::from)
         }
         Subcommands::Grant {
@@ -27,7 +30,7 @@ pub async fn exec(
             authorities,
         } => {
             let authority_refs = authorities.iter().map(String::as_str).collect::<Vec<_>>();
-            let grant = but_api::legacy::governance::perm_grant(
+            let grant = but_api::legacy::governance::perm_grant_with_repo(
                 &repo,
                 &target_ref,
                 &principal,
@@ -41,7 +44,7 @@ pub async fn exec(
             authorities,
         } => {
             let authority_refs = authorities.iter().map(String::as_str).collect::<Vec<_>>();
-            let revoke = but_api::legacy::governance::perm_revoke(
+            let revoke = but_api::legacy::governance::perm_revoke_with_repo(
                 &repo,
                 &target_ref,
                 &principal,

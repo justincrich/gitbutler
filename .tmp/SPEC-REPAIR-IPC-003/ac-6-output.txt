@@ -1,0 +1,5 @@
+=== AC-6: grep -rn _cmd_cmd crates/ ===
+PASS: no _cmd_cmd matches
+
+=== AC-6 supplementary: no but_api sources named *_cmd ===
+PASS: no but_api source fns suffixed _cmd
