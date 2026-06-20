@@ -1,0 +1,118 @@
+{
+  "task_id": "MGMT-IPC-002",
+  "timestamp": "2026-06-20T05:39:15Z",
+  "commit_sha": "7ffaf85c9f08c906952d9bc8cb536ad2f09b9635",
+  "typecheck": {
+    "exit_code": 0
+  },
+  "lint": {
+    "exit_code": 0,
+    "warnings": 0
+  },
+  "pre_existing_issues": false,
+  "requirement_results": [
+    {
+      "id": "AC-1",
+      "verify": "cargo test -p but-api error_serializes_remediation_hint_from_denial",
+      "exit_code": 0,
+      "output_file": ".tmp/MGMT-IPC-002/ac-1-output.txt",
+      "red_against_start_file": ".tmp/MGMT-IPC-002/AC-1-red-against-start.txt",
+      "green_file": ".tmp/MGMT-IPC-002/AC-1-green.txt",
+      "seeded_value": ".tmp/MGMT-IPC-002/AC-1-seeded-artifact.txt"
+    },
+    {
+      "id": "AC-2",
+      "verify": "cargo test -p but-api error_serializes_remediation_hint_from_merge_gate_error",
+      "exit_code": 0,
+      "output_file": ".tmp/MGMT-IPC-002/ac-2-output.txt",
+      "red_against_start_file": ".tmp/MGMT-IPC-002/AC-2-red-against-start.txt",
+      "green_file": ".tmp/MGMT-IPC-002/AC-2-green.txt",
+      "seeded_value": ".tmp/MGMT-IPC-002/AC-2-seeded-artifact.txt"
+    },
+    {
+      "id": "AC-3",
+      "verify": "cargo test -p but-api error_without_denial_keeps_two_field_shape",
+      "exit_code": 0,
+      "output_file": ".tmp/MGMT-IPC-002/ac-3-output.txt",
+      "red_against_start_file": ".tmp/MGMT-IPC-002/AC-3-red-against-start.txt",
+      "green_file": ".tmp/MGMT-IPC-002/AC-3-green.txt",
+      "seeded_value": ".tmp/MGMT-IPC-002/AC-3-seeded-artifact.txt"
+    },
+    {
+      "id": "AC-4",
+      "verify": "cargo test -p but-api error_recovers_hint_from_nested_denial",
+      "exit_code": 0,
+      "output_file": ".tmp/MGMT-IPC-002/ac-4-output.txt",
+      "red_against_start_file": ".tmp/MGMT-IPC-002/AC-4-red-against-start.txt",
+      "green_file": ".tmp/MGMT-IPC-002/AC-4-green.txt",
+      "seeded_value": ".tmp/MGMT-IPC-002/AC-4-seeded-artifact.txt"
+    },
+    {
+      "id": "AC-5",
+      "verify": "cargo test -p but-api error_serializes_remediation_hint_from_config_invalid",
+      "exit_code": 0,
+      "output_file": ".tmp/MGMT-IPC-002/ac-5-output.txt",
+      "red_against_start_file": ".tmp/MGMT-IPC-002/AC-5-red-against-start.txt",
+      "green_file": ".tmp/MGMT-IPC-002/AC-5-green.txt",
+      "seeded_value": ".tmp/MGMT-IPC-002/AC-5-seeded-artifact.txt"
+    },
+    {
+      "id": "TC-1",
+      "verify": "cargo test -p but-api error_serializes_remediation_hint_from_denial",
+      "exit_code": 0,
+      "output_file": ".tmp/MGMT-IPC-002/tc-1-output.txt"
+    },
+    {
+      "id": "TC-2",
+      "verify": "cargo test -p but-api error_serializes_remediation_hint_from_denial",
+      "exit_code": 0,
+      "output_file": ".tmp/MGMT-IPC-002/tc-2-output.txt"
+    },
+    {
+      "id": "TC-3",
+      "verify": "cargo test -p but-api error_serializes_remediation_hint_from_merge_gate_error",
+      "exit_code": 0,
+      "output_file": ".tmp/MGMT-IPC-002/tc-3-output.txt"
+    },
+    {
+      "id": "TC-4",
+      "verify": "cargo test -p but-api error_without_denial_keeps_two_field_shape",
+      "exit_code": 0,
+      "output_file": ".tmp/MGMT-IPC-002/tc-4-output.txt"
+    },
+    {
+      "id": "TC-5",
+      "verify": "cargo test -p but-api error_without_denial_keeps_two_field_shape",
+      "exit_code": 0,
+      "output_file": ".tmp/MGMT-IPC-002/tc-5-output.txt"
+    },
+    {
+      "id": "TC-6",
+      "verify": "cargo test -p but-api error_recovers_hint_from_nested_denial",
+      "exit_code": 0,
+      "output_file": ".tmp/MGMT-IPC-002/tc-6-output.txt"
+    },
+    {
+      "id": "TC-7",
+      "verify": "cargo test -p but-api json::error::tests",
+      "exit_code": 0,
+      "output_file": ".tmp/MGMT-IPC-002/tc-7-output.txt"
+    },
+    {
+      "id": "TC-8",
+      "verify": "cargo test -p but-api error_serializes_remediation_hint_from_config_invalid",
+      "exit_code": 0,
+      "output_file": ".tmp/MGMT-IPC-002/tc-8-output.txt"
+    }
+  ],
+  "red_evidence": {
+    "required": true,
+    "file": ".tmp/MGMT-IPC-002/red-output.txt"
+  },
+  "tests": {
+    "required": true,
+    "command": "cargo test -p but-api",
+    "output_file": ".tmp/MGMT-IPC-002/test-output.txt",
+    "exit_code": 0
+  }
+}
