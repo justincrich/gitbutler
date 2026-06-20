@@ -1,0 +1,144 @@
+{
+	"task_id": "MGMT-UI-006",
+	"status": "complete",
+	"commit_sha": "c74e0300cd7d4cc775767de2465e22e44067d59c",
+	"files_changed": [
+		"apps/desktop/src/components/governance/PrincipalsList.svelte",
+		"apps/desktop/tests/governance/PrincipalsList.spec.ts"
+	],
+	"tests": [
+		{
+			"command": "pnpm install",
+			"exit_code": 0,
+			"artifact_path": ".tmp/MGMT-UI-006/pnpm-install.txt"
+		},
+		{
+			"command": "pnpm -F @gitbutler/ui package",
+			"exit_code": 0,
+			"artifact_path": ".tmp/MGMT-UI-006/ui-package.txt"
+		},
+		{
+			"command": "pnpm -F @gitbutler/core package",
+			"exit_code": 0,
+			"artifact_path": ".tmp/MGMT-UI-006/core-package.txt"
+		},
+		{
+			"command": "pnpm -F @gitbutler/shared package",
+			"exit_code": 0,
+			"artifact_path": ".tmp/MGMT-UI-006/shared-package.txt"
+		},
+		{
+			"command": "pnpm -F @gitbutler/desktop test:ct:desktop -- PrincipalsListRows",
+			"exit_code": 1,
+			"artifact_path": ".tmp/MGMT-UI-006/green-required-PrincipalsListRows.txt",
+			"note": "Playwright treats the positional argument as a file pattern and reports No tests found."
+		},
+		{
+			"command": "pnpm -F @gitbutler/desktop test:ct:desktop -- PrincipalsListEditorToggle",
+			"exit_code": 1,
+			"artifact_path": ".tmp/MGMT-UI-006/green-required-PrincipalsListEditorToggle.txt",
+			"note": "Playwright treats the positional argument as a file pattern and reports No tests found."
+		},
+		{
+			"command": "pnpm -F @gitbutler/desktop test:ct:desktop -- PrincipalsListPending",
+			"exit_code": 1,
+			"artifact_path": ".tmp/MGMT-UI-006/green-required-PrincipalsListPending.txt",
+			"note": "Playwright treats the positional argument as a file pattern and reports No tests found."
+		},
+		{
+			"command": "pnpm -F @gitbutler/desktop test:ct:desktop -- PrincipalsListEmpty",
+			"exit_code": 1,
+			"artifact_path": ".tmp/MGMT-UI-006/green-required-PrincipalsListEmpty.txt",
+			"note": "Playwright treats the positional argument as a file pattern and reports No tests found."
+		},
+		{
+			"command": "pnpm -F @gitbutler/desktop test:ct:desktop -- governance/PrincipalsList.spec.ts",
+			"exit_code": 0,
+			"artifact_path": ".tmp/MGMT-UI-006/green-PrincipalsList-file.txt"
+		},
+		{
+			"command": "pnpm -F @gitbutler/desktop check",
+			"exit_code": 0,
+			"artifact_path": ".tmp/MGMT-UI-006/check.txt"
+		},
+		{
+			"command": "rg -n \"\\\\.gitbutler|\\\\.toml|writeFile|writeTextFile|fs\\\\.|node:fs|from ['\\\"]fs|@tauri-apps/plugin-fs|localStorage\\\\.setItem\" apps/desktop/src/components/governance/PrincipalsList.svelte apps/desktop/tests/governance/PrincipalsList.spec.ts",
+			"exit_code": 1,
+			"artifact_path": ".tmp/MGMT-UI-006/structural-grep.txt",
+			"note": "Exit 1 means no direct toml/fs write matches."
+		},
+		{
+			"command": "pnpm -F @gitbutler/desktop build",
+			"exit_code": 0,
+			"artifact_path": ".tmp/MGMT-UI-006/build.txt"
+		},
+		{
+			"command": "pnpm exec prettier --check apps/desktop/src/components/governance/PrincipalsList.svelte apps/desktop/tests/governance/PrincipalsList.spec.ts",
+			"exit_code": 0,
+			"artifact_path": ".tmp/MGMT-UI-006/prettier-check.txt"
+		}
+	],
+	"red_evidence": [
+		{
+			"acceptance": "AC-1..AC-5",
+			"artifact_path": ".tmp/MGMT-UI-006/debug-PrincipalsListRows.txt",
+			"note": "The new CT scenarios failed before the seed-prop GREEN implementation; rows, editor, pending, and empty-state assertions were absent."
+		},
+		{
+			"acceptance": "Required exact commands",
+			"artifact_paths": [
+				".tmp/MGMT-UI-006/red-PrincipalsListRows.txt",
+				".tmp/MGMT-UI-006/red-PrincipalsListEditorToggle.txt",
+				".tmp/MGMT-UI-006/red-PrincipalsListPending.txt",
+				".tmp/MGMT-UI-006/red-PrincipalsListEmpty.txt"
+			],
+			"note": "The required exact command forms fail at Playwright file discovery with No tests found."
+		}
+	],
+	"requirements": {
+		"AC-1": {
+			"satisfied": true,
+			"evidence_paths": ["apps/desktop/tests/governance/PrincipalsList.spec.ts", ".tmp/MGMT-UI-006/green-PrincipalsList-file.txt"]
+		},
+		"AC-2": {
+			"satisfied": true,
+			"evidence_paths": ["apps/desktop/tests/governance/PrincipalsList.spec.ts", ".tmp/MGMT-UI-006/green-PrincipalsList-file.txt"]
+		},
+		"AC-3": {
+			"satisfied": true,
+			"evidence_paths": ["apps/desktop/tests/governance/PrincipalsList.spec.ts", ".tmp/MGMT-UI-006/green-PrincipalsList-file.txt"]
+		},
+		"AC-4": {
+			"satisfied": true,
+			"evidence_paths": ["apps/desktop/tests/governance/PrincipalsList.spec.ts", ".tmp/MGMT-UI-006/green-PrincipalsList-file.txt"]
+		},
+		"AC-5": {
+			"satisfied": true,
+			"evidence_paths": ["apps/desktop/tests/governance/PrincipalsList.spec.ts", ".tmp/MGMT-UI-006/green-PrincipalsList-file.txt"]
+		},
+		"TC-1": {
+			"satisfied": true,
+			"evidence_paths": ["apps/desktop/tests/governance/PrincipalsList.spec.ts", ".tmp/MGMT-UI-006/green-PrincipalsList-file.txt"]
+		},
+		"TC-2": {
+			"satisfied": true,
+			"evidence_paths": ["apps/desktop/tests/governance/PrincipalsList.spec.ts", ".tmp/MGMT-UI-006/green-PrincipalsList-file.txt"]
+		},
+		"TC-3": {
+			"satisfied": true,
+			"evidence_paths": ["apps/desktop/tests/governance/PrincipalsList.spec.ts", ".tmp/MGMT-UI-006/green-PrincipalsList-file.txt"]
+		},
+		"TC-4": {
+			"satisfied": true,
+			"evidence_paths": ["apps/desktop/tests/governance/PrincipalsList.spec.ts", ".tmp/MGMT-UI-006/green-PrincipalsList-file.txt"]
+		},
+		"TC-5": {
+			"satisfied": true,
+			"evidence_paths": ["apps/desktop/tests/governance/PrincipalsList.spec.ts", ".tmp/MGMT-UI-006/green-PrincipalsList-file.txt"]
+		}
+	},
+	"residual_risks": [
+		"The four exact requested CT commands use Playwright positional arguments that match files, not test titles, so they exit 1 with No tests found. The equivalent file-targeted CT command passes all four scenarios.",
+		"The production default calls the real backend command boundary for perm_list(projectId, principal: null) and maps the single returned PermListOutcome honestly. It does not invent an all-principal list if the backend contract only returns one principal."
+	]
+}
