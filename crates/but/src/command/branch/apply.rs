@@ -5,6 +5,18 @@ use crate::utils::OutputChannel;
 
 /// Apply a branch to the workspace, and return the full ref name to it.
 pub fn apply(mut ctx: Context, branch_name: &str, out: &mut OutputChannel) -> anyhow::Result<()> {
+    {
+        let repo = ctx.repo.get()?;
+        let project_meta = ctx.project_meta()?;
+        if let Ok(target_ref) = project_meta.target_ref_or_err() {
+            but_api::commit::create::gate::enforce_commit_gate_for_target(
+                &repo,
+                &but_api::commit::create::gate::CommitGateTarget::config_only(target_ref.clone()),
+            )
+            .map_err(commit_gate_cli_error)?;
+        }
+    }
+
     let mut guard = ctx.exclusive_worktree_access();
     let reference = {
         let repo = ctx.repo.get()?;
@@ -54,4 +66,50 @@ pub fn apply(mut ctx: Context, branch_name: &str, out: &mut OutputChannel) -> an
         out.write_value(but_api::json::Reference::from(reference))?;
     }
     Ok(())
+}
+
+fn commit_gate_cli_error(err: anyhow::Error) -> anyhow::Error {
+    if let Some(gate_error) = but_api::commit::create::gate::classify_error(&err) {
+        return anyhow::anyhow!(
+            "{}",
+            serde_json::json!({
+                "error": {
+                    "code": gate_error.code,
+                    "message": gate_error.message,
+                }
+            })
+        );
+    }
+
+    err
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{args::OutputFormat, utils::OutputChannel};
+
+    use super::*;
+
+    #[test]
+    #[serial_test::serial]
+    fn branch_apply_no_target_ungoverned() -> anyhow::Result<()> {
+        let env = but_testsupport::Sandbox::open_with_default_settings("one-fork")?;
+        env.invoke_bash(
+            r#"
+git config user.name GitButler
+git config user.email gitbutler@example.com
+"#,
+        );
+        let repo = env.open_repo()?;
+        let ctx = Context::from_repo(repo.clone())?.with_memory_app_cache();
+        assert!(
+            ctx.project_meta()?.target_ref.is_none(),
+            "no-target fixture must not configure a workspace target ref"
+        );
+        let mut out = OutputChannel::new(OutputFormat::None);
+
+        temp_env::with_var("BUT_AGENT_HANDLE", Some("ro"), || apply(ctx, "A", &mut out))?;
+
+        Ok(())
+    }
 }
