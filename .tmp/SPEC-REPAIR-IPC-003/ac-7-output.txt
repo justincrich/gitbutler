@@ -1,0 +1,9 @@
+=== AC-7: main.rs consumes lib.rs factory ===
+
+--- main.rs invoke_handler consumption ---
+288:            .invoke_handler(gitbutler_tauri::invoke_handler())
+
+--- lib.rs factory definition ---
+49:/// `legacy::governance::*` paths it feeds to `tauri::generate_handler!`.
+75:pub fn invoke_handler(
+77:    tauri::generate_handler![

@@ -1,0 +1,11 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.29s
+     Running tests/branch_gates_governance.rs (target/debug/deps/branch_gates_governance-291077d3c98d43cb)
+
+running 4 tests
+test branch_gates_read_returns_working_tree_gates_under_admin_read ... ok
+test branch_gates_read_non_admin_denied ... ok
+test branch_gates_update_upserts_under_admin_write ... ok
+test branch_gates_update_non_admin_denied_writes_nothing ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.19s
+
