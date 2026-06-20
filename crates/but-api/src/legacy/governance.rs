@@ -6,7 +6,7 @@ use std::{
 
 use anyhow::{Context as _, anyhow};
 use but_authz::{
-    Authority, AuthoritySet, Denial, PermissionsWire, PrincipalId, PrincipalWire,
+    Authority, AuthoritySet, Denial, GroupWire, PermissionsWire, PrincipalId, PrincipalWire,
     load_governance_config, permissions_path,
 };
 use serde::Serialize;
@@ -57,6 +57,183 @@ impl std::fmt::Debug for PermListOutcome {
         }
         Ok(())
     }
+}
+
+/// Result of a governance group write.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct GroupWriteOutcome {
+    /// Group whose grants or membership were changed or inspected.
+    pub group: String,
+    /// Parsed authority tokens supplied by the caller.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub authorities: Vec<String>,
+    /// Principal membership changed by this operation.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub member: Option<String>,
+    /// Ref-pin caveat for the operator.
+    pub caveat: &'static str,
+}
+
+/// Listed group grants and members.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct GroupListEntry {
+    /// Group name.
+    pub name: String,
+    /// Functional authorities granted to the group.
+    pub authorities: Vec<String>,
+    /// Principals listed as group members.
+    pub members: Vec<String>,
+}
+
+/// Result of listing governed groups.
+#[derive(Clone, PartialEq, Eq, Serialize)]
+pub struct GroupListOutcome {
+    /// Groups from the working-tree governance config.
+    pub groups: Vec<GroupListEntry>,
+}
+
+impl std::fmt::Debug for GroupListOutcome {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        for group in &self.groups {
+            writeln!(f, "{}:", group.name)?;
+            for authority in &group.authorities {
+                writeln!(f, "  grant {authority}")?;
+            }
+            for member in &group.members {
+                writeln!(f, "  member {member}")?;
+            }
+        }
+        Ok(())
+    }
+}
+
+/// List governed groups under administration-read authority.
+pub fn group_list(repo: &gix::Repository, target_ref: &str) -> anyhow::Result<GroupListOutcome> {
+    let config = load_governance_config(repo, target_ref)?;
+    let caller = but_authz::resolve_principal_from_env(&config)?;
+    let held = but_authz::effective_authority(&caller, &config);
+    if !held.contains(Authority::AdministrationRead)
+        && !held.contains(Authority::AdministrationWrite)
+    {
+        return Err(Denial::missing_permission(Authority::AdministrationRead, &held).into());
+    }
+
+    let permissions = read_worktree_permissions(repo)?;
+    let groups = permissions
+        .group
+        .iter()
+        .map(group_list_entry)
+        .collect::<anyhow::Result<Vec<_>>>()?;
+
+    Ok(GroupListOutcome { groups })
+}
+
+/// Create a governed group in the working-tree governance config.
+pub fn group_create(
+    repo: &gix::Repository,
+    target_ref: &str,
+    group: &str,
+    authorities: &[&str],
+) -> anyhow::Result<GroupWriteOutcome> {
+    let parsed = parse_authorities(authorities)?;
+    enforce_administration_write_gate(repo, target_ref)?;
+
+    let mut permissions = load_permissions_for_write(repo, target_ref)?;
+    let exists = permissions.group.iter().any(|entry| entry.name == group);
+    if exists {
+        return Err(anyhow!("group {group} already exists"));
+    }
+
+    permissions.group.push(GroupWire {
+        name: group.to_owned(),
+        permissions: parsed
+            .iter()
+            .map(|authority| authority.name().to_owned())
+            .collect(),
+        role: None,
+        members: Vec::new(),
+    });
+    write_worktree_permissions(repo, &permissions)?;
+
+    Ok(group_write_outcome(group, &parsed, None))
+}
+
+/// Grant functional permissions to a governed group in the working-tree config.
+pub fn group_grant(
+    repo: &gix::Repository,
+    target_ref: &str,
+    group: &str,
+    authorities: &[&str],
+) -> anyhow::Result<GroupWriteOutcome> {
+    let parsed = parse_authorities(authorities)?;
+    enforce_administration_write_gate(repo, target_ref)?;
+
+    let mut permissions = load_permissions_for_write(repo, target_ref)?;
+    let group_wire = existing_group_entry_mut(&mut permissions, group)?;
+    let mut changed = false;
+    for authority in &parsed {
+        let token = authority.name();
+        if !group_wire
+            .permissions
+            .iter()
+            .any(|existing| existing == token)
+        {
+            group_wire.permissions.push(token.to_owned());
+            changed = true;
+        }
+    }
+
+    if changed {
+        write_worktree_permissions(repo, &permissions)?;
+    }
+
+    Ok(group_write_outcome(group, &parsed, None))
+}
+
+/// Add a principal to a governed group in the working-tree config.
+pub fn group_add_member(
+    repo: &gix::Repository,
+    target_ref: &str,
+    group: &str,
+    member: &str,
+) -> anyhow::Result<GroupWriteOutcome> {
+    enforce_administration_write_gate(repo, target_ref)?;
+
+    let mut permissions = load_permissions_for_write(repo, target_ref)?;
+    let group_wire = existing_group_entry_mut(&mut permissions, group)?;
+    let changed = if group_wire.members.iter().any(|existing| existing == member) {
+        false
+    } else {
+        group_wire.members.push(member.to_owned());
+        true
+    };
+
+    if changed {
+        write_worktree_permissions(repo, &permissions)?;
+    }
+
+    Ok(group_write_outcome(group, &[], Some(member)))
+}
+
+/// Remove a principal from a governed group in the working-tree config.
+pub fn group_remove_member(
+    repo: &gix::Repository,
+    target_ref: &str,
+    group: &str,
+    member: &str,
+) -> anyhow::Result<GroupWriteOutcome> {
+    enforce_administration_write_gate(repo, target_ref)?;
+
+    let mut permissions = load_permissions_for_write(repo, target_ref)?;
+    let group_wire = existing_group_entry_mut(&mut permissions, group)?;
+    let before_len = group_wire.members.len();
+    group_wire.members.retain(|existing| existing != member);
+
+    if group_wire.members.len() != before_len {
+        write_worktree_permissions(repo, &permissions)?;
+    }
+
+    Ok(group_write_outcome(group, &[], Some(member)))
 }
 
 /// List committed permissions plus working-tree pending grants for a principal.
@@ -185,6 +362,40 @@ pub fn perm_revoke(
     Ok(write_outcome(principal, &parsed))
 }
 
+fn group_write_outcome(
+    group: &str,
+    authorities: &[Authority],
+    member: Option<&str>,
+) -> GroupWriteOutcome {
+    GroupWriteOutcome {
+        group: group.to_owned(),
+        authorities: authorities
+            .iter()
+            .map(|authority| authority.name().to_owned())
+            .collect(),
+        member: member.map(str::to_owned),
+        caveat: REF_PIN_CAVEAT,
+    }
+}
+
+fn group_list_entry(group: &GroupWire) -> anyhow::Result<GroupListEntry> {
+    let listed = AuthoritySet::parse(group.permissions.iter().map(String::as_str))
+        .with_context(|| format!("parsing authority list for group {}", group.name))?;
+    let role = AuthoritySet::from_optional_role(group.role.as_deref())
+        .with_context(|| format!("desugaring authority role for group {}", group.name))?;
+    let authorities = listed
+        .union(&role)
+        .iter()
+        .map(|authority| authority.name().to_owned())
+        .collect();
+
+    Ok(GroupListEntry {
+        name: group.name.clone(),
+        authorities,
+        members: group.members.clone(),
+    })
+}
+
 fn write_outcome(principal: &str, authorities: &[Authority]) -> PermWriteOutcome {
     PermWriteOutcome {
         principal: principal.to_owned(),
@@ -228,6 +439,24 @@ fn principal_entry_mut<'a>(
         .principal
         .last_mut()
         .ok_or_else(|| anyhow!("principal entry was not available after seeding"))
+}
+
+fn existing_group_entry_mut<'a>(
+    permissions: &'a mut PermissionsWire,
+    group: &str,
+) -> anyhow::Result<&'a mut GroupWire> {
+    let Some(position) = permissions
+        .group
+        .iter()
+        .position(|entry| entry.name == group)
+    else {
+        return Err(anyhow!("undefined group {group}"));
+    };
+
+    permissions
+        .group
+        .get_mut(position)
+        .ok_or_else(|| anyhow!("group position disappeared while preparing permissions rewrite"))
 }
 
 fn direct_authorities_for_principal(

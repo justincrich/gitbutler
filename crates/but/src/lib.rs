@@ -499,6 +499,20 @@ async fn match_subcommand(
                 .await
                 .emit_metrics(metrics_ctx)
         }
+        #[cfg(feature = "legacy")]
+        Subcommands::Group(args::group::Platform { cmd }) => {
+            let mut ctx = setup::init_ctx(
+                &args,
+                InitCtxOptions {
+                    background_sync: BackgroundSync::Disabled,
+                    ..Default::default()
+                },
+                out,
+            )?;
+            command::group::exec(&mut ctx, out, cmd)
+                .await
+                .emit_metrics(metrics_ctx)
+        }
         Subcommands::Skill(args::skill::Platform { cmd }) => {
             // Skill commands use repository context when available, but can run
             // without one. Subcommand handlers produce tailored guidance when a

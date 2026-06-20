@@ -10,6 +10,7 @@ pub mod config;
 pub mod eval_hook;
 pub(crate) mod external;
 pub(crate) mod git_config;
+pub mod group;
 pub mod gui;
 pub mod help;
 pub mod r#move;

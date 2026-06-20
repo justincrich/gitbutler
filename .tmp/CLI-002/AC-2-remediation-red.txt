@@ -1,0 +1,58 @@
+   Compiling but-api v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/CLI-002/crates/but-api)
+error[E0061]: this function takes 3 arguments but 4 arguments were supplied
+   --> crates/but-api/tests/group_governance.rs:84:9
+    |
+ 84 |         group_create(&repo, MAIN_REF, "release-captains", &["reviews:write"])
+    |         ^^^^^^^^^^^^                                      ------------------ unexpected argument #4 of type `&[&str; 1]`
+    |
+note: function defined here
+   --> crates/but-api/src/legacy/governance.rs:132:8
+    |
+132 | pub fn group_create(
+    |        ^^^^^^^^^^^^
+help: remove the extra argument
+    |
+ 84 -         group_create(&repo, MAIN_REF, "release-captains", &["reviews:write"])
+ 84 +         group_create(&repo, MAIN_REF, "release-captains")
+    |
+
+error[E0061]: this function takes 3 arguments but 4 arguments were supplied
+   --> crates/but-api/tests/group_governance.rs:121:9
+    |
+121 |         group_create(&repo, MAIN_REF, "release-captains", &["statuses:write"])
+    |         ^^^^^^^^^^^^                                      ------------------- unexpected argument #4 of type `&[&str; 1]`
+    |
+note: function defined here
+   --> crates/but-api/src/legacy/governance.rs:132:8
+    |
+132 | pub fn group_create(
+    |        ^^^^^^^^^^^^
+help: remove the extra argument
+    |
+121 -         group_create(&repo, MAIN_REF, "release-captains", &["statuses:write"])
+121 +         group_create(&repo, MAIN_REF, "release-captains")
+    |
+
+error[E0061]: this function takes 3 arguments but 4 arguments were supplied
+   --> crates/but-api/tests/group_governance.rs:152:26
+    |
+152 |         classified_error(group_create(
+    |                          ^^^^^^^^^^^^
+...
+156 |             &["reviews:write"],
+    |             ------------------ unexpected argument #4 of type `&[&str; 1]`
+    |
+note: function defined here
+   --> crates/but-api/src/legacy/governance.rs:132:8
+    |
+132 | pub fn group_create(
+    |        ^^^^^^^^^^^^
+help: remove the extra argument
+    |
+155 -             "release-captains",
+156 -             &["reviews:write"],
+155 +             "release-captains",
+    |
+
+For more information about this error, try `rustc --explain E0061`.
+error: could not compile `but-api` (test "group_governance") due to 3 previous errors
