@@ -1,0 +1,40 @@
+
+> @gitbutler/desktop@0.0.0 test:ct:desktop /Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-003/apps/desktop
+> playwright test -c playwright-ct.config.ts -- GovernanceSettingsCommit
+
+
+Running 1 test using 1 worker
+
+Port 3101 is in use, trying another one...
+(node:38952) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:38952) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  1 [chromium] › tests/governance/GovernanceSettingsCommit.spec.ts:4:1 › commits pending governance changes and clears pending state (10.0s)
+
+
+  1) [chromium] › tests/governance/GovernanceSettingsCommit.spec.ts:4:1 › commits pending governance changes and clears pending state 
+
+    [31mTest timeout of 10000ms exceeded.[39m
+
+    Error: locator.click: Test timeout of 10000ms exceeded.
+    Call log:
+    [2m  - waiting for locator('#root').locator('internal:control=component').getByTestId('governance-commit-button')[22m
+
+
+       7 | 	});
+       8 |
+    >  9 | 	await component.getByTestId("governance-commit-button").click();
+         | 	                                                        ^
+      10 |
+      11 | 	await expect(component.getByTestId("governance-commit-count")).toHaveText("1");
+      12 | 	await expect(component.getByTestId("governance-commit-message")).toHaveText(
+        at /Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-003/apps/desktop/tests/governance/GovernanceSettingsCommit.spec.ts:9:58
+
+    Error Context: test-results/governance-GovernanceSetti-eb0ce-es-and-clears-pending-state-chromium/error-context.md
+
+  1 failed
+    [chromium] › tests/governance/GovernanceSettingsCommit.spec.ts:4:1 › commits pending governance changes and clears pending state 
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-003/apps/desktop:
+ ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  @gitbutler/desktop@0.0.0 test:ct:desktop: `playwright test -c playwright-ct.config.ts -- GovernanceSettingsCommit`
+Exit status 1

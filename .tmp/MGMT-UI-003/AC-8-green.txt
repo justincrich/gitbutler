@@ -1,0 +1,14 @@
+
+> @gitbutler/desktop@0.0.0 test:ct:desktop /Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-003/apps/desktop
+> playwright test -c playwright-ct.config.ts -- GovernanceSettingsAdminRoleNoWrite
+
+
+Running 1 test using 1 worker
+
+(node:71326) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:71326) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 [chromium] › tests/governance/GovernanceSettingsAdminRoleNoWrite.spec.ts:4:1 › keeps controls disabled for admin users without backend administration:write (177ms)
+
+  1 passed (1.6s)

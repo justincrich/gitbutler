@@ -1,0 +1,45 @@
+
+> @gitbutler/desktop@0.0.0 test:ct:desktop /Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-003/apps/desktop
+> playwright test -c playwright-ct.config.ts -- GovernanceSettingsAdminRoleNoWrite
+
+
+Running 1 test using 1 worker
+
+Port 3101 is in use, trying another one...
+(node:40563) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:40563) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  1 [chromium] › tests/governance/GovernanceSettingsAdminRoleNoWrite.spec.ts:4:1 › keeps controls disabled for admin users without backend administration:write (5.1s)
+
+
+  1) [chromium] › tests/governance/GovernanceSettingsAdminRoleNoWrite.spec.ts:4:1 › keeps controls disabled for admin users without backend administration:write 
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoContainText[2m([22m[32mexpected[39m[2m)[22m failed
+
+    Locator: locator('#root').locator('internal:control=component').getByTestId('governance-read-only-message')
+    Expected substring: [32m"administration:write"[39m
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+    [2m  - Expect "toContainText" with timeout 5000ms[22m
+    [2m  - waiting for locator('#root').locator('internal:control=component').getByTestId('governance-read-only-message')[22m
+
+
+      10 |
+      11 | 	await expect(component.getByTestId("governance-user-role")).toHaveText("admin");
+    > 12 | 	await expect(component.getByTestId("governance-read-only-message")).toContainText(
+         | 	                                                                    ^
+      13 | 		"administration:write",
+      14 | 	);
+      15 | 	await expect(component.getByTestId("governance-commit-button")).toBeDisabled();
+        at /Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-003/apps/desktop/tests/governance/GovernanceSettingsAdminRoleNoWrite.spec.ts:12:70
+
+    Error Context: test-results/governance-GovernanceSetti-f0b3b-ackend-administration-write-chromium/error-context.md
+
+  1 failed
+    [chromium] › tests/governance/GovernanceSettingsAdminRoleNoWrite.spec.ts:4:1 › keeps controls disabled for admin users without backend administration:write 
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-003/apps/desktop:
+ ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  @gitbutler/desktop@0.0.0 test:ct:desktop: `playwright test -c playwright-ct.config.ts -- GovernanceSettingsAdminRoleNoWrite`
+Exit status 1

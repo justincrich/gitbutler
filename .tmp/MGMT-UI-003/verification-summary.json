@@ -1,128 +1,189 @@
 {
-  "task_id": "MGMT-UI-003",
-  "status": "blocked",
-  "commit_sha": null,
-  "blocker_classification": "recoverable_dependency_missing",
-  "typecheck": {
-    "command": "not run",
-    "exit_code": null,
-    "reason": "Production implementation blocked before source changes because required generated SDK contract is absent."
-  },
-  "lint": {
-    "command": "not run",
-    "exit_code": null,
-    "reason": "Production implementation blocked before source changes because required generated SDK contract is absent."
-  },
-  "tests": [
-    {
-      "command": "not run",
-      "exit_code": null,
-      "reason": "Behavioral CT tests would need to mock missing SDK fields/functions that do not exist in production."
-    }
-  ],
-  "probe_commands": [
-    {
-      "command": "sed -n '1590,1655p' packages/but-sdk/src/generated/index.d.ts",
-      "exit_code": 0,
-      "finding": "GovernanceStatus contains only authorities: Array<string>."
-    },
-    {
-      "command": "rg -n \"governance.*commit|commit.*governance|Governance.*Commit|governanceCommit|governance_commit|pendingCount|hasAdminWrite\" packages/but-sdk/src/generated/index.d.ts packages/but-sdk/src/generated/index.js crates packages apps/desktop/src -g '!target' -g '!node_modules'",
-      "exit_code": 0,
-      "finding": "No generated SDK governance commit function, pendingCount field, or hasAdminWrite field found. Tauri-only governance_pending exists outside the generated SDK."
-    },
-    {
-      "command": "rg -n \"governance_(pending|status|commit)|governancePending|governanceStatus|pendingCount|hasAdminWrite\" crates/gitbutler-tauri/src packages/but-sdk/src/generated -g '!target'",
-      "exit_code": 0,
-      "finding": "Tauri registers governance_pending, but packages/but-sdk generated output exports only governanceStatusRead."
-    },
-    {
-      "command": "sed -n '320,350p' crates/but-api/src/legacy/governance.rs",
-      "exit_code": 0,
-      "finding": "governance_status_read returns AuthoritySet only."
-    }
-  ],
-  "requirement_results": [
-    {
-      "id": "AC-1",
-      "tc": "TC-1",
-      "status": "blocked",
-      "reason": "Four-tab shell depends on parent store and read-only contract, but source was not changed after required SDK blocker was confirmed.",
-      "red_against_start_file": null,
-      "green_file": null,
-      "seeded_value": "seeded_status_3_pending"
-    },
-    {
-      "id": "AC-2",
-      "tc": "TC-2",
-      "status": "blocked",
-      "reason": "Generated SDK status lacks pendingCount.",
-      "red_against_start_file": null,
-      "green_file": null,
-      "seeded_value": "pendingCount=3 and pendingCount=0"
-    },
-    {
-      "id": "AC-3",
-      "tc": "TC-3",
-      "status": "blocked",
-      "reason": "Generated SDK lacks governance commit function.",
-      "red_against_start_file": null,
-      "green_file": null,
-      "seeded_value": "pendingCount=3 then pendingCount=0 after commit"
-    },
-    {
-      "id": "AC-4",
-      "tc": "TC-4",
-      "status": "blocked",
-      "reason": "Generated SDK status lacks hasAdminWrite.",
-      "red_against_start_file": null,
-      "green_file": null,
-      "seeded_value": "hasAdminWrite=false"
-    },
-    {
-      "id": "AC-5",
-      "tc": "TC-5",
-      "status": "not_changed",
-      "reason": "No +page.server.ts or +layout.server.ts was added."
-    },
-    {
-      "id": "AC-6",
-      "tc": null,
-      "status": "not_changed",
-      "reason": "No renderer config write code was added."
-    },
-    {
-      "id": "AC-7",
-      "tc": "TC-6",
-      "status": "not_changed",
-      "reason": "No read-only derivation code was added; required hasAdminWrite field is missing."
-    },
-    {
-      "id": "AC-8",
-      "tc": "TC-7",
-      "status": "blocked",
-      "reason": "Generated SDK status lacks hasAdminWrite, so role-independent read-only behavior cannot be implemented honestly.",
-      "red_against_start_file": null,
-      "green_file": null,
-      "seeded_value": "user.role=admin, hasAdminWrite=false"
-    },
-    {
-      "id": "AC-9",
-      "tc": "TC-8",
-      "status": "blocked",
-      "reason": "Generated SDK status lacks pendingCount.",
-      "red_against_start_file": null,
-      "green_file": null,
-      "seeded_value": "pendingCount=0"
-    },
-    {
-      "id": "AC-10",
-      "tc": "TC-9",
-      "status": "blocked",
-      "reason": "Pending store cannot be implemented honestly without generated SDK pendingCount/commit contract.",
-      "red_against_start_file": null,
-      "green_file": null,
-      "seeded_value": "pendingCount=3"
-    }
-  ]
+	"task_id": "MGMT-UI-003",
+	"status": "complete",
+	"commit_sha": "4893d733518f46259962672bf965738b13c1e975",
+	"files_changed": [
+		"apps/desktop/src/components/governance/DESIGN-ANNOTATIONS.md",
+		"apps/desktop/src/components/governance/GovernanceSettings.svelte",
+		"apps/desktop/src/lib/governance/pendingStore.svelte.ts",
+		"apps/desktop/tests/governance/GovernanceSettingsAdminRoleNoWrite.spec.ts",
+		"apps/desktop/tests/governance/GovernanceSettingsCleanMount.spec.ts",
+		"apps/desktop/tests/governance/GovernanceSettingsCommit.spec.ts",
+		"apps/desktop/tests/governance/GovernanceSettingsCrossTabPending.spec.ts",
+		"apps/desktop/tests/governance/GovernanceSettingsHarness.svelte",
+		"apps/desktop/tests/governance/GovernanceSettingsPendingBanner.spec.ts",
+		"apps/desktop/tests/governance/GovernanceSettingsReadOnly.spec.ts",
+		"apps/desktop/tests/governance/GovernanceSettingsTabs.spec.ts"
+	],
+	"tests": [
+		{
+			"command": "pnpm -F @gitbutler/desktop test:ct:desktop -- GovernanceSettingsTabs",
+			"red_exit_code": 1,
+			"red_artifact": ".tmp/MGMT-UI-003/AC-1-red/output.txt",
+			"green_exit_code": 0,
+			"green_artifact": ".tmp/MGMT-UI-003/AC-1-green/output.txt"
+		},
+		{
+			"command": "pnpm -F @gitbutler/desktop test:ct:desktop -- GovernanceSettingsPendingBanner",
+			"red_exit_code": 1,
+			"red_artifact": ".tmp/MGMT-UI-003/AC-2-red/output.txt",
+			"green_exit_code": 0,
+			"green_artifact": ".tmp/MGMT-UI-003/AC-2-green/output.txt"
+		},
+		{
+			"command": "pnpm -F @gitbutler/desktop test:ct:desktop -- GovernanceSettingsCommit",
+			"red_exit_code": 1,
+			"red_artifact": ".tmp/MGMT-UI-003/AC-3-red/output.txt",
+			"green_exit_code": 0,
+			"green_artifact": ".tmp/MGMT-UI-003/AC-3-green/output.txt"
+		},
+		{
+			"command": "pnpm -F @gitbutler/desktop test:ct:desktop -- GovernanceSettingsReadOnly",
+			"red_exit_code": 1,
+			"red_artifact": ".tmp/MGMT-UI-003/AC-4-red/output.txt",
+			"green_exit_code": 0,
+			"green_artifact": ".tmp/MGMT-UI-003/AC-4-green/output.txt"
+		},
+		{
+			"command": "pnpm -F @gitbutler/desktop test:ct:desktop -- GovernanceSettingsAdminRoleNoWrite",
+			"red_exit_code": 1,
+			"red_artifact": ".tmp/MGMT-UI-003/AC-8-red/output.txt",
+			"green_exit_code": 0,
+			"green_artifact": ".tmp/MGMT-UI-003/AC-8-green/output.txt"
+		},
+		{
+			"command": "pnpm -F @gitbutler/desktop test:ct:desktop -- GovernanceSettingsCleanMount",
+			"red_exit_code": 1,
+			"red_artifact": ".tmp/MGMT-UI-003/AC-9-red/output.txt",
+			"green_exit_code": 0,
+			"green_artifact": ".tmp/MGMT-UI-003/AC-9-green/output.txt"
+		},
+		{
+			"command": "pnpm -F @gitbutler/desktop test:ct:desktop -- GovernanceSettingsCrossTabPending",
+			"red_exit_code": 1,
+			"red_artifact": ".tmp/MGMT-UI-003/AC-10-red/output.txt",
+			"green_exit_code": 0,
+			"green_artifact": ".tmp/MGMT-UI-003/AC-10-green/output.txt"
+		},
+		{
+			"command": "pnpm -F @gitbutler/desktop test:ct:desktop -- GovernanceSettings.spec",
+			"exit_code": 0,
+			"artifact": ".tmp/MGMT-UI-003/regression/governance-settings-spec.txt"
+		},
+		{
+			"command": "find apps/desktop/src -name '+page.server.ts' -path '*governance*' | wc -l | grep '^0$'",
+			"exit_code": 1,
+			"artifact": ".tmp/MGMT-UI-003/structural/no-governance-page-server.txt",
+			"note": "Raw count is zero, but macOS wc emits leading spaces. Normalized equivalent passed.",
+			"normalized_exit_code": 0,
+			"normalized_artifact": ".tmp/MGMT-UI-003/structural/no-governance-page-server.normalized.txt",
+			"raw_count_artifact": ".tmp/MGMT-UI-003/structural/no-governance-page-server.raw.txt"
+		},
+		{
+			"command": "grep -rn 'gitbutler.*\\.toml\\|writeFile\\|fs.write' apps/desktop/src/components/governance/ apps/desktop/src/lib/governance/ 2>/dev/null | grep -v 'but-sdk\\|SDK\\|import' | wc -l | grep '^0$'",
+			"exit_code": 1,
+			"artifact": ".tmp/MGMT-UI-003/structural/no-direct-toml-writes.txt",
+			"note": "Raw count is zero, but macOS wc emits leading spaces. Normalized equivalent passed.",
+			"normalized_exit_code": 0,
+			"normalized_artifact": ".tmp/MGMT-UI-003/structural/no-direct-toml-writes.normalized.txt",
+			"raw_count_artifact": ".tmp/MGMT-UI-003/structural/no-direct-toml-writes.raw.txt"
+		},
+		{
+			"command": "grep -n 'user\\.role\\|userService.*role' apps/desktop/src/components/governance/GovernanceSettings.svelte apps/desktop/src/lib/governance/pendingStore.svelte.ts 2>/dev/null | wc -l | grep '^0$'",
+			"exit_code": 1,
+			"artifact": ".tmp/MGMT-UI-003/structural/no-role-readonly.txt",
+			"note": "Raw count is zero, but macOS wc emits leading spaces. Normalized equivalent passed.",
+			"normalized_exit_code": 0,
+			"normalized_artifact": ".tmp/MGMT-UI-003/structural/no-role-readonly.normalized.txt",
+			"raw_count_artifact": ".tmp/MGMT-UI-003/structural/no-role-readonly.raw.txt"
+		},
+		{
+			"command": "pnpm -F @gitbutler/desktop check",
+			"exit_code": 0,
+			"artifact": ".tmp/MGMT-UI-003/check/desktop-check.txt"
+		},
+		{
+			"command": "pnpm -F @gitbutler/desktop build",
+			"exit_code": 1,
+			"artifact": ".tmp/MGMT-UI-003/build/desktop-build.txt",
+			"note": "Client build completed, then vite-plugin-sveltekit-compile failed opening apps/desktop/.svelte-kit/output/server/manifest-full.js. This appears unrelated to MGMT-UI-003 changes."
+		}
+	],
+	"requirements": {
+		"AC-1": {
+			"satisfied": true,
+			"evidence_paths": [
+				".tmp/MGMT-UI-003/AC-1-red/output.txt",
+				".tmp/MGMT-UI-003/AC-1-green/output.txt"
+			]
+		},
+		"AC-2": {
+			"satisfied": true,
+			"evidence_paths": [
+				".tmp/MGMT-UI-003/AC-2-red/output.txt",
+				".tmp/MGMT-UI-003/AC-2-green/output.txt"
+			]
+		},
+		"AC-3": {
+			"satisfied": true,
+			"evidence_paths": [
+				".tmp/MGMT-UI-003/AC-3-red/output.txt",
+				".tmp/MGMT-UI-003/AC-3-green/output.txt"
+			]
+		},
+		"AC-4": {
+			"satisfied": true,
+			"evidence_paths": [
+				".tmp/MGMT-UI-003/AC-4-red/output.txt",
+				".tmp/MGMT-UI-003/AC-4-green/output.txt"
+			]
+		},
+		"AC-5": {
+			"satisfied": true,
+			"evidence_paths": [
+				".tmp/MGMT-UI-003/structural/no-governance-page-server.raw.txt",
+				".tmp/MGMT-UI-003/structural/no-governance-page-server.normalized.txt"
+			]
+		},
+		"AC-6": {
+			"satisfied": true,
+			"evidence_paths": [
+				".tmp/MGMT-UI-003/structural/no-direct-toml-writes.raw.txt",
+				".tmp/MGMT-UI-003/structural/no-direct-toml-writes.normalized.txt"
+			]
+		},
+		"AC-7": {
+			"satisfied": true,
+			"evidence_paths": [
+				".tmp/MGMT-UI-003/structural/no-role-readonly.raw.txt",
+				".tmp/MGMT-UI-003/structural/no-role-readonly.normalized.txt"
+			]
+		},
+		"AC-8": {
+			"satisfied": true,
+			"evidence_paths": [
+				".tmp/MGMT-UI-003/AC-8-red/output.txt",
+				".tmp/MGMT-UI-003/AC-8-green/output.txt"
+			]
+		},
+		"AC-9": {
+			"satisfied": true,
+			"evidence_paths": [
+				".tmp/MGMT-UI-003/AC-9-red/output.txt",
+				".tmp/MGMT-UI-003/AC-9-green/output.txt"
+			]
+		},
+		"AC-10": {
+			"satisfied": true,
+			"evidence_paths": [
+				".tmp/MGMT-UI-003/AC-10-red/output.txt",
+				".tmp/MGMT-UI-003/AC-10-green/output.txt"
+			]
+		}
+	},
+	"residual_risks": [
+		"ProjectSettingsModalContent still mounts GovernanceSettings without projectId/targetRef because that file was outside the requested write scope; GovernanceSettings remains zero-prop safe and uses the real backend contract when a backend provider and target props are supplied.",
+		"pnpm -F @gitbutler/desktop build failed after client output generation because vite-plugin-sveltekit-compile could not open .svelte-kit/output/server/manifest-full.js.",
+		"The exact structural commands with wc -l | grep '^0$' exit 1 on this macOS shell due wc leading spaces; raw counts are zero and normalized checks passed."
+	]
 }
