@@ -1,0 +1,32 @@
+{
+  "task_id": "MGMT-UI-001",
+  "base_commit": "5122e16a56d4d33bc78bbab48abd023a94b1430d",
+  "summary": "Register governance settings modal page id/sidebar entry and scaffold apps/desktop Playwright CT harness.",
+  "write_allowed": [
+    "apps/desktop/src/lib/settings/projectSettingsPages.ts",
+    "apps/desktop/src/lib/state/uiState.svelte.ts",
+    "apps/desktop/playwright-ct.config.ts",
+    "apps/desktop/package.json",
+    "apps/desktop/tests/governance/GovernanceSettings.spec.ts"
+  ],
+  "acceptance": [
+    "AC-1: ProjectSettingsPageId includes governance",
+    "AC-2: projectSettingsPages has exactly one governance entry with label Permissions & Governance, icon lock, adminOnly true",
+    "AC-3: apps/desktop CT harness exists and pnpm test:ct:desktop -- GovernanceSettings mounts GovernanceSettings",
+    "AC-4: no governance route directory under apps/desktop/src/routes",
+    "AC-5: no +page.server.ts/+layout.server.ts under governance scope"
+  ],
+  "expected_checks": [
+    "pnpm install if node_modules is absent",
+    "pnpm -F @gitbutler/desktop check",
+    "pnpm test:ct:desktop -- GovernanceSettings",
+    "pnpm lint",
+    "grep/structural route invariants"
+  ],
+  "constraints": [
+    "No new SvelteKit route",
+    "No server files",
+    "No generated SDK edits",
+    "Stub GovernanceSettings shell is acceptable only for this task if the real component does not exist yet"
+  ]
+}

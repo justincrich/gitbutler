@@ -1,0 +1,5 @@
+No GovernanceSettings.svelte found under apps/desktop/src or packages/ui/src.
+Required smoke spec must mount GovernanceSettings.svelte, but writeAllowed does not include apps/desktop/src/components/governance/GovernanceSettings.svelte.
+Per task instruction, this is TASK_CONTRACT_INVALID rather than permission to write outside scope.
+find apps/desktop/src/routes -type d -name governance:
+find apps/desktop/src for governance server files:
