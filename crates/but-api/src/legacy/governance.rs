@@ -210,18 +210,6 @@ pub fn group_remove_member_cmd(
     group_remove_member(&repo, &target_ref, &group, &member)
 }
 
-/// Delete a governed group through the but-api boundary.
-#[but_api]
-pub fn group_delete_cmd(
-    ctx: &Context,
-    target_ref: String,
-    group: String,
-) -> anyhow::Result<GroupWriteOutcome> {
-    let repo = ctx.repo.get()?;
-    let target_ref = target_ref_from_ctx(ctx, Some(&target_ref))?;
-    group_delete(&repo, &target_ref, &group)
-}
-
 /// List governed direct permissions through the but-api boundary.
 #[but_api]
 pub fn perm_list_cmd(ctx: &Context, principal: Option<String>) -> anyhow::Result<PermListOutcome> {
@@ -395,25 +383,6 @@ pub fn group_remove_member(
     }
 
     Ok(group_write_outcome(group, &[], Some(member)))
-}
-
-/// Delete a governed group from the working-tree governance config.
-pub fn group_delete(
-    repo: &gix::Repository,
-    target_ref: &str,
-    group: &str,
-) -> anyhow::Result<GroupWriteOutcome> {
-    enforce_administration_write_gate(repo, target_ref)?;
-
-    let mut permissions = load_permissions_for_write(repo, target_ref)?;
-    let before_len = permissions.group.len();
-    permissions.group.retain(|entry| entry.name != group);
-
-    if permissions.group.len() != before_len {
-        write_worktree_permissions(repo, &permissions)?;
-    }
-
-    Ok(group_write_outcome(group, &[], None))
 }
 
 /// List committed permissions plus working-tree pending grants for a principal.

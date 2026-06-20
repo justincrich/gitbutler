@@ -1,1 +1,2 @@
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.46s
+    Checking but-api v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-IPC-001/crates/but-api)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 10.19s

@@ -1,4 +1,4 @@
-    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.34s
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.29s
      Running tests/governance_api.rs (target/debug/deps/governance_api-c65881f20ac9bc4d)
 
 running 1 test
