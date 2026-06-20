@@ -1,189 +1,145 @@
 {
 	"task_id": "MGMT-UI-003",
 	"status": "complete",
-	"commit_sha": "4893d733518f46259962672bf965738b13c1e975",
+	"commit_sha": "0f3d16f6110df72df1bc4d41115a4647bdb8a239",
+	"base_head_before_remediation": "0ba69a4940c6fa3d92cd2481ede2d28eb0d6996c",
 	"files_changed": [
-		"apps/desktop/src/components/governance/DESIGN-ANNOTATIONS.md",
 		"apps/desktop/src/components/governance/GovernanceSettings.svelte",
-		"apps/desktop/src/lib/governance/pendingStore.svelte.ts",
-		"apps/desktop/tests/governance/GovernanceSettingsAdminRoleNoWrite.spec.ts",
-		"apps/desktop/tests/governance/GovernanceSettingsCleanMount.spec.ts",
-		"apps/desktop/tests/governance/GovernanceSettingsCommit.spec.ts",
-		"apps/desktop/tests/governance/GovernanceSettingsCrossTabPending.spec.ts",
-		"apps/desktop/tests/governance/GovernanceSettingsHarness.svelte",
-		"apps/desktop/tests/governance/GovernanceSettingsPendingBanner.spec.ts",
+		"apps/desktop/src/components/settings/ProjectSettingsModalContent.svelte",
 		"apps/desktop/tests/governance/GovernanceSettingsReadOnly.spec.ts",
-		"apps/desktop/tests/governance/GovernanceSettingsTabs.spec.ts"
+		"apps/desktop/tests/governance/ProjectSettingsModalContentCtHarness.svelte",
+		"apps/desktop/tests/governance/ProjectSettingsModalContentGovernance.spec.ts",
+		"apps/desktop/tests/governance/SettingsModalLayoutAdminHarness.svelte"
+	],
+	"reviewer_remediation": [
+		{
+			"id": "modal-project-id-wiring",
+			"satisfied": true,
+			"red_artifact": ".tmp/MGMT-UI-003/reviewer-remediation/red/modal-path/output.txt",
+			"red_exit_code": 1,
+			"green_artifact": ".tmp/MGMT-UI-003/reviewer-remediation/green/modal-path/output.txt",
+			"green_exit_code": 0,
+			"notes": "ProjectSettingsModalContent now passes projectId and a GovernanceRendererContract into GovernanceSettings. CT proves ct-project and default refs/remotes/origin/main reach governance access/pending reads."
+		},
+		{
+			"id": "read-only-tab-navigation",
+			"satisfied": true,
+			"red_artifact": ".tmp/MGMT-UI-003/reviewer-remediation/red/read-only-tabs/output.txt",
+			"red_exit_code": 1,
+			"green_artifact": ".tmp/MGMT-UI-003/reviewer-remediation/green/read-only-tabs/output.txt",
+			"green_exit_code": 0,
+			"notes": "Read-only mode no longer disables tab triggers; edit controls remain disabled and the administration:write info banner remains visible."
+		}
 	],
 	"tests": [
 		{
-			"command": "pnpm -F @gitbutler/desktop test:ct:desktop -- GovernanceSettingsTabs",
-			"red_exit_code": 1,
-			"red_artifact": ".tmp/MGMT-UI-003/AC-1-red/output.txt",
-			"green_exit_code": 0,
-			"green_artifact": ".tmp/MGMT-UI-003/AC-1-green/output.txt"
-		},
-		{
-			"command": "pnpm -F @gitbutler/desktop test:ct:desktop -- GovernanceSettingsPendingBanner",
-			"red_exit_code": 1,
-			"red_artifact": ".tmp/MGMT-UI-003/AC-2-red/output.txt",
-			"green_exit_code": 0,
-			"green_artifact": ".tmp/MGMT-UI-003/AC-2-green/output.txt"
-		},
-		{
-			"command": "pnpm -F @gitbutler/desktop test:ct:desktop -- GovernanceSettingsCommit",
-			"red_exit_code": 1,
-			"red_artifact": ".tmp/MGMT-UI-003/AC-3-red/output.txt",
-			"green_exit_code": 0,
-			"green_artifact": ".tmp/MGMT-UI-003/AC-3-green/output.txt"
-		},
-		{
-			"command": "pnpm -F @gitbutler/desktop test:ct:desktop -- GovernanceSettingsReadOnly",
-			"red_exit_code": 1,
-			"red_artifact": ".tmp/MGMT-UI-003/AC-4-red/output.txt",
-			"green_exit_code": 0,
-			"green_artifact": ".tmp/MGMT-UI-003/AC-4-green/output.txt"
-		},
-		{
-			"command": "pnpm -F @gitbutler/desktop test:ct:desktop -- GovernanceSettingsAdminRoleNoWrite",
-			"red_exit_code": 1,
-			"red_artifact": ".tmp/MGMT-UI-003/AC-8-red/output.txt",
-			"green_exit_code": 0,
-			"green_artifact": ".tmp/MGMT-UI-003/AC-8-green/output.txt"
-		},
-		{
-			"command": "pnpm -F @gitbutler/desktop test:ct:desktop -- GovernanceSettingsCleanMount",
-			"red_exit_code": 1,
-			"red_artifact": ".tmp/MGMT-UI-003/AC-9-red/output.txt",
-			"green_exit_code": 0,
-			"green_artifact": ".tmp/MGMT-UI-003/AC-9-green/output.txt"
-		},
-		{
-			"command": "pnpm -F @gitbutler/desktop test:ct:desktop -- GovernanceSettingsCrossTabPending",
-			"red_exit_code": 1,
-			"red_artifact": ".tmp/MGMT-UI-003/AC-10-red/output.txt",
-			"green_exit_code": 0,
-			"green_artifact": ".tmp/MGMT-UI-003/AC-10-green/output.txt"
-		},
-		{
-			"command": "pnpm -F @gitbutler/desktop test:ct:desktop -- GovernanceSettings.spec",
+			"command": "pnpm -F @gitbutler/desktop test:ct:desktop -- GovernanceSettingsReadOnly GovernanceSettingsCrossTabPending GovernanceSettingsPendingBanner GovernanceSettingsCommit",
 			"exit_code": 0,
-			"artifact": ".tmp/MGMT-UI-003/regression/governance-settings-spec.txt"
+			"artifact": ".tmp/MGMT-UI-003/reviewer-remediation/revalidate/focused/output.txt"
 		},
 		{
-			"command": "find apps/desktop/src -name '+page.server.ts' -path '*governance*' | wc -l | grep '^0$'",
-			"exit_code": 1,
-			"artifact": ".tmp/MGMT-UI-003/structural/no-governance-page-server.txt",
-			"note": "Raw count is zero, but macOS wc emits leading spaces. Normalized equivalent passed.",
-			"normalized_exit_code": 0,
-			"normalized_artifact": ".tmp/MGMT-UI-003/structural/no-governance-page-server.normalized.txt",
-			"raw_count_artifact": ".tmp/MGMT-UI-003/structural/no-governance-page-server.raw.txt"
-		},
-		{
-			"command": "grep -rn 'gitbutler.*\\.toml\\|writeFile\\|fs.write' apps/desktop/src/components/governance/ apps/desktop/src/lib/governance/ 2>/dev/null | grep -v 'but-sdk\\|SDK\\|import' | wc -l | grep '^0$'",
-			"exit_code": 1,
-			"artifact": ".tmp/MGMT-UI-003/structural/no-direct-toml-writes.txt",
-			"note": "Raw count is zero, but macOS wc emits leading spaces. Normalized equivalent passed.",
-			"normalized_exit_code": 0,
-			"normalized_artifact": ".tmp/MGMT-UI-003/structural/no-direct-toml-writes.normalized.txt",
-			"raw_count_artifact": ".tmp/MGMT-UI-003/structural/no-direct-toml-writes.raw.txt"
-		},
-		{
-			"command": "grep -n 'user\\.role\\|userService.*role' apps/desktop/src/components/governance/GovernanceSettings.svelte apps/desktop/src/lib/governance/pendingStore.svelte.ts 2>/dev/null | wc -l | grep '^0$'",
-			"exit_code": 1,
-			"artifact": ".tmp/MGMT-UI-003/structural/no-role-readonly.txt",
-			"note": "Raw count is zero, but macOS wc emits leading spaces. Normalized equivalent passed.",
-			"normalized_exit_code": 0,
-			"normalized_artifact": ".tmp/MGMT-UI-003/structural/no-role-readonly.normalized.txt",
-			"raw_count_artifact": ".tmp/MGMT-UI-003/structural/no-role-readonly.raw.txt"
+			"command": "pnpm -F @gitbutler/desktop test:ct:desktop -- ProjectSettingsModalContentGovernance",
+			"exit_code": 0,
+			"artifact": ".tmp/MGMT-UI-003/reviewer-remediation/revalidate/modal/output.txt"
 		},
 		{
 			"command": "pnpm -F @gitbutler/desktop check",
 			"exit_code": 0,
-			"artifact": ".tmp/MGMT-UI-003/check/desktop-check.txt"
+			"artifact": ".tmp/MGMT-UI-003/reviewer-remediation/revalidate/check/output.txt"
+		},
+		{
+			"command": "find apps/desktop/src -name '+page.server.ts' -path '*governance*' | wc -l | tr -d ' ' | grep '^0$'",
+			"exit_code": 0,
+			"artifact": ".tmp/MGMT-UI-003/reviewer-remediation/revalidate/structural/no-governance-page-server.txt"
+		},
+		{
+			"command": "grep -rn 'gitbutler.*\\.toml\\|writeFile\\|fs.write' apps/desktop/src/components/governance/ apps/desktop/src/lib/governance/ 2>/dev/null | grep -v 'but-sdk\\|SDK\\|import' | wc -l | tr -d ' ' | grep '^0$'",
+			"exit_code": 0,
+			"artifact": ".tmp/MGMT-UI-003/reviewer-remediation/revalidate/structural/no-direct-toml-writes.txt"
+		},
+		{
+			"command": "grep -n 'user\\.role\\|userService.*role' apps/desktop/src/components/governance/GovernanceSettings.svelte apps/desktop/src/lib/governance/pendingStore.svelte.ts 2>/dev/null | wc -l | tr -d ' ' | grep '^0$'",
+			"exit_code": 0,
+			"artifact": ".tmp/MGMT-UI-003/reviewer-remediation/revalidate/structural/no-role-readonly.txt"
 		},
 		{
 			"command": "pnpm -F @gitbutler/desktop build",
-			"exit_code": 1,
-			"artifact": ".tmp/MGMT-UI-003/build/desktop-build.txt",
-			"note": "Client build completed, then vite-plugin-sveltekit-compile failed opening apps/desktop/.svelte-kit/output/server/manifest-full.js. This appears unrelated to MGMT-UI-003 changes."
+			"exit_code": 0,
+			"artifact": ".tmp/MGMT-UI-003/reviewer-remediation/revalidate/build/output.txt",
+			"notes": "adapter-static wrote site to apps/desktop/build. Sentry auth-token warnings only."
 		}
 	],
 	"requirements": {
 		"AC-1": {
 			"satisfied": true,
 			"evidence_paths": [
-				".tmp/MGMT-UI-003/AC-1-red/output.txt",
-				".tmp/MGMT-UI-003/AC-1-green/output.txt"
+				".tmp/MGMT-UI-003/AC-1-green/output.txt",
+				".tmp/MGMT-UI-003/reviewer-remediation/revalidate/focused/output.txt"
 			]
 		},
 		"AC-2": {
 			"satisfied": true,
 			"evidence_paths": [
-				".tmp/MGMT-UI-003/AC-2-red/output.txt",
-				".tmp/MGMT-UI-003/AC-2-green/output.txt"
+				".tmp/MGMT-UI-003/AC-2-green/output.txt",
+				".tmp/MGMT-UI-003/reviewer-remediation/revalidate/focused/output.txt"
 			]
 		},
 		"AC-3": {
 			"satisfied": true,
 			"evidence_paths": [
-				".tmp/MGMT-UI-003/AC-3-red/output.txt",
-				".tmp/MGMT-UI-003/AC-3-green/output.txt"
+				".tmp/MGMT-UI-003/AC-3-green/output.txt",
+				".tmp/MGMT-UI-003/reviewer-remediation/revalidate/focused/output.txt"
 			]
 		},
 		"AC-4": {
 			"satisfied": true,
 			"evidence_paths": [
-				".tmp/MGMT-UI-003/AC-4-red/output.txt",
-				".tmp/MGMT-UI-003/AC-4-green/output.txt"
+				".tmp/MGMT-UI-003/AC-4-green/output.txt",
+				".tmp/MGMT-UI-003/reviewer-remediation/revalidate/focused/output.txt",
+				".tmp/MGMT-UI-003/reviewer-remediation/green/read-only-tabs/output.txt"
 			]
 		},
 		"AC-5": {
 			"satisfied": true,
 			"evidence_paths": [
-				".tmp/MGMT-UI-003/structural/no-governance-page-server.raw.txt",
-				".tmp/MGMT-UI-003/structural/no-governance-page-server.normalized.txt"
+				".tmp/MGMT-UI-003/reviewer-remediation/revalidate/structural/no-governance-page-server.txt"
 			]
 		},
 		"AC-6": {
 			"satisfied": true,
 			"evidence_paths": [
-				".tmp/MGMT-UI-003/structural/no-direct-toml-writes.raw.txt",
-				".tmp/MGMT-UI-003/structural/no-direct-toml-writes.normalized.txt"
+				".tmp/MGMT-UI-003/reviewer-remediation/revalidate/structural/no-direct-toml-writes.txt"
 			]
 		},
 		"AC-7": {
 			"satisfied": true,
 			"evidence_paths": [
-				".tmp/MGMT-UI-003/structural/no-role-readonly.raw.txt",
-				".tmp/MGMT-UI-003/structural/no-role-readonly.normalized.txt"
+				".tmp/MGMT-UI-003/reviewer-remediation/revalidate/structural/no-role-readonly.txt"
 			]
 		},
 		"AC-8": {
 			"satisfied": true,
 			"evidence_paths": [
-				".tmp/MGMT-UI-003/AC-8-red/output.txt",
-				".tmp/MGMT-UI-003/AC-8-green/output.txt"
+				".tmp/MGMT-UI-003/AC-8-green/output.txt",
+				".tmp/MGMT-UI-003/reviewer-remediation/revalidate/focused/output.txt"
 			]
 		},
 		"AC-9": {
 			"satisfied": true,
 			"evidence_paths": [
-				".tmp/MGMT-UI-003/AC-9-red/output.txt",
 				".tmp/MGMT-UI-003/AC-9-green/output.txt"
 			]
 		},
 		"AC-10": {
 			"satisfied": true,
 			"evidence_paths": [
-				".tmp/MGMT-UI-003/AC-10-red/output.txt",
-				".tmp/MGMT-UI-003/AC-10-green/output.txt"
+				".tmp/MGMT-UI-003/AC-10-green/output.txt",
+				".tmp/MGMT-UI-003/reviewer-remediation/revalidate/focused/output.txt"
 			]
 		}
 	},
 	"residual_risks": [
-		"ProjectSettingsModalContent still mounts GovernanceSettings without projectId/targetRef because that file was outside the requested write scope; GovernanceSettings remains zero-prop safe and uses the real backend contract when a backend provider and target props are supplied.",
-		"pnpm -F @gitbutler/desktop build failed after client output generation because vite-plugin-sveltekit-compile could not open .svelte-kit/output/server/manifest-full.js.",
-		"The exact structural commands with wc -l | grep '^0$' exit 1 on this macOS shell due wc leading spaces; raw counts are zero and normalized checks passed."
+		"ProjectSettingsModalContent accepts an optional GovernanceRendererContract only for CT injection; production creates the contract from BACKEND and passes the real projectId.",
+		"Build passes in this remediation run. Sentry release/source-map upload warnings remain because no Sentry auth token is configured."
 	]
 }
