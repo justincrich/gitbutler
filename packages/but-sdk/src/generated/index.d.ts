@@ -342,6 +342,9 @@ export declare function groupList(projectId: string): Promise<GroupListOutcome>
 /** Remove a principal from a governed group through the but-api boundary (`group_remove_member`). */
 export declare function groupRemoveMember(projectId: string, targetRef: string, group: string, member: string): Promise<GroupWriteOutcome>
 
+/** Revoke governed group permissions through the but-api boundary (`group_revoke`). */
+export declare function groupRevoke(projectId: string, targetRef: string, group: string, authorities: Array<string>): Promise<GroupWriteOutcome>
+
 export declare function headInfo(projectId: string): Promise<RefInfo>
 
 /**
@@ -2733,4 +2736,3 @@ export type WorktreeChanges = {
   dependencies: HunkDependencies | null;
   dependenciesError: SerdeError | null;
 };
-

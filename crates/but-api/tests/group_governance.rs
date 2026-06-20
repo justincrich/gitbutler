@@ -3,6 +3,7 @@ use but_api::legacy::{
     governance::{
         REF_PIN_CAVEAT, group_add_member_with_repo, group_create_with_repo, group_delete_with_repo,
         group_grant_with_repo, group_list_with_repo, group_remove_member_with_repo,
+        group_revoke_with_repo,
     },
 };
 use but_authz::{
@@ -35,6 +36,12 @@ fn group_ops_non_admin_denied_all_mutating_verbs() -> anyhow::Result<()> {
             "group_add_member",
             temp_env::with_var("BUT_AGENT_HANDLE", Some("rust-reviewer"), || {
                 group_add_member_with_repo(&repo, MAIN_REF, "maintainers", "rust-implementer")
+            }),
+        ),
+        (
+            "group_revoke",
+            temp_env::with_var("BUT_AGENT_HANDLE", Some("rust-reviewer"), || {
+                group_revoke_with_repo(&repo, MAIN_REF, "maintainers", &["merge"])
             }),
         ),
         (
@@ -98,6 +105,12 @@ fn group_denials_include_remediation_hint() -> anyhow::Result<()> {
             "group_add_member",
             temp_env::with_var("BUT_AGENT_HANDLE", Some("rust-reviewer"), || {
                 group_add_member_with_repo(&repo, MAIN_REF, "maintainers", "rust-implementer")
+            }),
+        ),
+        (
+            "group_revoke",
+            temp_env::with_var("BUT_AGENT_HANDLE", Some("rust-reviewer"), || {
+                group_revoke_with_repo(&repo, MAIN_REF, "maintainers", &["merge"])
             }),
         ),
         (
@@ -215,6 +228,44 @@ fn group_grant_administration_write_delegates_admin_inert_until_committed() -> a
     );
 
     println!("administration:write group grant was written but stayed inert");
+    Ok(())
+}
+
+#[test]
+#[serial_test::serial]
+fn group_revoke_removes_direct_authority_and_preserves_members() -> anyhow::Result<()> {
+    let (repo, _tmp) = group_contract_base();
+    let main_before = ref_id(&repo, MAIN_REF)?;
+
+    let outcome = temp_env::with_var("BUT_AGENT_HANDLE", Some("admin"), || {
+        group_revoke_with_repo(&repo, MAIN_REF, "maintainers", &["reviews:write"])
+    })?;
+
+    let worktree_permissions = worktree_permissions(&repo)?;
+    let maintainers = group_block(&worktree_permissions, "maintainers")?;
+    assert!(
+        !maintainers.contains("reviews:write"),
+        "group_revoke must remove the requested direct authority from the group block"
+    );
+    assert!(
+        maintainers.contains("merge"),
+        "group_revoke must preserve unrelated direct group authorities"
+    );
+    assert!(
+        maintainers.contains("maint") && maintainers.contains("rust-reviewer"),
+        "group_revoke must preserve group members"
+    );
+    assert_eq!(
+        outcome.authorities,
+        vec!["reviews:write"],
+        "group_revoke outcome must report the requested authority"
+    );
+    assert_eq!(
+        ref_id(&repo, MAIN_REF)?,
+        main_before,
+        "group_revoke must not commit or move refs/heads/main"
+    );
+
     Ok(())
 }
 
@@ -432,6 +483,21 @@ fn group_ops_non_admin_denied() -> anyhow::Result<()> {
         worktree_permissions(&repo)?,
         before,
         "denied non-admin group_add_member must not write permissions.toml"
+    );
+
+    let revoke_error = temp_env::with_var("BUT_AGENT_HANDLE", Some("rust-implementer"), || {
+        classified_error(group_revoke_with_repo(
+            &repo,
+            MAIN_REF,
+            "code-reviewers",
+            &["reviews:write"],
+        ))
+    })?;
+    assert_perm_denied_administration_write(&revoke_error);
+    assert_eq!(
+        worktree_permissions(&repo)?,
+        before,
+        "denied non-admin group_revoke must not write permissions.toml"
     );
 
     let remove_error = temp_env::with_var("BUT_AGENT_HANDLE", Some("rust-implementer"), || {
@@ -718,7 +784,7 @@ permissions = ["merge"]
 
 [[group]]
 name = "maintainers"
-permissions = ["merge"]
+permissions = ["merge", "reviews:write"]
 members = ["maint", "rust-reviewer"]
 EOF
 

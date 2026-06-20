@@ -19,6 +19,7 @@ const GOVERNANCE_COMMANDS: &[&str] = &[
     "perm_revoke",
     "group_create",
     "group_grant",
+    "group_revoke",
     "group_add_member",
     "group_remove_member",
     "group_delete",
@@ -173,6 +174,51 @@ fn mgmt_governance_commands_registered_and_invokable() -> anyhow::Result<()> {
 }
 
 #[test]
+#[serial_test::serial]
+fn group_revoke_removes_only_requested_group_authority() -> anyhow::Result<()> {
+    let (repo, _tmp) = governance_api_repo(true);
+    let project_id = project_id_for(&repo)?;
+    let app = governance_app(test_desktop_session())?;
+    let webview = governance_webview(&app)?;
+
+    let response = temp_env::with_var("BUT_AGENT_HANDLE", None::<&str>, || {
+        invoke_ok(
+            &webview,
+            "group_revoke",
+            json!({
+                "projectId": project_id,
+                "targetRef": TARGET_REF,
+                "group": "eng",
+                "authorities": ["contents:write"]
+            }),
+        )
+    })?;
+
+    assert_eq!(response.get("group").and_then(Value::as_str), Some("eng"));
+    assert_eq!(
+        response.get("authorities").and_then(Value::as_array),
+        Some(&vec![Value::String("contents:write".to_owned())]),
+        "group_revoke must report the requested authority token"
+    );
+
+    let permissions = worktree_permissions(&repo)?;
+    let eng = group_block(&permissions, "eng")?;
+    assert!(
+        !eng.contains("contents:write"),
+        "group_revoke must remove only the requested direct authority"
+    );
+    assert!(
+        eng.contains("reviews:write"),
+        "group_revoke must preserve unrelated direct group authorities"
+    );
+    assert!(
+        eng.contains("alice") && eng.contains("bob"),
+        "group_revoke must preserve group members"
+    );
+    Ok(())
+}
+
+#[test]
 fn mgmt_capability_main_scope_preserved() {
     let capability = read_crate_file("capabilities/main.json");
 
@@ -254,6 +300,15 @@ fn governance_invocation_cases(
         },
         InvocationCase {
             command: "group_grant",
+            payload: json!({
+                "projectId": project_id,
+                "targetRef": TARGET_REF,
+                "group": "qa",
+                "authorities": ["contents:write"]
+            }),
+        },
+        InvocationCase {
+            command: "group_revoke",
             payload: json!({
                 "projectId": project_id,
                 "targetRef": TARGET_REF,
@@ -477,6 +532,11 @@ permissions = ["contents:write"]
 [[principal]]
 id = "rust-reviewer"
 permissions = ["contents:read"]
+
+[[group]]
+name = "eng"
+permissions = ["contents:write", "reviews:write"]
+members = ["alice", "bob"]
 EOF
 git add .gitbutler/permissions.toml
 "#
@@ -534,6 +594,14 @@ fn worktree_permissions_bytes(repo: &gix::Repository) -> anyhow::Result<Vec<u8>>
         .ok_or_else(|| anyhow::anyhow!("test repository must be non-bare"))?
         .join(PERMISSIONS_PATH);
     Ok(fs::read(path)?)
+}
+
+fn group_block<'a>(toml: &'a str, name: &str) -> anyhow::Result<&'a str> {
+    let marker = format!(r#"name = "{name}""#);
+    toml.split("[[group]]")
+        .skip(1)
+        .find(|block| block.contains(&marker))
+        .ok_or_else(|| anyhow::anyhow!("expected [[group]] block with {marker}"))
 }
 
 fn assert_perm_denied_with_hint(error: &Value, missing: &str) {
