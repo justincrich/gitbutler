@@ -485,6 +485,20 @@ async fn match_subcommand(
                 }
             }
         }
+        #[cfg(feature = "legacy")]
+        Subcommands::Perm(args::perm::Platform { cmd }) => {
+            let mut ctx = setup::init_ctx(
+                &args,
+                InitCtxOptions {
+                    background_sync: BackgroundSync::Disabled,
+                    ..Default::default()
+                },
+                out,
+            )?;
+            command::perm::exec(&mut ctx, out, cmd)
+                .await
+                .emit_metrics(metrics_ctx)
+        }
         Subcommands::Skill(args::skill::Platform { cmd }) => {
             // Skill commands use repository context when available, but can run
             // without one. Subcommand handlers produce tailored guidance when a

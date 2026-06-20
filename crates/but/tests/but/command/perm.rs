@@ -1,4 +1,4 @@
-use crate::utils::{CommandExt as _, Sandbox};
+use crate::utils::Sandbox;
 
 const REF_PIN_CAVEAT: &str = "takes effect once committed to the target branch";
 

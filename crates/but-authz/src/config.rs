@@ -1,13 +1,22 @@
 use std::{borrow::Borrow, collections::BTreeMap, path::Path, str};
 
 use anyhow::{Context, anyhow};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use crate::{AuthoritySet, Group, GroupName, PrincipalId};
 
 const PERMISSIONS_PATH: &str = ".gitbutler/permissions.toml";
 const GATES_PATH: &str = ".gitbutler/gates.toml";
 const CONFIG_INVALID: &str = "config.invalid";
+
+/// Return the repository-relative governance permissions path.
+///
+/// ```
+/// assert_eq!(but_authz::permissions_path(), ".gitbutler/permissions.toml");
+/// ```
+pub fn permissions_path() -> &'static str {
+    PERMISSIONS_PATH
+}
 
 /// Load committed governance config from the supplied target ref.
 ///
@@ -397,35 +406,42 @@ fn authority_set_from_wire(
     Ok(listed.union(&role_set))
 }
 
-#[derive(Debug, Deserialize)]
+/// Raw permissions TOML wire format.
+///
+/// This preserves role sugar and unrelated entries for read-modify-write callers.
+#[derive(Debug, Clone, Default, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
-struct PermissionsWire {
+pub struct PermissionsWire {
     #[serde(default)]
-    principal: Vec<PrincipalWire>,
+    pub principal: Vec<PrincipalWire>,
     #[serde(default)]
-    group: Vec<GroupWire>,
+    pub group: Vec<GroupWire>,
 }
 
-#[derive(Debug, Deserialize)]
+/// Raw `[[principal]]` permissions TOML entry.
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
-struct PrincipalWire {
-    id: String,
+pub struct PrincipalWire {
+    pub id: String,
     #[serde(default)]
-    permissions: Vec<String>,
-    role: Option<String>,
+    pub permissions: Vec<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub role: Option<String>,
     #[serde(default)]
-    groups: Vec<String>,
+    pub groups: Vec<String>,
 }
 
-#[derive(Debug, Deserialize)]
+/// Raw `[[group]]` permissions TOML entry.
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
-struct GroupWire {
-    name: String,
+pub struct GroupWire {
+    pub name: String,
     #[serde(default)]
-    permissions: Vec<String>,
-    role: Option<String>,
+    pub permissions: Vec<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub role: Option<String>,
     #[serde(default)]
-    members: Vec<String>,
+    pub members: Vec<String>,
 }
 
 #[derive(Debug, Deserialize)]

@@ -10,6 +10,7 @@ pub mod config;
 pub mod config_mutate;
 pub mod forge;
 pub mod git;
+pub mod governance;
 pub mod merge_gate;
 pub mod meta;
 pub mod modes;
