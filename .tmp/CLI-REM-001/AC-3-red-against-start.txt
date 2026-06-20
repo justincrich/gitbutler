@@ -1,0 +1,58 @@
+   Compiling but-api v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/CLI-REM-001/crates/but-api)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 17.61s
+     Running unittests src/lib.rs (target/debug/deps/but_api-b39b2d81e53be874)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 32 filtered out; finished in 0.00s
+
+     Running tests/admin_write_guard.rs (target/debug/deps/admin_write_guard-c678a85d6ea277c7)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 2 filtered out; finished in 0.00s
+
+     Running tests/api/main.rs (target/debug/deps/api-d8e5b7608d4ddca4)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 2 filtered out; finished in 0.00s
+
+     Running tests/commit_gate.rs (target/debug/deps/commit_gate-b8643f2d47fcfee4)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 13 filtered out; finished in 0.00s
+
+     Running tests/confinement.rs (target/debug/deps/confinement-7eaf4816e3d8361a)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 2 filtered out; finished in 0.00s
+
+     Running tests/forge_guard.rs (target/debug/deps/forge_guard-957b48013fabacec)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 4 filtered out; finished in 0.00s
+
+     Running tests/group_governance.rs (target/debug/deps/group_governance-4c2b554b81227445)
+
+running 1 test
+test group_grant_administration_write_delegates_admin_inert_until_committed ... FAILED
+
+failures:
+
+---- group_grant_administration_write_delegates_admin_inert_until_committed stdout ----
+
+thread 'group_grant_administration_write_delegates_admin_inert_until_committed' (88394748) panicked at crates/but-api/tests/group_governance.rs:136:5:
+delegated admin grant must be written to the working-tree group
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    group_grant_administration_write_delegates_admin_inert_until_committed
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 8 filtered out; finished in 0.07s
+
+error: test failed, to rerun pass `-p but-api --test group_governance`

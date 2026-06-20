@@ -3,6 +3,45 @@ use crate::utils::Sandbox;
 const REF_PIN_CAVEAT: &str = "takes effect once committed to the target branch";
 
 #[test]
+fn group_no_delete_surface_in_sprint_05() -> anyhow::Result<()> {
+    let manifest_dir = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let group_args = std::fs::read_to_string(manifest_dir.join("src/args/group.rs"))?;
+    let group_command = std::fs::read_to_string(manifest_dir.join("src/command/group.rs"))?;
+    let governance = std::fs::read_to_string(
+        manifest_dir
+            .parent()
+            .and_then(std::path::Path::parent)
+            .ok_or_else(|| anyhow::anyhow!("crate manifest must live below the workspace root"))?
+            .join("crates/but-api/src/legacy/governance.rs"),
+    )?;
+
+    assert!(
+        !group_args.contains("Delete"),
+        "Sprint 05 must not expose a group Delete clap variant"
+    );
+    assert!(
+        !governance.contains("group_delete"),
+        "Sprint 05 must not expose a group_delete API function"
+    );
+    for (path, source) in [
+        ("crates/but/src/args/group.rs", group_args.as_str()),
+        ("crates/but/src/command/group.rs", group_command.as_str()),
+        (
+            "crates/but-api/src/legacy/governance.rs",
+            governance.as_str(),
+        ),
+    ] {
+        assert!(
+            !source.contains("todo!()") && !source.contains("unimplemented!()"),
+            "{path} must not contain a group deletion placeholder"
+        );
+    }
+
+    println!("Sprint 05 group surface has no delete variant, API, or placeholder");
+    Ok(())
+}
+
+#[test]
 #[serial_test::serial]
 fn group_cli_create_grant_members_list_denial_and_no_delete() -> anyhow::Result<()> {
     let env = group_env()?;
