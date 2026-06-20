@@ -1,0 +1,20 @@
+$ nl -ba apps/desktop/svelte.config.js | sed -n 10,18p
+    10			},
+    11			adapter: staticAdapter({
+    12				pages: "build",
+    13				assets: "build",
+    14				fallback: "index.html",
+    15				precompress: false,
+    16				strict: false,
+    17			}),
+    18		},
+
+$ git show --name-only --oneline HEAD
+58cecb2d39 Add governance settings CT scaffold
+apps/desktop/package.json
+apps/desktop/playwright-ct.config.ts
+apps/desktop/src/components/governance/GovernanceSettings.svelte
+apps/desktop/src/lib/settings/projectSettingsPages.ts
+apps/desktop/src/lib/state/uiState.svelte.ts
+apps/desktop/tests/governance/GovernanceSettings.spec.ts
+pnpm-lock.yaml
