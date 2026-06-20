@@ -6,7 +6,7 @@
 //! If a JSON type only mirrors one API submodule, define it next to that API in
 //! a local `json` module instead of adding it here. See `crate::branch::json`,
 //! `crate::commit::json`, and `crate::diff::json` for the intended pattern.
-pub use error::{Error, ToJsonError, UnmarkedError};
+pub use error::{ConfigInvalid, Error, ToJsonError, UnmarkedError};
 use gix::refs::Target;
 use schemars::{self, JsonSchema};
 use serde::{Deserialize, Serialize};
@@ -226,6 +226,34 @@ mod error {
         }
     }
 
+    /// Structured config.invalid error payload for JSON transport callers.
+    ///
+    /// ```
+    /// let error = but_api::json::ConfigInvalid {
+    ///     code: "config.invalid",
+    ///     message: "governance config is malformed".to_owned(),
+    ///     remediation_hint: "fix the malformed governance config".to_owned(),
+    /// };
+    /// assert_eq!(error.code, "config.invalid");
+    /// ```
+    #[derive(Debug, Clone, PartialEq, Eq)]
+    pub struct ConfigInvalid {
+        /// Stable consumer-facing error code.
+        pub code: &'static str,
+        /// Human-readable config load or parse message.
+        pub message: String,
+        /// Actionable recovery hint for the invalid config.
+        pub remediation_hint: String,
+    }
+
+    impl std::fmt::Display for ConfigInvalid {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            f.write_str(&self.message)
+        }
+    }
+
+    impl std::error::Error for ConfigInvalid {}
+
     /// An error type for serialization, dynamically extracting context information during serialization,
     /// meant for consumption by the frontend.
     #[derive(Debug)]
@@ -255,15 +283,53 @@ mod error {
         }
     }
 
+    struct HintCarrier<'a> {
+        code: &'static str,
+        remediation_hint: &'a str,
+    }
+
+    fn hint_carrier(err: &anyhow::Error) -> Option<HintCarrier<'_>> {
+        for cause in err.chain() {
+            if let Some(denial) = cause.downcast_ref::<but_authz::Denial>() {
+                return Some(HintCarrier {
+                    code: denial.code,
+                    remediation_hint: &denial.remediation_hint,
+                });
+            }
+
+            #[cfg(feature = "legacy")]
+            if let Some(error) = cause.downcast_ref::<crate::legacy::merge_gate::MergeGateError>() {
+                return Some(HintCarrier {
+                    code: error.code,
+                    remediation_hint: &error.remediation_hint,
+                });
+            }
+
+            if let Some(error) = cause.downcast_ref::<ConfigInvalid>() {
+                return Some(HintCarrier {
+                    code: error.code,
+                    remediation_hint: &error.remediation_hint,
+                });
+            }
+        }
+
+        None
+    }
+
     impl Serialize for Error {
         fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
         where
             S: serde::Serializer,
         {
             let ctx = self.0.custom_context_or_error_chain();
+            let hint_carrier = hint_carrier(&self.0);
 
-            let mut map = serializer.serialize_map(Some(2))?;
-            map.serialize_entry("code", &ctx.code.to_string())?;
+            let mut map =
+                serializer.serialize_map(Some(if hint_carrier.is_some() { 3 } else { 2 }))?;
+            let code = hint_carrier
+                .as_ref()
+                .map_or_else(|| ctx.code.to_string(), |carrier| carrier.code.to_owned());
+            map.serialize_entry("code", &code)?;
             let message = ctx.message.unwrap_or_else(|| {
                 self.0
                     .source()
@@ -271,6 +337,9 @@ mod error {
                     .unwrap_or_else(|| Cow::Borrowed("An unknown backend error occurred"))
             });
             map.serialize_entry("message", &message)?;
+            if let Some(carrier) = hint_carrier {
+                map.serialize_entry("remediation_hint", carrier.remediation_hint)?;
+            }
             map.end()
         }
     }
