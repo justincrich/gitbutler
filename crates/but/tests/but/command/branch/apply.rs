@@ -88,6 +88,53 @@ use utils::create_local_branch_with_commit;
 use crate::command::branch::apply::utils::create_local_branch_with_commit_with_message;
 
 #[test]
+#[serial_test::serial]
+fn branch_apply_readonly_denied() -> anyhow::Result<()> {
+    let env = governed_apply_env()?;
+    let repo = env.open_repo()?;
+    let target_before = ref_id(&repo, "refs/remotes/origin/main")?;
+    let workspace_before = ref_id(&repo, "refs/heads/gitbutler/workspace")?;
+
+    let output = env
+        .but("--format json apply feature-branch")
+        .allow_json()
+        .env("BUT_AGENT_HANDLE", "ro")
+        .output()?;
+    assert_cli_denial(
+        &output,
+        "perm.denied",
+        "contents:write",
+        "read-only branch apply must be denied by the commit gate",
+    );
+    assert_eq!(
+        ref_id(&repo, "refs/remotes/origin/main")?,
+        target_before,
+        "read-only denial must leave the workspace target ref unchanged"
+    );
+    assert_eq!(
+        ref_id(&repo, "refs/heads/gitbutler/workspace")?,
+        workspace_before,
+        "read-only denial must happen before branch apply moves the workspace ref"
+    );
+
+    let dev_env = governed_apply_env()?;
+    let dev_output = dev_env
+        .but("--format json apply feature-branch")
+        .allow_json()
+        .env("BUT_AGENT_HANDLE", "dev")
+        .output()?;
+    assert!(
+        dev_output.status.success(),
+        "contents:write principal should proceed through branch apply; stdout: {}; stderr: {}",
+        String::from_utf8_lossy(&dev_output.stdout),
+        String::from_utf8_lossy(&dev_output.stderr)
+    );
+    assert_no_governance_denial(&dev_output, "contents:write branch apply");
+
+    Ok(())
+}
+
+#[test]
 fn local_branch() -> anyhow::Result<()> {
     let env = Sandbox::open_or_init_scenario_with_target_and_default_settings("one-stack")?;
     insta::assert_snapshot!(env.git_log()?, @"
@@ -497,6 +544,130 @@ Failed to apply branch. 'conflicting-branch' conflicts with existing stack in th
         .stdout_eq(str![""]);
 
     Ok(())
+}
+
+fn governed_apply_env() -> anyhow::Result<Sandbox> {
+    let env = Sandbox::open_or_init_scenario_with_target_and_default_settings("one-stack")?;
+    env.invoke_bash(
+        r#"
+write_governance_commit() {
+    target_ref="$1"
+    base=$(git rev-parse "$target_ref")
+    index=$(mktemp)
+    export GIT_INDEX_FILE="$index"
+    git read-tree "$base"
+    permissions_blob=$(git hash-object -w --stdin <<'EOF'
+[[principal]]
+id = "dev"
+permissions = ["contents:write"]
+
+[[principal]]
+id = "ro"
+permissions = ["contents:read"]
+EOF
+)
+    gates_blob=$(git hash-object -w --stdin <<'EOF'
+[[branch]]
+name = "main"
+protected = true
+
+[[branch]]
+name = "feature-branch"
+protected = false
+EOF
+)
+    git update-index --add --cacheinfo 100644 "$permissions_blob" .gitbutler/permissions.toml
+    git update-index --add --cacheinfo 100644 "$gates_blob" .gitbutler/gates.toml
+    tree=$(git write-tree)
+    commit=$(printf 'governance config\n' | git commit-tree "$tree" -p "$base")
+    git update-ref "$target_ref" "$commit"
+    rm "$index"
+    unset GIT_INDEX_FILE
+}
+
+write_governance_commit refs/heads/main
+write_governance_commit refs/remotes/origin/main
+"#,
+    );
+    env.setup_metadata(&["A"])?;
+    create_local_branch_with_commit(&env, "feature-branch");
+    Ok(env)
+}
+
+fn ref_id(repo: &gix::Repository, ref_name: &str) -> anyhow::Result<gix::ObjectId> {
+    Ok(repo.find_reference(ref_name)?.peel_to_id()?.detach())
+}
+
+fn assert_cli_denial(
+    output: &std::process::Output,
+    code: &str,
+    expected_message_text: &str,
+    reason: &str,
+) {
+    assert_eq!(
+        output.status.code(),
+        Some(1),
+        "{reason}; denial must exit with code 1. stdout: {}; stderr: {}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let envelope = parse_cli_error_envelope(output, reason);
+    assert_eq!(
+        envelope.code, code,
+        "{reason}; expected exact denial code {code}"
+    );
+    assert!(
+        envelope.message.contains(expected_message_text),
+        "{reason}; expected error.message to contain {expected_message_text:?}, got: {}",
+        envelope.message
+    );
+}
+
+fn assert_no_governance_denial(output: &std::process::Output, label: &str) {
+    assert!(
+        output.status.code() != Some(1) || parse_cli_error_envelope_opt(output).is_none(),
+        "{label} must not return a structured governance denial envelope: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        !stderr.contains(r#""code":"perm.denied""#)
+            && !stderr.contains(r#""code":"branch.protected""#)
+            && !stderr.contains(r#""code":"config.invalid""#),
+        "{label} must not fail with a governance denial: {stderr}"
+    );
+}
+
+#[derive(Debug, Clone)]
+struct CliErrorEnvelope {
+    code: String,
+    message: String,
+}
+
+fn parse_cli_error_envelope(output: &std::process::Output, reason: &str) -> CliErrorEnvelope {
+    parse_cli_error_envelope_opt(output).unwrap_or_else(|| {
+        panic!(
+            "{reason}; stderr must contain a parseable CLI JSON error envelope, got: {}",
+            String::from_utf8_lossy(&output.stderr)
+        )
+    })
+}
+
+fn parse_cli_error_envelope_opt(output: &std::process::Output) -> Option<CliErrorEnvelope> {
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    let json = stderr.lines().find_map(json_object_from_line)?;
+    let value = serde_json::from_str::<serde_json::Value>(json).ok()?;
+    let error = value.get("error")?;
+    let code = error.get("code")?.as_str()?.to_owned();
+    let message = error.get("message")?.as_str()?.to_owned();
+    Some(CliErrorEnvelope { code, message })
+}
+
+fn json_object_from_line(line: &str) -> Option<&str> {
+    let trimmed = line.trim();
+    let start = trimmed.find('{')?;
+    let end = trimmed.rfind('}')?;
+    (start <= end).then_some(&trimmed[start..=end])
 }
 
 mod utils {
