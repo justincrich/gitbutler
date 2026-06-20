@@ -17,6 +17,8 @@ use std::{
     path::{Path, PathBuf},
 };
 
+use serde_json::Value;
+
 /// All 12 governance commands IPC-003 promises to register.
 const GOVERNANCE_COMMANDS: &[&str] = &[
     "perm_list",
@@ -32,6 +34,114 @@ const GOVERNANCE_COMMANDS: &[&str] = &[
     "branch_gates_update",
     "governance_status_read",
 ];
+
+const MAIN_REF: &str = "refs/heads/main";
+const TARGET_REF: &str = "refs/remotes/origin/main";
+const PERMISSIONS_PATH: &str = ".gitbutler/permissions.toml";
+
+#[test]
+#[serial_test::serial]
+fn mgmt_config_command_resolves_fleet_owner_via_shim() -> anyhow::Result<()> {
+    let (repo, _tmp) = governance_api_repo(true);
+    let project_id = project_id_for(&repo)?;
+    let session = test_desktop_session();
+
+    let outcome = temp_env::with_var("BUT_AGENT_HANDLE", None::<&str>, || {
+        gitbutler_tauri::governance::perm_grant_for_desktop_session(
+            &session,
+            project_id.clone(),
+            TARGET_REF.to_owned(),
+            "rust-reviewer".to_owned(),
+            vec!["reviews:write".to_owned()],
+        )
+    })?;
+
+    assert_eq!(outcome.principal, "rust-reviewer");
+    assert!(
+        worktree_permissions(&repo)?.contains("reviews:write"),
+        "desktop fleet-owner grant must write the requested authority without BUT_AGENT_HANDLE"
+    );
+    Ok(())
+}
+
+#[test]
+#[serial_test::serial]
+fn mgmt_unauthorized_agent_config_command_denied() -> anyhow::Result<()> {
+    let (repo, _tmp) = governance_api_repo(true);
+    let project_id = project_id_for(&repo)?;
+    let before = worktree_permissions_bytes(&repo)?;
+
+    let result = temp_env::with_var("BUT_AGENT_HANDLE", Some("rust-implementer"), || {
+        gitbutler_tauri::governance::perm_grant_for_agent_env(
+            project_id.clone(),
+            TARGET_REF.to_owned(),
+            "rust-implementer".to_owned(),
+            vec!["administration:write".to_owned()],
+        )
+    });
+
+    let error = match result {
+        Ok(_) => anyhow::bail!("non-admin agent perm_grant must be denied"),
+        Err(error) => serde_json::to_value(error)?,
+    };
+    assert_perm_denied_with_hint(&error, "administration:write");
+    assert_eq!(
+        worktree_permissions_bytes(&repo)?,
+        before,
+        "denied non-admin agent invoke must leave permissions.toml byte-identical"
+    );
+    Ok(())
+}
+
+#[test]
+#[serial_test::serial]
+fn mgmt_fleet_owner_grants_on_bootstrap_no_committed_config() -> anyhow::Result<()> {
+    let (repo, _tmp) = governance_api_repo(false);
+    let project_id = project_id_for(&repo)?;
+    let session = test_desktop_session();
+
+    temp_env::with_var("BUT_AGENT_HANDLE", None::<&str>, || {
+        gitbutler_tauri::governance::perm_grant_for_desktop_session(
+            &session,
+            project_id.clone(),
+            TARGET_REF.to_owned(),
+            "rust-reviewer".to_owned(),
+            vec!["reviews:write".to_owned()],
+        )
+    })?;
+
+    let permissions = worktree_permissions(&repo)?;
+    assert!(
+        permissions.contains("rust-reviewer") && permissions.contains("reviews:write"),
+        "fleet-owner superuser path must bootstrap permissions.toml without committed grants"
+    );
+    Ok(())
+}
+
+#[test]
+#[serial_test::serial]
+fn mgmt_nonadmin_env_handle_does_not_shadow_fleet_owner() -> anyhow::Result<()> {
+    let (repo, _tmp) = governance_api_repo(true);
+    let project_id = project_id_for(&repo)?;
+    let session = test_desktop_session();
+
+    let outcome = temp_env::with_var("BUT_AGENT_HANDLE", Some("rust-implementer"), || {
+        gitbutler_tauri::governance::perm_grant_for_desktop_session(
+            &session,
+            project_id.clone(),
+            TARGET_REF.to_owned(),
+            "rust-reviewer".to_owned(),
+            vec!["reviews:write".to_owned()],
+        )
+    })?;
+
+    assert_eq!(outcome.principal, "rust-reviewer");
+    assert!(
+        worktree_permissions(&repo)?.contains("reviews:write"),
+        "non-admin BUT_AGENT_HANDLE must not shadow the desktop fleet-owner identity"
+    );
+    Ok(())
+}
 
 #[test]
 fn mgmt_governance_commands_registered_and_invokable() {
@@ -146,6 +256,7 @@ fn mgmt_unregistered_governance_command_not_invokable() {
 
 fn factory_registers_command(factory_source: &str, command: &str) -> bool {
     factory_source.contains(&format!("legacy::governance::tauri_{command}::{command}"))
+        || factory_source.contains(&format!("governance::tauri_{command}::{command}"))
 }
 
 fn governance_api_contract_mismatch() -> Vec<String> {
@@ -209,4 +320,115 @@ fn workspace_dir() -> PathBuf {
         .and_then(Path::parent)
         .expect("gitbutler-tauri lives under crates/")
         .to_path_buf()
+}
+
+fn governance_api_repo(with_committed_permissions: bool) -> (gix::Repository, tempfile::TempDir) {
+    let tmp = tempfile::TempDir::new()
+        .unwrap_or_else(|error| panic!("creating temp repository failed: {error}"));
+    but_testsupport::invoke_bash_at_dir(
+        r#"
+git init --initial-branch=main
+git config user.name "GitButler Test"
+git config user.email "gitbutler@example.com"
+echo initial >README.md
+git add README.md
+git commit -m "initial"
+"#,
+        tmp.path(),
+    );
+    let repo = gix::open(tmp.path())
+        .unwrap_or_else(|error| panic!("opening {} failed: {error}", tmp.path().display()));
+    let permissions = if with_committed_permissions {
+        r#"
+cat >.gitbutler/permissions.toml <<'EOF'
+[[principal]]
+id = "admin"
+permissions = ["administration:write", "merge"]
+
+[[principal]]
+id = "rust-implementer"
+permissions = ["contents:write"]
+
+[[principal]]
+id = "rust-reviewer"
+permissions = ["contents:read"]
+EOF
+git add .gitbutler/permissions.toml
+"#
+    } else {
+        ""
+    };
+    but_testsupport::invoke_bash(
+        &format!(
+            r#"
+mkdir -p .gitbutler
+{permissions}
+cat >.gitbutler/gates.toml <<'EOF'
+[[branch]]
+name = "main"
+protected = true
+EOF
+git add .gitbutler/gates.toml
+git commit -m "governance ipc config"
+git update-ref {TARGET_REF} {MAIN_REF}
+"#
+        ),
+        &repo,
+    );
+    (repo, tmp)
+}
+
+fn project_id_for(
+    repo: &gix::Repository,
+) -> anyhow::Result<but_ctx::ProjectHandleOrLegacyProjectId> {
+    let git_dir = repo.git_dir();
+    let handle = but_ctx::ProjectHandle::from_path(git_dir)?;
+    Ok(but_ctx::ProjectHandleOrLegacyProjectId::ProjectHandle(
+        handle,
+    ))
+}
+
+fn test_desktop_session() -> gitbutler_tauri::governance::TestDesktopSession {
+    gitbutler_tauri::governance::TestDesktopSession {
+        user_id: 42,
+        login: Some("fleet-owner".to_owned()),
+    }
+}
+
+fn worktree_permissions(repo: &gix::Repository) -> anyhow::Result<String> {
+    let path = repo
+        .workdir()
+        .ok_or_else(|| anyhow::anyhow!("test repository must be non-bare"))?
+        .join(PERMISSIONS_PATH);
+    Ok(fs::read_to_string(path)?)
+}
+
+fn worktree_permissions_bytes(repo: &gix::Repository) -> anyhow::Result<Vec<u8>> {
+    let path = repo
+        .workdir()
+        .ok_or_else(|| anyhow::anyhow!("test repository must be non-bare"))?
+        .join(PERMISSIONS_PATH);
+    Ok(fs::read(path)?)
+}
+
+fn assert_perm_denied_with_hint(error: &Value, missing: &str) {
+    assert_eq!(
+        error.get("code").and_then(Value::as_str),
+        Some("perm.denied"),
+        "governance IPC denial must serialize as code perm.denied: {error:?}"
+    );
+    assert!(
+        error
+            .get("message")
+            .and_then(Value::as_str)
+            .is_some_and(|message| message.contains(missing)),
+        "serialized denial message must name the missing {missing} authority"
+    );
+    assert!(
+        error
+            .get("remediation_hint")
+            .and_then(Value::as_str)
+            .is_some_and(|hint| !hint.is_empty() && hint.contains(missing)),
+        "serialized denial must include a non-empty remediation_hint naming {missing}"
+    );
 }

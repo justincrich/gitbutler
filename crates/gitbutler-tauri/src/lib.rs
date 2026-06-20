@@ -37,6 +37,7 @@ pub mod settings;
 pub mod zip;
 
 pub mod env;
+pub mod governance;
 
 pub mod csp;
 
@@ -221,7 +222,7 @@ pub fn invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Sen
         legacy::governance::tauri_group_remove_member::group_remove_member,
         legacy::governance::tauri_group_delete::group_delete,
         legacy::governance::tauri_perm_list::perm_list,
-        legacy::governance::tauri_perm_grant::perm_grant,
+        governance::tauri_perm_grant::perm_grant,
         legacy::governance::tauri_perm_revoke::perm_revoke,
         legacy::governance::tauri_branch_gates_read::branch_gates_read,
         legacy::governance::tauri_branch_gates_update::branch_gates_update,
