@@ -1,0 +1,4 @@
+-rwxr-xr-x@ 1 justinrich  staff  1242 Jun 19 17:34 tools/governance-checks/check_gate_helper_parity.sh
+-rwxr-xr-x@ 1 justinrich  staff   941 Jun 19 17:34 tools/governance-checks/check_merge_gate_production_unchanged.sh
+-rwxr-xr-x@ 1 justinrich  staff   864 Jun 19 17:34 tools/governance-checks/check_no_role_literals.sh
+exit=0

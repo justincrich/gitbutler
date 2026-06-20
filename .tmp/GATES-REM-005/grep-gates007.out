@@ -1,0 +1,3 @@
+    VERIFY: ./tools/governance-checks/check_gate_helper_parity.sh
+      "verify": "./tools/governance-checks/check_gate_helper_parity.sh",
+exit=0

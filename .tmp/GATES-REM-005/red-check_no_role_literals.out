@@ -1,0 +1,2 @@
+bash: ./tools/governance-checks/check_no_role_literals.sh: No such file or directory
+exit=127
