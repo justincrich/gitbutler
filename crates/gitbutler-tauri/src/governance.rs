@@ -3,6 +3,7 @@
 use std::{
     collections::{BTreeMap, BTreeSet},
     fs,
+    path::Path,
     str::FromStr as _,
 };
 
@@ -37,6 +38,41 @@ pub struct GovernancePending {
     pub principals: Vec<GovernancePendingPrincipal>,
     /// Number of authority tokens that differ between committed and working-tree config.
     pub pending_count: usize,
+}
+
+/// Read-only renderer contract for all principals present in governance config.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GovernancePrincipalsList {
+    /// Principals present in committed direct principals, committed group members,
+    /// working-tree direct principals, or working-tree group members.
+    pub principals: Vec<GovernancePrincipalListEntry>,
+}
+
+/// Renderer row for one governance principal.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GovernancePrincipalListEntry {
+    /// Stable principal identifier.
+    pub principal_id: String,
+    /// Direct grants from the committed target-ref principal entry.
+    pub own_grants: Vec<String>,
+    /// Grants inherited from committed target-ref group memberships.
+    pub inherited_grants: Vec<GovernanceInheritedGrant>,
+    /// Group memberships from the committed target-ref config.
+    pub group_memberships: Vec<String>,
+    /// True only when direct working-tree principal grants differ from committed direct grants.
+    pub pending: bool,
+}
+
+/// Renderer display source for a group-inherited grant.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GovernanceInheritedGrant {
+    /// Functional authority token.
+    pub authority: String,
+    /// Human-readable inheritance source.
+    pub source_label: String,
 }
 
 /// Pending authority diff for one principal.
@@ -344,6 +380,16 @@ pub fn governance_pending_for_project(
     governance_pending_with_repo(&repo, &target_ref).map_err(json::Error::from)
 }
 
+/// Invoke the read-only governance principals renderer contract.
+pub fn governance_principals_list_for_project(
+    project_id: ProjectHandleOrLegacyProjectId,
+    target_ref: String,
+) -> Result<GovernancePrincipalsList, json::Error> {
+    let ctx = context_for_project(project_id, &target_ref).map_err(json::Error::from)?;
+    let repo = ctx.repo.get().map_err(json::Error::from)?;
+    governance_principals_list_with_repo(&repo, &target_ref).map_err(json::Error::from)
+}
+
 /// Commit pending governance config files to the target ref.
 pub fn governance_commit_for_project(
     project_id: ProjectHandleOrLegacyProjectId,
@@ -440,6 +486,49 @@ pub fn governance_pending_with_repo(
     Ok(pending_diff(&committed, &working))
 }
 
+/// Return all governance principals needed by the desktop renderer.
+pub fn governance_principals_list_with_repo(
+    repo: &gix::Repository,
+    target_ref: &str,
+) -> anyhow::Result<GovernancePrincipalsList> {
+    let committed = read_committed_permissions_for_list(repo, target_ref)?;
+    let working = read_worktree_permissions_for_pending(repo)?;
+    principals_list(committed, working)
+}
+
+fn principals_list(
+    committed: PermissionsWire,
+    working: PermissionsWire,
+) -> anyhow::Result<GovernancePrincipalsList> {
+    let committed_view = permissions_view(committed)?;
+    let working_view = permissions_view(working)?;
+    let principal_ids = committed_view
+        .principal_ids()
+        .chain(working_view.principal_ids())
+        .collect::<BTreeSet<_>>();
+
+    let principals = principal_ids
+        .into_iter()
+        .map(|principal_id| {
+            let own_grants = committed_view.direct_grants(&principal_id);
+            let inherited_grants = committed_view.inherited_grants(&principal_id);
+            let group_memberships = committed_view.group_memberships(&principal_id);
+            let pending =
+                committed_view.direct_set(&principal_id) != working_view.direct_set(&principal_id);
+
+            GovernancePrincipalListEntry {
+                principal_id,
+                own_grants,
+                inherited_grants,
+                group_memberships,
+                pending,
+            }
+        })
+        .collect();
+
+    Ok(GovernancePrincipalsList { principals })
+}
+
 fn pending_diff(committed: &GovConfig, working: &GovConfig) -> GovernancePending {
     let principal_ids = committed
         .principals()
@@ -504,11 +593,170 @@ fn pending_diff(committed: &GovConfig, working: &GovConfig) -> GovernancePending
     }
 }
 
+#[derive(Debug, Clone)]
+struct PermissionsView {
+    direct_grants: BTreeMap<String, AuthoritySet>,
+    group_memberships: BTreeMap<String, BTreeSet<String>>,
+    group_grants: BTreeMap<String, AuthoritySet>,
+}
+
+impl PermissionsView {
+    fn principal_ids(&self) -> impl Iterator<Item = String> + '_ {
+        self.direct_grants
+            .keys()
+            .chain(self.group_memberships.keys())
+            .cloned()
+    }
+
+    fn direct_set(&self, principal_id: &str) -> AuthoritySet {
+        self.direct_grants
+            .get(principal_id)
+            .cloned()
+            .unwrap_or_else(AuthoritySet::empty)
+    }
+
+    fn direct_grants(&self, principal_id: &str) -> Vec<String> {
+        self.direct_grants
+            .get(principal_id)
+            .map_or_else(Vec::new, authority_names)
+    }
+
+    fn group_memberships(&self, principal_id: &str) -> Vec<String> {
+        self.group_memberships
+            .get(principal_id)
+            .map(|groups| groups.iter().cloned().collect())
+            .unwrap_or_default()
+    }
+
+    fn inherited_grants(&self, principal_id: &str) -> Vec<GovernanceInheritedGrant> {
+        let Some(groups) = self.group_memberships.get(principal_id) else {
+            return Vec::new();
+        };
+        groups
+            .iter()
+            .flat_map(|group| {
+                self.group_grants
+                    .get(group)
+                    .map_or_else(Vec::new, |authorities| {
+                        authorities
+                            .iter()
+                            .map(|authority| GovernanceInheritedGrant {
+                                authority: authority.name().to_owned(),
+                                source_label: format!("group: {group}"),
+                            })
+                            .collect()
+                    })
+            })
+            .collect::<BTreeSet<_>>()
+            .into_iter()
+            .collect()
+    }
+}
+
+fn permissions_view(permissions: PermissionsWire) -> anyhow::Result<PermissionsView> {
+    let mut direct_grants = BTreeMap::new();
+    let mut group_memberships: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
+    let mut group_grants = BTreeMap::new();
+
+    for group in &permissions.group {
+        let grants = authority_set_for_pending(
+            &group.permissions,
+            group.role.as_deref(),
+            &format!("group {}", group.name),
+        )?;
+        if group_grants.insert(group.name.clone(), grants).is_some() {
+            return Err(config_invalid(format!("duplicate group {}", group.name)));
+        }
+        for member in &group.members {
+            group_memberships
+                .entry(member.clone())
+                .or_default()
+                .insert(group.name.clone());
+        }
+    }
+
+    for principal in &permissions.principal {
+        let grants = authority_set_for_pending(
+            &principal.permissions,
+            principal.role.as_deref(),
+            &format!("principal {}", principal.id),
+        )?;
+        if direct_grants.insert(principal.id.clone(), grants).is_some() {
+            return Err(config_invalid(format!(
+                "duplicate principal {}",
+                principal.id
+            )));
+        }
+        for group in &principal.groups {
+            if !group_grants.contains_key(group) {
+                return Err(config_invalid(format!(
+                    "principal {} references undefined group {group}",
+                    principal.id
+                )));
+            }
+            group_memberships
+                .entry(principal.id.clone())
+                .or_default()
+                .insert(group.clone());
+        }
+    }
+
+    Ok(PermissionsView {
+        direct_grants,
+        group_memberships,
+        group_grants,
+    })
+}
+
 fn authority_names(authorities: &AuthoritySet) -> Vec<String> {
     authorities
         .iter()
         .map(|authority| authority.name().to_owned())
         .collect()
+}
+
+fn read_committed_permissions_for_list(
+    repo: &gix::Repository,
+    target_ref: &str,
+) -> anyhow::Result<PermissionsWire> {
+    let permissions_blob = read_committed_permissions_blob(repo, target_ref)?;
+    toml::from_str::<PermissionsWire>(&permissions_blob).map_err(|error| {
+        anyhow::Error::new(json::ConfigInvalid {
+            code: "config.invalid",
+            message: format!(
+                "malformed target-ref {} at {target_ref}: {error}",
+                permissions_path()
+            ),
+            remediation_hint:
+                "fix the malformed governance config and recommit it to the target branch"
+                    .to_owned(),
+        })
+    })
+}
+
+fn read_committed_permissions_blob(
+    repo: &gix::Repository,
+    target_ref: &str,
+) -> anyhow::Result<String> {
+    let mut reference = repo
+        .find_reference(target_ref)
+        .with_context(|| format!("resolving target ref {target_ref}"))?;
+    let commit = reference
+        .peel_to_commit()
+        .with_context(|| format!("peeling {target_ref} to a commit"))?;
+    let tree = commit
+        .tree()
+        .with_context(|| format!("reading tree for {target_ref}"))?;
+    let entry = tree
+        .lookup_entry_by_path(Path::new(permissions_path()))
+        .with_context(|| format!("looking up {} in {target_ref}", permissions_path()))?
+        .ok_or_else(|| anyhow!("missing {} at {target_ref}", permissions_path()))?;
+    let blob = repo
+        .find_blob(entry.id())
+        .with_context(|| format!("reading {} blob at {target_ref}", permissions_path()))?;
+    let content = std::str::from_utf8(&blob.data)
+        .with_context(|| format!("decoding {} at {target_ref} as UTF-8", permissions_path()))?;
+    Ok(content.to_owned())
 }
 
 fn load_worktree_governance_config(repo: &gix::Repository) -> anyhow::Result<GovConfig> {
@@ -772,6 +1020,20 @@ pub mod tauri_governance_pending {
         target_ref: String,
     ) -> Result<GovernancePending, json::Error> {
         super::governance_pending_for_project(project_id, target_ref)
+    }
+}
+
+/// Tauri command wrapper for read-only governance principals list.
+pub mod tauri_governance_principals_list {
+    use super::{GovernancePrincipalsList, ProjectHandleOrLegacyProjectId, json};
+
+    /// List all principals needed by the governance renderer.
+    #[tauri::command]
+    pub fn governance_principals_list(
+        project_id: ProjectHandleOrLegacyProjectId,
+        target_ref: String,
+    ) -> Result<GovernancePrincipalsList, json::Error> {
+        super::governance_principals_list_for_project(project_id, target_ref)
     }
 }
 

@@ -26,7 +26,9 @@ const GOVERNANCE_COMMANDS: &[&str] = &[
     "branch_gates_read",
     "branch_gates_update",
     "governance_status_read",
+    "governance_principals_list",
     "governance_pending",
+    "governance_commit",
 ];
 
 const MAIN_REF: &str = "refs/heads/main";
@@ -161,7 +163,7 @@ fn mgmt_governance_commands_registered_and_invokable() -> anyhow::Result<()> {
 
     assert_eq!(
         reached, GOVERNANCE_COMMANDS,
-        "the IPC harness must invoke exactly the 12 governance commands in the contract"
+        "the IPC harness must invoke exactly the governance commands in the contract"
     );
     assert!(
         worktree_permissions(&repo)?.contains("reviews:write"),
@@ -307,7 +309,15 @@ fn governance_invocation_cases(
             payload: json!({ "projectId": project_id }),
         },
         InvocationCase {
+            command: "governance_principals_list",
+            payload: json!({ "projectId": project_id, "targetRef": TARGET_REF }),
+        },
+        InvocationCase {
             command: "governance_pending",
+            payload: json!({ "projectId": project_id, "targetRef": TARGET_REF }),
+        },
+        InvocationCase {
+            command: "governance_commit",
             payload: json!({ "projectId": project_id, "targetRef": TARGET_REF }),
         },
     ]

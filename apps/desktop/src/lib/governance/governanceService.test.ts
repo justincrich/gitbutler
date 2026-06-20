@@ -4,6 +4,7 @@ import {
 	governanceAccessFromStatus,
 	type GovernanceCommitOutcome,
 	type GovernancePending,
+	type GovernancePrincipalsList,
 } from "$lib/governance/governanceService";
 import { describe, expect, test } from "vitest";
 
@@ -45,6 +46,50 @@ describe("governance renderer contract", () => {
 		expect(calls).toEqual([
 			{
 				command: "governance_pending",
+				args: { projectId: "project-1", targetRef: "refs/remotes/origin/main" },
+			},
+		]);
+	});
+
+	test("reads all principals through the backend governance_principals_list command", async () => {
+		const principals: GovernancePrincipalsList = {
+			principals: [
+				{
+					principalId: "codex-agent",
+					ownGrants: ["reviews:write"],
+					inheritedGrants: [{ authority: "contents:write", sourceLabel: "group: eng" }],
+					groupMemberships: ["eng"],
+					pending: false,
+				},
+				{
+					principalId: "worktree-only",
+					ownGrants: [],
+					inheritedGrants: [],
+					groupMemberships: [],
+					pending: true,
+				},
+			],
+		};
+		const calls: Array<{ command: string; args: unknown }> = [];
+		const contract = createGovernanceRendererContract({
+			invoke: async <T>(command: string, args: unknown): Promise<T> => {
+				calls.push({ command, args });
+				return principals as T;
+			},
+		});
+
+		const result = await contract.readPrincipals({
+			projectId: "project-1",
+			targetRef: "refs/remotes/origin/main",
+		});
+
+		expect(result.principals[0]?.principalId).toBe("codex-agent");
+		expect(result.principals[0]?.inheritedGrants).toEqual([
+			{ authority: "contents:write", sourceLabel: "group: eng" },
+		]);
+		expect(calls).toEqual([
+			{
+				command: "governance_principals_list",
 				args: { projectId: "project-1", targetRef: "refs/remotes/origin/main" },
 			},
 		]);

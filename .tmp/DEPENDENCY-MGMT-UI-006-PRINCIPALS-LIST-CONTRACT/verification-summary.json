@@ -1,0 +1,136 @@
+{
+  "task_id": "DEPENDENCY-MGMT-UI-006-PRINCIPALS-LIST-CONTRACT",
+  "status": "complete",
+  "commit_sha": "b92f4db23ada1a53d293290daa576ff38ef16e8b",
+  "files_changed": [
+    "apps/desktop/src/lib/governance/governanceService.test.ts",
+    "apps/desktop/src/lib/governance/governanceService.ts",
+    "crates/gitbutler-tauri/src/governance.rs",
+    "crates/gitbutler-tauri/src/lib.rs",
+    "crates/gitbutler-tauri/tests/mgmt_ipc_003_governance_commands.rs",
+    "crates/gitbutler-tauri/tests/tt_023_governance_principals_list.rs"
+  ],
+  "tests": [
+    {
+      "name": "RED governance_principals_list IPC contract",
+      "command": "cargo test -p gitbutler-tauri governance_principals_list_reports_committed_display_with_direct_pending_only",
+      "exit_code": 101,
+      "artifact_path": ".tmp/DEPENDENCY-MGMT-UI-006-PRINCIPALS-LIST-CONTRACT/AC-1-red/cargo-test.txt",
+      "result": "failed before implementation with: Command governance_principals_list not found"
+    },
+    {
+      "name": "GREEN governance_principals_list IPC contract",
+      "command": "cargo test -p gitbutler-tauri governance_principals_list_reports_committed_display_with_direct_pending_only",
+      "exit_code": 0,
+      "artifact_path": ".tmp/DEPENDENCY-MGMT-UI-006-PRINCIPALS-LIST-CONTRACT/AC-1-green/cargo-test.txt",
+      "result": "passed"
+    },
+    {
+      "name": "Governance command registration IPC",
+      "command": "cargo test -p gitbutler-tauri mgmt_governance_commands_registered_and_invokable",
+      "exit_code": 0,
+      "artifact_path": ".tmp/DEPENDENCY-MGMT-UI-006-PRINCIPALS-LIST-CONTRACT/registration-green/cargo-test.txt",
+      "result": "passed"
+    },
+    {
+      "name": "gitbutler-tauri all tests",
+      "command": "cargo test -p gitbutler-tauri",
+      "exit_code": 0,
+      "artifact_path": ".tmp/DEPENDENCY-MGMT-UI-006-PRINCIPALS-LIST-CONTRACT/cargo-test/cargo-test.txt",
+      "result": "passed"
+    },
+    {
+      "name": "gitbutler-tauri check",
+      "command": "cargo check -p gitbutler-tauri --all-targets",
+      "exit_code": 0,
+      "artifact_path": ".tmp/DEPENDENCY-MGMT-UI-006-PRINCIPALS-LIST-CONTRACT/cargo-check/cargo-check.txt",
+      "result": "passed"
+    },
+    {
+      "name": "Rust format",
+      "command": "cargo fmt --check -p gitbutler-tauri",
+      "exit_code": 0,
+      "artifact_path": ".tmp/DEPENDENCY-MGMT-UI-006-PRINCIPALS-LIST-CONTRACT/fmt/cargo-fmt-check.txt",
+      "result": "passed"
+    },
+    {
+      "name": "Rust clippy",
+      "command": "cargo clippy -p gitbutler-tauri --all-targets -- -D warnings",
+      "exit_code": 0,
+      "artifact_path": ".tmp/DEPENDENCY-MGMT-UI-006-PRINCIPALS-LIST-CONTRACT/clippy/cargo-clippy.txt",
+      "result": "passed"
+    },
+    {
+      "name": "Rust docs",
+      "command": "cargo doc -p gitbutler-tauri --no-deps",
+      "exit_code": 0,
+      "artifact_path": ".tmp/DEPENDENCY-MGMT-UI-006-PRINCIPALS-LIST-CONTRACT/cargo-doc/cargo-doc.txt",
+      "result": "passed"
+    },
+    {
+      "name": "Desktop governance service test",
+      "command": "pnpm -F @gitbutler/desktop test -- governanceService",
+      "exit_code": 1,
+      "artifact_path": ".tmp/DEPENDENCY-MGMT-UI-006-PRINCIPALS-LIST-CONTRACT/ts-green/pnpm-test.txt",
+      "result": "unavailable: vitest command not found because node_modules is missing in this worktree"
+    },
+    {
+      "name": "Desktop typecheck",
+      "command": "pnpm -F @gitbutler/desktop check",
+      "exit_code": 1,
+      "artifact_path": ".tmp/DEPENDENCY-MGMT-UI-006-PRINCIPALS-LIST-CONTRACT/desktop-check/pnpm-check.txt",
+      "result": "unavailable: svelte-check command not found because node_modules is missing in this worktree"
+    },
+    {
+      "name": "Tauri info",
+      "command": "cargo tauri info",
+      "exit_code": 101,
+      "artifact_path": ".tmp/DEPENDENCY-MGMT-UI-006-PRINCIPALS-LIST-CONTRACT/tauri-info/cargo-tauri-info.txt",
+      "result": "unavailable: cargo-tauri is not installed"
+    }
+  ],
+  "requirements": {
+    "AC-1": {
+      "satisfied": true,
+      "evidence_paths": [
+        ".tmp/DEPENDENCY-MGMT-UI-006-PRINCIPALS-LIST-CONTRACT/AC-1-green/cargo-test.txt"
+      ],
+      "notes": "IPC test includes committed direct principal alice, committed group members codex-agent and bob, working direct principal worktree-only, and working group member inherited-only."
+    },
+    "AC-2": {
+      "satisfied": true,
+      "evidence_paths": [
+        ".tmp/DEPENDENCY-MGMT-UI-006-PRINCIPALS-LIST-CONTRACT/AC-1-green/cargo-test.txt"
+      ],
+      "notes": "Test asserts committed ownGrants and groupMemberships for alice, codex-agent, bob, and working-only rows."
+    },
+    "AC-3": {
+      "satisfied": true,
+      "evidence_paths": [
+        ".tmp/DEPENDENCY-MGMT-UI-006-PRINCIPALS-LIST-CONTRACT/AC-1-green/cargo-test.txt"
+      ],
+      "notes": "Test asserts codex-agent inheritedGrants contains contents:write with sourceLabel group: eng."
+    },
+    "AC-4": {
+      "satisfied": true,
+      "evidence_paths": [
+        ".tmp/DEPENDENCY-MGMT-UI-006-PRINCIPALS-LIST-CONTRACT/AC-1-green/cargo-test.txt"
+      ],
+      "notes": "Test asserts alice/worktree-only direct changes are pending, and bob/inherited-only inherited-only rows are not pending while committed display fields stay committed."
+    },
+    "AC-5": {
+      "satisfied": true,
+      "evidence_paths": [
+        ".tmp/DEPENDENCY-MGMT-UI-006-PRINCIPALS-LIST-CONTRACT/registration-green/cargo-test.txt",
+        ".tmp/DEPENDENCY-MGMT-UI-006-PRINCIPALS-LIST-CONTRACT/cargo-check/cargo-check.txt",
+        ".tmp/DEPENDENCY-MGMT-UI-006-PRINCIPALS-LIST-CONTRACT/cargo-test/cargo-test.txt"
+      ],
+      "notes": "Command is registered through gitbutler_governance_command_rows and reads governance TOML in the backend. Renderer receives a typed invoke wrapper only."
+    }
+  },
+  "residual_risks": [
+    "Frontend test and typecheck were not runnable because node_modules is absent in this worktree.",
+    "cargo tauri info was not runnable because cargo-tauri is not installed in this environment.",
+    "isCurrentUser is omitted because the current principal cannot be derived honestly from the available committed governance config."
+  ]
+}
