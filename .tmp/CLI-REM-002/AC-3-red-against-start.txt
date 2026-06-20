@@ -1,0 +1,11 @@
+AC-3 RED note:
+
+`perm_list` with unset `BUT_AGENT_HANDLE` already failed closed on the stacked CLI-REM-001 base
+because `perm_list` resolves the caller through `but_authz::resolve_principal_from_env` before
+reading or returning another principal's authorities.
+
+The CLI-REM-002 change for AC-3 is coverage hardening: the added integration test asserts the
+structured `perm.denied` code, non-empty `remediation_hint`, and absence of the target
+principal's `reviews:write` authority in the denial payload. The GREEN evidence is
+`.tmp/CLI-REM-002/AC-3-green.txt`, with seeded value artifact
+`.tmp/CLI-REM-002/AC-3-seeded-artifact.txt`.

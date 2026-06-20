@@ -2,7 +2,7 @@ use but_api::legacy::{
     config_mutate::{AdminWriteGateError, classify_error},
     governance::{REF_PIN_CAVEAT, perm_grant, perm_list, perm_revoke},
 };
-use but_authz::{Authority, PrincipalId, load_governance_config};
+use but_authz::{Authority, Denial, PrincipalId, load_governance_config};
 
 const MAIN_REF: &str = "refs/heads/main";
 const PERMISSIONS_PATH: &str = ".gitbutler/permissions.toml";
@@ -262,6 +262,145 @@ fn perm_grant_fail_closed_bad_token_and_unset_handle() -> anyhow::Result<()> {
 
 #[test]
 #[serial_test::serial]
+fn perm_revoke_fail_closed_bad_token() -> anyhow::Result<()> {
+    let (repo, _tmp) = perm_remediation_base();
+    let before = worktree_permissions(&repo)?;
+
+    let error = temp_env::with_var("BUT_AGENT_HANDLE", Some("admin"), || {
+        perm_revoke(&repo, MAIN_REF, "rust-implementer", &["not a permission"])
+    })
+    .expect_err("bad permission token must reject before mutation");
+    let invalid = error.downcast::<but_api::json::ConfigInvalid>()?;
+    assert_eq!(
+        invalid.code, "config.invalid",
+        "bad permission token must classify as config.invalid"
+    );
+    assert!(
+        invalid.message.contains("not a permission"),
+        "invalid token message must include the rejected token, got: {}",
+        invalid.message
+    );
+    assert!(
+        !invalid.remediation_hint.trim().is_empty(),
+        "invalid token must include remediation guidance"
+    );
+    assert_eq!(
+        worktree_permissions(&repo)?,
+        before,
+        "bad-token revoke must leave permissions.toml byte-for-byte unchanged"
+    );
+
+    println!(
+        "seeded invalid-token response: code={}, message={}, remediation_hint={}",
+        invalid.code, invalid.message, invalid.remediation_hint
+    );
+    Ok(())
+}
+
+#[test]
+#[serial_test::serial]
+fn perm_revoke_fail_closed_unset_handle() -> anyhow::Result<()> {
+    let (repo, _tmp) = perm_remediation_base();
+    let before = worktree_permissions(&repo)?;
+
+    let denial = temp_env::with_var("BUT_AGENT_HANDLE", None::<&str>, || {
+        structured_denial(
+            perm_revoke(&repo, MAIN_REF, "rust-implementer", &["reviews:write"]),
+            "unset-handle perm_revoke",
+        )
+    })?;
+    assert_denial_payload(
+        &denial,
+        "BUT_AGENT_HANDLE",
+        "unset-handle revoke must return a structured identity denial",
+    );
+    assert_eq!(
+        worktree_permissions(&repo)?,
+        before,
+        "unset-handle revoke must leave permissions.toml byte-for-byte unchanged"
+    );
+
+    println!(
+        "seeded revoke denial: code={}, message={}, remediation_hint={}",
+        denial.code, denial.message, denial.remediation_hint
+    );
+    Ok(())
+}
+
+#[test]
+#[serial_test::serial]
+fn perm_list_fail_closed_unset_handle() -> anyhow::Result<()> {
+    let (repo, _tmp) = perm_remediation_base();
+
+    let denial = temp_env::with_var("BUT_AGENT_HANDLE", None::<&str>, || {
+        structured_denial(
+            perm_list(&repo, MAIN_REF, Some("rust-implementer")),
+            "unset-handle perm_list",
+        )
+    })?;
+    assert_denial_payload(
+        &denial,
+        "BUT_AGENT_HANDLE",
+        "unset-handle list must return a structured identity denial",
+    );
+    assert!(
+        !denial.message.contains("reviews:write")
+            && !denial.remediation_hint.contains("reviews:write"),
+        "unset-handle list denial must not reveal rust-implementer authorities: {denial:?}"
+    );
+
+    println!(
+        "seeded list denial: code={}, message={}, remediation_hint={}",
+        denial.code, denial.message, denial.remediation_hint
+    );
+    Ok(())
+}
+
+#[test]
+#[serial_test::serial]
+fn perm_denials_include_remediation_hint() -> anyhow::Result<()> {
+    let (repo, _tmp) = perm_remediation_base();
+
+    let grant = temp_env::with_var("BUT_AGENT_HANDLE", Some("rust-implementer"), || {
+        structured_denial(
+            perm_grant(&repo, MAIN_REF, "rust-reviewer", &["reviews:write"]),
+            "perm_grant",
+        )
+    })?;
+    let revoke = temp_env::with_var("BUT_AGENT_HANDLE", Some("rust-implementer"), || {
+        structured_denial(
+            perm_revoke(&repo, MAIN_REF, "admin", &["administration:write"]),
+            "perm_revoke",
+        )
+    })?;
+    let list = temp_env::with_var("BUT_AGENT_HANDLE", Some("rust-implementer"), || {
+        structured_denial(
+            perm_list(&repo, MAIN_REF, Some("rust-reviewer")),
+            "perm_list",
+        )
+    })?;
+
+    for (verb, denial) in [
+        ("perm_grant", grant),
+        ("perm_revoke", revoke),
+        ("perm_list", list),
+    ] {
+        assert_denial_payload(
+            &denial,
+            "administration",
+            &format!("{verb} denial must include code, message, and remediation_hint"),
+        );
+        println!(
+            "seeded {verb} denial: code={}, message={}, remediation_hint={}",
+            denial.code, denial.message, denial.remediation_hint
+        );
+    }
+
+    Ok(())
+}
+
+#[test]
+#[serial_test::serial]
 fn perm_list_cross_principal_scoping() -> anyhow::Result<()> {
     let (repo, _tmp) = perm_governance_base(false);
 
@@ -406,6 +545,53 @@ git commit -m "governance config (admin only)"
     (repo, tmp)
 }
 
+fn perm_remediation_base() -> (gix::Repository, tempfile::TempDir) {
+    let (repo, tmp) = but_testsupport::writable_scenario("checkout-head-info");
+    but_testsupport::invoke_bash(
+        r#"
+mkdir -p .gitbutler
+cat >.gitbutler/permissions.toml <<'EOF'
+[[principal]]
+id = "admin"
+permissions = ["administration:write"]
+
+[[principal]]
+id = "rust-implementer"
+permissions = ["reviews:write"]
+
+[[principal]]
+id = "rust-reviewer"
+permissions = ["contents:read"]
+
+[[group]]
+name = "maintainers"
+permissions = ["merge"]
+members = ["rust-reviewer"]
+EOF
+
+cat >.gitbutler/gates.toml <<'EOF'
+[[branch]]
+name = "main"
+protected = true
+EOF
+
+git add .gitbutler/permissions.toml .gitbutler/gates.toml
+git commit -m "governance config"
+"#,
+        &repo,
+    );
+    (repo, tmp)
+}
+
+fn structured_denial<T>(result: anyhow::Result<T>, scenario: &str) -> anyhow::Result<Denial> {
+    match result {
+        Ok(_) => anyhow::bail!("{scenario} should reject this scenario"),
+        Err(error) => error
+            .downcast::<Denial>()
+            .map_err(|error| anyhow::anyhow!("{scenario} should return Denial: {error}")),
+    }
+}
+
 fn classified_error<T>(result: anyhow::Result<T>) -> anyhow::Result<AdminWriteGateError> {
     match result {
         Ok(_) => anyhow::bail!("governance permission operation should reject this scenario"),
@@ -422,6 +608,19 @@ fn assert_perm_denied_administration_write(error: &AdminWriteGateError) {
     assert!(
         error.message.contains("administration:write"),
         "denial message must name the missing administration:write authority"
+    );
+}
+
+fn assert_denial_payload(denial: &Denial, expected_message: &str, reason: &str) {
+    assert_eq!(denial.code, Denial::PERM_DENIED_CODE, "{reason}");
+    assert!(
+        denial.message.contains(expected_message),
+        "{reason}; message must contain {expected_message:?}, got: {}",
+        denial.message
+    );
+    assert!(
+        !denial.remediation_hint.trim().is_empty(),
+        "{reason}; remediation_hint must be non-empty"
     );
 }
 

@@ -11,6 +11,8 @@ use but_authz::{
 };
 use serde::Serialize;
 
+use crate::json::ConfigInvalid;
+
 use super::config_mutate::enforce_administration_write_gate;
 
 /// Operator-facing caveat for working-tree governance writes.
@@ -90,6 +92,18 @@ pub struct GroupListEntry {
 pub struct GroupListOutcome {
     /// Groups from the working-tree governance config.
     pub groups: Vec<GroupListEntry>,
+}
+
+/// Structured governance error payload for CLI and API callers.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct GovernanceErrorPayload {
+    /// Stable consumer-facing error code.
+    pub code: &'static str,
+    /// Human-readable error message.
+    pub message: String,
+    /// Optional actionable recovery hint.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub remediation_hint: Option<String>,
 }
 
 impl std::fmt::Debug for GroupListOutcome {
@@ -417,7 +431,15 @@ fn parse_authorities(authorities: &[&str]) -> anyhow::Result<Vec<Authority>> {
         .iter()
         .map(|token| Authority::parse(token))
         .collect::<Result<Vec<_>, _>>()
-        .context("parsing permission authority token")
+        .map_err(|error| {
+            anyhow::Error::new(ConfigInvalid {
+                code: "config.invalid",
+                message: format!("invalid permission authority token {:?}: {error}", error.token()),
+                remediation_hint:
+                    "use a supported governance permission token such as contents:write, reviews:write, merge, or administration:write"
+                        .to_owned(),
+            })
+        })
 }
 
 fn principal_entry_mut<'a>(
@@ -564,4 +586,29 @@ fn read_committed_permissions(repo: &gix::Repository, target_ref: &str) -> anyho
     let content = std::str::from_utf8(&blob.data)
         .with_context(|| format!("decoding {} at {target_ref} as UTF-8", permissions_path()))?;
     Ok(content.to_owned())
+}
+
+/// Extract a structured governance payload from an error chain.
+pub fn classify_governance_error(err: &anyhow::Error) -> Option<GovernanceErrorPayload> {
+    if let Some(denial) = err.downcast_ref::<Denial>() {
+        return Some(GovernanceErrorPayload {
+            code: denial.code,
+            message: denial.message.clone(),
+            remediation_hint: Some(denial.remediation_hint.clone()),
+        });
+    }
+
+    if let Some(config_invalid) = err.downcast_ref::<ConfigInvalid>() {
+        return Some(GovernanceErrorPayload {
+            code: config_invalid.code,
+            message: config_invalid.message.clone(),
+            remediation_hint: Some(config_invalid.remediation_hint.clone()),
+        });
+    }
+
+    super::config_mutate::classify_error(err).map(|gate_error| GovernanceErrorPayload {
+        code: gate_error.code,
+        message: gate_error.message,
+        remediation_hint: None,
+    })
 }

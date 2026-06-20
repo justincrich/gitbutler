@@ -116,17 +116,15 @@ fn write_list(out: &mut OutputChannel, list: &PermListOutcome) -> anyhow::Result
 }
 
 fn governance_cli_error(err: anyhow::Error) -> CliError {
-    if let Some(gate_error) = but_api::legacy::config_mutate::classify_error(&err) {
-        return anyhow::anyhow!(
-            "{}",
-            serde_json::json!({
-                "error": {
-                    "code": gate_error.code,
-                    "message": gate_error.message,
-                }
-            })
-        )
-        .into();
+    if let Some(gate_error) = but_api::legacy::governance::classify_governance_error(&err) {
+        let mut error = serde_json::json!({
+            "code": gate_error.code,
+            "message": gate_error.message,
+        });
+        if let Some(remediation_hint) = gate_error.remediation_hint {
+            error["remediation_hint"] = remediation_hint.into();
+        }
+        return anyhow::anyhow!("{}", serde_json::json!({ "error": error })).into();
     }
 
     err.into()

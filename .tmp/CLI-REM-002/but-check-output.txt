@@ -1,0 +1,2 @@
+    Checking but v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/CLI-REM-002/crates/but)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 6.50s

@@ -1,0 +1,13 @@
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+   Compiling but-api v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/CLI-REM-002/crates/but-api)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 12.82s
+     Running tests/perm_governance.rs (target/debug/deps/perm_governance-42c85dcfae8ecb29)
+
+running 1 test
+test perm_revoke_fail_closed_bad_token ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 11 filtered out; finished in 0.11s
+

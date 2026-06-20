@@ -1,0 +1,22 @@
+   Compiling but-api v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/CLI-REM-002/crates/but-api)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 2.03s
+     Running tests/perm_governance.rs (target/debug/deps/perm_governance-42c85dcfae8ecb29)
+
+running 1 test
+test perm_revoke_fail_closed_bad_token ... FAILED
+
+failures:
+
+---- perm_revoke_fail_closed_bad_token stdout ----
+Error: parsing permission authority token
+
+Caused by:
+    unknown authority token: not a permission
+
+
+failures:
+    perm_revoke_fail_closed_bad_token
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 11 filtered out; finished in 0.29s
+
+error: test failed, to rerun pass `-p but-api --test perm_governance`

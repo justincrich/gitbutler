@@ -77,6 +77,68 @@ fn group_ops_non_admin_denied_all_mutating_verbs() -> anyhow::Result<()> {
 
 #[test]
 #[serial_test::serial]
+fn group_denials_include_remediation_hint() -> anyhow::Result<()> {
+    let (repo, _tmp) = group_contract_base();
+    let before = worktree_permissions(&repo)?;
+
+    let cases = [
+        (
+            "group_create",
+            temp_env::with_var("BUT_AGENT_HANDLE", Some("rust-reviewer"), || {
+                group_create(&repo, MAIN_REF, "new-team", &["reviews:write"])
+            }),
+        ),
+        (
+            "group_grant",
+            temp_env::with_var("BUT_AGENT_HANDLE", Some("rust-reviewer"), || {
+                group_grant(&repo, MAIN_REF, "maintainers", &["comments:write"])
+            }),
+        ),
+        (
+            "group_add_member",
+            temp_env::with_var("BUT_AGENT_HANDLE", Some("rust-reviewer"), || {
+                group_add_member(&repo, MAIN_REF, "maintainers", "rust-implementer")
+            }),
+        ),
+        (
+            "group_remove_member",
+            temp_env::with_var("BUT_AGENT_HANDLE", Some("rust-reviewer"), || {
+                group_remove_member(&repo, MAIN_REF, "maintainers", "maint")
+            }),
+        ),
+    ];
+
+    for (verb, result) in cases {
+        let denial = structured_denial(result, verb)?;
+        assert_eq!(
+            denial.code,
+            Denial::PERM_DENIED_CODE,
+            "{verb} must return the stable perm.denied code"
+        );
+        assert!(
+            denial.message.contains("administration:write"),
+            "{verb} denial must name the missing administration:write authority"
+        );
+        assert!(
+            !denial.remediation_hint.trim().is_empty(),
+            "{verb} denial must include an actionable remediation hint"
+        );
+        assert_eq!(
+            worktree_permissions(&repo)?,
+            before,
+            "denied {verb} must leave permissions.toml byte-for-byte unchanged"
+        );
+        println!(
+            "seeded {verb} denial: code={}, message={}, remediation_hint={}",
+            denial.code, denial.message, denial.remediation_hint
+        );
+    }
+
+    Ok(())
+}
+
+#[test]
+#[serial_test::serial]
 fn group_remove_member_writes_worktree_inert_until_committed() -> anyhow::Result<()> {
     let (repo, _tmp) = group_contract_base();
     let main_before = ref_id(&repo, MAIN_REF)?;
