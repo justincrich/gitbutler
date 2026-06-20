@@ -520,6 +520,64 @@ fn commit_gate_apply_integrate_no_target_ungoverned() -> anyhow::Result<()> {
 
 #[test]
 #[serial_test::serial]
+fn commit_gate_governed_missing_target_failclosed() -> anyhow::Result<()> {
+    let (repo, _tmp) = governed_repo();
+    let feat = gix::refs::FullName::try_from(FEAT_REF)?;
+    let feat_before = ref_id(&repo, FEAT_REF)?;
+
+    assert_eq!(
+        governance_file_count(&repo, MAIN_REF)?,
+        2,
+        "the governed missing-target fixture must commit governance on main"
+    );
+
+    temp_env::with_var("BUT_AGENT_HANDLE", Some("ro"), || -> anyhow::Result<()> {
+        let mut ctx = but_ctx::Context::from_repo(repo.clone())?.with_memory_app_cache();
+        clear_default_target(&mut ctx)?;
+        let apply_denial = assert_governance_denied(
+            but_api::branch::apply(&mut ctx, feat.as_ref()),
+            "perm.denied",
+        );
+        assert!(
+            apply_denial.message.contains("contents:write"),
+            "governed no-target branch::apply must fail closed through contents:write"
+        );
+        assert_eq!(
+            ref_id(&repo, FEAT_REF)?,
+            feat_before,
+            "governed no-target branch::apply denial must leave feat unchanged"
+        );
+
+        let mut ctx = but_ctx::Context::from_repo(repo.clone())?.with_memory_app_cache();
+        clear_default_target(&mut ctx)?;
+        let integration = empty_body_integration_plan(&repo)?;
+        let integrate_denial = assert_governance_denied(
+            but_api::branch::apply_branch_integration(
+                &mut ctx,
+                feat.as_ref(),
+                integration,
+                DryRun::No,
+            ),
+            "perm.denied",
+        );
+        assert!(
+            integrate_denial.message.contains("contents:write"),
+            "governed no-target apply_branch_integration must fail closed through contents:write"
+        );
+        assert_eq!(
+            ref_id(&repo, FEAT_REF)?,
+            feat_before,
+            "governed no-target apply_branch_integration denial must leave feat unchanged"
+        );
+
+        Ok(())
+    })?;
+
+    Ok(())
+}
+
+#[test]
+#[serial_test::serial]
 fn commit_gate_apply_integrate_dryrun_targetref_pinned() -> anyhow::Result<()> {
     let (repo, _tmp) = governed_repo();
     let feat = gix::refs::FullName::try_from(FEAT_REF)?;
