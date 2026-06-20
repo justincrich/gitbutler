@@ -1,0 +1,41 @@
+
+> @gitbutler/desktop@0.0.0 test:ct:desktop /Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-007/apps/desktop
+> playwright test -c playwright-ct.config.ts -- PrincipalEditorSelfEscalation
+
+
+Running 6 tests using 6 workers
+
+Port 3101 is in use, trying another one...
+Port 3102 is in use, trying another one...
+(node:68367) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:68365) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:68366) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:68368) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:68364) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:68363) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:68363) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:68368) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:68366) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:68364) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:68365) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:68367) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 [chromium] › tests/governance/PrincipalEditor.spec.ts:75:1 › PrincipalEditorInheritedReadOnly (614ms)
+  ✓  6 [chromium] › tests/governance/PrincipalEditor.spec.ts:132:1 › PrincipalEditorGroupChip (630ms)
+  ✓  3 [chromium] › tests/governance/PrincipalEditor.spec.ts:149:1 › PrincipalEditorSelfEscalation (662ms)
+  ✓  5 [chromium] › tests/governance/PrincipalEditor.spec.ts:88:1 › PrincipalEditorLocalState (736ms)
+  ✓  4 [chromium] › tests/governance/PrincipalEditor.spec.ts:116:1 › PrincipalEditorPreset (757ms)
+  ✓  2 [chromium] › tests/governance/PrincipalEditor.spec.ts:101:1 › PrincipalEditorBatchSave (753ms)
+
+  6 passed (3.0s)
