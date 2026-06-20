@@ -28,6 +28,12 @@ export const projectSettingsPages = [
 		label: "Experimental",
 		icon: "lab",
 	},
+	{
+		id: "governance",
+		label: "Permissions & Governance",
+		icon: "lock",
+		adminOnly: true,
+	},
 ] as const satisfies readonly SettingsPage[];
 
 export type ProjectSettingsPage = (typeof projectSettingsPages)[number];
