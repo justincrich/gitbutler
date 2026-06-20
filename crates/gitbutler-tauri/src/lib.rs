@@ -58,6 +58,7 @@ pub const GOVERNANCE_COMMANDS: &[&str] = &[
     "branch_gates_update",
     "governance_status_read",
     "governance_pending",
+    "governance_commit",
 ];
 
 /// Expands the production governance/config-management command rows into a caller-supplied macro.
@@ -82,6 +83,7 @@ macro_rules! gitbutler_governance_command_rows {
             $crate::governance::tauri_branch_gates_update::branch_gates_update,
             but_api::legacy::governance::tauri_governance_status_read::governance_status_read,
             $crate::governance::tauri_governance_pending::governance_pending,
+            $crate::governance::tauri_governance_commit::governance_commit,
             $crate::governance::tauri_agent_perm_grant::agent_perm_grant,
         ]
     };

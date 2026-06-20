@@ -1,0 +1,29 @@
+Diff in /Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-003-GOVERNANCE-RENDERER-CONTRACT/crates/gitbutler-tauri/src/governance.rs:7:
+ };
+ 
+ use anyhow::{Context as _, anyhow};
+-use but_core::RepositoryExt as _;
+ use but_api::{
+     json,
+     legacy::governance::{
+Diff in /Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-003-GOVERNANCE-RENDERER-CONTRACT/crates/gitbutler-tauri/src/governance.rs:19:
+     Authority, AuthoritySet, BranchName, BranchProtection, GovConfig, Group, GroupName,
+     PermissionsWire, PrincipalId, load_governance_config, permissions_path,
+ };
++use but_core::RepositoryExt as _;
+ use but_ctx::{Context, ProjectHandleOrLegacyProjectId};
+ use gix::{bstr::ByteSlice as _, object::tree::EntryKind};
+ use serde::{Deserialize, Serialize};
+Diff in /Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-003-GOVERNANCE-RENDERER-CONTRACT/crates/gitbutler-tauri/tests/tt_022_governance_commit.rs:2:
+ 
+ use anyhow::Context as _;
+ use serde_json::{Value, json};
+-use tauri::{
+-    WebviewWindowBuilder,
+-    ipc::InvokeBody,
+-    webview::InvokeRequest,
+-};
++use tauri::{WebviewWindowBuilder, ipc::InvokeBody, webview::InvokeRequest};
+ 
+ const TARGET_REF: &str = "refs/remotes/origin/main";
+ 

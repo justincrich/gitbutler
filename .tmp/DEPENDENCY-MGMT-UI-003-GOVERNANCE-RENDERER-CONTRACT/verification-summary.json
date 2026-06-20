@@ -1,0 +1,86 @@
+{
+  "task_id": "tt-022",
+  "status": "completed",
+  "commit_note": "Commit SHA is reported in the final JSON after committing this evidence file.",
+  "requirement_results": [
+    {
+      "id": "AC-1",
+      "status": "passed",
+      "summary": "Renderer contract exposes typed readPending() backed by governance_pending and returning pendingCount."
+    },
+    {
+      "id": "AC-2",
+      "status": "passed",
+      "summary": "Renderer contract exposes readAccess() and derives hasAdminWrite/isReadOnly from governance_status_read authorities."
+    },
+    {
+      "id": "AC-3",
+      "status": "passed",
+      "summary": "Renderer contract exposes commitPending(); backend governance_commit creates a real target-ref commit with message chore: update governance config."
+    },
+    {
+      "id": "AC-4",
+      "status": "passed",
+      "summary": "No renderer direct governance TOML write path introduced. Raw grep count is zero; BSD wc pads the count, so the exact grep '^0$' suffix emits no line on this host."
+    },
+    {
+      "id": "TC-1",
+      "status": "passed",
+      "summary": "Vitest proves pendingCount and hasAdminWrite are available through the typed renderer service without production stubs."
+    },
+    {
+      "id": "TC-2",
+      "status": "passed",
+      "summary": "Rust IPC test proves commit action reaches a real Tauri command and commits only governance config files; Vitest proves renderer calls governance_commit."
+    }
+  ],
+  "red_evidence": [
+    {
+      "file": "red-governance-commit.txt",
+      "command": "cargo test -p gitbutler-tauri --test tt_022_governance_commit governance_commit_commits_only_pending_governance_files",
+      "expected_failure": "Command governance_commit not found"
+    }
+  ],
+  "green_evidence": [
+    {
+      "file": "final-governance-rust-tests.txt",
+      "command": "cargo test -p gitbutler-tauri --test mgmt_ipc_003_governance_commands --test mgmt_ipc_005_governance_pending --test tt_022_governance_commit",
+      "result": "passed"
+    },
+    {
+      "file": "final-governance-service-focused.txt",
+      "command": "pnpm --dir apps/desktop exec vitest run --mode development src/lib/governance/governanceService.test.ts",
+      "result": "passed"
+    },
+    {
+      "file": "final-desktop-check.txt",
+      "command": "pnpm -F @gitbutler/desktop check",
+      "result": "passed"
+    },
+    {
+      "file": "cargo-check-gitbutler-tauri.txt",
+      "command": "cargo check -p gitbutler-tauri --all-targets",
+      "result": "passed"
+    },
+    {
+      "file": "cargo-clippy-gitbutler-tauri.txt",
+      "command": "cargo clippy -p gitbutler-tauri --all-targets -- -D warnings",
+      "result": "passed"
+    },
+    {
+      "file": "cargo-fmt-check.txt",
+      "command": "cargo fmt --check",
+      "result": "passed"
+    },
+    {
+      "file": "ac4-raw-count.txt",
+      "command": "grep -rn 'gitbutler.*\\.toml\\|writeFile\\|fs.write' apps/desktop/src/components/governance/ apps/desktop/src/lib/governance/ apps/desktop/src/components/settings/GovernanceSettings.svelte 2>/dev/null | grep -v 'but-sdk\\|SDK\\|import' | wc -l",
+      "result": "0"
+    }
+  ],
+  "notes": [
+    "pnpm install --frozen-lockfile was required because this fresh sprint worktree had no node_modules.",
+    "pnpm -F @gitbutler/shared package and pnpm -F @gitbutler/ui package were required before desktop check because those workspace packages export dist files.",
+    "A broad pnpm -F @gitbutler/desktop test -- src/lib/governance/governanceService.test.ts run executed unrelated desktop tests and failed on pre-existing workspace package resolution before package dist builds; the direct focused Vitest command passed."
+  ]
+}

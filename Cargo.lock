@@ -4258,6 +4258,8 @@ dependencies = [
  "console-subscriber",
  "document-features",
  "gitbutler-project",
+ "gitbutler-reference",
+ "gitbutler-repo",
  "gitbutler-watcher",
  "gix",
  "notify-rust",

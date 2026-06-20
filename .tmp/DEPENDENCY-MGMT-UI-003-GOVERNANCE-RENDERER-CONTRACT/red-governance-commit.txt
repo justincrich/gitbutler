@@ -1,0 +1,22 @@
+   Compiling gitbutler-tauri v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-003-GOVERNANCE-RENDERER-CONTRACT/crates/gitbutler-tauri)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.83s
+     Running tests/tt_022_governance_commit.rs (target/debug/deps/tt_022_governance_commit-875db9528c54ce22)
+
+running 1 test
+test governance_commit_commits_only_pending_governance_files ... FAILED
+
+failures:
+
+---- governance_commit_commits_only_pending_governance_files stdout ----
+
+thread 'governance_commit_commits_only_pending_governance_files' (4659195) panicked at crates/gitbutler-tauri/tests/tt_022_governance_commit.rs:49:52:
+governance_commit failed: String("Command governance_commit not found")
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    governance_commit_commits_only_pending_governance_files
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.09s
+
+error: test failed, to rerun pass `-p gitbutler-tauri --test tt_022_governance_commit`
