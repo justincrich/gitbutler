@@ -34,3 +34,14 @@ test("renders PrincipalsList in the principals tab", async ({ mount }) => {
 	);
 	await expect(component.getByTestId("governance-principals-control")).toHaveCount(0);
 });
+
+test("renders GroupsList in the groups tab", async ({ mount }) => {
+	const component = await mount(GovernanceSettingsHarness, {
+		props: { pendingCount: 0 },
+	});
+
+	await component.getByRole("tab", { name: "Groups" }).click();
+
+	await expect(component.getByTestId("groups-list")).toBeVisible();
+	await expect(component.getByTestId("governance-groups-control")).toHaveCount(0);
+});
