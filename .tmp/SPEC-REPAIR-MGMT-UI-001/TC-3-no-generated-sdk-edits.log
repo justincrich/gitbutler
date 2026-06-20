@@ -1,0 +1,3 @@
+$ git diff --name-only packages/but-sdk/src/generated
+$ git status --short packages/but-sdk/src/generated
+$ git status --short --untracked-files=all

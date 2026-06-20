@@ -1,0 +1,20 @@
+$ pnpm -F @gitbutler/desktop test:ct:desktop -- GovernanceSettings
+
+> @gitbutler/desktop@0.0.0 test:ct:desktop /Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/SPEC-REPAIR-MGMT-UI-001/apps/desktop
+> playwright test -c playwright-ct.config.ts -- GovernanceSettings
+
+
+Running 2 tests using 2 workers
+
+(node:37366) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:37367) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:37367) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:37366) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 [chromium] › tests/governance/GovernanceSettings.spec.ts:14:2 › GovernanceSettings › registers one admin-only governance project settings page (1ms)
+  ✓  2 [chromium] › tests/governance/GovernanceSettings.spec.ts:6:2 › GovernanceSettings › mounts the governance settings scaffold (165ms)
+
+  2 passed (2.1s)
