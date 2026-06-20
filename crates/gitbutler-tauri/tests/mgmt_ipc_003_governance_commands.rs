@@ -12,7 +12,7 @@ use std::{
 use serde_json::{Value, json};
 use tauri::{WebviewWindowBuilder, ipc::InvokeBody, webview::InvokeRequest};
 
-/// All 12 governance commands IPC-003 promises to register.
+/// Governance commands registered through the shared governance command rows.
 const GOVERNANCE_COMMANDS: &[&str] = &[
     "perm_list",
     "perm_grant",
@@ -26,6 +26,7 @@ const GOVERNANCE_COMMANDS: &[&str] = &[
     "branch_gates_read",
     "branch_gates_update",
     "governance_status_read",
+    "governance_pending",
 ];
 
 const MAIN_REF: &str = "refs/heads/main";
@@ -304,6 +305,10 @@ fn governance_invocation_cases(
         InvocationCase {
             command: "governance_status_read",
             payload: json!({ "projectId": project_id }),
+        },
+        InvocationCase {
+            command: "governance_pending",
+            payload: json!({ "projectId": project_id, "targetRef": TARGET_REF }),
         },
     ]
 }

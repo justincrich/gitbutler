@@ -4244,6 +4244,7 @@ dependencies = [
  "but-action",
  "but-api",
  "but-askpass",
+ "but-authz",
  "but-core",
  "but-ctx",
  "but-db",

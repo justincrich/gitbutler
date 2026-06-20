@@ -4,8 +4,8 @@ use anyhow::{Context as _, anyhow};
 use but_api::{
     json,
     legacy::governance::{
-        BranchGatesOutcome, BranchProtectionInput, GrantOutcome, GroupWriteOutcome,
-        PermWriteOutcome,
+        BranchGatesOutcome, BranchProtectionInput, GovernancePending, GrantOutcome,
+        GroupWriteOutcome, PermWriteOutcome,
     },
 };
 use but_ctx::{Context, ProjectHandleOrLegacyProjectId};
@@ -252,6 +252,15 @@ pub fn perm_grant_for_agent_env(
         .map_err(json::Error::from)
 }
 
+/// Invoke the read-only pending governance diff command.
+pub fn governance_pending_for_project(
+    project_id: ProjectHandleOrLegacyProjectId,
+    target_ref: String,
+) -> Result<GovernancePending, json::Error> {
+    let ctx = context_for_project(project_id, &target_ref).map_err(json::Error::from)?;
+    but_api::legacy::governance::governance_pending(&ctx, target_ref).map_err(json::Error::from)
+}
+
 fn context_for_project(
     project_id: ProjectHandleOrLegacyProjectId,
     target_ref: &str,
@@ -319,6 +328,20 @@ pub mod tauri_agent_perm_grant {
         authorities: Vec<String>,
     ) -> Result<GrantOutcome, json::Error> {
         super::perm_grant_for_agent_env(project_id, target_ref, principal, authorities)
+    }
+}
+
+/// Tauri command wrapper for read-only pending governance diff.
+pub mod tauri_governance_pending {
+    use super::{GovernancePending, ProjectHandleOrLegacyProjectId, json};
+
+    /// Read the working-tree-vs-target-ref pending governance diff.
+    #[tauri::command]
+    pub fn governance_pending(
+        project_id: ProjectHandleOrLegacyProjectId,
+        target_ref: String,
+    ) -> Result<GovernancePending, json::Error> {
+        super::governance_pending_for_project(project_id, target_ref)
     }
 }
 
