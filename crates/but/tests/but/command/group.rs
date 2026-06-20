@@ -229,6 +229,105 @@ fn group_denials_include_remediation_hint() -> anyhow::Result<()> {
     Ok(())
 }
 
+/// AC-2: `but group` must resolve and authorize against the workspace target ref
+/// (`refs/heads/main`), not the current checkout `HEAD`, when the two differ. The
+/// fixture commits `administration:write` for `admin` plus a `maintainers` group
+/// on `refs/heads/main`, and a different blob on branch `A` (HEAD) where `admin`
+/// lacks `administration:write`. If the command read HEAD, `admin` would be
+/// denied; because it reads the target ref, the add-member succeeds and the write
+/// lands only in the working tree.
+#[test]
+#[serial_test::serial]
+fn group_cli_uses_workspace_target_ref_not_head() -> anyhow::Result<()> {
+    let env = head_differs_target_env()?;
+    let repo = env.open_repo()?;
+    let main_before = ref_id(&repo, "refs/heads/main")?;
+
+    let add_member = env
+        .but("group add-member maintainers rust-reviewer")
+        .env("BUT_AGENT_HANDLE", "admin")
+        .output()?;
+    assert!(
+        add_member.status.success(),
+        "admin group add-member must authorize from refs/heads/main, not HEAD; got stderr: {}",
+        String::from_utf8_lossy(&add_member.stderr)
+    );
+    let add_member_stdout = String::from_utf8_lossy(&add_member.stdout);
+    assert!(
+        add_member_stdout.contains(REF_PIN_CAVEAT),
+        "add-member stdout must include the ref-pin caveat, got: {add_member_stdout}"
+    );
+
+    let worktree_permissions = std::fs::read_to_string(
+        env.projects_root()
+            .join(".gitbutler")
+            .join("permissions.toml"),
+    )?;
+    let maintainers_block = group_block(&worktree_permissions, "maintainers")?;
+    assert!(
+        maintainers_block.contains("rust-reviewer"),
+        "working-tree maintainers group must include rust-reviewer, got: {maintainers_block}"
+    );
+
+    assert_eq!(
+        ref_id(&repo, "refs/heads/main")?,
+        main_before,
+        "CLI group add-member must not move refs/heads/main — the write is inert until committed"
+    );
+
+    Ok(())
+}
+
+/// AC-3: A feature-HEAD self-grant of `administration:write` must NOT authorize
+/// a group write when the workspace target ref (`refs/heads/main`) lacks the
+/// grant. The fixture commits only `reviews:read` for `rust-reviewer` on main,
+/// while branch `A` (HEAD) adds a self-grant of `administration:write`. The
+/// command must be denied `perm.denied` and the working-tree file must be
+/// untouched.
+#[test]
+#[serial_test::serial]
+fn group_cli_denies_using_workspace_target_when_head_self_grants() -> anyhow::Result<()> {
+    let env = head_self_grants_env()?;
+    let permissions_path = env
+        .projects_root()
+        .join(".gitbutler")
+        .join("permissions.toml");
+    let before = std::fs::read_to_string(&permissions_path)?;
+
+    let denied = env
+        .but("group grant maintainers reviews:write")
+        .env("BUT_AGENT_HANDLE", "rust-reviewer")
+        .output()?;
+    assert_eq!(
+        denied.status.code(),
+        Some(1),
+        "rust-reviewer self-grant on HEAD must not authorize group grant from target ref"
+    );
+
+    let envelope = parse_cli_error_envelope(&denied, "group grant from HEAD self-grant");
+    assert_eq!(
+        envelope.code, "perm.denied",
+        "denial must use the stable perm.denied code"
+    );
+    assert!(
+        envelope.message.contains("administration:write"),
+        "denial message must name the missing administration:write authority, got: {}",
+        envelope.message
+    );
+    assert!(
+        !envelope.remediation_hint.trim().is_empty(),
+        "denial must include a non-empty remediation_hint"
+    );
+
+    let after = std::fs::read_to_string(&permissions_path)?;
+    assert_eq!(
+        before, after,
+        "denied group grant must not mutate the working-tree permissions.toml"
+    );
+
+    Ok(())
+}
+
 fn group_env() -> anyhow::Result<Sandbox> {
     let env = Sandbox::open_scenario_with_target_and_default_settings("one-stack")?;
     env.invoke_bash(
@@ -264,6 +363,157 @@ git commit -m "governance config"
 "#,
     );
     env.but("setup").assert().success();
+    Ok(env)
+}
+
+/// Fixture where checkout HEAD is branch `A` while the workspace target ref
+/// remains `refs/heads/main`. Main commits `administration:write` for `admin`
+/// plus a `maintainers` group; branch `A` (HEAD) commits a different blob where
+/// `admin` holds only `contents:write`. A command that mistakenly read HEAD
+/// would deny `admin`.
+fn head_differs_target_env() -> anyhow::Result<Sandbox> {
+    let env = Sandbox::open_scenario_with_target_and_default_settings("one-stack")?;
+    env.invoke_bash(
+        r#"
+git branch -f main origin/main
+git checkout main
+mkdir -p .gitbutler
+cat >.gitbutler/permissions.toml <<'EOF'
+[[principal]]
+id = "admin"
+permissions = ["administration:write", "merge"]
+
+[[principal]]
+id = "rust-reviewer"
+permissions = ["contents:read"]
+
+[[group]]
+name = "maintainers"
+permissions = ["reviews:write"]
+members = ["rust-implementer"]
+EOF
+cat >.gitbutler/gates.toml <<'EOF'
+[[branch]]
+name = "main"
+protected = true
+EOF
+git add .gitbutler/permissions.toml .gitbutler/gates.toml
+git commit -m "main governance (admin holds administration:write)"
+git checkout A
+mkdir -p .gitbutler
+cat >.gitbutler/permissions.toml <<'EOF'
+[[principal]]
+id = "admin"
+permissions = ["contents:write"]
+
+[[principal]]
+id = "rust-reviewer"
+permissions = ["contents:read"]
+
+[[group]]
+name = "maintainers"
+permissions = ["reviews:write"]
+members = ["rust-implementer"]
+EOF
+cat >.gitbutler/gates.toml <<'EOF'
+[[branch]]
+name = "main"
+protected = true
+EOF
+git add .gitbutler/permissions.toml .gitbutler/gates.toml
+git commit -m "feature head governance (admin lacks administration:write)"
+"#,
+    );
+    env.but("setup").assert().success();
+    Ok(env)
+}
+
+/// Fixture where `refs/heads/main` commits only `reviews:read` for
+/// `rust-reviewer`, while branch `A` (HEAD) adds a self-grant of
+/// `administration:write` for `rust-reviewer`. Correct target-ref authorization
+/// must deny `rust-reviewer`; reading HEAD would let the self-grant through.
+///
+/// After `but setup` the working-tree file is re-seeded with branch A's
+/// self-grant blob so the `before == after` assertion has real teeth — a buggy
+/// implementation reading HEAD would authorize, and a denied command must not
+/// mutate the file.
+fn head_self_grants_env() -> anyhow::Result<Sandbox> {
+    let env = Sandbox::open_scenario_with_target_and_default_settings("one-stack")?;
+    env.invoke_bash(
+        r#"
+git branch -f main origin/main
+git checkout main
+mkdir -p .gitbutler
+cat >.gitbutler/permissions.toml <<'EOF'
+[[principal]]
+id = "admin"
+permissions = ["administration:write"]
+
+[[principal]]
+id = "rust-reviewer"
+permissions = ["contents:read"]
+
+[[group]]
+name = "maintainers"
+permissions = ["reviews:write"]
+members = ["rust-implementer"]
+EOF
+cat >.gitbutler/gates.toml <<'EOF'
+[[branch]]
+name = "main"
+protected = true
+EOF
+git add .gitbutler/permissions.toml .gitbutler/gates.toml
+git commit -m "main governance (rust-reviewer lacks administration:write)"
+git checkout A
+mkdir -p .gitbutler
+cat >.gitbutler/permissions.toml <<'EOF'
+[[principal]]
+id = "admin"
+permissions = ["administration:write"]
+
+[[principal]]
+id = "rust-reviewer"
+permissions = ["contents:read", "administration:write"]
+
+[[group]]
+name = "maintainers"
+permissions = ["reviews:write"]
+members = ["rust-implementer"]
+EOF
+cat >.gitbutler/gates.toml <<'EOF'
+[[branch]]
+name = "main"
+protected = true
+EOF
+git add .gitbutler/permissions.toml .gitbutler/gates.toml
+git commit -m "feature head self-grants rust-reviewer administration:write"
+"#,
+    );
+    env.but("setup").assert().success();
+    // Re-seed the working-tree file with branch A's self-grant blob so the
+    // before/after assertion in AC-3 has real teeth. `but setup` may alter the
+    // working-tree checkout; the authz gate reads committed target-ref config,
+    // so restoring the working-tree file does not affect authorization.
+    env.invoke_bash(
+        r#"
+mkdir -p .gitbutler
+cat >.gitbutler/permissions.toml <<'EOF'
+[[principal]]
+id = "admin"
+permissions = ["administration:write"]
+
+[[principal]]
+id = "rust-reviewer"
+permissions = ["contents:read", "administration:write"]
+
+[[group]]
+name = "maintainers"
+permissions = ["reviews:write"]
+members = ["rust-implementer"]
+EOF
+"#,
+    );
     Ok(env)
 }
 

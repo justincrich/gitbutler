@@ -150,6 +150,54 @@ fn perm_denials_include_remediation_hint() -> anyhow::Result<()> {
     Ok(())
 }
 
+/// AC-1 (PRIMARY): `but perm` must resolve and authorize against the workspace
+/// target ref (`refs/heads/main`), not the current checkout `HEAD`, when the two
+/// differ. The fixture commits `administration:write` for `admin` on
+/// `refs/heads/main` and a *different* governance blob on branch `A` (HEAD) where
+/// `admin` lacks `administration:write`. If the command read HEAD, `admin` would
+/// be denied; because it reads the target ref, the grant succeeds and the write
+/// lands only in the working tree.
+#[test]
+#[serial_test::serial]
+fn perm_cli_uses_workspace_target_ref_not_head() -> anyhow::Result<()> {
+    let env = head_differs_target_env()?;
+    let repo = env.open_repo()?;
+    let main_before = ref_id(&repo, "refs/heads/main")?;
+
+    let grant = env
+        .but("perm grant --principal rust-reviewer reviews:write")
+        .env("BUT_AGENT_HANDLE", "admin")
+        .output()?;
+    assert!(
+        grant.status.success(),
+        "admin perm grant must authorize from refs/heads/main, not HEAD; got stderr: {}",
+        String::from_utf8_lossy(&grant.stderr)
+    );
+    let grant_stdout = String::from_utf8_lossy(&grant.stdout);
+    assert!(
+        grant_stdout.contains(REF_PIN_CAVEAT),
+        "grant stdout must include the ref-pin caveat, got: {grant_stdout}"
+    );
+
+    let worktree_permissions = std::fs::read_to_string(
+        env.projects_root()
+            .join(".gitbutler")
+            .join("permissions.toml"),
+    )?;
+    assert!(
+        worktree_permissions.contains("reviews:write"),
+        "working-tree permissions.toml must include the new reviews:write grant, got: {worktree_permissions}"
+    );
+
+    assert_eq!(
+        ref_id(&repo, "refs/heads/main")?,
+        main_before,
+        "CLI perm grant must not move refs/heads/main — the write is inert until committed"
+    );
+
+    Ok(())
+}
+
 fn perm_env() -> anyhow::Result<Sandbox> {
     let env = Sandbox::open_scenario_with_target_and_default_settings("one-stack")?;
     env.invoke_bash(
@@ -177,6 +225,57 @@ protected = true
 EOF
 git add .gitbutler/permissions.toml .gitbutler/gates.toml
 git commit -m "governance config"
+"#,
+    );
+    env.but("setup").assert().success();
+    Ok(env)
+}
+
+/// Fixture where checkout HEAD is branch `A` while the workspace target ref
+/// remains `refs/heads/main`. Main commits `administration:write` for `admin`;
+/// branch `A` (HEAD) commits a visibly different blob where `admin` holds only
+/// `contents:write`. A command that mistakenly read HEAD would deny `admin`.
+fn head_differs_target_env() -> anyhow::Result<Sandbox> {
+    let env = Sandbox::open_scenario_with_target_and_default_settings("one-stack")?;
+    env.invoke_bash(
+        r#"
+git branch -f main origin/main
+git checkout main
+mkdir -p .gitbutler
+cat >.gitbutler/permissions.toml <<'EOF'
+[[principal]]
+id = "admin"
+permissions = ["administration:write"]
+
+[[principal]]
+id = "rust-reviewer"
+permissions = ["contents:read"]
+EOF
+cat >.gitbutler/gates.toml <<'EOF'
+[[branch]]
+name = "main"
+protected = true
+EOF
+git add .gitbutler/permissions.toml .gitbutler/gates.toml
+git commit -m "main governance (admin holds administration:write)"
+git checkout A
+mkdir -p .gitbutler
+cat >.gitbutler/permissions.toml <<'EOF'
+[[principal]]
+id = "admin"
+permissions = ["contents:write"]
+
+[[principal]]
+id = "rust-reviewer"
+permissions = ["contents:read"]
+EOF
+cat >.gitbutler/gates.toml <<'EOF'
+[[branch]]
+name = "main"
+protected = true
+EOF
+git add .gitbutler/permissions.toml .gitbutler/gates.toml
+git commit -m "feature head governance (admin lacks administration:write)"
 "#,
     );
     env.but("setup").assert().success();
