@@ -1,0 +1,14 @@
+   Compiling but-api v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-IPC-001/crates/but-api)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 10.62s
+     Running tests/governance_api.rs (target/debug/deps/governance_api-c65881f20ac9bc4d)
+
+running 6 tests
+test governance_api_invariant_build_gate_covers_governance_boundary ... ok
+test governance_api_perm_grant_non_admin_denied_with_hint ... ok
+test governance_api_status_read_returns_own_effective_set ... ok
+test governance_api_group_add_member_non_admin_denied_with_hint ... ok
+test governance_api_status_read_is_self_scoped_no_foreign_principal ... ok
+test governance_api_perm_grant_admin_lands_inert ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.50s
+

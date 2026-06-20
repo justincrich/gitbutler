@@ -5,10 +5,12 @@ use std::{
 };
 
 use anyhow::{Context as _, anyhow};
+use but_api_macros::but_api;
 use but_authz::{
     Authority, AuthoritySet, Denial, GroupWire, PermissionsWire, PrincipalId, PrincipalWire,
     load_governance_config, permissions_path,
 };
+use but_ctx::Context;
 use serde::Serialize;
 
 use super::config_mutate::enforce_administration_write_gate;
@@ -25,6 +27,45 @@ pub struct PermWriteOutcome {
     pub authorities: Vec<String>,
     /// Ref-pin caveat for the operator.
     pub caveat: &'static str,
+}
+
+/// Result of a governance permission grant exposed through the API boundary.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct GrantOutcome {
+    /// Principal whose direct permissions were changed or inspected.
+    pub principal: String,
+    /// Parsed authority tokens supplied by the caller.
+    pub authorities: Vec<String>,
+    /// Ref-pin caveat for the operator.
+    pub caveat: &'static str,
+}
+
+impl From<PermWriteOutcome> for GrantOutcome {
+    fn from(outcome: PermWriteOutcome) -> Self {
+        Self {
+            principal: outcome.principal,
+            authorities: outcome.authorities,
+            caveat: outcome.caveat,
+        }
+    }
+}
+
+/// Serializable authority set returned by generated governance API wrappers.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct GovernanceStatus {
+    /// Effective functional authority tokens for the caller.
+    pub authorities: Vec<String>,
+}
+
+impl From<AuthoritySet> for GovernanceStatus {
+    fn from(authorities: AuthoritySet) -> Self {
+        Self {
+            authorities: authorities
+                .iter()
+                .map(|authority| authority.name().to_owned())
+                .collect(),
+        }
+    }
 }
 
 /// Listed authority for one principal.
@@ -105,6 +146,114 @@ impl std::fmt::Debug for GroupListOutcome {
         }
         Ok(())
     }
+}
+
+/// List governed groups through the but-api boundary.
+#[but_api]
+pub fn group_list_cmd(ctx: &Context) -> anyhow::Result<GroupListOutcome> {
+    let repo = ctx.repo.get()?;
+    let target_ref = target_ref_from_ctx(ctx, None)?;
+    group_list(&repo, &target_ref)
+}
+
+/// Create a governed group through the but-api boundary.
+#[but_api]
+pub fn group_create_cmd(
+    ctx: &Context,
+    target_ref: String,
+    group: String,
+    authorities: Vec<String>,
+) -> anyhow::Result<GroupWriteOutcome> {
+    let repo = ctx.repo.get()?;
+    let target_ref = target_ref_from_ctx(ctx, Some(&target_ref))?;
+    let authorities = authority_slices(&authorities);
+    group_create(&repo, &target_ref, &group, &authorities)
+}
+
+/// Grant governed group permissions through the but-api boundary.
+#[but_api]
+pub fn group_grant_cmd(
+    ctx: &Context,
+    target_ref: String,
+    group: String,
+    authorities: Vec<String>,
+) -> anyhow::Result<GroupWriteOutcome> {
+    let repo = ctx.repo.get()?;
+    let target_ref = target_ref_from_ctx(ctx, Some(&target_ref))?;
+    let authorities = authority_slices(&authorities);
+    group_grant(&repo, &target_ref, &group, &authorities)
+}
+
+/// Add a principal to a governed group through the but-api boundary.
+#[but_api]
+pub fn group_add_member_cmd(
+    ctx: &Context,
+    target_ref: String,
+    group: String,
+    member: String,
+) -> anyhow::Result<GroupWriteOutcome> {
+    let repo = ctx.repo.get()?;
+    let target_ref = target_ref_from_ctx(ctx, Some(&target_ref))?;
+    group_add_member(&repo, &target_ref, &group, &member)
+}
+
+/// Remove a principal from a governed group through the but-api boundary.
+#[but_api]
+pub fn group_remove_member_cmd(
+    ctx: &Context,
+    target_ref: String,
+    group: String,
+    member: String,
+) -> anyhow::Result<GroupWriteOutcome> {
+    let repo = ctx.repo.get()?;
+    let target_ref = target_ref_from_ctx(ctx, Some(&target_ref))?;
+    group_remove_member(&repo, &target_ref, &group, &member)
+}
+
+/// List governed direct permissions through the but-api boundary.
+#[but_api]
+pub fn perm_list_cmd(ctx: &Context, principal: Option<String>) -> anyhow::Result<PermListOutcome> {
+    let repo = ctx.repo.get()?;
+    let target_ref = target_ref_from_ctx(ctx, None)?;
+    perm_list(&repo, &target_ref, principal.as_deref())
+}
+
+/// Grant governed direct permissions through the but-api boundary.
+#[but_api]
+pub fn perm_grant_cmd(
+    ctx: &Context,
+    target_ref: String,
+    principal: String,
+    authorities: Vec<String>,
+) -> anyhow::Result<GrantOutcome> {
+    let repo = ctx.repo.get()?;
+    let target_ref = target_ref_from_ctx(ctx, Some(&target_ref))?;
+    let authorities = authority_slices(&authorities);
+    Ok(perm_grant(&repo, &target_ref, &principal, &authorities)?.into())
+}
+
+/// Revoke governed direct permissions through the but-api boundary.
+#[but_api]
+pub fn perm_revoke_cmd(
+    ctx: &Context,
+    target_ref: String,
+    principal: String,
+    authorities: Vec<String>,
+) -> anyhow::Result<PermWriteOutcome> {
+    let repo = ctx.repo.get()?;
+    let target_ref = target_ref_from_ctx(ctx, Some(&target_ref))?;
+    let authorities = authority_slices(&authorities);
+    perm_revoke(&repo, &target_ref, &principal, &authorities)
+}
+
+/// Return the caller's own effective governance authorities.
+#[but_api(GovernanceStatus)]
+pub fn governance_status_read(ctx: &Context) -> anyhow::Result<AuthoritySet> {
+    let repo = ctx.repo.get()?;
+    let target_ref = target_ref_from_ctx(ctx, None)?;
+    let config = load_governance_config(&repo, &target_ref)?;
+    let caller = but_authz::resolve_principal_from_env(&config)?;
+    Ok(but_authz::effective_authority(&caller, &config))
 }
 
 /// List governed groups under administration-read authority.
@@ -410,6 +559,22 @@ fn write_outcome(principal: &str, authorities: &[Authority]) -> PermWriteOutcome
             .collect(),
         caveat: REF_PIN_CAVEAT,
     }
+}
+
+fn target_ref_from_ctx(ctx: &Context, requested: Option<&str>) -> anyhow::Result<String> {
+    let target_ref = ctx.project_meta()?.target_ref_or_err()?.to_string();
+    if let Some(requested) = requested
+        && requested != target_ref
+    {
+        return Err(anyhow!(
+            "requested target ref {requested} does not match workspace target {target_ref}"
+        ));
+    }
+    Ok(target_ref)
+}
+
+fn authority_slices(authorities: &[String]) -> Vec<&str> {
+    authorities.iter().map(String::as_str).collect()
 }
 
 fn parse_authorities(authorities: &[&str]) -> anyhow::Result<Vec<Authority>> {
