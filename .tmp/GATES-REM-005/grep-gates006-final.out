@@ -1,0 +1,5 @@
+  VERIFY: ./tools/governance-checks/check_no_role_literals.sh
+    VERIFY: ./tools/governance-checks/check_no_role_literals.sh
+- No human-vs-AI enforcement branch and no role/group-name word-literal in the evaluator: `./tools/governance-checks/check_no_role_literals.sh`  -> Exit 0 (T-LOOP-011, T-LOOP-005 family). NOTE: the per-group unmet entry already names the group via a runtime cfg value (54-57), NOT a literal — so this grep stays clean as long as no concrete group-name literal is added. The test FIXTURE strings "reviewer-a"/"maintainers" live in merge_gate.rs tests, which is OUT of this grep scope — the grep targets the enforcement file only
+    { "id": "TC-4", "type": "test_criterion", "description": "no human-vs-AI enforcement branch + no role/group-name word-literal in the evaluator (word-boundary grep; T-LOOP-011, T-LOOP-005 family)", "verify": "./tools/governance-checks/check_no_role_literals.sh", "maps_to_ac": "AC-3" },
+exit=0

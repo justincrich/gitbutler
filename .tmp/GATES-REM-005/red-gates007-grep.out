@@ -1,0 +1,2 @@
+grep: .spec/prds/governance/tasks/sprint-04-gates-deepening/GATES-007-mechanism-agnostic-commit-gate.md: No such file or directory
+exit=2

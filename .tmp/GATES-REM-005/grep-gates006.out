@@ -1,0 +1,3 @@
+    VERIFY: ./tools/governance-checks/check_no_role_literals.sh
+    { "id": "TC-4", "type": "test_criterion", "description": "no human-vs-AI enforcement branch + no role/group-name word-literal in the evaluator (word-boundary grep; T-LOOP-011, T-LOOP-005 family)", "verify": "./tools/governance-checks/check_no_role_literals.sh", "maps_to_ac": "AC-3" },
+exit=0
