@@ -1039,6 +1039,11 @@ pub enum Subcommands {
     #[cfg_attr(feature = "raw-clap-docs", clap(verbatim_doc_comment))]
     Config(config::Platform),
 
+    /// Manage governed functional permissions.
+    #[cfg(feature = "legacy")]
+    #[cfg_attr(feature = "raw-clap-docs", clap(verbatim_doc_comment))]
+    Perm(perm::Platform),
+
     /// Cherry-pick a commit from an unapplied branch into an applied virtual branch.
     ///
     /// This command allows you to pick individual commits from unapplied branches
@@ -1275,6 +1280,8 @@ pub mod commit;
 #[cfg(feature = "legacy")]
 pub mod commit2;
 pub mod config;
+#[cfg(feature = "legacy")]
+pub mod perm;
 pub mod skill;
 pub mod update;
 

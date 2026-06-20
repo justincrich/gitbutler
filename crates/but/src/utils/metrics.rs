@@ -184,6 +184,8 @@ impl Subcommands {
                 }) => ForgeListUsers,
                 _ => Unknown,
             },
+            #[cfg(feature = "legacy")]
+            Subcommands::Perm(_) => Unknown,
             Subcommands::Completions { .. } => Completions,
             Subcommands::Help => Unknown,
             Subcommands::Alias(alias_args::Platform { cmd }) => match cmd {

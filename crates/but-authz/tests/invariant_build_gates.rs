@@ -19,6 +19,7 @@ const AUTHZ_CONFIG: &str = "crates/but-authz/src/config.rs";
 const COMMIT_GATE: &str = "crates/but-api/src/commit/gate.rs";
 const MERGE_GATE: &str = "crates/but-api/src/legacy/merge_gate.rs";
 const CONFIG_MUTATE: &str = "crates/but-api/src/legacy/config_mutate.rs";
+const GOVERNANCE: &str = "crates/but-api/src/legacy/governance.rs";
 const FORGE_GUARD: &str = "crates/but-api/src/legacy/forge.rs";
 const ENFORCEMENT_PATHS: &[&str] = &[
     AUTHZ_AUTHORIZE,
@@ -26,6 +27,7 @@ const ENFORCEMENT_PATHS: &[&str] = &[
     COMMIT_GATE,
     MERGE_GATE,
     CONFIG_MUTATE,
+    GOVERNANCE,
     FORGE_GUARD,
 ];
 const SPRINT_02_ENFORCEMENT_PATHS: &[&str] = &[MERGE_GATE, CONFIG_MUTATE];
@@ -72,6 +74,12 @@ fn invariant_build_gates() -> anyhow::Result<()> {
         &workspace_root,
         AUTHORITY_POSITIVE_PATTERN,
         &[CONFIG_MUTATE],
+    )?;
+    assert_grep_has_matches(
+        "governance boundary must use the but-authz Authority axis",
+        &workspace_root,
+        AUTHORITY_POSITIVE_PATTERN,
+        &[GOVERNANCE],
     )?;
     assert_grep_has_no_matches(
         "commit gate must not use GitButler Permission as authz carrier",

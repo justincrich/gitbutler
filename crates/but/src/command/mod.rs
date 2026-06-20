@@ -14,6 +14,7 @@ pub mod gui;
 pub mod help;
 pub mod r#move;
 pub mod onboarding;
+pub mod perm;
 pub mod push;
 pub mod skill;
 pub mod update;
