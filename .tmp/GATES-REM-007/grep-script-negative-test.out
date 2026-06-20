@@ -1,0 +1,4 @@
+$ grep -E 'NEGATIVE_TEST|manual test|deletion|rename' tools/governance-checks/check_merge_gate_production_unchanged.sh
+# NEGATIVE_TEST (manual test): in a disposable worktree, delete one production
+# line from crates/but-api/src/legacy/merge_gate.rs or rename the file, then run
+exit_code=0
