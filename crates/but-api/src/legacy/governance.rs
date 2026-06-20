@@ -605,11 +605,35 @@ pub fn perm_grant_with_repo(
 ) -> anyhow::Result<PermWriteOutcome> {
     let parsed = parse_authorities(authorities)?;
     enforce_administration_write_gate(repo, target_ref)?;
+    perm_grant_with_parsed_authorities(repo, target_ref, principal, &parsed)
+}
 
+/// Grant direct permissions after the desktop command boundary has resolved the
+/// signed-in fleet-owner and asserted the v1 administration-write exception.
+///
+/// This is intentionally not used by the agent/env path, which must continue to
+/// call [`perm_grant_with_repo`] and resolve `BUT_AGENT_HANDLE` through
+/// `but-authz`.
+pub fn perm_grant_with_repo_as_fleet_owner(
+    repo: &gix::Repository,
+    target_ref: &str,
+    principal: &str,
+    authorities: &[&str],
+) -> anyhow::Result<PermWriteOutcome> {
+    let parsed = parse_authorities(authorities)?;
+    perm_grant_with_parsed_authorities(repo, target_ref, principal, &parsed)
+}
+
+fn perm_grant_with_parsed_authorities(
+    repo: &gix::Repository,
+    target_ref: &str,
+    principal: &str,
+    parsed: &[Authority],
+) -> anyhow::Result<PermWriteOutcome> {
     let mut permissions = load_permissions_for_write(repo, target_ref)?;
     let principal_wire = principal_entry_mut(&mut permissions, principal)?;
     let mut changed = false;
-    for authority in &parsed {
+    for authority in parsed {
         let token = authority.name();
         if !principal_wire
             .permissions
@@ -625,7 +649,7 @@ pub fn perm_grant_with_repo(
         write_worktree_permissions(repo, &permissions)?;
     }
 
-    Ok(write_outcome(principal, &parsed))
+    Ok(write_outcome(principal, parsed))
 }
 
 /// Revoke direct functional permissions from the working-tree governance config.
