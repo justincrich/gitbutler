@@ -1,0 +1,13 @@
+packages/but-sdk/src/generated/index.js:582:const { absorb, absorptionPlan, apply, applyBranchIntegration, approveReview, assignHunk, branchCheckout, branchCheckoutNew, branchCreate, branchDetails, branchDiff, branchGatesRead, branchGatesUpdate, changesInWorktree, changesInWorktreeWithPerm, closeReview, commentReview, commitAmend, commitCreate, commitDetailsWithLineStats, commitDiscard, commitDiscardChanges, commitInsertBlank, commitMove, commitMoveChangesBetween, commitReword, commitSquash, commitUncommit, commitUncommitChanges, discardWorktreeChanges, forgeCompareBranchUrl, forgeInfo, forgeProvider, getInitialBranchIntegration, getRedoTargetSnapshot, getRepoInfo, getReview, getReviewBaseRepoUrl, getReviewMergeStatus, getUndoTargetSnapshot, governanceStatusRead, groupAddMember, groupCreate, groupDelete, groupGrant, groupList, groupRemoveMember, groupRevoke, headInfo, initApplicationNamespace, listAvailableReviewTemplates, listBranches, listCiChecks, listEditors, listProjectsStateless, listReviews, listReviewsForBranch, mergeReview, moveBranch, openInEditor, peelRestoreSnapshot, permGrant, permList, permRevoke, publishReview, pushStack, removeBranch, requestChangesReview, restoreSnapshotWithKind, reviewTemplate, setReviewAutoMerge, setReviewDraftiness, setReviewTemplate, tearOffBranch, treeChangeDiffs, unapplyStack, updateBranchName, updateReview, updateReviewFooters, warmCiChecksCache, workspaceBranchAndAncestorsPush, workspaceIntegrateUpstream, WatcherHandle, askpassInit, askpassSubmitPromptResponse, watcherStart } = nativeBinding
+packages/but-sdk/src/generated/index.js:630:export { groupRevoke }
+packages/but-sdk/src/generated/index.d.ts:345:/** Revoke governed group permissions through the but-api boundary (`group_revoke`). */
+packages/but-sdk/src/generated/index.d.ts:346:export declare function groupRevoke(projectId: string, targetRef: string, group: string, authorities: Array<string>): Promise<GroupWriteOutcome>
+diff --git a/packages/but-sdk/src/generated/index.d.ts b/packages/but-sdk/src/generated/index.d.ts
+index f6858b2699..541c3b5aac 100644
+--- a/packages/but-sdk/src/generated/index.d.ts
++++ b/packages/but-sdk/src/generated/index.d.ts
+@@ -2736,3 +2736,4 @@ export type WorktreeChanges = {
+   dependencies: HunkDependencies | null;
+   dependenciesError: SerdeError | null;
+ };
++

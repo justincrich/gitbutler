@@ -250,6 +250,20 @@ pub fn group_grant(
     group_grant_with_repo(&repo, &target_ref, &group, &authorities)
 }
 
+/// Revoke governed group permissions through the but-api boundary (`group_revoke`).
+#[but_api(napi)]
+pub fn group_revoke(
+    ctx: &Context,
+    target_ref: String,
+    group: String,
+    authorities: Vec<String>,
+) -> anyhow::Result<GroupWriteOutcome> {
+    let repo = ctx.repo.get()?;
+    let target_ref = target_ref_from_ctx(ctx, Some(&target_ref))?;
+    let authorities = authority_slices(&authorities);
+    group_revoke_with_repo(&repo, &target_ref, &group, &authorities)
+}
+
 /// Add a principal to a governed group through the but-api boundary (`group_add_member`).
 #[but_api(napi)]
 pub fn group_add_member(
@@ -551,6 +565,55 @@ fn group_grant_authorized(
     }
 
     if changed {
+        write_worktree_permissions(repo, &permissions)?;
+    }
+
+    Ok(group_write_outcome(group, parsed, None))
+}
+
+/// Revoke functional permissions from a governed group in the working-tree config.
+pub fn group_revoke_with_repo(
+    repo: &gix::Repository,
+    target_ref: &str,
+    group: &str,
+    authorities: &[&str],
+) -> anyhow::Result<GroupWriteOutcome> {
+    let parsed = parse_authorities(authorities)?;
+    enforce_administration_write_gate(repo, target_ref)?;
+    group_revoke_authorized(repo, target_ref, group, &parsed)
+}
+
+/// Revoke functional permissions from a governed group after the desktop
+/// fleet-owner boundary has asserted unconditional administration-write
+/// authority.
+pub fn group_revoke_with_repo_as_fleet_owner(
+    repo: &gix::Repository,
+    target_ref: &str,
+    group: &str,
+    authorities: &[&str],
+) -> anyhow::Result<GroupWriteOutcome> {
+    let parsed = parse_authorities(authorities)?;
+    group_revoke_authorized(repo, target_ref, group, &parsed)
+}
+
+fn group_revoke_authorized(
+    repo: &gix::Repository,
+    target_ref: &str,
+    group: &str,
+    parsed: &[Authority],
+) -> anyhow::Result<GroupWriteOutcome> {
+    let mut permissions = load_permissions_for_write(repo, target_ref)?;
+    let group_wire = existing_group_entry_mut(&mut permissions, group)?;
+    let revoke_tokens = parsed
+        .iter()
+        .map(|authority| authority.name())
+        .collect::<BTreeSet<_>>();
+    let before_len = group_wire.permissions.len();
+    group_wire
+        .permissions
+        .retain(|token| !revoke_tokens.contains(token.as_str()));
+
+    if group_wire.permissions.len() != before_len {
         write_worktree_permissions(repo, &permissions)?;
     }
 
