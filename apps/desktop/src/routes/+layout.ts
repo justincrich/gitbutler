@@ -10,7 +10,7 @@ import type { LayoutLoad } from "./$types";
 lscache.flushExpired();
 
 export const ssr = false;
-export const prerender = false;
+export const prerender = true;
 export const csr = true;
 
 // eslint-disable-next-line
