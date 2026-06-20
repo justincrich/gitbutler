@@ -1,0 +1,547 @@
+
+> root@ build:sdk /Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-008-GROUP-REVOKE-CONTRACT
+> turbo run --filter @gitbutler/but-sdk build --no-daemon
+
+ WARNING  --no-daemon is deprecated and will be removed in version 3.0. The daemon is no longer used for `turbo run`.
+• turbo 2.9.14
+ WARNING  the `daemon` configuration option is deprecated and will be removed in version 3.0. The daemon is no longer used for `turbo run`.
+
+   • Packages in scope: @gitbutler/but-sdk
+   • Running build in 1 packages
+   • Remote caching disabled, using shared worktree cache
+
+@gitbutler/but-sdk:build: cache miss, executing 07cb68b433d637b6
+@gitbutler/but-sdk:build:
+@gitbutler/but-sdk:build: > @gitbutler/but-sdk@0.0.1 build /Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-008-GROUP-REVOKE-CONTRACT/packages/but-sdk
+@gitbutler/but-sdk:build: > pnpm build:napi && pnpm build:types
+@gitbutler/but-sdk:build:
+@gitbutler/but-sdk:build:
+@gitbutler/but-sdk:build: > @gitbutler/but-sdk@0.0.1 build:napi /Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-008-GROUP-REVOKE-CONTRACT/packages/but-sdk
+@gitbutler/but-sdk:build: > napi build --platform --esm --manifest-path ../../crates/but-napi/Cargo.toml --js index.js --dts index.d.ts --output-dir ./src/generated/.
+@gitbutler/but-sdk:build:
+@gitbutler/but-sdk:build:    Compiling proc-macro2 v1.0.106
+@gitbutler/but-sdk:build:    Compiling unicode-ident v1.0.24
+@gitbutler/but-sdk:build:    Compiling quote v1.0.45
+@gitbutler/but-sdk:build:    Compiling serde_core v1.0.228
+@gitbutler/but-sdk:build:    Compiling libc v0.2.186
+@gitbutler/but-sdk:build:    Compiling serde v1.0.228
+@gitbutler/but-sdk:build:    Compiling cfg-if v1.0.4
+@gitbutler/but-sdk:build:    Compiling memchr v2.8.0
+@gitbutler/but-sdk:build:    Compiling regex-syntax v0.8.9
+@gitbutler/but-sdk:build:    Compiling scopeguard v1.2.0
+@gitbutler/but-sdk:build:    Compiling parking_lot_core v0.9.12
+@gitbutler/but-sdk:build:    Compiling bytes v1.11.1
+@gitbutler/but-sdk:build:    Compiling once_cell v1.21.4
+@gitbutler/but-sdk:build:    Compiling thiserror v2.0.18
+@gitbutler/but-sdk:build:    Compiling stable_deref_trait v1.2.1
+@gitbutler/but-sdk:build:    Compiling itoa v1.0.17
+@gitbutler/but-sdk:build:    Compiling foldhash v0.2.0
+@gitbutler/but-sdk:build:    Compiling tinyvec_macros v0.1.1
+@gitbutler/but-sdk:build:    Compiling gix-trace v0.1.20 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+@gitbutler/but-sdk:build:    Compiling crossbeam-utils v0.8.21
+@gitbutler/but-sdk:build:    Compiling tinyvec v1.10.0
+@gitbutler/but-sdk:build:    Compiling lock_api v0.4.14
+@gitbutler/but-sdk:build:    Compiling fastrand v2.3.0
+@gitbutler/but-sdk:build:    Compiling allocator-api2 v0.2.21
+@gitbutler/but-sdk:build:    Compiling equivalent v1.0.2
+@gitbutler/but-sdk:build:    Compiling same-file v1.0.6
+@gitbutler/but-sdk:build:    Compiling typenum v1.20.0
+@gitbutler/but-sdk:build:    Compiling shlex v1.3.0
+@gitbutler/but-sdk:build:    Compiling aho-corasick v1.1.4
+@gitbutler/but-sdk:build:    Compiling unicode-normalization v0.1.25
+@gitbutler/but-sdk:build:    Compiling walkdir v2.5.0
+@gitbutler/but-sdk:build:    Compiling find-msvc-tools v0.1.9
+@gitbutler/but-sdk:build:    Compiling hashbrown v0.17.1
+@gitbutler/but-sdk:build:    Compiling crc32fast v1.5.0
+@gitbutler/but-sdk:build:    Compiling version_check v0.9.5
+@gitbutler/but-sdk:build:    Compiling zlib-rs v0.6.2
+@gitbutler/but-sdk:build:    Compiling byteorder v1.5.0
+@gitbutler/but-sdk:build:    Compiling heapless v0.8.0
+@gitbutler/but-sdk:build:    Compiling getrandom v0.4.1
+@gitbutler/but-sdk:build:    Compiling generic-array v0.14.7
+@gitbutler/but-sdk:build:    Compiling hash32 v0.3.1
+@gitbutler/but-sdk:build:    Compiling jiff v0.2.28
+@gitbutler/but-sdk:build:    Compiling rustix v1.1.4
+@gitbutler/but-sdk:build:    Compiling hybrid-array v0.4.11
+@gitbutler/but-sdk:build:    Compiling pin-project-lite v0.2.16
+@gitbutler/but-sdk:build:    Compiling regex-automata v0.4.14
+@gitbutler/but-sdk:build:    Compiling block-buffer v0.12.0
+@gitbutler/but-sdk:build:    Compiling crypto-common v0.2.1
+@gitbutler/but-sdk:build:    Compiling futures-core v0.3.32
+@gitbutler/but-sdk:build:    Compiling hashbrown v0.14.5
+@gitbutler/but-sdk:build:    Compiling digest v0.11.3
+@gitbutler/but-sdk:build:    Compiling futures-sink v0.3.32
+@gitbutler/but-sdk:build:    Compiling fnv v1.0.7
+@gitbutler/but-sdk:build:    Compiling zmij v1.0.21
+@gitbutler/but-sdk:build:    Compiling core-foundation-sys v0.8.7
+@gitbutler/but-sdk:build:    Compiling indexmap v2.14.0
+@gitbutler/but-sdk:build:    Compiling slab v0.4.12
+@gitbutler/but-sdk:build:    Compiling bitflags v2.11.1
+@gitbutler/but-sdk:build:    Compiling percent-encoding v2.3.2
+@gitbutler/but-sdk:build:    Compiling syn v2.0.117
+@gitbutler/but-sdk:build:    Compiling fs_extra v1.3.0
+@gitbutler/but-sdk:build:    Compiling dunce v1.0.5
+@gitbutler/but-sdk:build:    Compiling futures-channel v0.3.32
+@gitbutler/but-sdk:build:    Compiling writeable v0.6.2
+@gitbutler/but-sdk:build:    Compiling litemap v0.8.1
+@gitbutler/but-sdk:build:    Compiling tracing-core v0.1.36
+@gitbutler/but-sdk:build:    Compiling icu_normalizer_data v2.1.1
+@gitbutler/but-sdk:build:    Compiling icu_properties_data v2.1.2
+@gitbutler/but-sdk:build:    Compiling futures-task v0.3.32
+@gitbutler/but-sdk:build:    Compiling futures-io v0.3.32
+@gitbutler/but-sdk:build:    Compiling aws-lc-rs v1.16.0
+@gitbutler/but-sdk:build:    Compiling log v0.4.29
+@gitbutler/but-sdk:build:    Compiling crossbeam-channel v0.5.15
+@gitbutler/but-sdk:build:    Compiling zeroize v1.8.2
+@gitbutler/but-sdk:build:    Compiling unicode-bom v2.0.3
+@gitbutler/but-sdk:build:    Compiling http v1.4.0
+@gitbutler/but-sdk:build:    Compiling serde_json v1.0.149
+@gitbutler/but-sdk:build:    Compiling static_assertions v1.1.0
+@gitbutler/but-sdk:build:    Compiling encoding_rs v0.8.35
+@gitbutler/but-sdk:build:    Compiling errno v0.3.14
+@gitbutler/but-sdk:build:    Compiling jobserver v0.1.34
+@gitbutler/but-sdk:build:    Compiling cpufeatures v0.2.17
+@gitbutler/but-sdk:build:    Compiling cpufeatures v0.3.0
+@gitbutler/but-sdk:build:    Compiling cc v1.2.56
+@gitbutler/but-sdk:build:    Compiling sha2 v0.11.0
+@gitbutler/but-sdk:build:    Compiling memmap2 v0.9.10
+@gitbutler/but-sdk:build:    Compiling signal-hook-registry v1.4.8
+@gitbutler/but-sdk:build:    Compiling socket2 v0.6.2
+@gitbutler/but-sdk:build:    Compiling mio v1.1.1
+@gitbutler/but-sdk:build:    Compiling shell-words v1.1.1
+@gitbutler/but-sdk:build:    Compiling http-body v1.0.1
+@gitbutler/but-sdk:build:    Compiling rustls-pki-types v1.14.0
+@gitbutler/but-sdk:build:    Compiling form_urlencoded v1.2.2
+@gitbutler/but-sdk:build:    Compiling utf8_iter v1.0.4
+@gitbutler/but-sdk:build:    Compiling cmake v0.1.57
+@gitbutler/but-sdk:build:    Compiling rustls v0.23.36
+@gitbutler/but-sdk:build:    Compiling untrusted v0.9.0
+@gitbutler/but-sdk:build:    Compiling httparse v1.10.1
+@gitbutler/but-sdk:build:    Compiling subtle v2.6.1
+@gitbutler/but-sdk:build:    Compiling tower-service v0.3.3
+@gitbutler/but-sdk:build:    Compiling atomic-waker v1.1.2
+@gitbutler/but-sdk:build:    Compiling try-lock v0.2.5
+@gitbutler/but-sdk:build:    Compiling security-framework-sys v2.17.0
+@gitbutler/but-sdk:build:    Compiling filetime v0.2.29
+@gitbutler/but-sdk:build:    Compiling want v0.3.1
+@gitbutler/but-sdk:build:    Compiling core-foundation v0.10.1
+@gitbutler/but-sdk:build:    Compiling unicase v2.9.0
+@gitbutler/but-sdk:build:    Compiling base64 v0.22.1
+@gitbutler/but-sdk:build:    Compiling pkg-config v0.3.32
+@gitbutler/but-sdk:build:    Compiling pin-utils v0.1.0
+@gitbutler/but-sdk:build:    Compiling sync_wrapper v1.0.2
+@gitbutler/but-sdk:build:    Compiling ipnet v2.11.0
+@gitbutler/but-sdk:build:    Compiling ryu v1.0.23
+@gitbutler/but-sdk:build:    Compiling mime_guess v2.0.5
+@gitbutler/but-sdk:build:    Compiling tower-layer v0.3.3
+@gitbutler/but-sdk:build:    Compiling synstructure v0.13.2
+@gitbutler/but-sdk:build:    Compiling security-framework v3.7.0
+@gitbutler/but-sdk:build:    Compiling iri-string v0.7.10
+@gitbutler/but-sdk:build:    Compiling vcpkg v0.2.15
+@gitbutler/but-sdk:build:    Compiling mime v0.3.17
+@gitbutler/but-sdk:build:    Compiling aws-lc-sys v0.37.1
+@gitbutler/but-sdk:build:    Compiling autocfg v1.5.0
+@gitbutler/but-sdk:build:    Compiling http-body-util v0.1.3
+@gitbutler/but-sdk:build:    Compiling rustversion v1.0.22
+@gitbutler/but-sdk:build:    Compiling clru v0.6.2
+@gitbutler/but-sdk:build:    Compiling io-close v0.3.7
+@gitbutler/but-sdk:build:    Compiling anyhow v1.0.102
+@gitbutler/but-sdk:build:    Compiling crypto-common v0.1.7
+@gitbutler/but-sdk:build:    Compiling block-buffer v0.10.4
+@gitbutler/but-sdk:build:    Compiling num-traits v0.2.19
+@gitbutler/but-sdk:build:    Compiling uuid v1.23.1
+@gitbutler/but-sdk:build:    Compiling digest v0.10.7
+@gitbutler/but-sdk:build:    Compiling iana-time-zone v0.1.65
+@gitbutler/but-sdk:build:    Compiling ref-cast v1.0.25
+@gitbutler/but-sdk:build:    Compiling sha1 v0.10.6
+@gitbutler/but-sdk:build:    Compiling sha1-checked v0.10.0
+@gitbutler/but-sdk:build:    Compiling zerocopy v0.8.39
+@gitbutler/but-sdk:build:    Compiling serde_derive_internals v0.29.1
+@gitbutler/but-sdk:build:    Compiling openssl-src v300.5.5+3.5.5
+@gitbutler/but-sdk:build:    Compiling option-ext v0.2.0
+@gitbutler/but-sdk:build:    Compiling winnow v0.7.14
+@gitbutler/but-sdk:build:    Compiling dirs-sys v0.5.0
+@gitbutler/but-sdk:build:    Compiling libz-sys v1.1.23
+@gitbutler/but-sdk:build:    Compiling serde_spanned v1.0.4
+@gitbutler/but-sdk:build:    Compiling openssl-sys v0.9.114
+@gitbutler/but-sdk:build:    Compiling tempfile v3.27.0
+@gitbutler/but-sdk:build:    Compiling serde_derive v1.0.228
+@gitbutler/but-sdk:build:    Compiling thiserror-impl v2.0.18
+@gitbutler/but-sdk:build:    Compiling zerofrom-derive v0.1.6
+@gitbutler/but-sdk:build:    Compiling yoke-derive v0.8.1
+@gitbutler/but-sdk:build:    Compiling zerovec-derive v0.11.2
+@gitbutler/but-sdk:build:    Compiling displaydoc v0.2.5
+@gitbutler/but-sdk:build:    Compiling tokio-macros v2.6.0
+@gitbutler/but-sdk:build:    Compiling tracing-attributes v0.1.31
+@gitbutler/but-sdk:build:    Compiling futures-macro v0.3.32
+@gitbutler/but-sdk:build:    Compiling maybe-async v0.2.11
+@gitbutler/but-sdk:build:    Compiling ref-cast-impl v1.0.25
+@gitbutler/but-sdk:build:    Compiling toml_parser v1.0.9+spec-1.1.0
+@gitbutler/but-sdk:build:    Compiling schemars_derive v1.2.1
+@gitbutler/but-sdk:build:    Compiling zerofrom v0.1.6
+@gitbutler/but-sdk:build:    Compiling toml_datetime v0.7.5+spec-1.1.0
+@gitbutler/but-sdk:build:    Compiling futures-util v0.3.32
+@gitbutler/but-sdk:build:    Compiling tracing v0.1.44
+@gitbutler/but-sdk:build:    Compiling toml_writer v1.0.6+spec-1.1.0
+@gitbutler/but-sdk:build:    Compiling dyn-clone v1.0.20
+@gitbutler/but-sdk:build:    Compiling toml v0.9.12+spec-1.1.0
+@gitbutler/but-sdk:build:    Compiling dirs v6.0.0
+@gitbutler/but-sdk:build:    Compiling libssh2-sys v0.3.1
+@gitbutler/but-sdk:build:    Compiling inventory v0.3.24
+@gitbutler/but-sdk:build:    Compiling pathdiff v0.2.3
+@gitbutler/but-sdk:build:    Compiling libgit2-sys v0.18.3+1.9.2
+@gitbutler/but-sdk:build:    Compiling open v5.3.4
+@gitbutler/but-sdk:build:    Compiling getrandom v0.3.4
+@gitbutler/but-sdk:build:    Compiling getrandom v0.2.17
+@gitbutler/but-sdk:build:    Compiling chardetng v0.1.17
+@gitbutler/but-sdk:build:    Compiling fslock v0.2.1
+@gitbutler/but-sdk:build:    Compiling unicode-segmentation v1.13.2
+@gitbutler/but-sdk:build:    Compiling arc-swap v1.9.1
+@gitbutler/but-sdk:build:    Compiling rand_core v0.6.4
+@gitbutler/but-sdk:build:    Compiling libsqlite3-sys v0.37.0
+@gitbutler/but-sdk:build:    Compiling fsevent-sys v4.1.0
+@gitbutler/but-sdk:build:    Compiling notify-types v2.1.0
+@gitbutler/but-sdk:build:    Compiling hashbrown v0.16.1
+@gitbutler/but-sdk:build:    Compiling notify v8.2.0
+@gitbutler/but-sdk:build:    Compiling keyring v3.6.3
+@gitbutler/but-sdk:build:    Compiling but-path v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-008-GROUP-REVOKE-CONTRACT/crates/but-path)
+@gitbutler/but-sdk:build:    Compiling hashlink v0.11.0
+@gitbutler/but-sdk:build:    Compiling instant v0.1.13
+@gitbutler/but-sdk:build:    Compiling fallible-streaming-iterator v0.1.9
+@gitbutler/but-sdk:build:    Compiling fallible-iterator v0.3.0
+@gitbutler/but-sdk:build:    Compiling serde_json_lenient v0.2.4
+@gitbutler/but-sdk:build:    Compiling proc-macro-error-attr2 v2.0.0
+@gitbutler/but-sdk:build:    Compiling but-db v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-008-GROUP-REVOKE-CONTRACT/crates/but-db)
+@gitbutler/but-sdk:build:    Compiling foldhash v0.1.5
+@gitbutler/but-sdk:build:    Compiling proc-macro-error2 v2.0.1
+@gitbutler/but-sdk:build:    Compiling hashbrown v0.15.5
+@gitbutler/but-sdk:build:    Compiling nom v8.0.0
+@gitbutler/but-sdk:build:    Compiling heck v0.5.0
+@gitbutler/but-sdk:build:    Compiling either v1.15.0
+@gitbutler/but-sdk:build:    Compiling urlencoding v2.1.3
+@gitbutler/but-sdk:build:    Compiling fixedbitset v0.5.7
+@gitbutler/but-sdk:build:    Compiling strum_macros v0.27.2
+@gitbutler/but-sdk:build:    Compiling petgraph v0.8.3
+@gitbutler/but-sdk:build:    Compiling yoke v0.8.1
+@gitbutler/but-sdk:build:    Compiling itertools v0.14.0
+@gitbutler/but-sdk:build:    Compiling sha2 v0.10.9
+@gitbutler/but-sdk:build:    Compiling hex v0.4.3
+@gitbutler/but-sdk:build:    Compiling md5 v0.8.0
+@gitbutler/but-sdk:build:    Compiling ppv-lite86 v0.2.21
+@gitbutler/but-sdk:build:    Compiling objc2 v0.6.4
+@gitbutler/but-sdk:build:    Compiling strum v0.27.2
+@gitbutler/but-sdk:build:    Compiling crossbeam-epoch v0.9.18
+@gitbutler/but-sdk:build:    Compiling rand_chacha v0.3.1
+@gitbutler/but-sdk:build:    Compiling objc2-encode v4.1.0
+@gitbutler/but-sdk:build:    Compiling gix-trace v0.1.19
+@gitbutler/but-sdk:build:    Compiling rand v0.8.5
+@gitbutler/but-sdk:build:    Compiling crossbeam-deque v0.8.6
+@gitbutler/but-sdk:build:    Compiling shellexpand v3.1.2
+@gitbutler/but-sdk:build:    Compiling cfb v0.7.3
+@gitbutler/but-sdk:build:    Compiling thread_local v1.1.9
+@gitbutler/but-sdk:build:    Compiling backoff v0.4.0
+@gitbutler/but-sdk:build:    Compiling fuzzy-matcher v0.3.7
+@gitbutler/but-sdk:build:    Compiling ident_case v1.0.1
+@gitbutler/but-sdk:build:    Compiling strsim v0.11.1
+@gitbutler/but-sdk:build:    Compiling memoffset v0.9.1
+@gitbutler/but-sdk:build:    Compiling rand_core v0.9.5
+@gitbutler/but-sdk:build:    Compiling infer v0.19.0
+@gitbutler/but-sdk:build:    Compiling rand_chacha v0.9.0
+@gitbutler/but-sdk:build:    Compiling cfg_aliases v0.2.1
+@gitbutler/but-sdk:build:    Compiling nanorand v0.7.0
+@gitbutler/but-sdk:build:    Compiling nix v0.30.1
+@gitbutler/but-sdk:build:    Compiling rand v0.9.4
+@gitbutler/but-sdk:build:    Compiling spin v0.9.8
+@gitbutler/but-sdk:build:    Compiling darling_core v0.20.11
+@gitbutler/but-sdk:build:    Compiling flume v0.11.1
+@gitbutler/but-sdk:build:    Compiling smallvec v1.15.1
+@gitbutler/but-sdk:build:    Compiling bstr v1.12.1
+@gitbutler/but-sdk:build:    Compiling faster-hex v0.10.0
+@gitbutler/but-sdk:build:    Compiling nonempty v0.12.0
+@gitbutler/but-sdk:build:    Compiling kstring v2.0.2
+@gitbutler/but-sdk:build:    Compiling gix-sec v0.14.1 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+@gitbutler/but-sdk:build:    Compiling serde_urlencoded v0.7.1
+@gitbutler/but-sdk:build:    Compiling chrono v0.4.44
+@gitbutler/but-sdk:build:    Compiling parking_lot v0.12.5
+@gitbutler/but-sdk:build:    Compiling dashmap v6.2.1
+@gitbutler/but-sdk:build:    Compiling boolean-enums v0.4.1
+@gitbutler/but-sdk:build:    Compiling gix-validate v0.11.2 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+@gitbutler/but-sdk:build:    Compiling gix-path v0.12.1 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+@gitbutler/but-sdk:build:    Compiling gix-utils v0.3.3 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+@gitbutler/but-sdk:build:    Compiling prodash v31.0.0
+@gitbutler/but-sdk:build:    Compiling gix-error v0.2.4 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+@gitbutler/but-sdk:build:    Compiling tokio v1.50.0
+@gitbutler/but-sdk:build:    Compiling gix-date v0.15.4 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+@gitbutler/but-sdk:build:    Compiling gix-chunk v0.7.2 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+@gitbutler/but-sdk:build:    Compiling gix-features v0.48.1 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+@gitbutler/but-sdk:build:    Compiling gix-quote v0.7.2 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+@gitbutler/but-sdk:build:    Compiling gix-actor v0.41.1 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+@gitbutler/but-sdk:build:    Compiling gix-config-value v0.18.1 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+@gitbutler/but-sdk:build:    Compiling gix-hash v0.25.1 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+@gitbutler/but-sdk:build:    Compiling gix-fs v0.21.2 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+@gitbutler/but-sdk:build:    Compiling gix-glob v0.26.1 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+@gitbutler/but-sdk:build:    Compiling gix-command v0.9.1 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+@gitbutler/but-sdk:build:    Compiling gix-hashtable v0.15.1 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+@gitbutler/but-sdk:build:    Compiling gix-tempfile v23.0.1 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+@gitbutler/but-sdk:build:    Compiling gix-commitgraph v0.37.1 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+@gitbutler/but-sdk:build:    Compiling gix-object v0.61.0 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+@gitbutler/but-sdk:build:    Compiling gix-lock v23.0.1 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+@gitbutler/but-sdk:build:    Compiling gix-attributes v0.33.1 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+@gitbutler/but-sdk:build:    Compiling gix-bitmap v0.3.2 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+@gitbutler/but-sdk:build:    Compiling gix-packetline v0.21.5 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+@gitbutler/but-sdk:build:    Compiling gix-ignore v0.21.1 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+@gitbutler/but-sdk:build:    Compiling gix-url v0.36.1 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+@gitbutler/but-sdk:build:    Compiling gix-prompt v0.15.1 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+@gitbutler/but-sdk:build:    Compiling gix-imara-diff v0.2.2 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+@gitbutler/but-sdk:build:    Compiling gix-shallow v0.12.1 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+@gitbutler/but-sdk:build:    Compiling schemars v1.2.1
+@gitbutler/but-sdk:build:    Compiling gix-pathspec v0.18.1 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+@gitbutler/but-sdk:build:    Compiling gix-credentials v0.38.1 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+@gitbutler/but-sdk:build:    Compiling getset v0.1.6
+@gitbutler/but-sdk:build:    Compiling gix-validate v0.10.1
+@gitbutler/but-sdk:build:    Compiling gix-revwalk v0.32.0 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+@gitbutler/but-sdk:build:    Compiling gix-ref v0.64.0 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+@gitbutler/but-sdk:build:    Compiling gix-filter v0.31.0 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+@gitbutler/but-sdk:build:    Compiling zerovec v0.11.5
+@gitbutler/but-sdk:build:    Compiling zerotrie v0.2.3
+@gitbutler/but-sdk:build:    Compiling gix-traverse v0.58.0 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+@gitbutler/but-sdk:build:    Compiling gix-revision v0.46.0 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+@gitbutler/but-sdk:build:    Compiling gix-index v0.52.0 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+@gitbutler/but-sdk:build:    Compiling gix-negotiate v0.32.0 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+@gitbutler/but-sdk:build:    Compiling gix-pack v0.71.0 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+@gitbutler/but-sdk:build:    Compiling gix-refspec v0.42.0 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+@gitbutler/but-sdk:build:    Compiling gix-path v0.10.22
+@gitbutler/but-sdk:build:    Compiling gix-discover v0.52.0 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+@gitbutler/but-sdk:build:    Compiling gix-config v0.57.0 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+@gitbutler/but-sdk:build:    Compiling rusqlite v0.39.0
+@gitbutler/but-sdk:build:    Compiling globset v0.4.18
+@gitbutler/but-sdk:build:    Compiling futures-executor v0.3.32
+@gitbutler/but-sdk:build:    Compiling gix-worktree v0.53.0 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+@gitbutler/but-sdk:build:    Compiling ignore v0.4.25
+@gitbutler/but-sdk:build:    Compiling futures v0.3.32
+@gitbutler/but-sdk:build:    Compiling gix-diff v0.64.0 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+@gitbutler/but-sdk:build:    Compiling gix-dir v0.26.0 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+@gitbutler/but-sdk:build:    Compiling gix-odb v0.81.0 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+@gitbutler/but-sdk:build:    Compiling gix-submodule v0.31.0 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+@gitbutler/but-sdk:build:    Compiling gix-worktree-state v0.31.0 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+@gitbutler/but-sdk:build:    Compiling objc2-core-foundation v0.3.2
+@gitbutler/but-sdk:build:    Compiling darling_macro v0.20.11
+@gitbutler/but-sdk:build:    Compiling gix-merge v0.17.0 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+@gitbutler/but-sdk:build:    Compiling gix-status v0.31.0 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+@gitbutler/but-sdk:build:    Compiling darling v0.20.11
+@gitbutler/but-sdk:build:    Compiling but-schemars v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-008-GROUP-REVOKE-CONTRACT/crates/but-schemars)
+@gitbutler/but-sdk:build:    Compiling tinystr v0.8.2
+@gitbutler/but-sdk:build:    Compiling potential_utf v0.1.4
+@gitbutler/but-sdk:build:    Compiling icu_locale_core v2.1.1
+@gitbutler/but-sdk:build:    Compiling icu_collections v2.1.1
+@gitbutler/but-sdk:build:    Compiling but-error v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-008-GROUP-REVOKE-CONTRACT/crates/but-error)
+@gitbutler/but-sdk:build:    Compiling objc2-io-kit v0.3.2
+@gitbutler/but-sdk:build:    Compiling lazy_static v1.5.0
+@gitbutler/but-sdk:build:    Compiling derive_builder_core v0.20.2
+@gitbutler/but-sdk:build:    Compiling minimal-lexical v0.2.1
+@gitbutler/but-sdk:build:    Compiling sysinfo v0.37.2
+@gitbutler/but-sdk:build:    Compiling dtor-proc-macro v0.0.13
+@gitbutler/but-sdk:build:    Compiling darling_core v0.23.0
+@gitbutler/but-sdk:build:    Compiling nom v7.1.3
+@gitbutler/but-sdk:build:    Compiling icu_provider v2.1.1
+@gitbutler/but-sdk:build:    Compiling icu_normalizer v2.1.1
+@gitbutler/but-sdk:build:    Compiling icu_properties v2.1.2
+@gitbutler/but-sdk:build:    Compiling napi-build v2.3.1
+@gitbutler/but-sdk:build:    Compiling derive_builder_macro v0.20.2
+@gitbutler/but-sdk:build:    Compiling secrecy v0.10.3
+@gitbutler/but-sdk:build:    Compiling serde-error v0.1.3
+@gitbutler/but-sdk:build:    Compiling derive_builder v0.20.2
+@gitbutler/but-sdk:build:    Compiling async-openai-macros v0.3.0
+@gitbutler/but-sdk:build:    Compiling powerfmt v0.2.0
+@gitbutler/but-sdk:build:    Compiling num-conv v0.2.0
+@gitbutler/but-sdk:build:    Compiling idna_adapter v1.2.1
+@gitbutler/but-sdk:build:    Compiling ctor-proc-macro v0.0.13
+@gitbutler/but-sdk:build:    Compiling idna v1.1.0
+@gitbutler/but-sdk:build:    Compiling eventsource-stream v0.2.3
+@gitbutler/but-sdk:build:    Compiling time-core v0.1.8
+@gitbutler/but-sdk:build:    Compiling deranged v0.5.8
+@gitbutler/but-sdk:build:    Compiling time-macros v0.2.27
+@gitbutler/but-sdk:build:    Compiling regex v1.12.3
+@gitbutler/but-sdk:build:    Compiling tokio-util v0.7.18
+@gitbutler/but-sdk:build:    Compiling url v2.5.8
+@gitbutler/but-sdk:build:    Compiling tokio-stream v0.1.18
+@gitbutler/but-sdk:build:    Compiling rmcp v0.16.0
+@gitbutler/but-sdk:build:    Compiling h2 v0.4.13
+@gitbutler/but-sdk:build:    Compiling tower v0.5.3
+@gitbutler/but-sdk:build:    Compiling git-url-parse v0.6.0
+@gitbutler/but-sdk:build:    Compiling darling_macro v0.23.0
+@gitbutler/but-sdk:build:    Compiling serde_regex v1.1.0
+@gitbutler/but-sdk:build:    Compiling time v0.3.47
+@gitbutler/but-sdk:build:    Compiling napi v3.8.5
+@gitbutler/but-sdk:build:    Compiling tower-http v0.6.8
+@gitbutler/but-sdk:build:    Compiling darling v0.23.0
+@gitbutler/but-sdk:build:    Compiling convert_case v0.11.0
+@gitbutler/but-sdk:build:    Compiling dtor v0.8.1
+@gitbutler/but-sdk:build:    Compiling async-trait v0.1.89
+@gitbutler/but-sdk:build:    Compiling libloading v0.9.0
+@gitbutler/but-sdk:build:    Compiling semver v1.0.27
+@gitbutler/but-sdk:build:    Compiling pastey v0.2.1
+@gitbutler/but-sdk:build:    Compiling file-id v0.2.3
+@gitbutler/but-sdk:build:    Compiling napi-sys v3.2.1
+@gitbutler/but-sdk:build:    Compiling gitbutler-notify-debouncer v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-008-GROUP-REVOKE-CONTRACT/crates/gitbutler-filemonitor/vendor/debouncer)
+@gitbutler/but-sdk:build:    Compiling napi-derive-backend v5.0.4
+@gitbutler/but-sdk:build:    Compiling convert_case v0.10.0
+@gitbutler/but-sdk:build:    Compiling objc2-foundation v0.3.2
+@gitbutler/but-sdk:build:    Compiling nohash-hasher v0.2.0
+@gitbutler/but-sdk:build:    Compiling rustc-hash v2.1.1
+@gitbutler/but-sdk:build:    Compiling but-napi v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-008-GROUP-REVOKE-CONTRACT/crates/but-napi)
+@gitbutler/but-sdk:build:    Compiling which v8.0.2
+@gitbutler/but-sdk:build:    Compiling but-api-macros v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-008-GROUP-REVOKE-CONTRACT/crates/but-api-macros)
+@gitbutler/but-sdk:build:    Compiling hyper v1.8.1
+@gitbutler/but-sdk:build:    Compiling ctor v0.10.1
+@gitbutler/but-sdk:build:    Compiling rmcp-macros v0.16.0
+@gitbutler/but-sdk:build:    Compiling objc2-app-kit v0.3.2
+@gitbutler/but-sdk:build:    Compiling hyper-util v0.1.20
+@gitbutler/but-sdk:build:    Compiling napi-derive v3.5.4
+@gitbutler/but-sdk:build:    Compiling rustls-webpki v0.103.13
+@gitbutler/but-sdk:build:    Compiling tokio-rustls v0.26.4
+@gitbutler/but-sdk:build:    Compiling rustls-platform-verifier v0.6.2
+@gitbutler/but-sdk:build:    Compiling hyper-rustls v0.27.7
+@gitbutler/but-sdk:build:    Compiling reqwest v0.13.4
+@gitbutler/but-sdk:build:    Compiling gix-transport v0.57.1 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+@gitbutler/but-sdk:build:    Compiling async-openai v0.38.2
+@gitbutler/but-sdk:build:    Compiling gix-protocol v0.62.0 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+@gitbutler/but-sdk:build:    Compiling gix v0.84.0 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+@gitbutler/but-sdk:build:    Compiling but-project-handle v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-008-GROUP-REVOKE-CONTRACT/crates/but-project-handle)
+@gitbutler/but-sdk:build:    Compiling but-utils v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-008-GROUP-REVOKE-CONTRACT/crates/but-utils)
+@gitbutler/but-sdk:build:    Compiling but-secret v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-008-GROUP-REVOKE-CONTRACT/crates/but-secret)
+@gitbutler/but-sdk:build:    Compiling git-meta-lib v0.1.10 (https://github.com/git-meta/git-meta?rev=b40c108514a992abea2f739889376334481af1a3#b40c1085)
+@gitbutler/but-sdk:build:    Compiling but-authz v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-008-GROUP-REVOKE-CONTRACT/crates/but-authz)
+@gitbutler/but-sdk:build:    Compiling but-forge-storage v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-008-GROUP-REVOKE-CONTRACT/crates/but-forge-storage)
+@gitbutler/but-sdk:build:    Compiling but-settings v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-008-GROUP-REVOKE-CONTRACT/crates/but-settings)
+@gitbutler/but-sdk:build:    Compiling gitbutler-user v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-008-GROUP-REVOKE-CONTRACT/crates/gitbutler-user)
+@gitbutler/but-sdk:build:    Compiling gitbutler-filemonitor v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-008-GROUP-REVOKE-CONTRACT/crates/gitbutler-filemonitor)
+@gitbutler/but-sdk:build:    Compiling but-gitlab v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-008-GROUP-REVOKE-CONTRACT/crates/but-gitlab)
+@gitbutler/but-sdk:build:    Compiling but-github v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-008-GROUP-REVOKE-CONTRACT/crates/but-github)
+@gitbutler/but-sdk:build:    Compiling but-forge v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-008-GROUP-REVOKE-CONTRACT/crates/but-forge)
+@gitbutler/but-sdk:build:    Compiling git2 v0.20.4
+@gitbutler/but-sdk:build:    Compiling but-oxidize v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-008-GROUP-REVOKE-CONTRACT/crates/but-oxidize)
+@gitbutler/but-sdk:build:    Compiling but-serde v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-008-GROUP-REVOKE-CONTRACT/crates/but-serde)
+@gitbutler/but-sdk:build:    Compiling git2-hooks v0.5.0
+@gitbutler/but-sdk:build:    Compiling but-core v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-008-GROUP-REVOKE-CONTRACT/crates/but-core)
+@gitbutler/but-sdk:build:    Compiling gitbutler-reference v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-008-GROUP-REVOKE-CONTRACT/crates/gitbutler-reference)
+@gitbutler/but-sdk:build:    Compiling but-graph v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-008-GROUP-REVOKE-CONTRACT/crates/but-graph)
+@gitbutler/but-sdk:build:    Compiling gitbutler-project v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-008-GROUP-REVOKE-CONTRACT/crates/gitbutler-project)
+@gitbutler/but-sdk:build:    Compiling gitbutler-commit v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-008-GROUP-REVOKE-CONTRACT/crates/gitbutler-commit)
+@gitbutler/but-sdk:build:    Compiling but-askpass v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-008-GROUP-REVOKE-CONTRACT/crates/but-askpass)
+@gitbutler/but-sdk:build:    Compiling gitbutler-cherry-pick v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-008-GROUP-REVOKE-CONTRACT/crates/gitbutler-cherry-pick)
+@gitbutler/but-sdk:build:    Compiling gitbutler-branch v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-008-GROUP-REVOKE-CONTRACT/crates/gitbutler-branch)
+@gitbutler/but-sdk:build:    Compiling but-meta v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-008-GROUP-REVOKE-CONTRACT/crates/but-meta)
+@gitbutler/but-sdk:build:    Compiling but-ctx v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-008-GROUP-REVOKE-CONTRACT/crates/but-ctx)
+@gitbutler/but-sdk:build:    Compiling but-gerrit v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-008-GROUP-REVOKE-CONTRACT/crates/but-gerrit)
+@gitbutler/but-sdk:build:    Compiling gitbutler-git v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-008-GROUP-REVOKE-CONTRACT/crates/gitbutler-git)
+@gitbutler/but-sdk:build:    Compiling but-hunk-dependency v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-008-GROUP-REVOKE-CONTRACT/crates/but-hunk-dependency)
+@gitbutler/but-sdk:build:    Compiling gitbutler-workspace v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-008-GROUP-REVOKE-CONTRACT/crates/gitbutler-workspace)
+@gitbutler/but-sdk:build:    Compiling gitbutler-repo v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-008-GROUP-REVOKE-CONTRACT/crates/gitbutler-repo)
+@gitbutler/but-sdk:build:    Compiling but-rebase v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-008-GROUP-REVOKE-CONTRACT/crates/but-rebase)
+@gitbutler/but-sdk:build:    Compiling but-hunk-assignment v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-008-GROUP-REVOKE-CONTRACT/crates/but-hunk-assignment)
+@gitbutler/but-sdk:build:    Compiling gitbutler-oplog v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-008-GROUP-REVOKE-CONTRACT/crates/gitbutler-oplog)
+@gitbutler/but-sdk:build:    Compiling gitbutler-stack v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-008-GROUP-REVOKE-CONTRACT/crates/gitbutler-stack)
+@gitbutler/but-sdk:build:    Compiling but-worktrees v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-008-GROUP-REVOKE-CONTRACT/crates/but-worktrees)
+@gitbutler/but-sdk:build:    Compiling but-oplog v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-008-GROUP-REVOKE-CONTRACT/crates/but-oplog)
+@gitbutler/but-sdk:build:    Compiling but-workspace v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-008-GROUP-REVOKE-CONTRACT/crates/but-workspace)
+@gitbutler/but-sdk:build:    Compiling gitbutler-repo-actions v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-008-GROUP-REVOKE-CONTRACT/crates/gitbutler-repo-actions)
+@gitbutler/but-sdk:build:    Compiling gitbutler-operating-modes v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-008-GROUP-REVOKE-CONTRACT/crates/gitbutler-operating-modes)
+@gitbutler/but-sdk:build:    Compiling but-tools v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-008-GROUP-REVOKE-CONTRACT/crates/but-tools)
+@gitbutler/but-sdk:build:    Compiling but-rules v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-008-GROUP-REVOKE-CONTRACT/crates/but-rules)
+@gitbutler/but-sdk:build:    Compiling but-llm v0.1.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-008-GROUP-REVOKE-CONTRACT/crates/but-llm)
+@gitbutler/but-sdk:build:    Compiling gitbutler-branch-actions v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-008-GROUP-REVOKE-CONTRACT/crates/gitbutler-branch-actions)
+@gitbutler/but-sdk:build:    Compiling gitbutler-edit-mode v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-008-GROUP-REVOKE-CONTRACT/crates/gitbutler-edit-mode)
+@gitbutler/but-sdk:build:    Compiling gitbutler-watcher v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-008-GROUP-REVOKE-CONTRACT/crates/gitbutler-watcher)
+@gitbutler/but-sdk:build:    Compiling but-cherry-apply v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-008-GROUP-REVOKE-CONTRACT/crates/but-cherry-apply)
+@gitbutler/but-sdk:build:    Compiling but-action v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-008-GROUP-REVOKE-CONTRACT/crates/but-action)
+@gitbutler/but-sdk:build:    Compiling but-api v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-008-GROUP-REVOKE-CONTRACT/crates/but-api)
+@gitbutler/but-sdk:build:     Finished `dev` profile [unoptimized + debuginfo] target(s) in 52.25s
+@gitbutler/but-sdk:build:
+@gitbutler/but-sdk:build: > @gitbutler/but-sdk@0.0.1 build:types /Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-008-GROUP-REVOKE-CONTRACT/packages/but-sdk
+@gitbutler/but-sdk:build: > cargo run -p but-ts -- --output ./src/generated/index.d.ts
+@gitbutler/but-sdk:build:
+@gitbutler/but-sdk:build:    Compiling aws-lc-sys v0.37.1
+@gitbutler/but-sdk:build:    Compiling rustls v0.23.36
+@gitbutler/but-sdk:build:    Compiling gix-tempfile v23.0.1 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+@gitbutler/but-sdk:build:    Compiling but-error v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-008-GROUP-REVOKE-CONTRACT/crates/but-error)
+@gitbutler/but-sdk:build:    Compiling aws-lc-rs v1.16.0
+@gitbutler/but-sdk:build:    Compiling gix-lock v23.0.1 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+@gitbutler/but-sdk:build:    Compiling gix-pack v0.71.0 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+@gitbutler/but-sdk:build:    Compiling gix-ref v0.64.0 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+@gitbutler/but-sdk:build:    Compiling gix-index v0.52.0 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+@gitbutler/but-sdk:build:    Compiling gix-shallow v0.12.1 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+@gitbutler/but-sdk:build:    Compiling rustls-webpki v0.103.13
+@gitbutler/but-sdk:build:    Compiling gix-worktree v0.53.0 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+@gitbutler/but-sdk:build:    Compiling gix-discover v0.52.0 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+@gitbutler/but-sdk:build:    Compiling gix-config v0.57.0 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+@gitbutler/but-sdk:build:    Compiling gix-diff v0.64.0 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+@gitbutler/but-sdk:build:    Compiling gix-dir v0.26.0 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+@gitbutler/but-sdk:build:    Compiling gix-worktree-state v0.31.0 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+@gitbutler/but-sdk:build:    Compiling gix-odb v0.81.0 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+@gitbutler/but-sdk:build:    Compiling gix-status v0.31.0 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+@gitbutler/but-sdk:build:    Compiling gix-merge v0.17.0 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+@gitbutler/but-sdk:build:    Compiling gix-submodule v0.31.0 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+@gitbutler/but-sdk:build:    Compiling tokio-rustls v0.26.4
+@gitbutler/but-sdk:build:    Compiling rustls-platform-verifier v0.6.2
+@gitbutler/but-sdk:build:    Compiling hyper-rustls v0.27.7
+@gitbutler/but-sdk:build:    Compiling reqwest v0.13.4
+@gitbutler/but-sdk:build:    Compiling gix-transport v0.57.1 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+@gitbutler/but-sdk:build:    Compiling async-openai v0.38.2
+@gitbutler/but-sdk:build:    Compiling gix-protocol v0.62.0 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+@gitbutler/but-sdk:build:    Compiling gix v0.84.0 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+@gitbutler/but-sdk:build:    Compiling but-utils v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-008-GROUP-REVOKE-CONTRACT/crates/but-utils)
+@gitbutler/but-sdk:build:    Compiling but-project-handle v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-008-GROUP-REVOKE-CONTRACT/crates/but-project-handle)
+@gitbutler/but-sdk:build:    Compiling but-oxidize v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-008-GROUP-REVOKE-CONTRACT/crates/but-oxidize)
+@gitbutler/but-sdk:build:    Compiling but-serde v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-008-GROUP-REVOKE-CONTRACT/crates/but-serde)
+@gitbutler/but-sdk:build:    Compiling but-secret v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-008-GROUP-REVOKE-CONTRACT/crates/but-secret)
+@gitbutler/but-sdk:build:    Compiling git-meta-lib v0.1.10 (https://github.com/git-meta/git-meta?rev=b40c108514a992abea2f739889376334481af1a3#b40c1085)
+@gitbutler/but-sdk:build:    Compiling but-authz v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-008-GROUP-REVOKE-CONTRACT/crates/but-authz)
+@gitbutler/but-sdk:build:    Compiling but-forge-storage v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-008-GROUP-REVOKE-CONTRACT/crates/but-forge-storage)
+@gitbutler/but-sdk:build:    Compiling but-db v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-008-GROUP-REVOKE-CONTRACT/crates/but-db)
+@gitbutler/but-sdk:build:    Compiling but-settings v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-008-GROUP-REVOKE-CONTRACT/crates/but-settings)
+@gitbutler/but-sdk:build:    Compiling but-core v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-008-GROUP-REVOKE-CONTRACT/crates/but-core)
+@gitbutler/but-sdk:build:    Compiling gitbutler-user v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-008-GROUP-REVOKE-CONTRACT/crates/gitbutler-user)
+@gitbutler/but-sdk:build:    Compiling but-gitlab v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-008-GROUP-REVOKE-CONTRACT/crates/but-gitlab)
+@gitbutler/but-sdk:build:    Compiling but-github v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-008-GROUP-REVOKE-CONTRACT/crates/but-github)
+@gitbutler/but-sdk:build:    Compiling but-forge v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-008-GROUP-REVOKE-CONTRACT/crates/but-forge)
+@gitbutler/but-sdk:build:    Compiling gitbutler-reference v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-008-GROUP-REVOKE-CONTRACT/crates/gitbutler-reference)
+@gitbutler/but-sdk:build:    Compiling but-graph v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-008-GROUP-REVOKE-CONTRACT/crates/but-graph)
+@gitbutler/but-sdk:build:    Compiling gitbutler-commit v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-008-GROUP-REVOKE-CONTRACT/crates/gitbutler-commit)
+@gitbutler/but-sdk:build:    Compiling but-askpass v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-008-GROUP-REVOKE-CONTRACT/crates/but-askpass)
+@gitbutler/but-sdk:build:    Compiling gitbutler-cherry-pick v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-008-GROUP-REVOKE-CONTRACT/crates/gitbutler-cherry-pick)
+@gitbutler/but-sdk:build:    Compiling gitbutler-branch v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-008-GROUP-REVOKE-CONTRACT/crates/gitbutler-branch)
+@gitbutler/but-sdk:build:    Compiling gitbutler-project v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-008-GROUP-REVOKE-CONTRACT/crates/gitbutler-project)
+@gitbutler/but-sdk:build:    Compiling but-meta v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-008-GROUP-REVOKE-CONTRACT/crates/but-meta)
+@gitbutler/but-sdk:build:    Compiling but-ctx v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-008-GROUP-REVOKE-CONTRACT/crates/but-ctx)
+@gitbutler/but-sdk:build:    Compiling but-gerrit v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-008-GROUP-REVOKE-CONTRACT/crates/but-gerrit)
+@gitbutler/but-sdk:build:    Compiling gitbutler-git v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-008-GROUP-REVOKE-CONTRACT/crates/gitbutler-git)
+@gitbutler/but-sdk:build:    Compiling gitbutler-workspace v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-008-GROUP-REVOKE-CONTRACT/crates/gitbutler-workspace)
+@gitbutler/but-sdk:build:    Compiling but-hunk-dependency v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-008-GROUP-REVOKE-CONTRACT/crates/but-hunk-dependency)
+@gitbutler/but-sdk:build:    Compiling gitbutler-repo v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-008-GROUP-REVOKE-CONTRACT/crates/gitbutler-repo)
+@gitbutler/but-sdk:build:    Compiling but-rebase v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-008-GROUP-REVOKE-CONTRACT/crates/but-rebase)
+@gitbutler/but-sdk:build:    Compiling but-hunk-assignment v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-008-GROUP-REVOKE-CONTRACT/crates/but-hunk-assignment)
+@gitbutler/but-sdk:build:    Compiling gitbutler-oplog v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-008-GROUP-REVOKE-CONTRACT/crates/gitbutler-oplog)
+@gitbutler/but-sdk:build:    Compiling gitbutler-stack v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-008-GROUP-REVOKE-CONTRACT/crates/gitbutler-stack)
+@gitbutler/but-sdk:build:    Compiling but-worktrees v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-008-GROUP-REVOKE-CONTRACT/crates/but-worktrees)
+@gitbutler/but-sdk:build:    Compiling but-oplog v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-008-GROUP-REVOKE-CONTRACT/crates/but-oplog)
+@gitbutler/but-sdk:build:    Compiling but-workspace v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-008-GROUP-REVOKE-CONTRACT/crates/but-workspace)
+@gitbutler/but-sdk:build:    Compiling gitbutler-repo-actions v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-008-GROUP-REVOKE-CONTRACT/crates/gitbutler-repo-actions)
+@gitbutler/but-sdk:build:    Compiling gitbutler-operating-modes v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-008-GROUP-REVOKE-CONTRACT/crates/gitbutler-operating-modes)
+@gitbutler/but-sdk:build:    Compiling but-tools v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-008-GROUP-REVOKE-CONTRACT/crates/but-tools)
+@gitbutler/but-sdk:build:    Compiling but-rules v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-008-GROUP-REVOKE-CONTRACT/crates/but-rules)
+@gitbutler/but-sdk:build:    Compiling but-llm v0.1.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-008-GROUP-REVOKE-CONTRACT/crates/but-llm)
+@gitbutler/but-sdk:build:    Compiling gitbutler-branch-actions v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-008-GROUP-REVOKE-CONTRACT/crates/gitbutler-branch-actions)
+@gitbutler/but-sdk:build:    Compiling gitbutler-edit-mode v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-008-GROUP-REVOKE-CONTRACT/crates/gitbutler-edit-mode)
+@gitbutler/but-sdk:build:    Compiling but-cherry-apply v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-008-GROUP-REVOKE-CONTRACT/crates/but-cherry-apply)
+@gitbutler/but-sdk:build:    Compiling but-action v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-008-GROUP-REVOKE-CONTRACT/crates/but-action)
+@gitbutler/but-sdk:build:    Compiling but-api v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-008-GROUP-REVOKE-CONTRACT/crates/but-api)
+@gitbutler/but-sdk:build:    Compiling but-ts v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-008-GROUP-REVOKE-CONTRACT/crates/but-ts)
+@gitbutler/but-sdk:build:     Finished `dev` profile [unoptimized + debuginfo] target(s) in 19.24s
+@gitbutler/but-sdk:build:      Running `/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-008-GROUP-REVOKE-CONTRACT/target/debug/but-ts --output ./src/generated/index.d.ts`
+@gitbutler/but-sdk:build: Collected 177 unique type schemas
+@gitbutler/but-sdk:build: Written to ./src/generated/index.d.ts
+
+ Tasks:    1 successful, 1 total
+Cached:    0 cached, 1 total
+  Time:    1m13.717s
