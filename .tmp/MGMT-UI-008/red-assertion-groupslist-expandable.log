@@ -1,0 +1,82 @@
+
+> @gitbutler/desktop@0.0.0 test:ct:desktop /Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-008/apps/desktop
+> playwright test -c playwright-ct.config.ts -- GroupsList
+
+
+Running 8 tests using 8 workers
+
+(node:12325) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:12327) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:12326) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:12328) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:12330) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:12329) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:12331) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:12332) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:12330) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:12328) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:12326) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:12329) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:12331) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:12327) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:12325) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:12332) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  2 [chromium] › tests/governance/GroupsList.spec.ts:180:1 › GroupsListEmpty renders empty state with create action (539ms)
+  ✓  8 [chromium] › tests/governance/GroupsList.spec.ts:278:1 › GroupsListReadOnly disables mutating controls and fires zero SDK calls (686ms)
+  ✓  6 [chromium] › tests/governance/GroupsList.spec.ts:264:1 › GroupsListRevokeToggle revokes an enabled grant immediately (688ms)
+  ✓  5 [chromium] › tests/governance/GroupsList.spec.ts:210:1 › GroupsListRemoveMember removes a non-last member chip immediately (691ms)
+  ✓  1 [chromium] › tests/governance/GroupsList.spec.ts:162:1 › GroupsListSDKCalls creates groups and grants permissions immediately (722ms)
+  ✓  3 [chromium] › tests/governance/GroupsList.spec.ts:229:1 › GroupsListLastMemberWarning can cancel last member removal for gate-referenced group (983ms)
+  ✓  7 [chromium] › tests/governance/GroupsList.spec.ts:190:1 › GroupsListDeleteConfirm requires confirmation before delete (1.5s)
+  ✘  4 [chromium] › tests/governance/GroupsList.spec.ts:148:1 › GroupsListRows renders expandable groups with grants and members (5.7s)
+
+
+  1) [chromium] › tests/governance/GroupsList.spec.ts:148:1 › GroupsListRows renders expandable groups with grants and members 
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).not.[22mtoBeChecked[2m([22m[2m)[22m failed
+
+    Locator:  locator('#root').locator('internal:control=component').getByTestId('groups-list-toggle-eng-contents-write')
+    Expected: not checked
+    Received: checked
+    Timeout:  5000ms
+
+    Call log:
+    [2m  - Expect "not toBeChecked" with timeout 5000ms[22m
+    [2m  - waiting for locator('#root').locator('internal:control=component').getByTestId('groups-list-toggle-eng-contents-write')[22m
+    [2m    9 × locator resolved to <input type="checkbox" class="toggle svelte-88fnjx" data-testid="groups-list-toggle-eng-contents-write"/>[22m
+    [2m      - unexpected value "checked"[22m
+
+
+      155 | 	await component.getByTestId("groups-list-row-eng").getByRole("button", { name: /eng/ }).click();
+      156 |
+    > 157 | 	await expect(component.getByTestId("groups-list-toggle-eng-contents-write")).not.toBeChecked();
+          | 	                                                                                 ^
+      158 | 	await expect(component.getByTestId("groups-list-members-eng")).toContainText("claude-agent");
+      159 | 	await expect(component.getByTestId("groups-list-members-eng")).toContainText("codex-agent");
+      160 | });
+        at /Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-008/apps/desktop/tests/governance/GroupsList.spec.ts:157:83
+
+    Error Context: test-results/governance-GroupsList-Grou-ccadd-ups-with-grants-and-members-chromium/error-context.md
+
+  1 failed
+    [chromium] › tests/governance/GroupsList.spec.ts:148:1 › GroupsListRows renders expandable groups with grants and members 
+  7 passed (8.2s)
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-008/apps/desktop:
+ ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  @gitbutler/desktop@0.0.0 test:ct:desktop: `playwright test -c playwright-ct.config.ts -- GroupsList`
+Exit status 1

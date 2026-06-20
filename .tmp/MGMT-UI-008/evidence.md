@@ -45,3 +45,15 @@ Post-dependency refresh:
 - `pnpm -F @gitbutler/desktop build`
   - Final: exit 0; adapter-static wrote `build`.
   - Log: `.tmp/MGMT-UI-008/post-dependency-desktop-build.log`
+
+Reviewer remediation:
+- HIGH: `ProjectSettingsModalContent.svelte` now wraps only the `governance` settings page branch in the existing shared `ErrorBoundary`. This covers the live governance modal surface without wrapping unrelated settings pages.
+- MEDIUM: Added assertion-based RED evidence in `.tmp/MGMT-UI-008/red-assertion-groupslist-expandable.log`.
+  - Command run: `pnpm -F @gitbutler/desktop test:ct:desktop -- GroupsList`.
+  - Method: temporarily inverted the existing `GroupsListRows` assertion from `toBeChecked()` to `not.toBeChecked()` for `groups-list-toggle-eng-contents-write`, ran the focused CT, captured the failing Playwright assertion, then reverted the temporary mutation before validation and commit.
+  - Failure proved the seeded `eng` group expands to a checked `contents:write` toggle and would catch a regression in core AC-1. The log shows `Expected: not checked`, `Received: checked`.
+- Remediation validation:
+  - `pnpm -F @gitbutler/desktop test:ct:desktop -- GroupsList`: 8 passed. Log: `.tmp/MGMT-UI-008/remediation-groupslist.log`
+  - `pnpm -F @gitbutler/desktop test:ct:desktop -- GovernanceSettingsTabs`: 3 passed. Log: `.tmp/MGMT-UI-008/remediation-governance-settings-tabs.log`
+  - `pnpm -F @gitbutler/desktop check`: 0 errors, 0 warnings. Log: `.tmp/MGMT-UI-008/remediation-desktop-check.log`
+  - `pnpm -F @gitbutler/desktop build`: exit 0; adapter-static wrote `build`. Log: `.tmp/MGMT-UI-008/remediation-desktop-build.log`
