@@ -168,6 +168,67 @@ fn group_cli_create_grant_members_list_denial_and_no_delete() -> anyhow::Result<
     Ok(())
 }
 
+#[test]
+#[serial_test::serial]
+fn group_denials_include_remediation_hint() -> anyhow::Result<()> {
+    let env = group_env()?;
+    let cases = [
+        (
+            "group create",
+            env.but("group create new-team --permissions reviews:write")
+                .env("BUT_AGENT_HANDLE", "rust-implementer")
+                .output()?,
+        ),
+        (
+            "group grant",
+            env.but("group grant code-reviewers comments:write")
+                .env("BUT_AGENT_HANDLE", "rust-implementer")
+                .output()?,
+        ),
+        (
+            "group add-member",
+            env.but("group add-member code-reviewers rust-implementer")
+                .env("BUT_AGENT_HANDLE", "rust-implementer")
+                .output()?,
+        ),
+        (
+            "group remove-member",
+            env.but("group remove-member code-reviewers rust-reviewer")
+                .env("BUT_AGENT_HANDLE", "rust-implementer")
+                .output()?,
+        ),
+    ];
+
+    for (verb, output) in cases {
+        assert_eq!(
+            output.status.code(),
+            Some(1),
+            "{verb} denial must exit 1, got status {:?}",
+            output.status
+        );
+        let envelope = parse_cli_error_envelope(&output, verb);
+        assert_eq!(
+            envelope.code, "perm.denied",
+            "{verb} denial must include the stable perm.denied code"
+        );
+        assert!(
+            envelope.message.contains("administration:write"),
+            "{verb} denial message must name administration:write, got: {}",
+            envelope.message
+        );
+        assert!(
+            !envelope.remediation_hint.trim().is_empty(),
+            "{verb} denial must include a non-empty remediation_hint"
+        );
+        println!(
+            "seeded {verb} CLI denial: code={}, message={}, remediation_hint={}",
+            envelope.code, envelope.message, envelope.remediation_hint
+        );
+    }
+
+    Ok(())
+}
+
 fn group_env() -> anyhow::Result<Sandbox> {
     let env = Sandbox::open_scenario_with_target_and_default_settings("one-stack")?;
     env.invoke_bash(
@@ -217,4 +278,42 @@ fn group_block<'a>(toml: &'a str, name: &str) -> anyhow::Result<&'a str> {
 fn ref_id(repo: &gix::Repository, ref_name: &str) -> anyhow::Result<gix::ObjectId> {
     let mut reference = repo.find_reference(ref_name)?;
     Ok(reference.peel_to_commit()?.id)
+}
+
+#[derive(Debug, Clone)]
+struct CliErrorEnvelope {
+    code: String,
+    message: String,
+    remediation_hint: String,
+}
+
+fn parse_cli_error_envelope(output: &std::process::Output, reason: &str) -> CliErrorEnvelope {
+    parse_cli_error_envelope_opt(output).unwrap_or_else(|| {
+        panic!(
+            "{reason}; stderr must contain a parseable CLI JSON error envelope, got: {}",
+            String::from_utf8_lossy(&output.stderr)
+        )
+    })
+}
+
+fn parse_cli_error_envelope_opt(output: &std::process::Output) -> Option<CliErrorEnvelope> {
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    let json = stderr.lines().find_map(json_object_from_line)?;
+    let value = serde_json::from_str::<serde_json::Value>(json).ok()?;
+    let error = value.get("error")?;
+    let code = error.get("code")?.as_str()?.to_owned();
+    let message = error.get("message")?.as_str()?.to_owned();
+    let remediation_hint = error.get("remediation_hint")?.as_str()?.to_owned();
+    Some(CliErrorEnvelope {
+        code,
+        message,
+        remediation_hint,
+    })
+}
+
+fn json_object_from_line(line: &str) -> Option<&str> {
+    let trimmed = line.trim();
+    let start = trimmed.find('{')?;
+    let end = trimmed.rfind('}')?;
+    (start <= end).then_some(&trimmed[start..=end])
 }

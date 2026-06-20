@@ -1,0 +1,63 @@
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on artifact directory
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1.68s
+     Running unittests src/lib.rs (target/debug/deps/but-42661aa15a3020c2)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 496 filtered out; finished in 0.00s
+
+     Running unittests src/main.rs (target/debug/deps/but-3ca9a7b7565080fe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/but/main.rs (target/debug/deps/but-dfd7207fbf2ead6c)
+
+running 1 test
+seeded perm grant CLI denial: code=perm.denied, message=action requires administration:write; authorization denied (held permissions: contents:write), remediation_hint=request a reviewed merge or ask a maintainer to grant administration:write
+seeded perm revoke CLI denial: code=perm.denied, message=action requires administration:write; authorization denied (held permissions: contents:write), remediation_hint=request a reviewed merge or ask a maintainer to grant administration:write
+seeded perm list CLI denial: code=perm.denied, message=BUT_AGENT_HANDLE is required to resolve a governed principal, remediation_hint=set BUT_AGENT_HANDLE to a principal committed in governance config
+test command::perm::perm_denials_include_remediation_hint ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 436 filtered out; finished in 2.39s
+
+     Running tests/theme.rs (target/debug/deps/theme-518dc3d978cbc92d)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 2 filtered out; finished in 0.00s
+
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.46s
+     Running unittests src/lib.rs (target/debug/deps/but-42661aa15a3020c2)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 496 filtered out; finished in 0.00s
+
+     Running unittests src/main.rs (target/debug/deps/but-3ca9a7b7565080fe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/but/main.rs (target/debug/deps/but-dfd7207fbf2ead6c)
+
+running 1 test
+seeded group create CLI denial: code=perm.denied, message=action requires administration:write; authorization denied (held permissions: contents:write), remediation_hint=request a reviewed merge or ask a maintainer to grant administration:write
+seeded group grant CLI denial: code=perm.denied, message=action requires administration:write; authorization denied (held permissions: contents:write), remediation_hint=request a reviewed merge or ask a maintainer to grant administration:write
+seeded group add-member CLI denial: code=perm.denied, message=action requires administration:write; authorization denied (held permissions: contents:write), remediation_hint=request a reviewed merge or ask a maintainer to grant administration:write
+seeded group remove-member CLI denial: code=perm.denied, message=action requires administration:write; authorization denied (held permissions: contents:write), remediation_hint=request a reviewed merge or ask a maintainer to grant administration:write
+test command::group::group_denials_include_remediation_hint ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 436 filtered out; finished in 2.29s
+
+     Running tests/theme.rs (target/debug/deps/theme-518dc3d978cbc92d)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 2 filtered out; finished in 0.00s
