@@ -24,16 +24,37 @@ depth and not yet built. I've tried to be exact about which is which throughout.
 
 ## Why this work
 
-The bottleneck in software has moved. Generation is cheap and abundant; what's scarce now
-is **convergence and verification** — reading, trusting, and safely landing what agents
-produce. The community evidence is blunt: when several agents work in parallel, a study of 142k
-agentic PRs found ~28% hit merge conflicts; frontier models demonstrably reward-hack their
-own evals (so "tests pass" is a claim with nothing behind it); and AI-authored PRs carry
-markedly more logic defects, pushing the cost onto review.[^evidence]
+**The timing.** Fully-agentic engineering — hand off a task and *don't read the diff* — is
+still a minority today. [Anthropic's 2026 Agentic Coding Trends Report](https://resources.anthropic.com/2026-agentic-coding-trends-report)
+finds developers use AI in ~60% of their work but **fully delegate only 0–20% of tasks**;
+roughly 90% of "AI-native" developers still sit at the [pairing level](https://www.danshapiro.com/blog/2026/01/the-five-levels-from-spicy-autocomplete-to-the-software-factory),
+a human reviewing every change. But that frontier is climbing the same curve
+[vibe coding](https://en.wikipedia.org/wiki/Vibe_coding) did — a niche coinage in early 2025,
+mainstream within a year. As the "don't-look-at-the-code" cohort grows over the coming months,
+one thing hasn't kept up: **there is no standard for how a *team* of agents is governed.**
 
-GitButler is a near-perfect place to absorb that pressure — it already sits at the moment
-of convergence, and it already markets itself to agents. But it has two gaps at exactly
-the point that matters, the moment code lands:
+**The bottleneck moved.** Generation is cheap and abundant; what's scarce is **convergence and
+verification** — reading, trusting, and safely landing what agents produce. The human "LGTM"
+is now the constraint: AI-assisted teams [merge far more PRs while review time and PR size
+balloon](https://www.metacto.com/blogs/code-review-bottleneck-ai-development), and GitHub itself
+shipped [PR kill-switches (Feb 2026) and per-contributor PR caps (Jun 2026)](https://www.coderabbit.ai/blog/github-gives-maintainers-a-throttle-for-the-ai-pull-request)
+to stem the flood of agent-generated changes. The [PR-and-review model](https://burakdede.com/blog/the-pull-request-is-dead-surviving-the-ai-code-avalanche)
+was built for humans writing code slowly; under agent volume it buckles.[^evidence]
+
+**Don't reinvent the wheel — and don't make it a black box.** The reflex is to reach for a
+proprietary orchestrator — [Factory's Missions](https://factory.ai/news/missions), Claude Code's
+[`ultracode`](https://www.infoq.com/news/2026/06/dynamic-workflows-claude-code) — that spawns
+workers, validators, and subagents inside an opaque runtime. Those deliver autonomy, but they
+hide *how the team of agents works and is governed.* We already have a battle-tested process for
+shipping production code with many contributors: GitHub — functional permissions, review, branch
+protection, an auditable trail. The missing piece isn't another black box; it's a **governed
+convergence layer between the agents and the human review process** — where many agents' work is
+held to the *same standards as humans* and made legible *before* it floods the queue humans work
+in. That's what these two PRDs build on GitButler.
+
+GitButler is a near-perfect place to put that layer — it already sits at the moment of
+convergence, and it already brands itself "for you and your agents." But it has two gaps at
+exactly the point that matters, the moment code lands:
 
 1. **Process is unenforced.** An agent driving GitButler commits and merges on the same
    footing as the tool's owner. Nothing GitButler enforces says *this principal may not
@@ -193,4 +214,4 @@ want to keep building.
 
 [steer]: ./prds/governance/enrichments/v1.4.0-capability-aware-denials/README.md
 
-[^evidence]: Figures synthesized from external research — AgenticFlict (142k-PR study), METR/Abundant reward-hacking findings, and CodeRabbit AI-PR defect rates.
+[^evidence]: Sources — [Anthropic 2026 Agentic Coding Trends Report](https://resources.anthropic.com/2026-agentic-coding-trends-report) (~60% of work AI-assisted, 0–20% of tasks fully delegated) · [Dan Shapiro, "The Five Levels: from Spicy Autocomplete to the Dark Factory"](https://www.danshapiro.com/blog/2026/01/the-five-levels-from-spicy-autocomplete-to-the-software-factory) · [Swarmia, "Five levels of AI coding agent autonomy"](https://www.swarmia.com/blog/five-levels-ai-agent-autonomy) · ["Vibe coding," Wikipedia](https://en.wikipedia.org/wiki/Vibe_coding) (coined Feb 2025 → 2025 Collins Word of the Year) · [Burak Dede, "The Pull Request is Dead"](https://burakdede.com/blog/the-pull-request-is-dead-surviving-the-ai-code-avalanche) · [CodeRabbit on GitHub's AI-PR caps](https://www.coderabbit.ai/blog/github-gives-maintainers-a-throttle-for-the-ai-pull-request) · [Metacto, "AI Code Review Bottleneck"](https://www.metacto.com/blogs/code-review-bottleneck-ai-development) · [Factory Missions](https://factory.ai/news/missions) · [InfoQ, Claude Code dynamic workflows / `ultracode`](https://www.infoq.com/news/2026/06/dynamic-workflows-claude-code).
