@@ -72,7 +72,7 @@ Tab order is fixed: `principals`, `groups`, `branch-gates`, `rules`.
 ## Pending-State Visual Contract
 
 Pending state is visual-only. It indicates that governed configuration has been
-written to the working-tree `.gitbutler/*.toml` files and is waiting for the
+written to the working-tree governance config files and is waiting for the
 human to commit those files to the governance ref. It does not optimistically
 apply enforcement, change the effective permission set, or introduce a spinner,
 progress row, toast, or new design-system primitive.
@@ -151,10 +151,10 @@ The complete transition is default -> edit -> commit -> clean.
    `pendingCount` increments in the CLIENT-ONLY store; the warning
    `InfoMessage` banner appears above the `TabList`.
 3. After the user activates `Commit changes`: the commit action commits the
-   working-tree `.gitbutler/{permissions,gates}.toml` files to the current
+   working-tree governance config files to the current
    workspace branch; the pending `Badge`s are removed; the banner is hidden; the
    effective set updates from the committed governance ref.
-4. Clean reconciliation: if `.gitbutler/*.toml` is clean versus `HEAD`, the
+4. Clean reconciliation: if governance config files are clean versus `HEAD`, the
    banner is hidden regardless of stale UI state, and row pending `Badge`s are
    cleared.
 
@@ -190,7 +190,7 @@ therefore persist while switching between `Principals`, `Groups`,
 | Group granted permissions | `Toggle` at `packages/ui/src/lib/components/Toggle.svelte` for each grant; optional grant labels use existing text styles. | Changed grants show pending marker by the section or row. | `Toggle disabled=true`. | Denied grant toggle remains unchanged and danger banner appears. | Not rendered. |
 | Group members | `TagInput` at `packages/ui/src/lib/components/TagInput.svelte` with member tags such as `claude-agent`, `codex-agent`, `agent:new`; `readonly=true` when view-only. | Added or removed members contribute to section pending state. | `TagInput readonly=true`. | Denied member edit is not applied and danger banner appears. | Not rendered. |
 | Group delete confirmation | `Modal` at `packages/ui/src/lib/components/Modal.svelte`; destructive button uses `Button`; title copy `Remove group eng?`; body copy `N principals will lose inherited permissions.` | Confirmation precedes the staged pending write. | Delete action disabled, so modal does not open. | If delete is denied, close modal and show danger `InfoMessage`. | Not rendered. |
-| Branch Gates tab header | `BranchGatesList` at `apps/desktop/src/components/governance/BranchGatesList.svelte`; add action uses `Button` label `Add`; helper copy `reads .gitbutler/gates.toml`. | Header remains; pending branches show pending badge. | Add `Button` disabled. | Danger `InfoMessage` above gate list. | `EmptyStatePlaceholder` path and slots listed in the Empty States section. |
+| Branch Gates tab header | `BranchGatesList` at `apps/desktop/src/components/governance/BranchGatesList.svelte`; add action uses `Button` label `Add`; helper copy says it reads governance gate configuration. | Header remains; pending branches show pending badge. | Add `Button` disabled. | Danger `InfoMessage` above gate list. | `EmptyStatePlaceholder` path and slots listed in the Empty States section. |
 | Branch gate row | `ExpandableSection` at `apps/desktop/src/components/shared/ExpandableSection.svelte`; `label="main"` or branch pattern; committed rows have no pending `Badge`. | `Badge style="warning" kind="soft" size="icon"` children `○` plus pending row text. | Row expands with controls disabled or readonly. | Denied gate edit does not flip controls and shows danger banner. | Not rendered. |
 | Branch protected control | `Toggle` at `packages/ui/src/lib/components/Toggle.svelte` with `checked=true` for protected ON. | Turning OFF opens confirmation before pending write. | `Toggle disabled=true`. | Denied unprotect leaves `checked=true` and shows danger `InfoMessage`. | Not rendered. |
 | Branch unprotect confirmation | `Modal` at `packages/ui/src/lib/components/Modal.svelte`; title `Unprotect branch main?`; body `Merges will no longer require review.` | Confirmation precedes pending write. | Not available. | Denial closes or keeps modal state consistent and shows danger banner. | Not rendered. |
