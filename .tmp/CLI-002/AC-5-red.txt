@@ -1,0 +1,19 @@
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+   Compiling but-api v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/CLI-002/crates/but-api)
+error[E0432]: unresolved imports `but_api::legacy::governance::group_add_member`, `but_api::legacy::governance::group_create`, `but_api::legacy::governance::group_grant`, `but_api::legacy::governance::group_list`, `but_api::legacy::governance::group_remove_member`
+ --> crates/but-api/tests/group_governance.rs:4:25
+  |
+4 |         REF_PIN_CAVEAT, group_add_member, group_create, group_grant, group_list,
+  |                         ^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^  ^^^^^^^^^^^  ^^^^^^^^^^ no `group_list` in `legacy::governance`
+  |                         |                 |             |
+  |                         |                 |             no `group_grant` in `legacy::governance`
+  |                         |                 no `group_create` in `legacy::governance`
+  |                         no `group_add_member` in `legacy::governance`
+5 |         group_remove_member,
+  |         ^^^^^^^^^^^^^^^^^^^ no `group_remove_member` in `legacy::governance`
+
+For more information about this error, try `rustc --explain E0432`.
+error: could not compile `but-api` (test "group_governance") due to 1 previous error

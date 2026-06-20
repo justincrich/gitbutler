@@ -28,6 +28,8 @@ mod format;
 mod governed_loop;
 #[cfg(feature = "legacy")]
 mod governed_merge_cli;
+#[cfg(feature = "legacy")]
+mod group;
 mod gui;
 mod help;
 #[cfg(feature = "legacy")]

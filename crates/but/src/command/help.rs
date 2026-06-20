@@ -148,6 +148,8 @@ fn print_grouped_with_truncation(
                 SubcommandDiscriminant::Config => Group::OtherCommands,
                 #[cfg(feature = "legacy")]
                 SubcommandDiscriminant::Perm => Group::OtherCommands,
+                #[cfg(feature = "legacy")]
+                SubcommandDiscriminant::Group => Group::OtherCommands,
                 SubcommandDiscriminant::Skill => Group::OtherCommands,
                 SubcommandDiscriminant::Help => Group::OtherCommands,
 
@@ -363,6 +365,7 @@ Other Commands:
   alias        Manage command aliases
   config       View and manage GitButler configuration
   perm         Manage governed functional permissions
+  group        Manage governed groups
   skill        Manage AI agent skills for GitButler
 
 To add command completion, add this to your shell rc: (for example ~/.zshrc)

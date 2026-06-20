@@ -1,0 +1,110 @@
+[
+  {
+    "id": "AC-1",
+    "verify": "cargo test -p but-api group_add_member_writes_worktree_inert_until_committed",
+    "exit_code": 0,
+    "output_file": ".tmp/CLI-002/ac-1-output.txt"
+  },
+  {
+    "id": "AC-2",
+    "verify": "cargo test -p but-api group_create_grant_writes_worktree",
+    "exit_code": 0,
+    "output_file": ".tmp/CLI-002/ac-2-output.txt"
+  },
+  {
+    "id": "AC-3",
+    "verify": "cargo test -p but-api group_ops_non_admin_denied",
+    "exit_code": 0,
+    "output_file": ".tmp/CLI-002/ac-3-output.txt"
+  },
+  {
+    "id": "AC-4",
+    "verify": "cargo test -p but-api group_grant_fail_closed_undefined_group_bad_token_and_unset_handle",
+    "exit_code": 0,
+    "output_file": ".tmp/CLI-002/ac-4-output.txt"
+  },
+  {
+    "id": "AC-5",
+    "verify": "cargo test -p but-api group_list_under_admin_read",
+    "exit_code": 0,
+    "output_file": ".tmp/CLI-002/ac-5-output.txt"
+  },
+  {
+    "id": "TC-1",
+    "verify": "cargo test -p but-api group_add_member_writes_worktree_inert_until_committed",
+    "exit_code": 0,
+    "output_file": ".tmp/CLI-002/tc-1-output.txt"
+  },
+  {
+    "id": "TC-2",
+    "verify": "cargo test -p but-api group_add_member_writes_worktree_inert_until_committed",
+    "exit_code": 0,
+    "output_file": ".tmp/CLI-002/tc-2-output.txt"
+  },
+  {
+    "id": "TC-3",
+    "verify": "cargo test -p but-api group_add_member_writes_worktree_inert_until_committed",
+    "exit_code": 0,
+    "output_file": ".tmp/CLI-002/tc-3-output.txt"
+  },
+  {
+    "id": "TC-4",
+    "verify": "cargo test -p but-api group_create_grant_writes_worktree",
+    "exit_code": 0,
+    "output_file": ".tmp/CLI-002/tc-4-output.txt"
+  },
+  {
+    "id": "TC-5",
+    "verify": "cargo test -p but-api group_create_grant_writes_worktree",
+    "exit_code": 0,
+    "output_file": ".tmp/CLI-002/tc-5-output.txt"
+  },
+  {
+    "id": "TC-6",
+    "verify": "cargo test -p but-api group_ops_non_admin_denied",
+    "exit_code": 0,
+    "output_file": ".tmp/CLI-002/tc-6-output.txt"
+  },
+  {
+    "id": "TC-7",
+    "verify": "cargo test -p but-api group_ops_non_admin_denied",
+    "exit_code": 0,
+    "output_file": ".tmp/CLI-002/tc-7-output.txt"
+  },
+  {
+    "id": "TC-8",
+    "verify": "cargo test -p but-api group_grant_fail_closed_undefined_group_bad_token_and_unset_handle",
+    "exit_code": 0,
+    "output_file": ".tmp/CLI-002/tc-8-output.txt"
+  },
+  {
+    "id": "TC-9",
+    "verify": "cargo test -p but-api group_grant_fail_closed_undefined_group_bad_token_and_unset_handle",
+    "exit_code": 0,
+    "output_file": ".tmp/CLI-002/tc-9-output.txt"
+  },
+  {
+    "id": "TC-10",
+    "verify": "cargo test -p but-api group_grant_fail_closed_undefined_group_bad_token_and_unset_handle",
+    "exit_code": 0,
+    "output_file": ".tmp/CLI-002/tc-10-output.txt"
+  },
+  {
+    "id": "TC-11",
+    "verify": "cargo test -p but-api group_list_under_admin_read",
+    "exit_code": 0,
+    "output_file": ".tmp/CLI-002/tc-11-output.txt"
+  },
+  {
+    "id": "TC-12",
+    "verify": "cargo test -p but group",
+    "exit_code": 0,
+    "output_file": ".tmp/CLI-002/tc-12-output.txt"
+  },
+  {
+    "id": "TC-13",
+    "verify": "cargo test -p but group",
+    "exit_code": 0,
+    "output_file": ".tmp/CLI-002/tc-13-output.txt"
+  }
+]

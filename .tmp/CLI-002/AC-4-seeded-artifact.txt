@@ -1,0 +1,1 @@
+AC-4 seeded artifact: crates/but-api/tests/group_governance.rs was added before production implementation and the matching AC-4-red-against-start.txt file captures the real pre-implementation failure against missing but_api::legacy::governance group APIs.

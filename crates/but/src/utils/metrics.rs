@@ -186,6 +186,8 @@ impl Subcommands {
             },
             #[cfg(feature = "legacy")]
             Subcommands::Perm(_) => Unknown,
+            #[cfg(feature = "legacy")]
+            Subcommands::Group(_) => Unknown,
             Subcommands::Completions { .. } => Completions,
             Subcommands::Help => Unknown,
             Subcommands::Alias(alias_args::Platform { cmd }) => match cmd {
