@@ -1,0 +1,90 @@
+{
+	"task_id": "MGMT-UI-002",
+	"timestamp": "2026-06-20T17:53:05Z",
+	"commit_sha": "c13687b6b62080eae7bcca1eedee949833e23202",
+	"commit_sha_note": "This summary was package-repaired after the evidence commit; the final handoff commit is reported by the implementer JSON.",
+	"typecheck": {
+		"exit_code": 0,
+		"output_file": ".tmp/MGMT-UI-002/typecheck-output.txt"
+	},
+	"lint": {
+		"exit_code": 1,
+		"output_file": ".tmp/MGMT-UI-002/lint-output.txt",
+		"pre_existing_unrelated": true,
+		"note": "root lint has unrelated Markdown/spec Prettier warnings; focused prettier passed"
+	},
+	"pre_existing_issues": true,
+	"red_evidence": {
+		"required": true,
+		"output_file": ".tmp/MGMT-UI-002/red-output.txt"
+	},
+	"requirement_results": [
+		{
+			"id": "AC-1",
+			"verify": "pnpm -F @gitbutler/desktop test:ct:desktop -- SettingsModalLayoutAdmin",
+			"exit_code": 0,
+			"output_file": ".tmp/MGMT-UI-002/test-output.txt",
+			"red_against_start_file": ".tmp/MGMT-UI-002/AC-1-red-against-start.txt",
+			"green_file": ".tmp/MGMT-UI-002/AC-1-green.txt",
+			"seeded_value": "Permissions & Governance button visible for admin"
+		},
+		{
+			"id": "AC-2",
+			"verify": "pnpm -F @gitbutler/desktop test:ct:desktop -- SettingsModalLayoutAdmin",
+			"exit_code": 0,
+			"output_file": ".tmp/MGMT-UI-002/test-output.txt",
+			"red_against_start_file": ".tmp/MGMT-UI-002/AC-2-red-leak-control.txt",
+			"green_file": ".tmp/MGMT-UI-002/AC-2-green.txt",
+			"seeded_value": "Permissions & Governance row count is 0 for member",
+			"negative_control_note": "AC-2 uses a leak-control temporary fault because a fully reversed implementation hides governance for everyone and is not a discriminating RED."
+		},
+		{
+			"id": "AC-3",
+			"verify": "pnpm -F @gitbutler/desktop test:ct:desktop -- ProjectSettingsModalContentGovernance",
+			"exit_code": 0,
+			"output_file": ".tmp/MGMT-UI-002/project-settings-governance-output.txt",
+			"red_against_start_file": ".tmp/MGMT-UI-002/AC-3-red-against-start.txt",
+			"green_file": ".tmp/MGMT-UI-002/AC-3-green.txt",
+			"seeded_value": "GovernanceSettings renders Permissions & Governance heading and no not-found fallback"
+		},
+		{
+			"id": "AC-4",
+			"verify": "grep -n 'isAdmin' apps/desktop/src/components/settings/ProjectSettingsModalContent.svelte",
+			"exit_code": 0,
+			"output_file": ".tmp/MGMT-UI-002/isadmin-grep-output.txt"
+		},
+		{
+			"id": "AC-5",
+			"verify": "find apps/desktop/src/routes -name '*governance*' | wc -l | grep '^0$'",
+			"exit_code": 0,
+			"output_file": ".tmp/MGMT-UI-002/routes-governance-output.txt"
+		},
+		{
+			"id": "TC-1",
+			"verify": "pnpm -F @gitbutler/desktop test:ct:desktop -- SettingsModalLayoutAdmin",
+			"exit_code": 0,
+			"output_file": ".tmp/MGMT-UI-002/test-output.txt"
+		},
+		{
+			"id": "TC-2",
+			"verify": "pnpm -F @gitbutler/desktop test:ct:desktop -- SettingsModalLayoutAdmin",
+			"exit_code": 0,
+			"output_file": ".tmp/MGMT-UI-002/test-output.txt"
+		},
+		{
+			"id": "TC-3",
+			"verify": "pnpm -F @gitbutler/desktop test:ct:desktop -- ProjectSettingsModalContentGovernance",
+			"exit_code": 0,
+			"output_file": ".tmp/MGMT-UI-002/project-settings-governance-output.txt"
+		},
+		{
+			"id": "TC-4",
+			"verify": "pnpm -F @gitbutler/desktop check",
+			"exit_code": 0,
+			"output_file": ".tmp/MGMT-UI-002/typecheck-output.txt"
+		}
+	],
+	"evidence_path": ".tmp/MGMT-UI-002/",
+	"temporary_source_mutations_restored": true,
+	"source_changes_in_this_commit": false
+}

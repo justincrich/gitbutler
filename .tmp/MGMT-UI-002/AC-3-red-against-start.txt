@@ -1,0 +1,44 @@
+
+> @gitbutler/desktop@0.0.0 test:ct:desktop /Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-002/apps/desktop
+> playwright test -c playwright-ct.config.ts -- ProjectSettingsModalContentGovernance
+
+
+Running 1 test using 1 worker
+
+(node:78386) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:78386) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  1 [chromium] › tests/governance/ProjectSettingsModalContentGovernance.spec.ts:5:2 › ProjectSettingsModalContentGovernance › renders governance settings when selected by an admin user (5.2s)
+
+
+  1) [chromium] › tests/governance/ProjectSettingsModalContentGovernance.spec.ts:5:2 › ProjectSettingsModalContentGovernance › renders governance settings when selected by an admin user
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+
+    Locator: locator('#root').locator('internal:control=component').getByRole('heading', { name: 'Permissions & Governance' })
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+    [2m  - Expect "toBeVisible" with timeout 5000ms[22m
+    [2m  - waiting for locator('#root').locator('internal:control=component').getByRole('heading', { name: 'Permissions & Governance' })[22m
+
+
+      10 | 		await expect(
+      11 | 			component.getByRole("heading", { name: "Permissions & Governance" }),
+    > 12 | 		).toBeVisible();
+         | 		  ^
+      13 | 		await expect(component.getByText("Settings page governance not Found.")).toHaveCount(0);
+      14 | 	});
+      15 | });
+        at /Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-002/apps/desktop/tests/governance/ProjectSettingsModalContentGovernance.spec.ts:12:5
+
+    Error Context: test-results/governance-ProjectSettings-68355-n-selected-by-an-admin-user-chromium/error-context.md
+
+  1 failed
+    [chromium] › tests/governance/ProjectSettingsModalContentGovernance.spec.ts:5:2 › ProjectSettingsModalContentGovernance › renders governance settings when selected by an admin user
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-002/apps/desktop:
+ ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  @gitbutler/desktop@0.0.0 test:ct:desktop: `playwright test -c playwright-ct.config.ts -- ProjectSettingsModalContentGovernance`
+Exit status 1
