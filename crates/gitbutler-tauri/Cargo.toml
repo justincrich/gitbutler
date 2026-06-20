@@ -35,6 +35,7 @@ but-core.workspace = true
 but-askpass.workspace = true
 but-action.workspace = true
 but-api = { workspace = true, features = ["tauri", "path-bytes", "legacy"] }
+but-authz.workspace = true
 but-ctx = { workspace = true, features = ["legacy"] }
 but-irc = { workspace = true, optional = true }
 notify-rust.workspace = true
@@ -62,6 +63,7 @@ console-subscriber = "0.5.0"
 gix = { workspace = true, features = ["max-performance", "worktree-mutation"] }
 serde.workspace = true
 serde_json = { workspace = true, features = ["arbitrary_precision"] }
+toml.workspace = true
 
 parking_lot.workspace = true
 # The features here optimize for performance.
