@@ -44,10 +44,6 @@ pub mod csp;
 use but_api::{branch, commit, diff, github, gitlab, legacy, open, platform, workspace};
 
 /// The 12 governance commands registered through the but-api boundary.
-///
-/// Source of truth for governance-command presence assertions; the
-/// [`invoke_handler`] factory must keep this list in sync with the
-/// `legacy::governance::*` paths it feeds to `tauri::generate_handler!`.
 pub const GOVERNANCE_COMMANDS: &[&str] = &[
     "perm_list",
     "perm_grant",
@@ -63,18 +59,36 @@ pub const GOVERNANCE_COMMANDS: &[&str] = &[
     "governance_status_read",
 ];
 
-/// Build the real Tauri [`generate_handler!`](tauri::generate_handler) payload
-/// shared by the desktop binary and the integration test harness.
+/// Expands the production governance/config-management command rows into a caller-supplied macro.
 ///
-/// `main.rs::run()` is the single binary entrypoint; it consumes this factory
-/// instead of re-declaring the command list, so tests that exercise the same
-/// registration surface cannot drift from production.
-///
-/// Returns a `tauri::ipc::InvokeHandler`-shaped closure built from the real
-/// macro; callers feed it straight to
-/// [`tauri::Builder::invoke_handler`](tauri::Builder::invoke_handler).
+/// Production `invoke_handler()` and IPC registration tests both consume this
+/// macro, which keeps the registration paths in one place while allowing tests
+/// to run with Tauri's mock runtime.
+#[macro_export]
+macro_rules! gitbutler_governance_command_rows {
+    ($handler:ident) => {
+        $handler![
+            but_api::legacy::governance::tauri_group_list::group_list,
+            $crate::governance::tauri_group_create::group_create,
+            $crate::governance::tauri_group_grant::group_grant,
+            $crate::governance::tauri_group_add_member::group_add_member,
+            $crate::governance::tauri_group_remove_member::group_remove_member,
+            $crate::governance::tauri_group_delete::group_delete,
+            but_api::legacy::governance::tauri_perm_list::perm_list,
+            $crate::governance::tauri_perm_grant::perm_grant,
+            $crate::governance::tauri_perm_revoke::perm_revoke,
+            but_api::legacy::governance::tauri_branch_gates_read::branch_gates_read,
+            $crate::governance::tauri_branch_gates_update::branch_gates_update,
+            but_api::legacy::governance::tauri_governance_status_read::governance_status_read,
+            $crate::governance::tauri_agent_perm_grant::agent_perm_grant,
+        ]
+    };
+}
+
 pub fn invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Send + Sync + 'static {
-    tauri::generate_handler![
+    macro_rules! full_invoke_handler {
+        ($($governance_command:path),* $(,)?) => {
+            tauri::generate_handler![
         github::tauri_init_github_device_oauth::init_github_device_oauth,
         github::tauri_check_github_auth_status::check_github_auth_status,
         github::tauri_store_github_pat::store_github_pat,
@@ -215,18 +229,7 @@ pub fn invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Sen
         diff::tauri_assign_hunk::assign_hunk,
         #[cfg(unix)]
         legacy::workspace::tauri_show_graph_svg::show_graph_svg,
-        legacy::governance::tauri_group_list::group_list,
-        legacy::governance::tauri_group_create::group_create,
-        legacy::governance::tauri_group_grant::group_grant,
-        legacy::governance::tauri_group_add_member::group_add_member,
-        legacy::governance::tauri_group_remove_member::group_remove_member,
-        legacy::governance::tauri_group_delete::group_delete,
-        legacy::governance::tauri_perm_list::perm_list,
-        governance::tauri_perm_grant::perm_grant,
-        legacy::governance::tauri_perm_revoke::perm_revoke,
-        legacy::governance::tauri_branch_gates_read::branch_gates_read,
-        legacy::governance::tauri_branch_gates_update::branch_gates_update,
-        legacy::governance::tauri_governance_status_read::governance_status_read,
+        $($governance_command),*,
         action::list_actions,
         action::handle_changes,
         action::list_workflows,
@@ -324,5 +327,8 @@ pub fn invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Sen
         commit::uncommit::tauri_commit_uncommit::commit_uncommit,
         workspace::tauri_workspace_integrate_upstream::workspace_integrate_upstream,
         platform::tauri_build_type::build_type,
-    ]
+            ]
+        };
+    }
+    gitbutler_governance_command_rows!(full_invoke_handler)
 }

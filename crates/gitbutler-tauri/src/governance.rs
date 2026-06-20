@@ -1,7 +1,13 @@
 //! Governance command-boundary helpers for desktop fleet-owner identity.
 
 use anyhow::{Context as _, anyhow};
-use but_api::{json, legacy::governance::GrantOutcome};
+use but_api::{
+    json,
+    legacy::governance::{
+        BranchGatesOutcome, BranchProtectionInput, GrantOutcome, GroupWriteOutcome,
+        PermWriteOutcome,
+    },
+};
 use but_ctx::{Context, ProjectHandleOrLegacyProjectId};
 
 /// Minimal signed-in desktop user identity required for the fleet-owner path.
@@ -14,9 +20,27 @@ pub struct FleetOwnerIdentity {
 }
 
 /// Source of the signed-in desktop user at the command boundary.
-pub trait DesktopSession {
+pub trait DesktopSession: Send + Sync {
     /// Resolve the signed-in desktop user that acts as the v1 fleet-owner.
     fn fleet_owner_identity(&self) -> anyhow::Result<FleetOwnerIdentity>;
+}
+
+/// Tauri-managed desktop session resolver used by governance command wrappers.
+pub struct DesktopSessionState {
+    session: Box<dyn DesktopSession>,
+}
+
+impl DesktopSessionState {
+    /// Store the desktop session resolver used by Tauri command wrappers.
+    pub fn new(session: impl DesktopSession + 'static) -> Self {
+        Self {
+            session: Box::new(session),
+        }
+    }
+
+    fn session(&self) -> &dyn DesktopSession {
+        self.session.as_ref()
+    }
 }
 
 /// Production desktop-session resolver backed by `legacy::users::get_user`.
@@ -56,7 +80,7 @@ impl DesktopSession for TestDesktopSession {
 /// Resolve the project context and signed-in desktop fleet-owner before any
 /// governance config-management command can fall through to env-handle authz.
 pub fn fleet_owner_context(
-    session: &impl DesktopSession,
+    session: &(impl DesktopSession + ?Sized),
     project_id: ProjectHandleOrLegacyProjectId,
     target_ref: &str,
 ) -> Result<(Context, FleetOwnerIdentity), json::Error> {
@@ -67,7 +91,7 @@ pub fn fleet_owner_context(
 
 /// Invoke `perm_grant` as the signed-in desktop fleet-owner.
 pub fn perm_grant_for_desktop_session(
-    session: &impl DesktopSession,
+    session: &dyn DesktopSession,
     project_id: ProjectHandleOrLegacyProjectId,
     target_ref: String,
     principal: String,
@@ -83,6 +107,136 @@ pub fn perm_grant_for_desktop_session(
         &authorities,
     )
     .map(GrantOutcome::from)
+    .map_err(json::Error::from)
+}
+
+/// Invoke `perm_revoke` as the signed-in desktop fleet-owner.
+pub fn perm_revoke_for_desktop_session(
+    session: &dyn DesktopSession,
+    project_id: ProjectHandleOrLegacyProjectId,
+    target_ref: String,
+    principal: String,
+    authorities: Vec<String>,
+) -> Result<PermWriteOutcome, json::Error> {
+    let (ctx, _owner) = fleet_owner_context(session, project_id, &target_ref)?;
+    let repo = ctx.repo.get().map_err(json::Error::from)?;
+    let authorities = authority_slices(&authorities);
+    but_api::legacy::governance::perm_revoke_with_repo_as_fleet_owner(
+        &repo,
+        &target_ref,
+        &principal,
+        &authorities,
+    )
+    .map_err(json::Error::from)
+}
+
+/// Invoke `group_create` as the signed-in desktop fleet-owner.
+pub fn group_create_for_desktop_session(
+    session: &dyn DesktopSession,
+    project_id: ProjectHandleOrLegacyProjectId,
+    target_ref: String,
+    group: String,
+    authorities: Vec<String>,
+) -> Result<GroupWriteOutcome, json::Error> {
+    let (ctx, _owner) = fleet_owner_context(session, project_id, &target_ref)?;
+    let repo = ctx.repo.get().map_err(json::Error::from)?;
+    let authorities = authority_slices(&authorities);
+    but_api::legacy::governance::group_create_with_repo_as_fleet_owner(
+        &repo,
+        &target_ref,
+        &group,
+        &authorities,
+    )
+    .map_err(json::Error::from)
+}
+
+/// Invoke `group_grant` as the signed-in desktop fleet-owner.
+pub fn group_grant_for_desktop_session(
+    session: &dyn DesktopSession,
+    project_id: ProjectHandleOrLegacyProjectId,
+    target_ref: String,
+    group: String,
+    authorities: Vec<String>,
+) -> Result<GroupWriteOutcome, json::Error> {
+    let (ctx, _owner) = fleet_owner_context(session, project_id, &target_ref)?;
+    let repo = ctx.repo.get().map_err(json::Error::from)?;
+    let authorities = authority_slices(&authorities);
+    but_api::legacy::governance::group_grant_with_repo_as_fleet_owner(
+        &repo,
+        &target_ref,
+        &group,
+        &authorities,
+    )
+    .map_err(json::Error::from)
+}
+
+/// Invoke `group_add_member` as the signed-in desktop fleet-owner.
+pub fn group_add_member_for_desktop_session(
+    session: &dyn DesktopSession,
+    project_id: ProjectHandleOrLegacyProjectId,
+    target_ref: String,
+    group: String,
+    member: String,
+) -> Result<GroupWriteOutcome, json::Error> {
+    let (ctx, _owner) = fleet_owner_context(session, project_id, &target_ref)?;
+    let repo = ctx.repo.get().map_err(json::Error::from)?;
+    but_api::legacy::governance::group_add_member_with_repo_as_fleet_owner(
+        &repo,
+        &target_ref,
+        &group,
+        &member,
+    )
+    .map_err(json::Error::from)
+}
+
+/// Invoke `group_remove_member` as the signed-in desktop fleet-owner.
+pub fn group_remove_member_for_desktop_session(
+    session: &dyn DesktopSession,
+    project_id: ProjectHandleOrLegacyProjectId,
+    target_ref: String,
+    group: String,
+    member: String,
+) -> Result<GroupWriteOutcome, json::Error> {
+    let (ctx, _owner) = fleet_owner_context(session, project_id, &target_ref)?;
+    let repo = ctx.repo.get().map_err(json::Error::from)?;
+    but_api::legacy::governance::group_remove_member_with_repo_as_fleet_owner(
+        &repo,
+        &target_ref,
+        &group,
+        &member,
+    )
+    .map_err(json::Error::from)
+}
+
+/// Invoke `group_delete` as the signed-in desktop fleet-owner.
+pub fn group_delete_for_desktop_session(
+    session: &dyn DesktopSession,
+    project_id: ProjectHandleOrLegacyProjectId,
+    target_ref: String,
+    group: String,
+) -> Result<GroupWriteOutcome, json::Error> {
+    let (ctx, _owner) = fleet_owner_context(session, project_id, &target_ref)?;
+    let repo = ctx.repo.get().map_err(json::Error::from)?;
+    but_api::legacy::governance::group_delete_with_repo_as_fleet_owner(&repo, &target_ref, &group)
+        .map_err(json::Error::from)
+}
+
+/// Invoke `branch_gates_update` as the signed-in desktop fleet-owner.
+pub fn branch_gates_update_for_desktop_session(
+    session: &dyn DesktopSession,
+    project_id: ProjectHandleOrLegacyProjectId,
+    target_ref: String,
+    branch: String,
+    protection: BranchProtectionInput,
+) -> Result<BranchGatesOutcome, json::Error> {
+    let (ctx, _owner) = fleet_owner_context(session, project_id, &target_ref)?;
+    let repo = ctx.repo.get().map_err(json::Error::from)?;
+    but_api::legacy::governance::branch_gates_update_with_repo_as_fleet_owner(
+        &repo,
+        &target_ref,
+        &branch,
+        protection,
+    )
     .map_err(json::Error::from)
 }
 
@@ -131,22 +285,201 @@ fn authority_slices(authorities: &[String]) -> Vec<&str> {
 
 /// Tauri command wrapper for desktop fleet-owner `perm_grant`.
 pub mod tauri_perm_grant {
-    use super::{GitButlerDesktopSession, GrantOutcome, ProjectHandleOrLegacyProjectId, json};
+    use super::{DesktopSessionState, GrantOutcome, ProjectHandleOrLegacyProjectId, json};
 
     /// Grant direct governance permissions as the signed-in desktop fleet-owner.
     #[tauri::command]
     pub fn perm_grant(
+        desktop_session: tauri::State<'_, DesktopSessionState>,
         project_id: ProjectHandleOrLegacyProjectId,
         target_ref: String,
         principal: String,
         authorities: Vec<String>,
     ) -> Result<GrantOutcome, json::Error> {
         super::perm_grant_for_desktop_session(
-            &GitButlerDesktopSession,
+            desktop_session.session(),
             project_id,
             target_ref,
             principal,
             authorities,
+        )
+    }
+}
+
+/// Tauri command wrapper for agent/env-authorized `perm_grant`.
+pub mod tauri_agent_perm_grant {
+    use super::{GrantOutcome, ProjectHandleOrLegacyProjectId, json};
+
+    /// Grant direct governance permissions through the server-side agent/env boundary.
+    #[tauri::command]
+    pub fn agent_perm_grant(
+        project_id: ProjectHandleOrLegacyProjectId,
+        target_ref: String,
+        principal: String,
+        authorities: Vec<String>,
+    ) -> Result<GrantOutcome, json::Error> {
+        super::perm_grant_for_agent_env(project_id, target_ref, principal, authorities)
+    }
+}
+
+/// Tauri command wrapper for desktop fleet-owner `perm_revoke`.
+pub mod tauri_perm_revoke {
+    use super::{DesktopSessionState, PermWriteOutcome, ProjectHandleOrLegacyProjectId, json};
+
+    /// Revoke direct governance permissions as the signed-in desktop fleet-owner.
+    #[tauri::command]
+    pub fn perm_revoke(
+        desktop_session: tauri::State<'_, DesktopSessionState>,
+        project_id: ProjectHandleOrLegacyProjectId,
+        target_ref: String,
+        principal: String,
+        authorities: Vec<String>,
+    ) -> Result<PermWriteOutcome, json::Error> {
+        super::perm_revoke_for_desktop_session(
+            desktop_session.session(),
+            project_id,
+            target_ref,
+            principal,
+            authorities,
+        )
+    }
+}
+
+/// Tauri command wrapper for desktop fleet-owner `group_create`.
+pub mod tauri_group_create {
+    use super::{DesktopSessionState, GroupWriteOutcome, ProjectHandleOrLegacyProjectId, json};
+
+    /// Create a governed group as the signed-in desktop fleet-owner.
+    #[tauri::command]
+    pub fn group_create(
+        desktop_session: tauri::State<'_, DesktopSessionState>,
+        project_id: ProjectHandleOrLegacyProjectId,
+        target_ref: String,
+        group: String,
+        authorities: Vec<String>,
+    ) -> Result<GroupWriteOutcome, json::Error> {
+        super::group_create_for_desktop_session(
+            desktop_session.session(),
+            project_id,
+            target_ref,
+            group,
+            authorities,
+        )
+    }
+}
+
+/// Tauri command wrapper for desktop fleet-owner `group_grant`.
+pub mod tauri_group_grant {
+    use super::{DesktopSessionState, GroupWriteOutcome, ProjectHandleOrLegacyProjectId, json};
+
+    /// Grant governed group permissions as the signed-in desktop fleet-owner.
+    #[tauri::command]
+    pub fn group_grant(
+        desktop_session: tauri::State<'_, DesktopSessionState>,
+        project_id: ProjectHandleOrLegacyProjectId,
+        target_ref: String,
+        group: String,
+        authorities: Vec<String>,
+    ) -> Result<GroupWriteOutcome, json::Error> {
+        super::group_grant_for_desktop_session(
+            desktop_session.session(),
+            project_id,
+            target_ref,
+            group,
+            authorities,
+        )
+    }
+}
+
+/// Tauri command wrapper for desktop fleet-owner `group_add_member`.
+pub mod tauri_group_add_member {
+    use super::{DesktopSessionState, GroupWriteOutcome, ProjectHandleOrLegacyProjectId, json};
+
+    /// Add a principal to a governed group as the signed-in desktop fleet-owner.
+    #[tauri::command]
+    pub fn group_add_member(
+        desktop_session: tauri::State<'_, DesktopSessionState>,
+        project_id: ProjectHandleOrLegacyProjectId,
+        target_ref: String,
+        group: String,
+        member: String,
+    ) -> Result<GroupWriteOutcome, json::Error> {
+        super::group_add_member_for_desktop_session(
+            desktop_session.session(),
+            project_id,
+            target_ref,
+            group,
+            member,
+        )
+    }
+}
+
+/// Tauri command wrapper for desktop fleet-owner `group_remove_member`.
+pub mod tauri_group_remove_member {
+    use super::{DesktopSessionState, GroupWriteOutcome, ProjectHandleOrLegacyProjectId, json};
+
+    /// Remove a principal from a governed group as the signed-in desktop fleet-owner.
+    #[tauri::command]
+    pub fn group_remove_member(
+        desktop_session: tauri::State<'_, DesktopSessionState>,
+        project_id: ProjectHandleOrLegacyProjectId,
+        target_ref: String,
+        group: String,
+        member: String,
+    ) -> Result<GroupWriteOutcome, json::Error> {
+        super::group_remove_member_for_desktop_session(
+            desktop_session.session(),
+            project_id,
+            target_ref,
+            group,
+            member,
+        )
+    }
+}
+
+/// Tauri command wrapper for desktop fleet-owner `group_delete`.
+pub mod tauri_group_delete {
+    use super::{DesktopSessionState, GroupWriteOutcome, ProjectHandleOrLegacyProjectId, json};
+
+    /// Delete a governed group as the signed-in desktop fleet-owner.
+    #[tauri::command]
+    pub fn group_delete(
+        desktop_session: tauri::State<'_, DesktopSessionState>,
+        project_id: ProjectHandleOrLegacyProjectId,
+        target_ref: String,
+        group: String,
+    ) -> Result<GroupWriteOutcome, json::Error> {
+        super::group_delete_for_desktop_session(
+            desktop_session.session(),
+            project_id,
+            target_ref,
+            group,
+        )
+    }
+}
+
+/// Tauri command wrapper for desktop fleet-owner `branch_gates_update`.
+pub mod tauri_branch_gates_update {
+    use super::{
+        BranchGatesOutcome, BranchProtectionInput, DesktopSessionState,
+        ProjectHandleOrLegacyProjectId, json,
+    };
+
+    /// Update branch gates as the signed-in desktop fleet-owner.
+    #[tauri::command]
+    pub fn branch_gates_update(
+        desktop_session: tauri::State<'_, DesktopSessionState>,
+        project_id: ProjectHandleOrLegacyProjectId,
+        target_ref: String,
+        branch: String,
+        protection: BranchProtectionInput,
+    ) -> Result<BranchGatesOutcome, json::Error> {
+        super::branch_gates_update_for_desktop_session(
+            desktop_session.session(),
+            project_id,
+            target_ref,
+            branch,
+            protection,
         )
     }
 }

@@ -288,6 +288,9 @@ fn main() -> anyhow::Result<()> {
             .plugin(tauri_plugin_clipboard_manager::init())
             .plugin(tauri_plugin_store::Builder::default().build())
             .plugin(log.build())
+            .manage(gitbutler_tauri::governance::DesktopSessionState::new(
+                gitbutler_tauri::governance::GitButlerDesktopSession,
+            ))
             .invoke_handler(gitbutler_tauri::invoke_handler())
             .menu(move |handle| menu::build(handle, &app_settings_for_menu))
             .on_window_event(|window, event| match event {

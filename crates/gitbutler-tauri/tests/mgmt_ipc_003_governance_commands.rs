@@ -1,23 +1,16 @@
-//! IPC-003 governance command registration & invocation proofs.
+//! IPC-003 governance command registration and invocation proofs.
 //!
-//! These tests prove the 12 governance commands are registered through the
-//! real `gitbutler_tauri::invoke_handler()` factory (extracted from
-//! `main.rs::run()` in SPEC-REPAIR-IPC-003) and that the registration surface
-//! matches the live but-api contract.
-//!
-//! They do not duplicate the registration list — they read the single source
-//! of truth (`crates/gitbutler-tauri/src/lib.rs`) and assert that every
-//! governance command in the contract is present as
-//! `legacy::governance::tauri_<name>::<name>` inside the factory's
-//! `tauri::generate_handler!` payload, and that `main.rs` consumes the factory
-//! rather than re-declaring the list.
+//! These tests exercise Tauri's real mock runtime command bus with
+//! `tauri::test::get_ipc_response`. They intentionally avoid source-only
+//! registration checks for the behavioral ACs.
 
 use std::{
     fs,
     path::{Path, PathBuf},
 };
 
-use serde_json::Value;
+use serde_json::{Value, json};
+use tauri::{WebviewWindowBuilder, ipc::InvokeBody, webview::InvokeRequest};
 
 /// All 12 governance commands IPC-003 promises to register.
 const GOVERNANCE_COMMANDS: &[&str] = &[
@@ -44,19 +37,21 @@ const PERMISSIONS_PATH: &str = ".gitbutler/permissions.toml";
 fn mgmt_config_command_resolves_fleet_owner_via_shim() -> anyhow::Result<()> {
     let (repo, _tmp) = governance_api_repo(true);
     let project_id = project_id_for(&repo)?;
-    let session = test_desktop_session();
+    let app = governance_app(test_desktop_session())?;
+    let webview = governance_webview(&app)?;
 
-    let outcome = temp_env::with_var("BUT_AGENT_HANDLE", None::<&str>, || {
-        gitbutler_tauri::governance::perm_grant_for_desktop_session(
-            &session,
-            project_id.clone(),
-            TARGET_REF.to_owned(),
-            "rust-reviewer".to_owned(),
-            vec!["reviews:write".to_owned()],
+    let response = temp_env::with_var("BUT_AGENT_HANDLE", None::<&str>, || {
+        invoke_ok(
+            &webview,
+            "perm_grant",
+            grant_payload(&project_id, "rust-reviewer", ["reviews:write"]),
         )
     })?;
 
-    assert_eq!(outcome.principal, "rust-reviewer");
+    assert_eq!(
+        response.get("principal").and_then(Value::as_str),
+        Some("rust-reviewer")
+    );
     assert!(
         worktree_permissions(&repo)?.contains("reviews:write"),
         "desktop fleet-owner grant must write the requested authority without BUT_AGENT_HANDLE"
@@ -70,20 +65,17 @@ fn mgmt_unauthorized_agent_config_command_denied() -> anyhow::Result<()> {
     let (repo, _tmp) = governance_api_repo(true);
     let project_id = project_id_for(&repo)?;
     let before = worktree_permissions_bytes(&repo)?;
+    let app = governance_app(test_desktop_session())?;
+    let webview = governance_webview(&app)?;
 
-    let result = temp_env::with_var("BUT_AGENT_HANDLE", Some("rust-implementer"), || {
-        gitbutler_tauri::governance::perm_grant_for_agent_env(
-            project_id.clone(),
-            TARGET_REF.to_owned(),
-            "rust-implementer".to_owned(),
-            vec!["administration:write".to_owned()],
+    let error = temp_env::with_var("BUT_AGENT_HANDLE", Some("rust-implementer"), || {
+        invoke_err(
+            &webview,
+            "agent_perm_grant",
+            grant_payload(&project_id, "rust-implementer", ["administration:write"]),
         )
-    });
+    })?;
 
-    let error = match result {
-        Ok(_) => anyhow::bail!("non-admin agent perm_grant must be denied"),
-        Err(error) => serde_json::to_value(error)?,
-    };
     assert_perm_denied_with_hint(&error, "administration:write");
     assert_eq!(
         worktree_permissions_bytes(&repo)?,
@@ -98,15 +90,14 @@ fn mgmt_unauthorized_agent_config_command_denied() -> anyhow::Result<()> {
 fn mgmt_fleet_owner_grants_on_bootstrap_no_committed_config() -> anyhow::Result<()> {
     let (repo, _tmp) = governance_api_repo(false);
     let project_id = project_id_for(&repo)?;
-    let session = test_desktop_session();
+    let app = governance_app(test_desktop_session())?;
+    let webview = governance_webview(&app)?;
 
     temp_env::with_var("BUT_AGENT_HANDLE", None::<&str>, || {
-        gitbutler_tauri::governance::perm_grant_for_desktop_session(
-            &session,
-            project_id.clone(),
-            TARGET_REF.to_owned(),
-            "rust-reviewer".to_owned(),
-            vec!["reviews:write".to_owned()],
+        invoke_ok(
+            &webview,
+            "perm_grant",
+            grant_payload(&project_id, "rust-reviewer", ["reviews:write"]),
         )
     })?;
 
@@ -123,19 +114,21 @@ fn mgmt_fleet_owner_grants_on_bootstrap_no_committed_config() -> anyhow::Result<
 fn mgmt_nonadmin_env_handle_does_not_shadow_fleet_owner() -> anyhow::Result<()> {
     let (repo, _tmp) = governance_api_repo(true);
     let project_id = project_id_for(&repo)?;
-    let session = test_desktop_session();
+    let app = governance_app(test_desktop_session())?;
+    let webview = governance_webview(&app)?;
 
-    let outcome = temp_env::with_var("BUT_AGENT_HANDLE", Some("rust-implementer"), || {
-        gitbutler_tauri::governance::perm_grant_for_desktop_session(
-            &session,
-            project_id.clone(),
-            TARGET_REF.to_owned(),
-            "rust-reviewer".to_owned(),
-            vec!["reviews:write".to_owned()],
+    let response = temp_env::with_var("BUT_AGENT_HANDLE", Some("rust-implementer"), || {
+        invoke_ok(
+            &webview,
+            "perm_grant",
+            grant_payload(&project_id, "rust-reviewer", ["reviews:write"]),
         )
     })?;
 
-    assert_eq!(outcome.principal, "rust-reviewer");
+    assert_eq!(
+        response.get("principal").and_then(Value::as_str),
+        Some("rust-reviewer")
+    );
     assert!(
         worktree_permissions(&repo)?.contains("reviews:write"),
         "non-admin BUT_AGENT_HANDLE must not shadow the desktop fleet-owner identity"
@@ -144,67 +137,36 @@ fn mgmt_nonadmin_env_handle_does_not_shadow_fleet_owner() -> anyhow::Result<()> 
 }
 
 #[test]
-fn mgmt_governance_commands_registered_and_invokable() {
-    // Prove the real factory compiles + is callable from outside the binary.
-    // `invoke_handler` returns the `tauri::generate_handler!` closure; calling
-    // it without a full Tauri runtime would panic on Invoke resolution, so we
-    // only build it here. Compilation + the absence of `unreachable!`/panic
-    // during construction is the load-bearing proof that the registration
-    // surface compiles end-to-end against the real but-api macros.
-    let _handler = gitbutler_tauri::invoke_handler();
+#[serial_test::serial]
+fn mgmt_governance_commands_registered_and_invokable() -> anyhow::Result<()> {
+    let (repo, _tmp) = governance_api_repo(true);
+    let project_id = project_id_for(&repo)?;
+    let app = governance_app(test_desktop_session())?;
+    let webview = governance_webview(&app)?;
 
-    // Belt-and-braces: the const view exported from lib.rs must align with the
-    // IPC-003 contract — every governance command present.
-    for command in GOVERNANCE_COMMANDS {
-        assert!(
-            gitbutler_tauri::GOVERNANCE_COMMANDS.contains(command),
-            "gitbutler_tauri::GOVERNANCE_COMMANDS must advertise {command}"
-        );
-    }
+    let reached = temp_env::with_var("BUT_AGENT_HANDLE", Some("admin"), || {
+        let mut reached = Vec::new();
+        for case in governance_invocation_cases(&project_id) {
+            let result = invoke(&webview, case.command, case.payload.clone())?;
+            assert!(
+                result.is_ok() || structured_governance_error(result.as_ref().err()),
+                "{} must reach its registered governance command and return a real result/error, got {result:?}",
+                case.command
+            );
+            reached.push(case.command);
+        }
+        anyhow::Ok(reached)
+    })?;
 
-    // The factory's `generate_handler!` payload (the single source of truth)
-    // must register each governance command under the bare post-rename path
-    // `legacy::governance::tauri_<name>::<name>`. This is the same source the
-    // desktop binary consumes, so the test cannot drift from production.
-    let factory_source = read_crate_file("src/lib.rs");
-    let api_contract_mismatch = governance_api_contract_mismatch();
-    let missing_from_factory = GOVERNANCE_COMMANDS
-        .iter()
-        .copied()
-        .filter(|command| !factory_registers_command(&factory_source, command))
-        .collect::<Vec<_>>();
-
-    assert!(
-        missing_from_factory.is_empty() && api_contract_mismatch.is_empty(),
-        "MGMT-IPC-003 requires all governance commands to be registered in the real \
-         gitbutler_tauri::invoke_handler() factory surface as \
-         `legacy::governance::tauri_<name>::<name>` rows. Missing factory rows: \
-         {missing_from_factory:?}. Current but-api/spec mismatch: {api_contract_mismatch:?}."
-    );
-
-    // Pin the factory shape: lib.rs must be the single registration site.
-    assert!(
-        factory_source.contains("pub fn invoke_handler("),
-        "lib.rs must expose the public invoke_handler factory consumed by main.rs"
+    assert_eq!(
+        reached, GOVERNANCE_COMMANDS,
+        "the IPC harness must invoke exactly the 12 governance commands in the contract"
     );
     assert!(
-        factory_source.contains("tauri::generate_handler!["),
-        "invoke_handler must build the payload from the real tauri::generate_handler! macro"
+        worktree_permissions(&repo)?.contains("reviews:write"),
+        "perm_grant IPC call must reach the real mutation path"
     );
-
-    // main.rs must NOT duplicate the registration list — it consumes the
-    // factory. A second `generate_handler!` in the binary would let the test
-    // surface drift from production.
-    let main_source = read_crate_file("src/main.rs");
-    assert!(
-        !main_source.contains("tauri::generate_handler!["),
-        "main.rs must consume gitbutler_tauri::invoke_handler() and not duplicate the \
-         generate_handler! command list"
-    );
-    assert!(
-        main_source.contains("gitbutler_tauri::invoke_handler()"),
-        "main.rs must register the governance command surface through the extracted factory"
-    );
+    Ok(())
 }
 
 #[test]
@@ -244,38 +206,198 @@ fn mgmt_capability_main_scope_preserved() {
 }
 
 #[test]
-fn mgmt_unregistered_governance_command_not_invokable() {
-    let factory_source = read_crate_file("src/lib.rs");
-    let negative_control = "mgmt_unregistered_governance_probe";
+#[serial_test::serial]
+fn mgmt_unregistered_governance_command_not_invokable() -> anyhow::Result<()> {
+    let app = governance_app(test_desktop_session())?;
+    let webview = governance_webview(&app)?;
+    let error = invoke_err(&webview, "mgmt_unregistered_governance_probe", json!({}))?;
 
     assert!(
-        !factory_registers_command(&factory_source, negative_control),
-        "the deliberately unregistered governance negative control must remain command-not-found"
+        error.to_string().contains("not found"),
+        "the real Tauri bus must reject an unregistered governance command, got {error:?}"
     );
+    Ok(())
 }
 
-fn factory_registers_command(factory_source: &str, command: &str) -> bool {
-    factory_source.contains(&format!("legacy::governance::tauri_{command}::{command}"))
-        || factory_source.contains(&format!("governance::tauri_{command}::{command}"))
+struct InvocationCase {
+    command: &'static str,
+    payload: Value,
 }
 
-fn governance_api_contract_mismatch() -> Vec<String> {
-    let governance_api = read_workspace_file("crates/but-api/src/legacy/governance.rs");
-    GOVERNANCE_COMMANDS
-        .iter()
-        .copied()
-        .filter_map(|command| {
-            let exact_wrapper = format!("#[but_api]\npub fn {command}(");
-            let converted_wrapper = format!("#[but_api(GovernanceStatus)]\npub fn {command}(");
-            if governance_api.contains(&exact_wrapper)
-                || governance_api.contains(&converted_wrapper)
-            {
-                None
-            } else {
-                Some(command.to_owned())
-            }
-        })
-        .collect()
+fn governance_invocation_cases(
+    project_id: &but_ctx::ProjectHandleOrLegacyProjectId,
+) -> Vec<InvocationCase> {
+    vec![
+        InvocationCase {
+            command: "perm_list",
+            payload: json!({ "projectId": project_id, "principal": "admin" }),
+        },
+        InvocationCase {
+            command: "perm_grant",
+            payload: grant_payload(project_id, "rust-reviewer", ["reviews:write"]),
+        },
+        InvocationCase {
+            command: "perm_revoke",
+            payload: grant_payload(project_id, "rust-reviewer", ["contents:read"]),
+        },
+        InvocationCase {
+            command: "group_create",
+            payload: json!({
+                "projectId": project_id,
+                "targetRef": TARGET_REF,
+                "group": "qa",
+                "authorities": ["reviews:write"]
+            }),
+        },
+        InvocationCase {
+            command: "group_grant",
+            payload: json!({
+                "projectId": project_id,
+                "targetRef": TARGET_REF,
+                "group": "qa",
+                "authorities": ["contents:write"]
+            }),
+        },
+        InvocationCase {
+            command: "group_add_member",
+            payload: json!({
+                "projectId": project_id,
+                "targetRef": TARGET_REF,
+                "group": "qa",
+                "member": "rust-reviewer"
+            }),
+        },
+        InvocationCase {
+            command: "group_remove_member",
+            payload: json!({
+                "projectId": project_id,
+                "targetRef": TARGET_REF,
+                "group": "qa",
+                "member": "rust-reviewer"
+            }),
+        },
+        InvocationCase {
+            command: "group_delete",
+            payload: json!({
+                "projectId": project_id,
+                "targetRef": TARGET_REF,
+                "group": "qa"
+            }),
+        },
+        InvocationCase {
+            command: "group_list",
+            payload: json!({ "projectId": project_id }),
+        },
+        InvocationCase {
+            command: "branch_gates_read",
+            payload: json!({ "projectId": project_id, "targetRef": TARGET_REF }),
+        },
+        InvocationCase {
+            command: "branch_gates_update",
+            payload: json!({
+                "projectId": project_id,
+                "targetRef": TARGET_REF,
+                "branch": "release",
+                "protection": { "protected": true }
+            }),
+        },
+        InvocationCase {
+            command: "governance_status_read",
+            payload: json!({ "projectId": project_id }),
+        },
+    ]
+}
+
+fn grant_payload(
+    project_id: &but_ctx::ProjectHandleOrLegacyProjectId,
+    principal: &str,
+    authorities: impl IntoIterator<Item = &'static str>,
+) -> Value {
+    json!({
+        "projectId": project_id,
+        "targetRef": TARGET_REF,
+        "principal": principal,
+        "authorities": authorities.into_iter().collect::<Vec<_>>()
+    })
+}
+
+fn governance_app(
+    session: gitbutler_tauri::governance::TestDesktopSession,
+) -> anyhow::Result<tauri::App<tauri::test::MockRuntime>> {
+    macro_rules! tauri_handler_from_governance_rows {
+        ($($governance_command:path),* $(,)?) => {
+            tauri::generate_handler![$($governance_command),*]
+        };
+    }
+
+    tauri::test::mock_builder()
+        .manage(gitbutler_tauri::governance::DesktopSessionState::new(
+            session,
+        ))
+        .invoke_handler(gitbutler_tauri::gitbutler_governance_command_rows!(
+            tauri_handler_from_governance_rows
+        ))
+        .build(tauri::test::mock_context(tauri::test::noop_assets()))
+        .map_err(Into::into)
+}
+
+fn governance_webview(
+    app: &tauri::App<tauri::test::MockRuntime>,
+) -> anyhow::Result<tauri::WebviewWindow<tauri::test::MockRuntime>> {
+    WebviewWindowBuilder::new(app, "main", Default::default())
+        .build()
+        .map_err(Into::into)
+}
+
+fn invoke_ok(
+    webview: &tauri::WebviewWindow<tauri::test::MockRuntime>,
+    command: &str,
+    payload: Value,
+) -> anyhow::Result<Value> {
+    invoke(webview, command, payload)?
+        .map_err(|error| anyhow::anyhow!("unexpected IPC error: {error:?}"))
+}
+
+fn invoke_err(
+    webview: &tauri::WebviewWindow<tauri::test::MockRuntime>,
+    command: &str,
+    payload: Value,
+) -> anyhow::Result<Value> {
+    match invoke(webview, command, payload)? {
+        Ok(value) => anyhow::bail!("expected IPC error from {command}, got {value:?}"),
+        Err(error) => Ok(error),
+    }
+}
+
+fn invoke(
+    webview: &tauri::WebviewWindow<tauri::test::MockRuntime>,
+    command: &str,
+    payload: Value,
+) -> anyhow::Result<Result<Value, Value>> {
+    let request = InvokeRequest {
+        cmd: command.into(),
+        callback: tauri::ipc::CallbackFn(0),
+        error: tauri::ipc::CallbackFn(1),
+        url: "tauri://localhost".parse()?,
+        body: InvokeBody::from(payload),
+        headers: Default::default(),
+        invoke_key: tauri::test::INVOKE_KEY.to_owned(),
+    };
+
+    match tauri::test::get_ipc_response(webview, request) {
+        Ok(body) => Ok(Ok(body.deserialize::<Value>()?)),
+        Err(error) => Ok(Err(error)),
+    }
+}
+
+fn structured_governance_error(error: Option<&Value>) -> bool {
+    error.is_some_and(|error| {
+        error
+            .get("code")
+            .and_then(Value::as_str)
+            .is_some_and(|code| matches!(code, "perm.denied" | "config.invalid"))
+            || !error.to_string().contains("not found")
+    })
 }
 
 fn capability_files() -> Vec<PathBuf> {
@@ -289,7 +411,9 @@ fn collect_files(dir: &Path, files: &mut Vec<PathBuf>) {
     for entry in fs::read_dir(dir)
         .unwrap_or_else(|error| panic!("reading {} failed: {error}", dir.display()))
     {
-        let path = entry.expect("reading directory entry failed").path();
+        let path = entry
+            .unwrap_or_else(|error| panic!("reading directory entry failed: {error}"))
+            .path();
         if path.is_dir() {
             collect_files(&path, files);
         } else {
@@ -304,22 +428,8 @@ fn read_crate_file(relative: &str) -> String {
         .unwrap_or_else(|error| panic!("reading {} failed: {error}", path.display()))
 }
 
-fn read_workspace_file(relative: &str) -> String {
-    let path = workspace_dir().join(relative);
-    fs::read_to_string(&path)
-        .unwrap_or_else(|error| panic!("reading {} failed: {error}", path.display()))
-}
-
 fn crate_dir() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-}
-
-fn workspace_dir() -> PathBuf {
-    crate_dir()
-        .parent()
-        .and_then(Path::parent)
-        .expect("gitbutler-tauri lives under crates/")
-        .to_path_buf()
 }
 
 fn governance_api_repo(with_committed_permissions: bool) -> (gix::Repository, tempfile::TempDir) {
@@ -343,7 +453,7 @@ git commit -m "initial"
 cat >.gitbutler/permissions.toml <<'EOF'
 [[principal]]
 id = "admin"
-permissions = ["administration:write", "merge"]
+permissions = ["administration:write", "administration:read", "merge"]
 
 [[principal]]
 id = "rust-implementer"
