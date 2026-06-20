@@ -1,0 +1,721 @@
+
+> @gitbutler/desktop@0.0.0 check /Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop
+> svelte-check --tsconfig ./tsconfig.json
+
+Loading svelte-check in workspace: /Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop
+Getting Svelte diagnostics...
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/lib/config/config.ts:6:8
+Error: Cannot find module '@gitbutler/shared/persisted' or its corresponding type declarations. 
+	type Persisted,
+} from "@gitbutler/shared/persisted";
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/lib/ai/types.ts:2:32
+Error: Cannot find module '@gitbutler/shared/persisted' or its corresponding type declarations. 
+import { isStr } from "@gitbutler/ui/utils/string";
+import type { Persisted } from "@gitbutler/shared/persisted";
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/lib/ai/butlerClient.ts:8:39
+Error: Cannot find module '@gitbutler/shared/utils/promise' or its corresponding type declarations. 
+import { ModelKind, type AIClient, type AIEvalOptions, type Prompt } from "$lib/ai/types";
+import { stringStreamGenerator } from "@gitbutler/shared/utils/promise";
+import type { HttpClient } from "@gitbutler/shared/network/httpClient";
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/lib/ai/butlerClient.ts:9:33
+Error: Cannot find module '@gitbutler/shared/network/httpClient' or its corresponding type declarations. 
+import { stringStreamGenerator } from "@gitbutler/shared/utils/promise";
+import type { HttpClient } from "@gitbutler/shared/network/httpClient";
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/lib/rules/rule.ts:1:32
+Error: Cannot find module '@gitbutler/shared/utils/branding' or its corresponding type declarations. 
+import type { BrandedId } from "@gitbutler/shared/utils/branding";
+import type { FileStatus } from "@gitbutler/ui/components/file/types";
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/lib/state/customHooks.svelte.ts:3:26
+Error: Cannot find module '@gitbutler/shared/reactiveUtils.svelte' or its corresponding type declarations. 
+import { isNormalizedError, type NormalizedError } from "$lib/error/normalizedError";
+import { reactive } from "@gitbutler/shared/reactiveUtils.svelte";
+import { type Reactive } from "@gitbutler/shared/storeUtils";
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/lib/state/customHooks.svelte.ts:4:31
+Error: Cannot find module '@gitbutler/shared/storeUtils' or its corresponding type declarations. 
+import { reactive } from "@gitbutler/shared/reactiveUtils.svelte";
+import { type Reactive } from "@gitbutler/shared/storeUtils";
+import { isErrorlike } from "@gitbutler/ui/utils/typeguards";
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/lib/state/customHooks.svelte.ts:29:31
+Error: Cannot find module '@gitbutler/shared/utils/typeUtils' or its corresponding type declarations. 
+import type { HookContext } from "$lib/state/context";
+import type { Prettify } from "@gitbutler/shared/utils/typeUtils";
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/lib/state/butlerModule.ts:7:31
+Error: Cannot find module '@gitbutler/shared/storeUtils' or its corresponding type declarations. 
+import { isMutationDefinition, isQueryDefinition } from "$lib/state/helpers";
+import { type Reactive } from "@gitbutler/shared/storeUtils";
+import {
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/lib/state/uiState.svelte.ts:3:26
+Error: Cannot find module '@gitbutler/shared/reactiveUtils.svelte' or its corresponding type declarations. 
+import { InjectionToken } from "@gitbutler/core/context";
+import { reactive } from "@gitbutler/shared/reactiveUtils.svelte";
+import { type Reactive } from "@gitbutler/shared/storeUtils";
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/lib/state/uiState.svelte.ts:4:31
+Error: Cannot find module '@gitbutler/shared/storeUtils' or its corresponding type declarations. 
+import { reactive } from "@gitbutler/shared/reactiveUtils.svelte";
+import { type Reactive } from "@gitbutler/shared/storeUtils";
+import { createEntityAdapter, createSlice, type EntityState } from "@reduxjs/toolkit";
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/lib/user/userEndpoints.ts:4:30
+Error: Cannot find module '@gitbutler/shared/users/types' or its corresponding type declarations. 
+import type { User } from "$lib/user/user";
+import type { ApiUser } from "@gitbutler/shared/users/types";
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/lib/hunks/hunk.ts:1:25
+Error: Cannot find module '@gitbutler/shared/memoization' or its corresponding type declarations. 
+import { memoize } from "@gitbutler/shared/memoization";
+import {
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/lib/user/userService.svelte.ts:11:30
+Error: Cannot find module '@gitbutler/shared/users/types' or its corresponding type declarations. 
+import type { User } from "$lib/user/user";
+import type { ApiUser } from "@gitbutler/shared/users/types";
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/lib/ai/service.ts:38:33
+Error: Cannot find module '@gitbutler/shared/network/httpClient' or its corresponding type declarations. 
+import type { TokenMemoryService } from "$lib/user/tokenMemoryService";
+import type { HttpClient } from "@gitbutler/shared/network/httpClient";
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/components/editor/commitSuggestions.svelte.ts:8:39
+Error: Cannot find module '@gitbutler/shared/storeUtils' or its corresponding type declarations. 
+import type { UiState } from "$lib/state/uiState.svelte";
+import type { WritableReactive } from "@gitbutler/shared/storeUtils";
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/lib/updater/updater.ts:3:27
+Error: Cannot find module '@gitbutler/shared/persisted' or its corresponding type declarations. 
+import { InjectionToken } from "@gitbutler/core/context";
+import { persisted } from "@gitbutler/shared/persisted";
+import { get, writable } from "svelte/store";
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/components/shared/Resizer.svelte:6:40
+Error: Cannot find module '@gitbutler/shared/persisted' or its corresponding type declarations. (ts)
+	import { inject } from "@gitbutler/core/context";
+	import { persistWithExpiration } from "@gitbutler/shared/persisted";
+	import { mergeUnlisten } from "@gitbutler/ui/utils/mergeUnlisten";
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/lib/ai/aiPromptService.ts:8:43
+Error: Cannot find module '@gitbutler/shared/persisted' or its corresponding type declarations. 
+import { InjectionToken } from "@gitbutler/core/context";
+import { persisted, type Persisted } from "@gitbutler/shared/persisted";
+import { get } from "svelte/store";
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/lib/ai/aiPromptService.ts:43:63
+Error: Argument of type '{}' is not assignable to parameter of type 'string'. 
+
+		return this.findPrompt(get(this.branchPrompts.userPrompts), id);
+	}
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/lib/ai/aiPromptService.ts:55:63
+Error: Argument of type '{}' is not assignable to parameter of type 'string'. 
+
+		return this.findPrompt(get(this.commitPrompts.userPrompts), id);
+	}
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/lib/selection/key.ts:1:32
+Error: Cannot find module '@gitbutler/shared/utils/branding' or its corresponding type declarations. 
+import type { BrandedId } from "@gitbutler/shared/utils/branding";
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/lib/selection/uncommittedService.svelte.ts:18:26
+Error: Cannot find module '@gitbutler/shared/reactiveUtils.svelte' or its corresponding type declarations. 
+import { InjectionToken } from "@gitbutler/core/context";
+import { reactive } from "@gitbutler/shared/reactiveUtils.svelte";
+import { type Reactive } from "@gitbutler/shared/storeUtils";
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/lib/selection/uncommittedService.svelte.ts:19:31
+Error: Cannot find module '@gitbutler/shared/storeUtils' or its corresponding type declarations. 
+import { reactive } from "@gitbutler/shared/reactiveUtils.svelte";
+import { type Reactive } from "@gitbutler/shared/storeUtils";
+import { isDefined } from "@gitbutler/ui/utils/typeguards";
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/lib/selection/uncommittedService.svelte.ts:356:47
+Error: Parameter 'l' implicitly has an 'any' type. 
+				// selected.
+				const hunksAtPath = relevantHunks.filter((l) => l.path === diff.path);
+				if (hunksAtPath.length === 0) return undefined;
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/lib/selection/uncommittedService.svelte.ts:364:31
+Error: Parameter 'l' implicitly has an 'any' type. 
+				const filteredDiff = diff.diff.subject.hunks.filter((h) => {
+					return hunksAtPath.some((l) => {
+						const assignment = uncommittedSelectors.hunkAssignments.selectById(
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/lib/config/uiFeatureFlags.ts:7:50
+Error: Cannot find module '@gitbutler/shared/persisted' or its corresponding type declarations. 
+ */
+import { persisted, persistWithExpiration } from "@gitbutler/shared/persisted";
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/lib/stacks/stackService.svelte.ts:26:26
+Error: Cannot find module '@gitbutler/shared/reactiveUtils.svelte' or its corresponding type declarations. 
+import { InjectionToken } from "@gitbutler/core/context";
+import { reactive } from "@gitbutler/shared/reactiveUtils.svelte";
+import { isDefined } from "@gitbutler/ui/utils/typeguards";
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/lib/ai/diffInputContext.svelte.ts:1:28
+Error: Cannot find module '@gitbutler/shared/lockfiles' or its corresponding type declarations. 
+import { isLockfile } from "@gitbutler/shared/lockfiles";
+import type { DiffInput } from "$lib/ai/service";
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/lib/ai/service.test.ts:27:28
+Error: Cannot find module '@gitbutler/shared/network/httpClient' or its corresponding type declarations. 
+import { TokenMemoryService } from "$lib/user/tokenMemoryService";
+import { HttpClient } from "@gitbutler/shared/network/httpClient";
+import { expect, test, describe, vi } from "vitest";
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/lib/project/projectsService.ts:7:27
+Error: Cannot find module '@gitbutler/shared/persisted' or its corresponding type declarations. 
+import { InjectionToken } from "@gitbutler/core/context";
+import { persisted } from "@gitbutler/shared/persisted";
+import { chipToasts } from "@gitbutler/ui";
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/lib/analytics/commitAnalytics.ts:202:25
+Error: Argument of type '{ stagingBehavior: unknown; autoSelectBranchName: unknown; }' is not assignable to parameter of type 'EventProperties'.
+  Property 'stagingBehavior' is incompatible with index signature.
+    Type 'unknown' is not assignable to type 'string | number | boolean | undefined'. 
+
+		return namespaceProps(behaviorMetrics, "behavior");
+	}
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/lib/forge/interface/types.ts:3:31
+Error: Cannot find module '@gitbutler/shared/storeUtils' or its corresponding type declarations. 
+import type { ForgeReviewLabel } from "@gitbutler/but-sdk";
+import type { Reactive } from "@gitbutler/shared/storeUtils";
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/lib/selection/fileSelectionManager.svelte.ts:12:26
+Error: Cannot find module '@gitbutler/shared/reactiveUtils.svelte' or its corresponding type declarations. 
+import { InjectionToken } from "@gitbutler/core/context";
+import { reactive } from "@gitbutler/shared/reactiveUtils.svelte";
+import { SvelteSet } from "svelte/reactivity";
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/lib/bootstrap/deps.ts:74:43
+Error: Cannot find module '@gitbutler/shared/feeds/service' or its corresponding type declarations. 
+import { provideAll } from "@gitbutler/core/context";
+import { FeedService, FEED_SERVICE } from "@gitbutler/shared/feeds/service";
+import { HttpClient, HTTP_CLIENT } from "@gitbutler/shared/network/httpClient";
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/lib/bootstrap/deps.ts:75:41
+Error: Cannot find module '@gitbutler/shared/network/httpClient' or its corresponding type declarations. 
+import { FeedService, FEED_SERVICE } from "@gitbutler/shared/feeds/service";
+import { HttpClient, HTTP_CLIENT } from "@gitbutler/shared/network/httpClient";
+import {
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/lib/bootstrap/deps.ts:79:8
+Error: Cannot find module '@gitbutler/shared/organizations/organizationService' or its corresponding type declarations. 
+	ORGANIZATION_SERVICE,
+} from "@gitbutler/shared/organizations/organizationService";
+import { reactive } from "@gitbutler/shared/reactiveUtils.svelte";
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/lib/bootstrap/deps.ts:80:26
+Error: Cannot find module '@gitbutler/shared/reactiveUtils.svelte' or its corresponding type declarations. 
+} from "@gitbutler/shared/organizations/organizationService";
+import { reactive } from "@gitbutler/shared/reactiveUtils.svelte";
+import { AppState, APP_STATE, APP_DISPATCH } from "@gitbutler/shared/redux/store.svelte";
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/lib/bootstrap/deps.ts:81:51
+Error: Cannot find module '@gitbutler/shared/redux/store.svelte' or its corresponding type declarations. 
+import { reactive } from "@gitbutler/shared/reactiveUtils.svelte";
+import { AppState, APP_STATE, APP_DISPATCH } from "@gitbutler/shared/redux/store.svelte";
+import { UPLOADS_SERVICE, UploadsService } from "@gitbutler/shared/uploads/uploadsService";
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/lib/bootstrap/deps.ts:82:49
+Error: Cannot find module '@gitbutler/shared/uploads/uploadsService' or its corresponding type declarations. 
+import { AppState, APP_STATE, APP_DISPATCH } from "@gitbutler/shared/redux/store.svelte";
+import { UPLOADS_SERVICE, UploadsService } from "@gitbutler/shared/uploads/uploadsService";
+import {
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/lib/bootstrap/deps.ts:86:8
+Error: Cannot find module '@gitbutler/shared/users/userService' or its corresponding type declarations. 
+	USER_SERVICE as CLOUD_USER_SERVICE,
+} from "@gitbutler/shared/users/userService";
+import { DragStateService, DRAG_STATE_SERVICE } from "@gitbutler/ui/drag/dragStateService.svelte";
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/lib/forge/butRequestDetailsService.ts:1:53
+Error: Cannot find module '@gitbutler/shared/branches/branchService' or its corresponding type declarations. 
+import { BranchService as CloudBranchService } from "@gitbutler/shared/branches/branchService";
+import type { LatestBranchLookupService } from "@gitbutler/shared/branches/latestBranchLookupService";
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/lib/forge/butRequestDetailsService.ts:2:48
+Error: Cannot find module '@gitbutler/shared/branches/latestBranchLookupService' or its corresponding type declarations. 
+import { BranchService as CloudBranchService } from "@gitbutler/shared/branches/branchService";
+import type { LatestBranchLookupService } from "@gitbutler/shared/branches/latestBranchLookupService";
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/lib/forge/github/hooks.svelte.ts:7:26
+Error: Cannot find module '@gitbutler/shared/reactiveUtils.svelte' or its corresponding type declarations. 
+import { inject } from "@gitbutler/core/context";
+import { reactive } from "@gitbutler/shared/reactiveUtils.svelte";
+import type { ForgeUserQuery } from "$lib/forge/interface/types";
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/lib/forge/github/hooks.svelte.ts:10:31
+Error: Cannot find module '@gitbutler/shared/storeUtils' or its corresponding type declarations. 
+import type { Code, GithubAccountIdentifier } from "@gitbutler/but-sdk";
+import type { Reactive } from "@gitbutler/shared/storeUtils";
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/lib/forge/gitlab/hooks.svelte.ts:7:26
+Error: Cannot find module '@gitbutler/shared/reactiveUtils.svelte' or its corresponding type declarations. 
+import { inject } from "@gitbutler/core/context";
+import { reactive } from "@gitbutler/shared/reactiveUtils.svelte";
+import type { ForgeUserQuery } from "$lib/forge/interface/types";
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/lib/forge/gitlab/hooks.svelte.ts:10:31
+Error: Cannot find module '@gitbutler/shared/storeUtils' or its corresponding type declarations. 
+import type { GitlabAccountIdentifier } from "@gitbutler/but-sdk";
+import type { Reactive } from "@gitbutler/shared/storeUtils";
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/lib/forge/forgeAuth.svelte.ts:5:26
+Error: Cannot find module '@gitbutler/shared/reactiveUtils.svelte' or its corresponding type declarations. 
+import { inject } from "@gitbutler/core/context";
+import { reactive } from "@gitbutler/shared/reactiveUtils.svelte";
+import type { Reactive } from "@gitbutler/shared/storeUtils";
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/lib/forge/forgeAuth.svelte.ts:6:31
+Error: Cannot find module '@gitbutler/shared/storeUtils' or its corresponding type declarations. 
+import { reactive } from "@gitbutler/shared/reactiveUtils.svelte";
+import type { Reactive } from "@gitbutler/shared/storeUtils";
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/lib/forge/prContents.ts:1:66
+Error: Cannot find module '@gitbutler/shared/persisted' or its corresponding type declarations. 
+import { getEphemeralStorageItem, setEphemeralStorageItem } from "@gitbutler/shared/persisted";
+import { type Subscriber, type Unsubscriber } from "svelte/store";
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/lib/testing/mockStackService.ts:2:26
+Error: Cannot find module '@gitbutler/shared/reactiveUtils.svelte' or its corresponding type declarations. 
+import { mockReduxFulfilled } from "$lib/testing/mockRedux";
+import { reactive } from "@gitbutler/shared/reactiveUtils.svelte";
+import { vi } from "vitest";
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/lib/user/tokenMemoryService.test.ts:2:27
+Error: Cannot find module '@gitbutler/shared/persisted' or its corresponding type declarations. 
+import { TokenMemoryService } from "$lib/user/tokenMemoryService";
+import { persisted } from "@gitbutler/shared/persisted";
+import { get } from "svelte/store";
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/lib/floating/FloatingModal.svelte:8:49
+Error: Cannot find module '@gitbutler/shared/persisted' or its corresponding type declarations. (ts)
+	import { inject } from "@gitbutler/core/context";
+	import { getStorageItem, setStorageItem } from "@gitbutler/shared/persisted";
+	import { focusable } from "@gitbutler/ui/focus/focusable";
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/components/editor/MessageEditor.svelte:20:30
+Error: Cannot find module '@gitbutler/shared/dom' or its corresponding type declarations. (ts)
+	import { inject } from "@gitbutler/core/context";
+	import { uploadFiles } from "@gitbutler/shared/dom";
+	import { persisted } from "@gitbutler/shared/persisted";
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/components/editor/MessageEditor.svelte:21:28
+Error: Cannot find module '@gitbutler/shared/persisted' or its corresponding type declarations. (ts)
+	import { uploadFiles } from "@gitbutler/shared/dom";
+	import { persisted } from "@gitbutler/shared/persisted";
+	import { UPLOADS_SERVICE } from "@gitbutler/shared/uploads/uploadsService";
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/components/editor/MessageEditor.svelte:22:34
+Error: Cannot find module '@gitbutler/shared/uploads/uploadsService' or its corresponding type declarations. (ts)
+	import { persisted } from "@gitbutler/shared/persisted";
+	import { UPLOADS_SERVICE } from "@gitbutler/shared/uploads/uploadsService";
+	import {
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/components/editor/MessageEditor.svelte:157:26
+Error: 'uploadsService' is of type 'unknown'. (ts)
+			.map(async (file) => {
+				const upload = await uploadsService.uploadFile(file);
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/components/forge/ReviewCreation.svelte:36:28
+Error: Cannot find module '@gitbutler/shared/persisted' or its corresponding type declarations. (ts)
+	import { inject } from "@gitbutler/core/context";
+	import { persisted } from "@gitbutler/shared/persisted";
+	import { chipToasts, TestId } from "@gitbutler/ui";
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/components/forge/ReviewCreation.svelte:193:54
+Error: Binding element 'branch' implicitly has an 'any' type. (ts)
+
+			const remoteRef = pushQuery.branchToRemote.find(([branch]) => branch === branchName)?.[1];
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/components/forge/ReviewCreationControls.svelte:2:28
+Error: Cannot find module '@gitbutler/shared/persisted' or its corresponding type declarations. (ts)
+<script lang="ts">
+	import { persisted } from "@gitbutler/shared/persisted";
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/components/forge/CreateReviewBox.svelte:10:27
+Error: Cannot find module '@gitbutler/shared/reactiveUtils.svelte' or its corresponding type declarations. (ts)
+	import { inject } from "@gitbutler/core/context";
+	import { reactive } from "@gitbutler/shared/reactiveUtils.svelte";
+	import { TestId } from "@gitbutler/ui";
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/components/branch/CreateBranchModal.svelte:11:28
+Error: Cannot find module '@gitbutler/shared/persisted' or its corresponding type declarations. (ts)
+	import { inject } from "@gitbutler/core/context";
+	import { persisted } from "@gitbutler/shared/persisted";
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/components/branchesPage/BranchExplorer.svelte:19:27
+Error: Cannot find module '@gitbutler/shared/reactiveUtils.svelte' or its corresponding type declarations. (ts)
+	import { inject } from "@gitbutler/core/context";
+	import { reactive } from "@gitbutler/shared/reactiveUtils.svelte";
+	import { Badge, Button, EmptyStatePlaceholder, SegmentControl } from "@gitbutler/ui";
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/components/files/FileListViewToggle.svelte:4:28
+Error: Cannot find module '@gitbutler/shared/persisted' or its corresponding type declarations. (ts)
+	import { inject } from "@gitbutler/core/context";
+	import { persisted } from "@gitbutler/shared/persisted";
+	import { SegmentControl, TestId } from "@gitbutler/ui";
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/components/files/FileListViewToggle.svelte:20:27
+Error: Parameter 'value' implicitly has an 'any' type. (ts)
+	$effect(() => {
+		return saved.subscribe((value) => {
+			mode = value ?? uiState.global.defaultFileListMode.current;
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/components/shared/Drawer.svelte:4:40
+Error: Cannot find module '@gitbutler/shared/persisted' or its corresponding type declarations. (ts)
+	import DrawerHeader from "$components/shared/DrawerHeader.svelte";
+	import { persistWithExpiration } from "@gitbutler/shared/persisted";
+	import { Icon } from "@gitbutler/ui";
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/components/commit/NewCommitView.svelte:152:47
+Error: Binding element 'reason' implicitly has an 'any' type. (ts)
+				const pathsToRejectedChanges = response.rejectedChanges.reduce(
+					(acc: Record<string, RejectionReason>, { reason, path }) => {
+						acc[path] = reason;
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/components/commit/NewCommitView.svelte:152:55
+Error: Binding element 'path' implicitly has an 'any' type. (ts)
+				const pathsToRejectedChanges = response.rejectedChanges.reduce(
+					(acc: Record<string, RejectionReason>, { reason, path }) => {
+						acc[path] = reason;
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/components/diff/UnifiedDiffView.svelte:21:30
+Error: Cannot find module '@gitbutler/shared/utils/file' or its corresponding type declarations. (ts)
+	import { inject } from "@gitbutler/core/context";
+	import { isImageFile } from "@gitbutler/shared/utils/file";
+	import { EmptyStatePlaceholder, generateHunkId, HunkDiff, TestId } from "@gitbutler/ui";
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/components/diff/UnifiedDiffView.svelte:125:37
+Error: Parameter 'assignment' implicitly has an 'any' type. (ts)
+		const filtered = hunks.filter((hunk) => {
+			return assignments.current.some((assignment) =>
+				assignment?.hunkHeader === null ? true : hunkHeaderEquals(hunk, assignment.hunkHeader),
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/components/diff/UnifiedDiffView.svelte:204:8
+Error: Parameter 'selectedLine' implicitly has an 'any' type. (ts)
+					!currentSelectedLines.some(
+						(selectedLine) =>
+							selectedLine.newLine === line.newLine && selectedLine.oldLine === line.oldLine,
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/components/forge/CanPublishReviewPlugin.svelte:6:27
+Error: Cannot find module '@gitbutler/shared/reactiveUtils.svelte' or its corresponding type declarations. (ts)
+	import { inject } from "@gitbutler/core/context";
+	import { reactive } from "@gitbutler/shared/reactiveUtils.svelte";
+	import type { Commit } from "@gitbutler/but-sdk";
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/components/forge/MergeButton.svelte:5:44
+Error: Cannot find module '@gitbutler/shared/persisted' or its corresponding type declarations. (ts)
+	import { inject } from "@gitbutler/core/context";
+	import { persisted, type Persisted } from "@gitbutler/shared/persisted";
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/components/forge/MergeButton.svelte:88:3
+Error: Element implicitly has an 'any' type because expression of type 'any' can't be used to index type '{ merge: string; rebase: string; squash: string; }'. (ts)
+>
+	{labels[$action]}
+	{#snippet contextMenuSlot()}
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/components/forge/ForgeIntegrationBanner.svelte:9:27
+Error: Cannot find module '@gitbutler/shared/reactiveUtils.svelte' or its corresponding type declarations. (ts)
+	import { inject } from "@gitbutler/core/context";
+	import { reactive } from "@gitbutler/shared/reactiveUtils.svelte";
+	import { Button, Link } from "@gitbutler/ui";
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/components/forge/PushButton.svelte:15:28
+Error: Cannot find module '@gitbutler/shared/persisted' or its corresponding type declarations. (ts)
+	import { inject } from "@gitbutler/core/context";
+	import { persisted } from "@gitbutler/shared/persisted";
+	import {
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/components/forge/PushButton.svelte:118:12
+Error: Binding element '_' implicitly has an 'any' type. (ts)
+			const upstreamBranchNames = pushResult.branchToRemote
+				.map(([_, refname]) => getBranchNameFromRef(refname, pushResult.remote))
+				.filter(isDefined);
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/components/forge/PushButton.svelte:118:15
+Error: Binding element 'refname' implicitly has an 'any' type. (ts)
+			const upstreamBranchNames = pushResult.branchToRemote
+				.map(([_, refname]) => getBranchNameFromRef(refname, pushResult.remote))
+				.filter(isDefined);
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/components/onboarding/CloneForm.svelte:13:28
+Error: Cannot find module '@gitbutler/shared/persisted' or its corresponding type declarations. (ts)
+	import { inject } from "@gitbutler/core/context";
+	import { persisted } from "@gitbutler/shared/persisted";
+	import { Button, InfoMessage, type MessageStyle, Spacer, Textbox } from "@gitbutler/ui";
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/components/onboarding/ProjectConnectModal.svelte:3:31
+Error: Cannot find module '@gitbutler/shared/interest/RegisterInterest.svelte' or its corresponding type declarations. (ts)
+	import { inject } from "@gitbutler/core/context";
+	import RegisterInterest from "@gitbutler/shared/interest/RegisterInterest.svelte";
+	import Loading from "@gitbutler/shared/network/Loading.svelte";
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/components/onboarding/ProjectConnectModal.svelte:4:22
+Error: Cannot find module '@gitbutler/shared/network/Loading.svelte' or its corresponding type declarations. (ts)
+	import RegisterInterest from "@gitbutler/shared/interest/RegisterInterest.svelte";
+	import Loading from "@gitbutler/shared/network/Loading.svelte";
+	import { ORGANIZATION_SERVICE } from "@gitbutler/shared/organizations/organizationService";
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/components/onboarding/ProjectConnectModal.svelte:5:39
+Error: Cannot find module '@gitbutler/shared/organizations/organizationService' or its corresponding type declarations. (ts)
+	import Loading from "@gitbutler/shared/network/Loading.svelte";
+	import { ORGANIZATION_SERVICE } from "@gitbutler/shared/organizations/organizationService";
+	import { organizationTable } from "@gitbutler/shared/organizations/organizationsSlice";
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/components/onboarding/ProjectConnectModal.svelte:6:36
+Error: Cannot find module '@gitbutler/shared/organizations/organizationsSlice' or its corresponding type declarations. (ts)
+	import { ORGANIZATION_SERVICE } from "@gitbutler/shared/organizations/organizationService";
+	import { organizationTable } from "@gitbutler/shared/organizations/organizationsSlice";
+	import { PROJECT_SERVICE } from "@gitbutler/shared/organizations/projectService";
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/components/onboarding/ProjectConnectModal.svelte:7:34
+Error: Cannot find module '@gitbutler/shared/organizations/projectService' or its corresponding type declarations. (ts)
+	import { organizationTable } from "@gitbutler/shared/organizations/organizationsSlice";
+	import { PROJECT_SERVICE } from "@gitbutler/shared/organizations/projectService";
+	import { projectTable } from "@gitbutler/shared/organizations/projectsSlice";
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/components/onboarding/ProjectConnectModal.svelte:8:31
+Error: Cannot find module '@gitbutler/shared/organizations/projectsSlice' or its corresponding type declarations. (ts)
+	import { PROJECT_SERVICE } from "@gitbutler/shared/organizations/projectService";
+	import { projectTable } from "@gitbutler/shared/organizations/projectsSlice";
+	import { APP_STATE } from "@gitbutler/shared/redux/store.svelte";
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/components/onboarding/ProjectConnectModal.svelte:9:28
+Error: Cannot find module '@gitbutler/shared/redux/store.svelte' or its corresponding type declarations. (ts)
+	import { projectTable } from "@gitbutler/shared/organizations/projectsSlice";
+	import { APP_STATE } from "@gitbutler/shared/redux/store.svelte";
+	import { Button, CardGroup, Modal } from "@gitbutler/ui";
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/components/onboarding/ProjectConnectModal.svelte:24:3
+Error: 'organizationService' is of type 'unknown'. (ts)
+	const organizationInterest = $derived(
+		organizationService.getOrganizationWithDetailsInterest(organizationSlug),
+	);
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/components/onboarding/ProjectConnectModal.svelte:26:35
+Error: 'projectsService' is of type 'unknown'. (ts)
+	);
+	const projectInterest = $derived(projectsService.getProjectInterest(projectRepositoryId));
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/components/onboarding/ProjectConnectModal.svelte:29:42
+Error: 'appState' is of type 'unknown'. (ts)
+	const chosenOrganization = $derived(
+		organizationTable.selectors.selectById(appState.organizations, organizationSlug),
+	);
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/components/onboarding/ProjectConnectModal.svelte:32:37
+Error: 'appState' is of type 'unknown'. (ts)
+	const targetProject = $derived(
+		projectTable.selectors.selectById(appState.projects, projectRepositoryId),
+	);
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/components/onboarding/ProjectConnectModal.svelte:38:56
+Error: Parameter 'repositoryId' implicitly has an 'any' type. (ts)
+		return (
+			chosenOrganization.value.projectRepositoryIds?.map((repositoryId) => ({
+				project: projectTable.selectors.selectById(appState.projects, repositoryId),
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/components/onboarding/ProjectConnectModal.svelte:39:48
+Error: 'appState' is of type 'unknown'. (ts)
+			chosenOrganization.value.projectRepositoryIds?.map((repositoryId) => ({
+				project: projectTable.selectors.selectById(appState.projects, repositoryId),
+				interest: projectsService.getProjectInterest(repositoryId),
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/components/onboarding/ProjectConnectModal.svelte:40:15
+Error: 'projectsService' is of type 'unknown'. (ts)
+				project: projectTable.selectors.selectById(appState.projects, repositoryId),
+				interest: projectsService.getProjectInterest(repositoryId),
+			})) || []
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/components/onboarding/ProjectConnectModal.svelte:48:3
+Error: 'projectsService' is of type 'unknown'. (ts)
+
+		projectsService.connectProjectToOrganization(
+			targetProject.value.repositoryId,
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/components/onboarding/ProjectConnectModal.svelte:74:25
+Error: Parameter 'organizationProject' implicitly has an 'any' type. (ts)
+				<Loading loadable={organizationProject}>
+					{#snippet children(organizationProject)}
+						<h5>{organizationProject.name}</h5>
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/components/projectSettings/AIPromptSelect.svelte:7:33
+Error: Cannot find module '@gitbutler/shared/persisted' or its corresponding type declarations. (ts)
+	import type { Prompts, UserPrompt } from "$lib/ai/types";
+	import type { Persisted } from "@gitbutler/shared/persisted";
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/components/projectSettings/ForgeForm.svelte:18:27
+Error: Cannot find module '@gitbutler/shared/reactiveUtils.svelte' or its corresponding type declarations. (ts)
+	import { inject } from "@gitbutler/core/context";
+	import { reactive } from "@gitbutler/shared/reactiveUtils.svelte";
+	import { CardGroup, Select, SelectItem } from "@gitbutler/ui";
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/components/settings/AIPromptEdit.svelte:30:7
+Error: Type 'unknown' must have a '[Symbol.iterator]()' method that returns an iterator. (ts)
+		prompts?.userPrompts.set([
+			...get(prompts.userPrompts),
+			promptService.createDefaultUserPrompt(promptUse),
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/components/settings/AIPromptEdit.svelte:37:28
+Error: Object is of type 'unknown'. (ts)
+		if (prompts) {
+			const filteredPrompts = get(prompts.userPrompts).filter((prompt) => prompt !== targetPrompt);
+			prompts.userPrompts.set(filteredPrompts);
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/components/settings/AIPromptEdit.svelte:37:61
+Error: Parameter 'prompt' implicitly has an 'any' type. (ts)
+		if (prompts) {
+			const filteredPrompts = get(prompts.userPrompts).filter((prompt) => prompt !== targetPrompt);
+			prompts.userPrompts.set(filteredPrompts);
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/components/settings/LanesAndBranchesSettings.svelte:8:28
+Error: Cannot find module '@gitbutler/shared/persisted' or its corresponding type declarations. (ts)
+	} from "$lib/config/uiFeatureFlags";
+	import { persisted } from "@gitbutler/shared/persisted";
+	import { CardGroup, RadioButton, Toggle, Spacer } from "@gitbutler/ui";
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/components/settings/OrganisationSettings.svelte:3:31
+Error: Cannot find module '@gitbutler/shared/interest/RegisterInterest.svelte' or its corresponding type declarations. (ts)
+	import { inject } from "@gitbutler/core/context";
+	import RegisterInterest from "@gitbutler/shared/interest/RegisterInterest.svelte";
+	import Loading from "@gitbutler/shared/network/Loading.svelte";
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/components/settings/OrganisationSettings.svelte:4:22
+Error: Cannot find module '@gitbutler/shared/network/Loading.svelte' or its corresponding type declarations. (ts)
+	import RegisterInterest from "@gitbutler/shared/interest/RegisterInterest.svelte";
+	import Loading from "@gitbutler/shared/network/Loading.svelte";
+	import { HTTP_CLIENT } from "@gitbutler/shared/network/httpClient";
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/components/settings/OrganisationSettings.svelte:5:30
+Error: Cannot find module '@gitbutler/shared/network/httpClient' or its corresponding type declarations. (ts)
+	import Loading from "@gitbutler/shared/network/Loading.svelte";
+	import { HTTP_CLIENT } from "@gitbutler/shared/network/httpClient";
+	import CreateOrganizationModal from "@gitbutler/shared/organizations/CreateOrganizationModal.svelte";
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/components/settings/OrganisationSettings.svelte:6:38
+Error: Cannot find module '@gitbutler/shared/organizations/CreateOrganizationModal.svelte' or its corresponding type declarations. (ts)
+	import { HTTP_CLIENT } from "@gitbutler/shared/network/httpClient";
+	import CreateOrganizationModal from "@gitbutler/shared/organizations/CreateOrganizationModal.svelte";
+	import JoinOrganizationModal from "@gitbutler/shared/organizations/JoinOrganizationModal.svelte";
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/components/settings/OrganisationSettings.svelte:7:36
+Error: Cannot find module '@gitbutler/shared/organizations/JoinOrganizationModal.svelte' or its corresponding type declarations. (ts)
+	import CreateOrganizationModal from "@gitbutler/shared/organizations/CreateOrganizationModal.svelte";
+	import JoinOrganizationModal from "@gitbutler/shared/organizations/JoinOrganizationModal.svelte";
+	import OrganizationModal from "@gitbutler/shared/organizations/OrganizationModal.svelte";
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/components/settings/OrganisationSettings.svelte:8:32
+Error: Cannot find module '@gitbutler/shared/organizations/OrganizationModal.svelte' or its corresponding type declarations. (ts)
+	import JoinOrganizationModal from "@gitbutler/shared/organizations/JoinOrganizationModal.svelte";
+	import OrganizationModal from "@gitbutler/shared/organizations/OrganizationModal.svelte";
+	import { ORGANIZATION_SERVICE } from "@gitbutler/shared/organizations/organizationService";
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/components/settings/OrganisationSettings.svelte:9:39
+Error: Cannot find module '@gitbutler/shared/organizations/organizationService' or its corresponding type declarations. (ts)
+	import OrganizationModal from "@gitbutler/shared/organizations/OrganizationModal.svelte";
+	import { ORGANIZATION_SERVICE } from "@gitbutler/shared/organizations/organizationService";
+	import { organizationTable } from "@gitbutler/shared/organizations/organizationsSlice";
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/components/settings/OrganisationSettings.svelte:10:36
+Error: Cannot find module '@gitbutler/shared/organizations/organizationsSlice' or its corresponding type declarations. (ts)
+	import { ORGANIZATION_SERVICE } from "@gitbutler/shared/organizations/organizationService";
+	import { organizationTable } from "@gitbutler/shared/organizations/organizationsSlice";
+	import { APP_STATE } from "@gitbutler/shared/redux/store.svelte";
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/components/settings/OrganisationSettings.svelte:11:28
+Error: Cannot find module '@gitbutler/shared/redux/store.svelte' or its corresponding type declarations. (ts)
+	import { organizationTable } from "@gitbutler/shared/organizations/organizationsSlice";
+	import { APP_STATE } from "@gitbutler/shared/redux/store.svelte";
+	import { Button, CardGroup } from "@gitbutler/ui";
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/components/settings/OrganisationSettings.svelte:17:24
+Error: 'httpClient' is of type 'unknown'. (ts)
+	const httpClient = inject(HTTP_CLIENT);
+	const authenticated = httpClient.authenticationAvailable;
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/components/settings/OrganisationSettings.svelte:19:32
+Error: 'organizationService' is of type 'unknown'. (ts)
+
+	const organizationsInterest = organizationService.getOrganizationListingInterest();
+	const organizations = $derived(organizationTable.selectors.selectAll(appState.organizations));
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/components/settings/OrganisationSettings.svelte:20:71
+Error: 'appState' is of type 'unknown'. (ts)
+	const organizationsInterest = organizationService.getOrganizationListingInterest();
+	const organizations = $derived(organizationTable.selectors.selectAll(appState.organizations));
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/components/settings/OrganisationSettings.svelte:39:25
+Error: Parameter 'organization' implicitly has an 'any' type. (ts)
+				<Loading loadable={loadableOrganization}>
+					{#snippet children(organization)}
+						<div class="inline">
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/components/upstream/IntegrateUpstreamModalDeprecated.svelte:22:9
+Error: Cannot find module '@gitbutler/shared/persisted' or its corresponding type declarations. (ts)
+		setBooleanStorageItem,
+	} from "@gitbutler/shared/persisted";
+	import {
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/components/shared/ShareIssueModal.svelte:10:30
+Error: Cannot find module '@gitbutler/shared/network/httpClient' or its corresponding type declarations. (ts)
+	import { inject } from "@gitbutler/core/context";
+	import { HTTP_CLIENT } from "@gitbutler/shared/network/httpClient";
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/components/shared/ShareIssueModal.svelte:137:16
+Error: 'httpClient' is of type 'unknown'. (ts)
+		// Content Type must be unset for the right form-data border to be set automatically
+		return await httpClient.put("feedback", {
+			body: formData,
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/components/views/BranchList.svelte:31:27
+Error: Cannot find module '@gitbutler/shared/reactiveUtils.svelte' or its corresponding type declarations. (ts)
+	import { inject } from "@gitbutler/core/context";
+	import { reactive } from "@gitbutler/shared/reactiveUtils.svelte";
+	import { Button, TestId } from "@gitbutler/ui";
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/components/views/BranchesView.svelte:30:28
+Error: Cannot find module '@gitbutler/shared/persisted' or its corresponding type declarations. (ts)
+	import { inject } from "@gitbutler/core/context";
+	import { persisted } from "@gitbutler/shared/persisted";
+	import { reactive } from "@gitbutler/shared/reactiveUtils.svelte";
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/components/views/BranchesView.svelte:31:27
+Error: Cannot find module '@gitbutler/shared/reactiveUtils.svelte' or its corresponding type declarations. (ts)
+	import { persisted } from "@gitbutler/shared/persisted";
+	import { reactive } from "@gitbutler/shared/reactiveUtils.svelte";
+	import { AsyncButton, Button, Modal, TestId } from "@gitbutler/ui";
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/components/views/StackPanel.svelte:112:34
+Error: Function lacks ending return statement and return type does not include 'undefined'. (ts)
+
+	function checkFilesForCommit(): true {
+		switch ($stagingBehaviorFeature) {
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/components/views/StackView.svelte:12:40
+Error: Cannot find module '@gitbutler/shared/persisted' or its corresponding type declarations. (ts)
+	import { inject } from "@gitbutler/core/context";
+	import { persistWithExpiration } from "@gitbutler/shared/persisted";
+	import { TestId } from "@gitbutler/ui";
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop/src/components/views/UnassignedView.svelte:79:34
+Error: Function lacks ending return statement and return type does not include 'undefined'. (ts)
+
+	function checkFilesForCommit(): true {
+		switch ($stagingBehaviorFeature) {
+
+====================================
+svelte-check found 123 errors and 0 warnings in 62 files
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-005/apps/desktop:
+ ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  @gitbutler/desktop@0.0.0 check: `svelte-check --tsconfig ./tsconfig.json`
+Exit status 1
