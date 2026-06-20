@@ -22,13 +22,13 @@ commands, authorization logic, or persistence behavior.
 | Secondary tab list | `TabList` | `apps/desktop/src/components/shared/TabList.svelte` | The parent tab list carries `aria-label="Governance configuration tabs"`. |
 | Secondary tab trigger | `TabTrigger` | `apps/desktop/src/components/shared/TabTrigger.svelte` | `value` is one of `principals`, `groups`, `branch-gates`, `rules`; `disabled` only when the whole surface is read-only unavailable. |
 | Secondary tab panel | `TabContent` | `apps/desktop/src/components/shared/TabContent.svelte` | `value` matches the tab id. |
-| Pending banner composition | `GovernancePendingBanner` | `apps/desktop/src/components/governance/GovernancePendingBanner.svelte` | Planned thin composition from the Net-new table; wraps `InfoMessage` warning state. |
+| Pending banner composition | `GovernancePendingBanner` | `apps/desktop/src/components/governance/GovernancePendingBanner.svelte` | Planned thin composition from the Net-new table; wraps `InfoMessage` warning state; hidden when `isReadOnly=true`. |
 | Banner feedback | `InfoMessage` | `packages/ui/src/lib/components/InfoMessage.svelte` | `style="warning"`, `style="info"`, or `style="danger"`; `outlined=true`; `primaryLabel` and `primaryIcon` when an action is present. |
 | Status and role marker | `Badge` | `packages/ui/src/lib/components/Badge.svelte` | Pending only: `style="warning"` `kind="soft"` `size="icon"` with `○` and pending text. Committed rows render no pending `Badge`; absence is the committed signal for this contract. |
 | Principal rows | `PrincipalsList` | `apps/desktop/src/components/governance/PrincipalsList.svelte` | Planned thin composition from the Net-new table; row surface uses `CardGroupRoot.svelte` and `CardGroupItem.svelte`. |
 | Row group container | `CardGroupRoot` | `packages/ui/src/lib/components/cardGroup/CardGroupRoot.svelte` | Groups principal rows in the list body. |
 | Row item | `CardGroupItem` | `packages/ui/src/lib/components/cardGroup/CardGroupItem.svelte` | Single principal row, group row summary, or status row as needed by the composition. |
-| Row overflow actions | `KebabButton` | `packages/ui/src/lib/components/KebabButton.svelte` | Wireframe `...` overflow affordance. |
+| Row overflow actions | `KebabButton` | `packages/ui/src/lib/components/KebabButton.svelte` | Wireframe `...` overflow affordance; read-only compositions omit mutating actions or render menu entries through `ContextMenuItem disabled=true`. |
 | Add, create, save, commit, cancel actions | `Button` | `packages/ui/src/lib/components/Button.svelte` | Use component variants already exposed by the Button component; no new button styling. |
 | Principal editor | `PrincipalEditor` | `apps/desktop/src/components/governance/PrincipalEditor.svelte` | Planned thin composition from the Net-new table; inline editor mirrors `RuleEditor.svelte` spacing and slide-in placement. |
 | Inline editor pattern | `RuleEditor` | `apps/desktop/src/components/rules/RuleEditor.svelte` | Pattern source only; governance editor keeps the same inline stacked editor treatment. |
@@ -171,12 +171,12 @@ therefore persist while switching between `Principals`, `Groups`,
 |---|---|---|---|---|---|
 | Project Settings modal shell | `SettingsModalLayout` at `apps/desktop/src/components/settings/SettingsModalLayout.svelte`; active sidebar entry is the `Permissions & Governance` page. | Same shell; page-level pending banner appears above tabs. | Same shell; page remains visible for admins but controls below become disabled or readonly. | Same shell; denial banner appears above or inside the affected tab. | Same shell; active tab panel renders that tab's empty state. |
 | Governance page heading | `GovernanceSettings` at `apps/desktop/src/components/settings/GovernanceSettings.svelte` using `SettingsSection` at `apps/desktop/src/components/shared/SettingsSection.svelte`; title text `Permissions & Governance`. | Same heading with `GovernancePendingBanner` at `apps/desktop/src/components/governance/GovernancePendingBanner.svelte`. | Same heading plus read-only `InfoMessage` info banner. | Same heading plus danger `InfoMessage`. | Same heading; empty-state component appears in the active `TabContent`. |
-| Pending banner area | Hidden when there are no pending governance changes. | `GovernancePendingBanner` wraps `InfoMessage` at `packages/ui/src/lib/components/InfoMessage.svelte` with `style="warning"`, `outlined=true`, `primaryLabel="Commit changes"`, `primaryIcon="arrow-right"`, title `{pendingCount} pending governance change(s) - take effect once committed to the governance ref`, and content `Changes take effect once committed to the governance ref.`; rendered above the `Tabs` `TabList` under `{#if pendingCount > 0}`. | Hidden unless pending changes are visible but not actionable; if visible, commit `Button` is disabled by the composition. | Replaced or accompanied by danger `InfoMessage` for the denied action. | Hidden. |
+| Pending banner area | Hidden when there are no pending governance changes. | `GovernancePendingBanner` wraps `InfoMessage` at `packages/ui/src/lib/components/InfoMessage.svelte` with `style="warning"`, `outlined=true`, `primaryLabel="Commit changes"`, `primaryIcon="arrow-right"`, title `{pendingCount} pending governance change(s) - take effect once committed to the governance ref`, and content `Changes take effect once committed to the governance ref.`; rendered above the `Tabs` `TabList` under `{#if pendingCount > 0}`. | Hidden while `isReadOnly=true`; the commit affordance is not rendered in read-only mode. | Replaced or accompanied by danger `InfoMessage` for the denied action. | Hidden. |
 | Tab strip | `Tabs` at `apps/desktop/src/components/shared/Tabs.svelte` with `defaultSelected="principals"`; `TabList`, `TabTrigger`, and `TabContent` paths listed in the tab IA contract. | Same tab strip; pending badges remain within tab content rows, not in tab labels. | Same tab strip; triggers stay navigable unless the whole feature cannot render. | Same tab strip; the denied tab remains selected so the user sees the banner. | Same tab strip; selected tab shows `EmptyStatePlaceholder`. |
 | Principals tab list header | `PrincipalsList` at `apps/desktop/src/components/governance/PrincipalsList.svelte`; visual primitives are `SettingsSection` and `Button` at `packages/ui/src/lib/components/Button.svelte` with label `Add`. | Header remains; Add action may show pending affordance only after save. | Add `Button` disabled; rows below use disabled controls. | Danger `InfoMessage` above list explains the rejected action. | `EmptyStatePlaceholder` path and slots listed in the Empty States section. |
 | Principal row: committed actor | `CardGroupItem` at `packages/ui/src/lib/components/cardGroup/CardGroupItem.svelte`; no pending `Badge`; row text such as `claude-agent`, `admin`, `eng`, `contents:rw`. | If the row has uncommitted edits, use the pending badge state in this row. | Row opens editor in read-only mode or exposes disabled controls only. | If a row action is denied, show danger `InfoMessage` near the row or page action area. | Not rendered. |
 | Principal row: pending actor | `CardGroupItem` plus `Badge style="warning" kind="soft" size="icon"` children `○`; pending permission copy such as `contents:read ○ pending` remains row text. | Same pending badge remains until commit clears it. | Pending badge may remain visible; editor controls disabled. | Denial banner appears; do not flip the denied control visually. | Not rendered. |
-| Principal row overflow | `KebabButton` at `packages/ui/src/lib/components/KebabButton.svelte`. | Same overflow; destructive entries can be disabled while a write is pending. | `KebabButton` disabled or menu actions disabled by the composition. | Danger `InfoMessage` after denied menu action. | Not rendered. |
+| Principal row overflow | `KebabButton` at `packages/ui/src/lib/components/KebabButton.svelte`. | Same overflow; destructive entries can be disabled while a write is pending. | Mutating menu actions are omitted; if the menu remains for non-mutating entries, mutating entries use `ContextMenuItem disabled=true`. | Danger `InfoMessage` after denied menu action. | Not rendered. |
 | Per-principal editor container | `PrincipalEditor` at `apps/desktop/src/components/governance/PrincipalEditor.svelte`; follows `RuleEditor` at `apps/desktop/src/components/rules/RuleEditor.svelte` as the inline slide-in pattern. | Save `Button` label `Save changes ○ pending`; pending badge uses `Badge style="warning" kind="soft" size="icon"`. | Whole editor stays readable; `Segment`, `Toggle`, `TagInput`, and save action are disabled or readonly. | Denial banner with `InfoMessage style="danger"` remains visible and denied control does not change state. | Not rendered. |
 | Principal editor title and close | `PrincipalEditor` composition; close action is `Button` at `packages/ui/src/lib/components/Button.svelte` or icon button equivalent from the existing button component, visible label or accessible label `Close`. | Close remains available. | Close remains available. | Close remains available after denial. | Not rendered. |
 | Role preset strip | `SegmentControl` at `packages/ui/src/lib/components/segmentControl/SegmentControl.svelte` with `selected="write"` in the wireframe; each role is `Segment` at `packages/ui/src/lib/components/segmentControl/Segment.svelte` with ids `read`, `triage`, `write`, `maintain`, `admin`. | Selecting a role marks the editor dirty; save button carries pending text. | Every `Segment` gets `disabled=true`. | Denied self-escalation leaves the prior selected segment active and shows danger `InfoMessage`. | Not rendered. |
@@ -220,7 +220,7 @@ the slot contract for `title`, `caption`, and `actions`; actions render with
 | State | Component path | Props and copy | Applies to |
 |---|---|---|---|
 | Pending banner | `packages/ui/src/lib/components/InfoMessage.svelte` via `apps/desktop/src/components/governance/GovernancePendingBanner.svelte` | `style="warning"`, `outlined=true`, `primaryLabel="Commit changes"`, `primaryIcon="arrow-right"`, `primaryAction` wired to the commit action, title `{pendingCount} pending governance change(s) - take effect once committed to the governance ref`, content `Changes take effect once committed to the governance ref.`; render only under `{#if pendingCount > 0}`. | Page-level area above the `Tabs` `TabList` whenever pending count is greater than zero. |
-| Read-only banner | `packages/ui/src/lib/components/InfoMessage.svelte` | `style="info"`, `outlined=true`, title `Read-only`, content `administration:write is required to change governance.` | Page-level area above tab content when the viewer lacks write permission. |
+| Read-only banner | `packages/ui/src/lib/components/InfoMessage.svelte` | `style="info"`, `outlined=true`, content `Read-only: administration:write is required to change governance settings`; omit `primaryLabel`, `secondaryLabel`, and `tertiaryLabel` so no action buttons render. | Page-level area above tab content when the viewer can navigate to the page but lacks `administration:write`. |
 | Denial banner | `packages/ui/src/lib/components/InfoMessage.svelte` | `style="danger"`, `outlined=true`, `primaryLabel="Retry"` only for retryable IPC failures, title `perm.denied`, content `You cannot modify your own administration grants.` | Above the affected tab or editor after a refused write. |
 | Pending row badge | `packages/ui/src/lib/components/Badge.svelte` | `style="warning"`, `kind="soft"`, `size="icon"`, children `○`; row label or adjacent row text includes `pending`. | Principal rows, group rows, branch gate rows, editor save summary. |
 | Committed row marker | None | Committed rows render no pending `Badge`; absence of the pending marker is the committed signal. Do not recolor the pending `Badge` to gray. | Principal rows, rule principal selector rows, branch gate summaries. |
@@ -229,6 +229,44 @@ the slot contract for `title`, `caption`, and `actions`; actions render with
 | Read-only number field | `packages/ui/src/lib/components/Textbox.svelte` | `type="number"`, `readonly=true` or `disabled=true`. | Branch gate minimum approvals. |
 | Destructive confirmation | `packages/ui/src/lib/components/Modal.svelte` | Confirmation copy from the specific row action; action `Button` uses existing Button styling. | Group delete and branch unprotect. |
 | Error boundary fallback | `apps/desktop/src/components/governance/GovernanceErrorBoundary.svelte` plus `packages/ui/src/lib/components/InfoMessage.svelte` | `InfoMessage style="danger"`, `outlined=true`, title `Governance settings could not load`, optional `primaryLabel="Retry"`. | Whole governance surface if a render/runtime failure occurs. |
+
+## Read-Only State Contract
+
+Read-only applies when the viewer can navigate to the Project Settings
+`Permissions & Governance` page but the governed SDK `administration:write`
+check is false. It is separate from the `adminOnly` settings-sidebar filter:
+`apps/desktop/src/components/settings/SettingsModalLayout.svelte:53` filters
+pages with `pages.filter((p) => !p.adminOnly || isAdmin)`, which hides the page
+for non-admins so they cannot navigate to it. Read-only is the functional
+permission state for a viewer who can navigate but cannot mutate governance
+settings. These layers are independent and must not be conflated.
+
+`apps/desktop/src/components/settings/GovernanceSettings.svelte` derives one
+boolean, `isReadOnly`, from the `administration:write` check in the governed SDK
+and passes it as a prop to `PrincipalsList`, `PrincipalEditor`, `GroupsList`, and
+`BranchGatesList`. The Rules tab wrapper or `RulesList` also consumes the same
+prop. Child components consume the prop; they do not re-derive the permission.
+The same contract covers `Principals`, `Groups`, `Branch Gates`, and `Rules`:
+rule create, edit, delete, and save affordances are disabled by the governance
+wrapper when `isReadOnly=true`.
+
+The banner slot is single-purpose in read-only mode. Render `InfoMessage` from
+`packages/ui/src/lib/components/InfoMessage.svelte` with `style="info"`,
+`outlined=true`, and content
+`Read-only: administration:write is required to change governance settings`.
+Do not pass `primaryLabel`, `secondaryLabel`, or `tertiaryLabel`; the read-only
+banner has no action buttons. When `isReadOnly=true`,
+`GovernancePendingBanner` is hidden even if there are pending changes, so the
+commit affordance is unavailable rather than disabled in-place.
+
+| Control family | Existing prop or component source | Read-only treatment |
+|---|---|---|
+| Permission and gate toggles | `packages/ui/src/lib/components/Toggle.svelte` exposes `disabled`; its `:disabled` CSS provides the opacity and pointer-event treatment. | Pass `disabled=true`; do not wrap the tab in an extra grey overlay or add a second opacity treatment. |
+| Group, member, and required-approval chips | `packages/ui/src/lib/components/TagInput.svelte` exposes `readonly`; removal buttons are hidden when `readonly=true`. | Pass `readonly=true` so tags remain readable and chip removal/addition is inert. |
+| Add, create, save, delete, and other mutating actions | `packages/ui/src/lib/components/Button.svelte` exposes `disabled`; `Button` also disables while `loading`. | Pass `disabled=true` for visible mutating buttons. Keep non-mutating close/cancel/navigation buttons available. |
+| Role preset strip | `packages/ui/src/lib/components/segmentControl/Segment.svelte` exposes `disabled`; `SegmentControl.svelte` coordinates selection through child `Segment` buttons. | Pass `disabled=true` to every role `Segment` so the `SegmentControl` is non-interactive while preserving the selected role. |
+| Row overflow actions | `packages/ui/src/lib/components/KebabButton.svelte` opens the menu; `packages/ui/src/lib/components/ContextMenuItem.svelte` exposes `disabled`. | Prefer omitting mutating context actions from the `KebabButton` menu. If visible for context, render those mutating entries as `ContextMenuItem disabled=true`. |
+| Branch gate number fields | `packages/ui/src/lib/components/Textbox.svelte` exposes `disabled` and `readonly`. | Use `readonly=true` when the value should remain selectable/readable, or `disabled=true` when the field is part of a fully disabled mutating form row. |
 
 ## Token And Styling Contract
 

@@ -1,0 +1,5 @@
+found: `style="info"`
+found: `outlined=true`
+found: Read-only: administration:write is required to change governance settings
+found: Do not pass `primaryLabel`, `secondaryLabel`, or `tertiaryLabel`
+found: banner has no action buttons

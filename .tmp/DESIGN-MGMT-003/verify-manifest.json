@@ -1,0 +1,47 @@
+{
+  "task_id": "DESIGN-MGMT-003",
+  "verification_policy": {
+    "requires_tests": false,
+    "requires_red_evidence": false,
+    "requires_seeded_evidence": false
+  },
+  "project_commands": {
+    "typecheck": "true",
+    "lint": "true",
+    "test": "true"
+  },
+  "requirements": [
+    {
+      "id": "AC-1",
+      "verify": "bash .tmp/DESIGN-MGMT-003/verify-design-review.sh AC-1"
+    },
+    {
+      "id": "AC-2",
+      "verify": "bash .tmp/DESIGN-MGMT-003/verify-design-review.sh AC-2"
+    },
+    {
+      "id": "AC-3",
+      "verify": "bash .tmp/DESIGN-MGMT-003/verify-design-review.sh AC-3"
+    },
+    {
+      "id": "AC-4",
+      "verify": "bash .tmp/DESIGN-MGMT-003/verify-design-review.sh AC-4"
+    },
+    {
+      "id": "TC-1",
+      "verify": "bash .tmp/DESIGN-MGMT-003/verify-design-review.sh TC-1"
+    },
+    {
+      "id": "TC-2",
+      "verify": "bash .tmp/DESIGN-MGMT-003/verify-design-review.sh TC-2"
+    },
+    {
+      "id": "TC-3",
+      "verify": "bash .tmp/DESIGN-MGMT-003/verify-design-review.sh TC-3"
+    },
+    {
+      "id": "TC-4",
+      "verify": "bash .tmp/DESIGN-MGMT-003/verify-design-review.sh TC-4"
+    }
+  ]
+}

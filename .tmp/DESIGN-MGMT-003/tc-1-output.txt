@@ -1,0 +1,9 @@
+found: Toggle.svelte` exposes `disabled`
+found: Pass `disabled=true`
+found: TagInput.svelte` exposes `readonly`
+found: Pass `readonly=true`
+found: Button.svelte` exposes `disabled`
+found: SegmentControl` is non-interactive
+found: KebabButton.svelte` opens the menu
+found: ContextMenuItem.svelte` exposes `disabled`
+found: render those mutating entries as `ContextMenuItem disabled=true`
