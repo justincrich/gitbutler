@@ -1,0 +1,68 @@
+
+> @gitbutler/desktop@0.0.0 test:ct:desktop /Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-008/apps/desktop
+> playwright test -c playwright-ct.config.ts -- GovernanceSettingsTabs
+
+
+Running 3 tests using 3 workers
+
+Port 3101 is in use, trying another one...
+(node:83441) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:83442) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:83445) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:83442) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:83441) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:83445) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  3 [chromium] › tests/governance/GovernanceSettingsTabs.spec.ts:38:1 › renders GroupsList in the groups tab (0ms)
+  ✘  2 [chromium] › tests/governance/GovernanceSettingsTabs.spec.ts:15:1 › renders PrincipalsList in the principals tab (0ms)
+  ✘  1 [chromium] › tests/governance/GovernanceSettingsTabs.spec.ts:4:1 › renders the four governance tabs (1ms)
+
+
+  1) [chromium] › tests/governance/GovernanceSettingsTabs.spec.ts:4:1 › renders the four governance tabs 
+
+    Error: browserType.launch: Executable doesn't exist at /Users/justinrich/Library/Caches/ms-playwright/chromium_headless_shell-1208/chrome-headless-shell-mac-arm64/chrome-headless-shell
+    ╔═════════════════════════════════════════════════════════════════════════╗
+    ║ Looks like Playwright Test or Playwright was just installed or updated. ║
+    ║ Please run the following command to download new browsers:              ║
+    ║                                                                         ║
+    ║     pnpm exec playwright install                                        ║
+    ║                                                                         ║
+    ║ <3 Playwright Team                                                      ║
+    ╚═════════════════════════════════════════════════════════════════════════╝
+
+  2) [chromium] › tests/governance/GovernanceSettingsTabs.spec.ts:15:1 › renders PrincipalsList in the principals tab 
+
+    Error: browserType.launch: Executable doesn't exist at /Users/justinrich/Library/Caches/ms-playwright/chromium_headless_shell-1208/chrome-headless-shell-mac-arm64/chrome-headless-shell
+    ╔═════════════════════════════════════════════════════════════════════════╗
+    ║ Looks like Playwright Test or Playwright was just installed or updated. ║
+    ║ Please run the following command to download new browsers:              ║
+    ║                                                                         ║
+    ║     pnpm exec playwright install                                        ║
+    ║                                                                         ║
+    ║ <3 Playwright Team                                                      ║
+    ╚═════════════════════════════════════════════════════════════════════════╝
+
+  3) [chromium] › tests/governance/GovernanceSettingsTabs.spec.ts:38:1 › renders GroupsList in the groups tab 
+
+    Error: browserType.launch: Executable doesn't exist at /Users/justinrich/Library/Caches/ms-playwright/chromium_headless_shell-1208/chrome-headless-shell-mac-arm64/chrome-headless-shell
+    ╔═════════════════════════════════════════════════════════════════════════╗
+    ║ Looks like Playwright Test or Playwright was just installed or updated. ║
+    ║ Please run the following command to download new browsers:              ║
+    ║                                                                         ║
+    ║     pnpm exec playwright install                                        ║
+    ║                                                                         ║
+    ║ <3 Playwright Team                                                      ║
+    ╚═════════════════════════════════════════════════════════════════════════╝
+
+  3 failed
+    [chromium] › tests/governance/GovernanceSettingsTabs.spec.ts:4:1 › renders the four governance tabs 
+    [chromium] › tests/governance/GovernanceSettingsTabs.spec.ts:15:1 › renders PrincipalsList in the principals tab 
+    [chromium] › tests/governance/GovernanceSettingsTabs.spec.ts:38:1 › renders GroupsList in the groups tab 
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-008/apps/desktop:
+ ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  @gitbutler/desktop@0.0.0 test:ct:desktop: `playwright test -c playwright-ct.config.ts -- GovernanceSettingsTabs`
+Exit status 1

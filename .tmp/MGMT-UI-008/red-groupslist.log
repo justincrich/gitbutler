@@ -1,0 +1,9 @@
+
+> @gitbutler/desktop@0.0.0 test:ct:desktop /Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-008/apps/desktop
+> playwright test -c playwright-ct.config.ts -- GroupsList
+
+error: unknown command 'test'
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-008/apps/desktop:
+ ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  @gitbutler/desktop@0.0.0 test:ct:desktop: `playwright test -c playwright-ct.config.ts -- GroupsList`
+Exit status 1
+ WARN   Local package.json exists, but node_modules missing, did you mean to install?

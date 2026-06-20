@@ -1,4 +1,5 @@
 <script lang="ts">
+	import GroupsList from "$components/governance/GroupsList.svelte";
 	import PrincipalsList from "$components/governance/PrincipalsList.svelte";
 	import TabContent from "$components/shared/TabContent.svelte";
 	import TabList from "$components/shared/TabList.svelte";
@@ -115,16 +116,12 @@
 		</TabContent>
 
 		<TabContent value="groups">
-			<section class="governance-panel" data-testid="governance-groups-panel">
+			<section
+				class="governance-panel governance-panel--groups"
+				data-testid="governance-groups-panel"
+			>
 				<h3>Groups</h3>
-				<button
-					type="button"
-					class="governance-button"
-					disabled={isReadOnly}
-					data-testid="governance-groups-control"
-				>
-					Add group
-				</button>
+				<GroupsList {projectId} {targetRef} {isReadOnly} onRefresh={refreshGovernance} />
 			</section>
 		</TabContent>
 
@@ -218,7 +215,8 @@
 		gap: var(--clr-space-8);
 	}
 
-	.governance-panel--principals {
+	.governance-panel--principals,
+	.governance-panel--groups {
 		flex-direction: column;
 	}
 </style>

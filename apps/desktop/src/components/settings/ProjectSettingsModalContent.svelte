@@ -1,5 +1,6 @@
 <script lang="ts">
 	import CloudForm from "$components/projectSettings/CloudForm.svelte";
+	import ErrorBoundary from "$components/shared/ErrorBoundary.svelte";
 	import GeneralSettings from "$components/projectSettings/GeneralSettings.svelte";
 	import GitForm from "$components/projectSettings/GitForm.svelte";
 	import GovernanceSettings from "$components/governance/GovernanceSettings.svelte";
@@ -58,7 +59,9 @@
 			{:else if currentPage.id === "experimental"}
 				<PreferencesForm projectId={data.projectId} />
 			{:else if currentPage.id === "governance"}
-				<GovernanceSettings projectId={data.projectId} service={governanceService} />
+				<ErrorBoundary title="Governance settings failed">
+					<GovernanceSettings projectId={data.projectId} service={governanceService} />
+				</ErrorBoundary>
 			{:else}
 				Settings page {currentPage.id} not Found.
 			{/if}
