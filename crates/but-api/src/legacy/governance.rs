@@ -141,7 +141,12 @@ pub fn group_create(
     let mut permissions = load_permissions_for_write(repo, target_ref)?;
     let exists = permissions.group.iter().any(|entry| entry.name == group);
     if exists {
-        return Err(anyhow!("group {group} already exists"));
+        return Err(Denial {
+            code: "config.invalid",
+            message: format!("group {group} already exists"),
+            remediation_hint: "choose a unique group name or grant the existing group".to_owned(),
+        }
+        .into());
     }
 
     permissions.group.push(GroupWire {

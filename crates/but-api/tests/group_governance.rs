@@ -5,10 +5,194 @@ use but_api::legacy::{
         group_remove_member,
     },
 };
-use but_authz::{Authority, GroupName, PrincipalId, load_governance_config};
+use but_authz::{
+    Authority, Denial, GroupName, PrincipalId, load_governance_config, permissions_path,
+};
 
 const MAIN_REF: &str = "refs/heads/main";
 const PERMISSIONS_PATH: &str = ".gitbutler/permissions.toml";
+
+#[test]
+#[serial_test::serial]
+fn group_ops_non_admin_denied_all_mutating_verbs() -> anyhow::Result<()> {
+    let (repo, _tmp) = group_contract_base();
+    let committed_before = committed_blob_text(&repo)?;
+
+    let cases = [
+        (
+            "group_create",
+            temp_env::with_var("BUT_AGENT_HANDLE", Some("rust-reviewer"), || {
+                group_create(&repo, MAIN_REF, "new-team", &["reviews:write"])
+            }),
+        ),
+        (
+            "group_grant",
+            temp_env::with_var("BUT_AGENT_HANDLE", Some("rust-reviewer"), || {
+                group_grant(&repo, MAIN_REF, "maintainers", &["comments:write"])
+            }),
+        ),
+        (
+            "group_add_member",
+            temp_env::with_var("BUT_AGENT_HANDLE", Some("rust-reviewer"), || {
+                group_add_member(&repo, MAIN_REF, "maintainers", "rust-implementer")
+            }),
+        ),
+        (
+            "group_remove_member",
+            temp_env::with_var("BUT_AGENT_HANDLE", Some("rust-reviewer"), || {
+                group_remove_member(&repo, MAIN_REF, "maintainers", "maint")
+            }),
+        ),
+    ];
+
+    for (verb, result) in cases {
+        let denial = structured_denial(result, verb)?;
+        assert_eq!(
+            denial.code,
+            Denial::PERM_DENIED_CODE,
+            "{verb} must return the stable perm.denied code"
+        );
+        assert!(
+            denial.message.contains("administration:write"),
+            "{verb} denial must name the missing administration:write authority"
+        );
+        assert!(
+            !denial.remediation_hint.is_empty(),
+            "{verb} denial must include an actionable remediation hint"
+        );
+        assert_eq!(
+            worktree_permissions(&repo)?,
+            committed_before,
+            "denied {verb} must leave permissions.toml byte-for-byte unchanged"
+        );
+    }
+
+    assert!(
+        !worktree_permissions(&repo)?.contains("new-team"),
+        "denied group_create must not leave a new-team group behind"
+    );
+    println!("all 4 mutating group verbs denied rust-reviewer with remediation hints");
+    Ok(())
+}
+
+#[test]
+#[serial_test::serial]
+fn group_remove_member_writes_worktree_inert_until_committed() -> anyhow::Result<()> {
+    let (repo, _tmp) = group_contract_base();
+    let main_before = ref_id(&repo, MAIN_REF)?;
+
+    let remove = temp_env::with_var("BUT_AGENT_HANDLE", Some("admin"), || {
+        group_remove_member(&repo, MAIN_REF, "maintainers", "rust-reviewer")
+    })?;
+
+    let worktree_permissions = worktree_permissions(&repo)?;
+    let maintainers = group_block(&worktree_permissions, "maintainers")?;
+    assert!(
+        maintainers.contains("maint"),
+        "remove-member must preserve other maintainers members"
+    );
+    assert!(
+        !maintainers.contains("rust-reviewer"),
+        "remove-member must remove the named member from the working-tree group"
+    );
+    assert!(
+        format!("{remove:?}").contains(REF_PIN_CAVEAT),
+        "remove-member result must include the ref-pin caveat"
+    );
+
+    let committed_after = load_governance_config(&repo, MAIN_REF)?;
+    let committed_maintainers = committed_after
+        .groups()
+        .get(&GroupName::new("maintainers"))
+        .ok_or_else(|| anyhow::anyhow!("committed maintainers group must still exist"))?;
+    assert!(
+        committed_maintainers
+            .members()
+            .contains(&PrincipalId::new("rust-reviewer")),
+        "target-ref membership must remain unchanged until the working-tree edit is committed"
+    );
+    assert_eq!(
+        ref_id(&repo, MAIN_REF)?,
+        main_before,
+        "group_remove_member must not commit or move refs/heads/main"
+    );
+
+    println!("remove-member removed rust-reviewer only from the working tree");
+    Ok(())
+}
+
+#[test]
+#[serial_test::serial]
+fn group_grant_administration_write_delegates_admin_inert_until_committed() -> anyhow::Result<()> {
+    let (repo, _tmp) = group_contract_base();
+    let main_before = ref_id(&repo, MAIN_REF)?;
+
+    temp_env::with_var("BUT_AGENT_HANDLE", Some("admin"), || {
+        group_grant(&repo, MAIN_REF, "maintainers", &["administration:write"])
+    })?;
+
+    let worktree_permissions = worktree_permissions(&repo)?;
+    let maintainers = group_block(&worktree_permissions, "maintainers")?;
+    assert!(
+        maintainers.contains("administration:write"),
+        "delegated admin grant must be written to the working-tree group"
+    );
+
+    let committed_after = load_governance_config(&repo, MAIN_REF)?;
+    let committed_reviewers = committed_after
+        .principal_authorities(&PrincipalId::new("rust-reviewer"))
+        .ok_or_else(|| anyhow::anyhow!("rust-reviewer must exist in committed config"))?;
+    assert!(
+        !committed_reviewers.contains(Authority::AdministrationWrite),
+        "working-tree delegated admin grant must not affect target-ref authority until committed"
+    );
+    assert_eq!(
+        ref_id(&repo, MAIN_REF)?,
+        main_before,
+        "group_grant must not commit or move refs/heads/main"
+    );
+
+    println!("administration:write group grant was written but stayed inert");
+    Ok(())
+}
+
+#[test]
+#[serial_test::serial]
+fn group_create_duplicate_errs_without_overwrite() -> anyhow::Result<()> {
+    let (repo, _tmp) = group_contract_base();
+    let before = worktree_permissions(&repo)?;
+
+    let result = temp_env::with_var("BUT_AGENT_HANDLE", Some("admin"), || {
+        group_create(&repo, MAIN_REF, "maintainers", &["reviews:write"])
+    });
+    let denial = structured_denial(result, "duplicate group_create")?;
+    assert_eq!(
+        denial.code, "config.invalid",
+        "duplicate group_create must return a stable config-invalid error"
+    );
+    assert!(
+        !denial.remediation_hint.is_empty(),
+        "duplicate group_create must include a remediation hint"
+    );
+    assert_eq!(
+        worktree_permissions(&repo)?,
+        before,
+        "duplicate group_create must not overwrite permissions.toml"
+    );
+    let maintainers = group_block(&before, "maintainers")?;
+    assert!(
+        maintainers.contains("merge") && maintainers.contains("rust-reviewer"),
+        "duplicate group_create must preserve the existing group values"
+    );
+    assert_eq!(
+        before.matches(r#"name = "maintainers""#).count(),
+        1,
+        "duplicate group_create must not append a second maintainers group"
+    );
+
+    println!("duplicate group_create returned config.invalid and left maintainers unchanged");
+    Ok(())
+}
 
 #[test]
 #[serial_test::serial]
@@ -349,6 +533,57 @@ git commit -m "governance config"
     (repo, tmp)
 }
 
+fn group_contract_base() -> (gix::Repository, tempfile::TempDir) {
+    let (repo, tmp) = but_testsupport::writable_scenario("checkout-head-info");
+    but_testsupport::invoke_bash(
+        r#"
+mkdir -p .gitbutler
+cat >.gitbutler/permissions.toml <<'EOF'
+[[principal]]
+id = "admin"
+permissions = ["administration:write", "merge"]
+
+[[principal]]
+id = "rust-reviewer"
+permissions = ["reviews:write"]
+
+[[principal]]
+id = "rust-implementer"
+role = "write"
+
+[[principal]]
+id = "maint"
+permissions = ["merge"]
+
+[[group]]
+name = "maintainers"
+permissions = ["merge"]
+members = ["maint", "rust-reviewer"]
+EOF
+
+cat >.gitbutler/gates.toml <<'EOF'
+[[branch]]
+name = "main"
+protected = true
+EOF
+
+git add .gitbutler/permissions.toml .gitbutler/gates.toml
+git commit -m "governance config"
+"#,
+        &repo,
+    );
+    (repo, tmp)
+}
+
+fn structured_denial<T>(result: anyhow::Result<T>, scenario: &str) -> anyhow::Result<Denial> {
+    match result {
+        Ok(_) => anyhow::bail!("{scenario} should reject this scenario"),
+        Err(error) => error.downcast::<Denial>().map_err(|error| {
+            anyhow::anyhow!("{scenario} should return a structured error: {error}")
+        }),
+    }
+}
+
 fn classified_error<T>(result: anyhow::Result<T>) -> anyhow::Result<AdminWriteGateError> {
     match result {
         Ok(_) => anyhow::bail!("governance group operation should reject this scenario"),
@@ -373,6 +608,17 @@ fn worktree_permissions(repo: &gix::Repository) -> anyhow::Result<String> {
         .workdir()
         .ok_or_else(|| anyhow::anyhow!("test repository must be non-bare"))?;
     Ok(std::fs::read_to_string(workdir.join(PERMISSIONS_PATH))?)
+}
+
+fn committed_blob_text(repo: &gix::Repository) -> anyhow::Result<String> {
+    let mut reference = repo.find_reference(MAIN_REF)?;
+    let commit = reference.peel_to_commit()?;
+    let tree = commit.tree()?;
+    let entry = tree
+        .lookup_entry_by_path(std::path::Path::new(permissions_path()))?
+        .ok_or_else(|| anyhow::anyhow!("{} must exist at {MAIN_REF}", permissions_path()))?;
+    let blob = repo.find_blob(entry.id())?;
+    Ok(std::str::from_utf8(&blob.data)?.to_owned())
 }
 
 fn principal_block<'a>(toml: &'a str, id: &str) -> anyhow::Result<&'a str> {
