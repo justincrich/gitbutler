@@ -3,8 +3,10 @@
 	import type {
 		GovernanceAccess,
 		GovernancePending,
+		GovernancePrincipalsList,
 		GovernanceRendererContract,
 		GovernanceTarget,
+		PrincipalListEntry,
 	} from "$lib/governance";
 
 	type UserRole = "admin" | "member";
@@ -14,6 +16,7 @@
 		pendingCountAfterCommit?: number;
 		hasAdminWrite?: boolean;
 		role?: UserRole;
+		principals?: PrincipalListEntry[];
 	};
 
 	const {
@@ -21,6 +24,15 @@
 		pendingCountAfterCommit = 0,
 		hasAdminWrite = true,
 		role = "member",
+		principals = [
+			{
+				principalId: "settings-agent",
+				ownGrants: ["contents:read"],
+				inheritedGrants: [],
+				groupMemberships: [],
+				pending: false,
+			},
+		],
 	}: Props = $props();
 
 	let currentPendingCount = $state(pendingCount);
@@ -37,6 +49,9 @@
 	const service: GovernanceRendererContract = {
 		async readPending(_target: GovernanceTarget) {
 			return pending();
+		},
+		async readPrincipals(_target: GovernanceTarget): Promise<GovernancePrincipalsList> {
+			return { principals };
 		},
 		async readAccess(_projectId: string): Promise<GovernanceAccess> {
 			return {

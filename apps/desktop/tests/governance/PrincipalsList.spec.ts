@@ -1,4 +1,5 @@
 import PrincipalsList from "$components/governance/PrincipalsList.svelte";
+import PrincipalsListBackendHarness from "./PrincipalsListBackendHarness.svelte";
 import { expect, test } from "@playwright/experimental-ct-svelte";
 import type { PrincipalEditorService } from "$components/governance/PrincipalEditor.svelte";
 import type { PrincipalsListEntry } from "$components/governance/PrincipalsList.svelte";
@@ -78,6 +79,25 @@ test("PrincipalsListRows renders seeded principals and grant sources", async ({ 
 	);
 	await expect(component.getByTestId("principals-list-row-claude-agent")).toContainText(
 		"own grant",
+	);
+});
+
+test("PrincipalsListDefaultService reads all principals through governance backend", async ({
+	mount,
+}) => {
+	const component = await mount(PrincipalsListBackendHarness);
+
+	await expect(component.getByTestId("principals-list-backend-calls")).toContainText(
+		"governance_principals_list",
+	);
+	await expect(component.getByTestId("principals-list-backend-args")).toContainText(
+		"refs/remotes/origin/main",
+	);
+	await expect(component.getByTestId("principals-list-row-backend-agent")).toContainText(
+		"backend-agent",
+	);
+	await expect(component.getByTestId("principals-list-row-backend-agent")).toContainText(
+		"group: platform",
 	);
 });
 

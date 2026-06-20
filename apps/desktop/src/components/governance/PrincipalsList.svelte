@@ -3,6 +3,7 @@
 		PrincipalEditorService,
 		PrincipalInheritedGrant,
 	} from "$components/governance/PrincipalEditor.svelte";
+	import type { GovernancePrincipalsList, GovernanceTarget } from "$lib/governance";
 
 	export type PrincipalsListEntry = {
 		principalId: string;
@@ -14,17 +15,18 @@
 	};
 
 	export type PrincipalsListService = {
-		listPrincipals: (projectId: string, targetRef: string) => Promise<PrincipalsListEntry[]>;
+		readPrincipals: (target: GovernanceTarget) => Promise<GovernancePrincipalsList>;
 	};
 </script>
 
 <script lang="ts">
 	import PrincipalEditor from "$components/governance/PrincipalEditor.svelte";
 	import { BACKEND } from "$lib/backend";
+	import { createGovernanceRendererContract } from "$lib/governance";
 	import { injectOptional } from "@gitbutler/core/context";
-	import { Badge, EmptyStatePlaceholder, InfoMessage } from "@gitbutler/ui";
+	import { Badge, Button, EmptyStatePlaceholder, InfoMessage } from "@gitbutler/ui";
 	import { untrack } from "svelte";
-	import type { PermListOutcome } from "@gitbutler/but-sdk";
+	import type { GovernanceRendererContract } from "$lib/governance";
 
 	type Props = {
 		projectId: string;
@@ -51,7 +53,7 @@
 	}: Props = $props();
 
 	const backend = injectOptional(BACKEND, undefined);
-	const service = untrack(() => providedService ?? createPermListService());
+	const service = untrack(() => providedService ?? createPrincipalsListService());
 	let principals = $state<PrincipalsListEntry[]>(untrack(() => providedPrincipals ?? []));
 	let selectedPrincipalId = $state<string | undefined>();
 	let isLoading = $state(untrack(() => providedPrincipals === undefined));
@@ -78,32 +80,24 @@
 		});
 	});
 
-	function createPermListService(): PrincipalsListService {
-		return {
-			async listPrincipals(projectId) {
-				if (!backend) throw new Error("governance.backend_unavailable");
-
-				const outcome = await backend.invoke<PermListOutcome>("perm_list", {
-					projectId,
-					principal: null,
-				});
-
-				return [permListOutcomeToEntry(outcome)].filter(
-					(entry) => entry.principalId || entry.ownGrants.length > 0,
-				);
-			},
-		};
+	function createPrincipalsListService(): PrincipalsListService {
+		const governanceService = backend ? createGovernanceRendererContract(backend) : undefined;
+		return governanceService
+			? createPrincipalsListServiceFromContract(governanceService)
+			: unavailableService();
 	}
 
-	function permListOutcomeToEntry(outcome: PermListOutcome): PrincipalsListEntry {
+	function createPrincipalsListServiceFromContract(
+		governanceService: Pick<GovernanceRendererContract, "readPrincipals">,
+	): PrincipalsListService {
+		return governanceService;
+	}
+
+	function unavailableService(): PrincipalsListService {
 		return {
-			principalId: outcome.principal,
-			ownGrants: outcome.authorities
-				.filter((entry) => entry.marker === null)
-				.map((entry) => entry.authority),
-			inheritedGrants: [],
-			groupMemberships: [],
-			pending: outcome.authorities.some((entry) => entry.marker !== null),
+			async readPrincipals() {
+				throw new Error("governance.backend_unavailable");
+			},
 		};
 	}
 
@@ -127,7 +121,8 @@
 		loadError = undefined;
 
 		try {
-			principals = await service.listPrincipals(projectId, targetRef);
+			const outcome = await service.readPrincipals({ projectId, targetRef });
+			principals = outcome.principals;
 		} catch (error) {
 			loadError = error instanceof Error ? error.message : "governance.principals_load_failed";
 			principals = [];
@@ -159,14 +154,7 @@
 			<EmptyStatePlaceholder gap={12} topBottomPadding={24}>
 				{#snippet title()}No principals configured{/snippet}
 				{#snippet actions()}
-					<button
-						type="button"
-						class="principals-list__action"
-						disabled={isReadOnly}
-						onclick={onAddFirst}
-					>
-						+ Add first
-					</button>
+					<Button kind="outline" disabled={isReadOnly} onclick={onAddFirst}>+ Add first</Button>
 				{/snippet}
 			</EmptyStatePlaceholder>
 		</div>
@@ -306,20 +294,5 @@
 
 	.principals-list__editor {
 		padding-left: var(--clr-space-12);
-	}
-
-	.principals-list__action {
-		padding: var(--clr-space-4) var(--clr-space-8);
-		border: 1px solid var(--clr-border-2);
-		border-radius: var(--radius-s);
-		background: var(--clr-bg-1);
-		color: var(--clr-text-1);
-		font: inherit;
-		cursor: pointer;
-	}
-
-	.principals-list__action:disabled {
-		cursor: not-allowed;
-		opacity: 0.5;
 	}
 </style>
