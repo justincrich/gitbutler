@@ -1,50 +1,10 @@
-import ProjectSettingsModalContent from "$components/settings/ProjectSettingsModalContent.svelte";
-import type { ProjectSettingsModalState } from "$lib/state/uiState.svelte";
-import { expect, test, type Page } from "@playwright/experimental-ct-svelte";
-
-type UserRole = "admin" | "member";
-
-async function provideUserService(page: Page, role: UserRole) {
-	await page.evaluate(async (userRole) => {
-		const { USER_SERVICE } = await import("/src/lib/user/userService.svelte.ts");
-		const userService = {
-			user: {
-				id: 1,
-				name: "Settings Tester",
-				email: "settings@example.com",
-				locale: "en-US",
-				created_at: "2026-06-20T00:00:00.000Z",
-				updated_at: "2026-06-20T00:00:00.000Z",
-				access_token: "desktop-ct-token",
-				role: userRole,
-				supporter: false,
-			},
-		};
-
-		window.__pw_hooks_before_mount.push(({ App }) => {
-			return new App({
-				context: new Map([[USER_SERVICE._key, userService]]),
-			});
-		});
-	}, role);
-}
-
-function projectSettingsData(
-	selectedId?: ProjectSettingsModalState["selectedId"],
-): ProjectSettingsModalState {
-	return {
-		type: "project-settings",
-		projectId: "desktop-ct-project",
-		selectedId,
-	};
-}
+import SettingsModalLayoutAdminHarness from "./SettingsModalLayoutAdminHarness.svelte";
+import { expect, test } from "@playwright/experimental-ct-svelte";
 
 test.describe("ProjectSettingsModalContent admin settings", () => {
-	test("shows Permissions & Governance in the sidebar for admin users", async ({ mount, page }) => {
-		await provideUserService(page, "admin");
-
-		const component = await mount(ProjectSettingsModalContent, {
-			props: { data: projectSettingsData() },
+	test("shows Permissions & Governance in the sidebar for admin users", async ({ mount }) => {
+		const component = await mount(SettingsModalLayoutAdminHarness, {
+			props: { role: "admin", selectedId: "governance" },
 		});
 
 		await expect(component.getByRole("button", { name: "Project" })).toBeVisible();
@@ -52,14 +12,9 @@ test.describe("ProjectSettingsModalContent admin settings", () => {
 		await expect(component.getByRole("button", { name: "Permissions & Governance" })).toBeVisible();
 	});
 
-	test("hides Permissions & Governance in the sidebar for non-admin users", async ({
-		mount,
-		page,
-	}) => {
-		await provideUserService(page, "member");
-
-		const component = await mount(ProjectSettingsModalContent, {
-			props: { data: projectSettingsData() },
+	test("hides Permissions & Governance in the sidebar for non-admin users", async ({ mount }) => {
+		const component = await mount(SettingsModalLayoutAdminHarness, {
+			props: { role: "member", selectedId: "governance" },
 		});
 
 		await expect(component.getByRole("button", { name: "Project" })).toBeVisible();
@@ -69,14 +24,9 @@ test.describe("ProjectSettingsModalContent admin settings", () => {
 		);
 	});
 
-	test("renders governance settings when the governance page is selected", async ({
-		mount,
-		page,
-	}) => {
-		await provideUserService(page, "admin");
-
-		const component = await mount(ProjectSettingsModalContent, {
-			props: { data: projectSettingsData("governance") },
+	test("renders governance settings when the governance page is selected", async ({ mount }) => {
+		const component = await mount(SettingsModalLayoutAdminHarness, {
+			props: { role: "admin", selectedId: "governance" },
 		});
 
 		await expect(
