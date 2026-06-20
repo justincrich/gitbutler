@@ -105,7 +105,7 @@ AC-3: The integrate gate fires under DryRun (dedicated) + decision is workspace-
   WHEN:  a DryRun=Yes `apply_branch_integration` by ro is attempted; a `branch::apply` by ro is attempted with the working-tree edit present; AND the source is structurally inspected
   THEN:  the DryRun apply_branch_integration is STILL denied perm.denied (the gate runs in the PUBLIC function even under DryRun) and persists nothing (no ref/object/oplog) — this is the DEDICATED DryRun-no-bypass sub-case for apply_branch_integration (the public apply + worktree_integrate have no DryRun param, so they are not part of this sub-case); the working-tree-edited apply is still denied per the workspace-target-ref config (config read from the target ref, not the working tree); and all three entry points call `commit::gate::enforce_commit_gate_for_target` (build-gate PER-FILE: branch.rs >= 2, worktree.rs >= 1 — proving one shared decision, not three parallel re-implementations)
   TEST_TIER: integration + build-gate   VERIFICATION_SERVICE: real but-api branch/worktree seam + real git; source grep   UNIT_TEST_JUSTIFIED: the shared-helper structural invariant (all three call the one decision fn, per-file) is a grep/compile build-gate; the DryRun-no-bypass + target-ref-pin behaviors are integration-proven
-  VERIFY: cargo test -p but-api commit_gate_apply_integrate_dryrun_targetref_pinned && ./tools/governance-checks/check_gate_helper_parity.sh
+  VERIFY: cargo test -p but-api commit_gate_apply_integrate_dryrun_targetref_pinned && ./tools/governance-checks/check_gate_before_guard.py
 
 --------------------------------------------------------------------------------
 TEST CRITERIA (boolean; maps to ACs)
@@ -123,7 +123,7 @@ TEST CRITERIA (boolean; maps to ACs)
 - TC-6 (-> AC-3, edge): a working-tree gates.toml edit cannot weaken; the workspace-target-ref blob governs apply/integrate/worktree (T-GATES-019 family, CAP-CONFIG-01)
     VERIFY: cargo test -p but-api commit_gate_apply_integrate_dryrun_targetref_pinned
 - TC-7 (-> AC-3, structural): all three entry points call the SAME commit::gate::enforce_commit_gate_for_target decision (mechanism parity, PER-FILE: branch.rs >= 2 AND worktree.rs >= 1, not a parallel gate)
-    VERIFY: ./tools/governance-checks/check_gate_helper_parity.sh
+    VERIFY: ./tools/governance-checks/check_gate_before_guard.py
 - TC-8 (-> AC-2, edge): (S9b) branch::apply AND apply_branch_integration on a repo with NO configured default target are PERMITTED — the gate is SKIPPED (target_ref_or_err() Err(DefaultTargetNotFound) MATCHED, not ?-propagated) so a legitimate ungoverned no-target apply does NOT hard-error (parity with commit_gate_absent_config_is_ungoverned, commit_gate.rs:255-289; apply.rs:44-46)
     VERIFY: cargo test -p but-api commit_gate_apply_integrate_no_target_ungoverned
 
@@ -204,7 +204,7 @@ VERIFICATION GATES
 - apply/integrate contents:write denial passes: `cargo test -p but-api commit_gate_apply_integrate_readonly_denied`  -> Exit 0; perm.denied naming contents:write on the PUBLIC branch::apply AND apply_branch_integration for ro (config read from the workspace target ref); dev feature-branch op permitted; NO vacuous branch.protected on apply/integrate
 - (S9b) no-target apply/integrate is ungoverned = permit (NOT a hard-error): `cargo test -p but-api commit_gate_apply_integrate_no_target_ungoverned`  -> Exit 0; on a repo with NO configured default target (DefaultTargetNotFound), branch::apply AND apply_branch_integration by ro are PERMITTED (gate SKIPPED — target_ref_or_err MATCHED, not ?-propagated), no hard-error surfaced (parity with commit_gate_absent_config_is_ungoverned)
 - DryRun-no-bypass + target-ref pin: `cargo test -p but-api commit_gate_apply_integrate_dryrun_targetref_pinned`  -> Exit 0; DryRun=Yes apply_branch_integration still denied + persists nothing; working-tree edit cannot weaken
-- One shared decision helper (mechanism parity, PER-FILE): `./tools/governance-checks/check_gate_helper_parity.sh` -> Exit 0. A loose cross-file SUM is INSUFFICIENT — it could pass with worktree_integrate ungated (e.g. 3 in branch.rs, 0 in worktree.rs).
+- One shared decision helper (mechanism parity, PER-FILE): `./tools/governance-checks/check_gate_before_guard.py` -> Exit 0. A loose cross-file SUM is INSUFFICIENT — it could pass with worktree_integrate ungated (e.g. 3 in branch.rs, 0 in worktree.rs).
 - Gate fires BEFORE the guard at the PUBLIC seam: in crates/but-api/src/branch.rs the `enforce_commit_gate_for_target(...)` call in `apply`/`apply_branch_integration` precedes `ctx.exclusive_worktree_access()`; in crates/but-api/src/legacy/worktree.rs it precedes the `let mut guard = ctx.exclusive_worktree_access();` at :59 (mirrors create.rs:35 before :38). NO gate call inside `apply_with_perm` / `apply_branch_integration_with_perm` bodies.
 - Config ref is the workspace target ref (NOT the feature branch): `grep -nE 'config_only\(.*existing_branch|config_only\(.*\bbranch\b' crates/but-api/src/branch.rs`  -> No matches (the apply/integrate config_ref is the matched `target_ref` from `ctx.project_meta()?.target_ref_or_err()`, not existing_branch/branch)
 - (S9b) No-target apply MUST NOT hard-error: `! grep -nE 'target_ref_or_err\(\)\?' crates/but-api/src/branch.rs`  -> No matches in `apply`/`apply_branch_integration` (the accessor is MATCHED via `if let Ok(target_ref) = ctx.project_meta()?.target_ref_or_err()`, NOT `?`-propagated — a no-default-target repo is ungoverned = permit, parity with commit_gate_absent_config_is_ungoverned, not a hard-error)
@@ -470,7 +470,7 @@ Blocks:     Sprint 05, Sprint 06b
       "type": "acceptance_criterion",
       "primary": false,
       "description": "GIVEN the PUBLIC apply_branch_integration under DryRun (it forwards dry_run: DryRun to apply_branch_integration_with_perm, branch.rs:961 — the ONLY of the three paths with a DryRun param) with BUT_AGENT_HANDLE=ro, and gated_apply_repo_wt_unprotect (working-tree gates.toml weakened, NOT committed) WHEN a DryRun=Yes apply_branch_integration by ro is attempted, a branch::apply by ro is attempted with the working-tree edit present, AND the source is inspected THEN the DryRun apply_branch_integration is STILL denied perm.denied and persists nothing (DEDICATED DryRun-no-bypass sub-case for apply_branch_integration; the gate runs in the PUBLIC fn before the guard so DryRun never bypasses), the working-tree-edited apply is still denied per the WORKSPACE TARGET-ref config (main), and all three entry points call the SAME commit::gate::enforce_commit_gate_for_target decision (PER-FILE build-gate: branch.rs >= 2 AND worktree.rs >= 1 — mechanism parity, not a loose cross-file sum that could pass with worktree.rs at 0)",
-      "verify": "cargo test -p but-api commit_gate_apply_integrate_dryrun_targetref_pinned && ./tools/governance-checks/check_gate_helper_parity.sh",
+      "verify": "cargo test -p but-api commit_gate_apply_integrate_dryrun_targetref_pinned && ./tools/governance-checks/check_gate_before_guard.py",
       "maps_to_ac": null,
       "scenario": {
         "tier": "holdout",
@@ -583,7 +583,7 @@ Blocks:     Sprint 05, Sprint 06b
       "id": "TC-7",
       "type": "test_criterion",
       "description": "all three entry points call the SAME commit::gate::enforce_commit_gate_for_target decision (mechanism parity, PER-FILE: crates/but-api/src/branch.rs >= 2 AND crates/but-api/src/legacy/worktree.rs >= 1, not a loose cross-file sum or a parallel gate)",
-      "verify": "./tools/governance-checks/check_gate_helper_parity.sh",
+      "verify": "./tools/governance-checks/check_gate_before_guard.py",
       "maps_to_ac": "AC-3"
     },
     {
