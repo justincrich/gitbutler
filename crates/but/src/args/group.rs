@@ -14,6 +14,9 @@ pub enum Subcommands {
     Create {
         /// Group name to create.
         name: String,
+        /// Initial functional permission tokens to grant to the group.
+        #[clap(long = "permissions", required = true, num_args = 1..)]
+        authorities: Vec<String>,
     },
     /// Grant functional permissions to a group in the working-tree governance config.
     Grant {

@@ -1,15 +1,39 @@
 {
   "task_id": "CLI-002",
-  "timestamp": "2026-06-20T04:47:24Z",
-  "commit_sha": "14f9fcced9afdf99ca058c83b2024220293ec8f4",
+  "timestamp": "2026-06-20T05:12:07.377Z",
+  "branch": "kb-run-sprint/sprint-05-cli-perm-group/CLI-002",
+  "base_sha": "5f699714844d59798cae2f59fde86b0f2b92d54d",
+  "starting_head_sha": "bd9ecc5a8139588af56995390984375af056ec55",
+  "commit_sha": "reported-in-final-response",
   "typecheck": {
-    "exit_code": 0
+    "command": "cargo check -p but-api --all-targets && cargo check -p but --all-targets",
+    "exit_code": 0,
+    "output_file": ".tmp/CLI-002/typecheck-output.txt"
   },
   "lint": {
+    "command": "cargo clippy -p but-authz -p but-api -p but --all-targets",
     "exit_code": 0,
-    "warnings": 0
+    "warnings": 0,
+    "output_file": ".tmp/CLI-002/cargo-clippy-but-authz-but-api-but-all-targets.txt"
   },
-  "pre_existing_issues": false,
+  "fmt": {
+    "command": "cargo fmt --check",
+    "exit_code": 0,
+    "output_file": ".tmp/CLI-002/cargo-fmt-check.txt"
+  },
+  "doc": {
+    "command": "cargo doc -p but-authz -p but-api -p but --no-deps",
+    "exit_code": 0,
+    "warning_count": 1,
+    "warning_classification": "pre-existing rustdoc unresolved intra-doc link in crates/but-api/src/open/editor.rs, unrelated to CLI-002",
+    "output_file": ".tmp/CLI-002/cargo-doc-but-authz-but-api-but-no-deps.txt"
+  },
+  "broad_test": {
+    "command": "cargo test",
+    "exit_code": 0,
+    "output_file": ".tmp/CLI-002/cargo-test-workspace.txt",
+    "reviewer_regression_check": "commit_gate_apply_integrate_dryrun_targetref_pinned passed during the workspace run"
+  },
   "requirement_results": [
     {
       "id": "AC-1",
@@ -121,6 +145,9 @@
     }
   ],
   "red_evidence": {
-    "required": true
-  }
+    "required": true,
+    "remediation_red": ".tmp/CLI-002/AC-2-remediation-red.txt",
+    "failure": "group_create accepted only 3 arguments before the create-time permissions API was implemented"
+  },
+  "pre_existing_issues": false
 }

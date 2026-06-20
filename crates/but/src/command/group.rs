@@ -21,9 +21,15 @@ pub async fn exec(
                 .map_err(governance_cli_error)?;
             write_list(out, &list).map_err(CliError::from)
         }
-        Subcommands::Create { name } => {
-            let create = but_api::legacy::governance::group_create(&repo, &target_ref, &name)
-                .map_err(governance_cli_error)?;
+        Subcommands::Create { name, authorities } => {
+            let authority_refs = authorities.iter().map(String::as_str).collect::<Vec<_>>();
+            let create = but_api::legacy::governance::group_create(
+                &repo,
+                &target_ref,
+                &name,
+                &authority_refs,
+            )
+            .map_err(governance_cli_error)?;
             write_mutation(out, "created", &create).map_err(CliError::from)
         }
         Subcommands::Grant { name, authorities } => {

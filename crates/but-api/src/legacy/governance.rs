@@ -133,22 +133,29 @@ pub fn group_create(
     repo: &gix::Repository,
     target_ref: &str,
     group: &str,
+    authorities: &[&str],
 ) -> anyhow::Result<GroupWriteOutcome> {
+    let parsed = parse_authorities(authorities)?;
     enforce_administration_write_gate(repo, target_ref)?;
 
     let mut permissions = load_permissions_for_write(repo, target_ref)?;
     let exists = permissions.group.iter().any(|entry| entry.name == group);
-    if !exists {
-        permissions.group.push(GroupWire {
-            name: group.to_owned(),
-            permissions: Vec::new(),
-            role: None,
-            members: Vec::new(),
-        });
-        write_worktree_permissions(repo, &permissions)?;
+    if exists {
+        return Err(anyhow!("group {group} already exists"));
     }
 
-    Ok(group_write_outcome(group, &[], None))
+    permissions.group.push(GroupWire {
+        name: group.to_owned(),
+        permissions: parsed
+            .iter()
+            .map(|authority| authority.name().to_owned())
+            .collect(),
+        role: None,
+        members: Vec::new(),
+    });
+    write_worktree_permissions(repo, &permissions)?;
+
+    Ok(group_write_outcome(group, &parsed, None))
 }
 
 /// Grant functional permissions to a governed group in the working-tree config.

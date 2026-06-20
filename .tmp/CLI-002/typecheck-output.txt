@@ -1,2 +1,6 @@
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.85s
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.50s
+    Checking but-api v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/CLI-002/crates/but-api)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 6.36s
+    Checking but-api v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/CLI-002/crates/but-api)
+    Checking but-transaction v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/CLI-002/crates/but-transaction)
+    Checking but v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/CLI-002/crates/but)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 8.68s

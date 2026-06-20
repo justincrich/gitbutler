@@ -10,13 +10,13 @@ fn group_cli_create_grant_members_list_denial_and_no_delete() -> anyhow::Result<
     let main_before = ref_id(&repo, "refs/heads/main")?;
 
     let create = env
-        .but("group create release-captains")
+        .but("group create release-captains --permissions reviews:write")
         .env("BUT_AGENT_HANDLE", "admin")
         .output()?;
     assert!(create.status.success(), "admin group create must succeed");
     let create_stdout = String::from_utf8_lossy(&create.stdout);
     assert!(
-        create_stdout.contains(REF_PIN_CAVEAT),
+        create_stdout.contains("reviews:write") && create_stdout.contains(REF_PIN_CAVEAT),
         "create stdout must include the ref-pin caveat, got: {create_stdout}"
     );
 
@@ -60,6 +60,7 @@ fn group_cli_create_grant_members_list_denial_and_no_delete() -> anyhow::Result<
     assert!(
         list_stdout.contains("release-captains")
             && list_stdout.contains("administration:write")
+            && list_stdout.contains("reviews:write")
             && list_stdout.contains("rust-implementer"),
         "list stdout must include group names, grants, and members, got: {list_stdout}"
     );

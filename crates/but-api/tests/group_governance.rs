@@ -80,30 +80,56 @@ fn group_add_member_writes_worktree_inert_until_committed() -> anyhow::Result<()
 fn group_create_grant_writes_worktree() -> anyhow::Result<()> {
     let (repo, _tmp) = group_governance_base(true);
 
-    temp_env::with_var("BUT_AGENT_HANDLE", Some("admin"), || {
-        group_create(&repo, MAIN_REF, "release-captains")
+    let create = temp_env::with_var("BUT_AGENT_HANDLE", Some("admin"), || {
+        group_create(&repo, MAIN_REF, "release-captains", &["reviews:write"])
     })?;
-    temp_env::with_var("BUT_AGENT_HANDLE", Some("admin"), || {
-        group_grant(
-            &repo,
-            MAIN_REF,
-            "release-captains",
-            &["administration:write"],
-        )
-    })?;
-
-    let worktree_permissions = worktree_permissions(&repo)?;
-    let release_captains = group_block(&worktree_permissions, "release-captains")?;
+    assert_eq!(
+        create.authorities,
+        vec!["reviews:write"],
+        "create outcome must report the create-time authority, not a later grant"
+    );
+    let after_create = worktree_permissions(&repo)?;
     assert!(
-        release_captains.contains("administration:write"),
-        "group_grant must write the new authority into the created group block"
+        group_block(&after_create, "release-captains")?.contains("reviews:write"),
+        "group_create must write create-time authorities before any later group_grant"
     );
     assert!(
-        group_block(&worktree_permissions, "code-reviewers")?.contains(r#"role = "write""#),
+        !group_block(&after_create, "release-captains")?.contains("comments:write"),
+        "test setup must prove comments:write arrives from group_grant, not group_create"
+    );
+
+    temp_env::with_var("BUT_AGENT_HANDLE", Some("admin"), || {
+        group_grant(&repo, MAIN_REF, "release-captains", &["comments:write"])
+    })?;
+
+    let final_permissions = worktree_permissions(&repo)?;
+    let release_captains = group_block(&final_permissions, "release-captains")?;
+    assert!(
+        release_captains.contains("reviews:write"),
+        "group_create must keep the create-time authority in the created group block"
+    );
+    assert!(
+        release_captains.contains("comments:write"),
+        "group_grant must write the later authority into the created group block"
+    );
+    let duplicate_create = temp_env::with_var("BUT_AGENT_HANDLE", Some("admin"), || {
+        group_create(&repo, MAIN_REF, "release-captains", &["statuses:write"])
+    });
+    assert!(
+        duplicate_create.is_err(),
+        "creating an already-defined group must fail instead of silently succeeding"
+    );
+    assert_eq!(
+        worktree_permissions(&repo)?,
+        final_permissions,
+        "duplicate group_create must not rewrite permissions.toml"
+    );
+    assert!(
+        group_block(&final_permissions, "code-reviewers")?.contains(r#"role = "write""#),
         "group create/grant rewrite must preserve unrelated group role sugar by value"
     );
     assert!(
-        principal_block(&worktree_permissions, "security-bot")?.contains("statuses:write"),
+        principal_block(&final_permissions, "security-bot")?.contains("statuses:write"),
         "group create/grant rewrite must preserve unrelated principal entries"
     );
 
@@ -118,7 +144,12 @@ fn group_ops_non_admin_denied() -> anyhow::Result<()> {
     let before = worktree_permissions(&repo)?;
 
     let create_error = temp_env::with_var("BUT_AGENT_HANDLE", Some("rust-implementer"), || {
-        classified_error(group_create(&repo, MAIN_REF, "release-captains"))
+        classified_error(group_create(
+            &repo,
+            MAIN_REF,
+            "release-captains",
+            &["reviews:write"],
+        ))
     })?;
     assert_perm_denied_administration_write(&create_error);
     assert_eq!(
