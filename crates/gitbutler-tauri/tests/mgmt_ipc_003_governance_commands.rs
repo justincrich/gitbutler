@@ -65,13 +65,13 @@ fn mgmt_unauthorized_agent_config_command_denied() -> anyhow::Result<()> {
     let (repo, _tmp) = governance_api_repo(true);
     let project_id = project_id_for(&repo)?;
     let before = worktree_permissions_bytes(&repo)?;
-    let app = agent_governance_app()?;
+    let app = governance_app(test_desktop_session())?;
     let webview = governance_webview(&app)?;
 
     let error = temp_env::with_var("BUT_AGENT_HANDLE", Some("rust-implementer"), || {
         invoke_err(
             &webview,
-            "perm_grant",
+            "agent_perm_grant",
             grant_payload(&project_id, "rust-implementer", ["administration:write"]),
         )
     })?;
@@ -324,35 +324,21 @@ fn grant_payload(
 fn governance_app(
     session: gitbutler_tauri::governance::TestDesktopSession,
 ) -> anyhow::Result<tauri::App<tauri::test::MockRuntime>> {
+    macro_rules! tauri_handler_from_governance_rows {
+        ($($governance_command:path),* $(,)?) => {
+            tauri::generate_handler![$($governance_command),*]
+        };
+    }
+
     tauri::test::mock_builder()
         .manage(gitbutler_tauri::governance::DesktopSessionState::new(
             session,
         ))
-        .invoke_handler(gitbutler_tauri::governance_invoke_handler())
+        .invoke_handler(gitbutler_tauri::gitbutler_governance_command_rows!(
+            tauri_handler_from_governance_rows
+        ))
         .build(tauri::test::mock_context(tauri::test::noop_assets()))
         .map_err(Into::into)
-}
-
-fn agent_governance_app() -> anyhow::Result<tauri::App<tauri::test::MockRuntime>> {
-    tauri::test::mock_builder()
-        .invoke_handler(tauri::generate_handler![agent_perm_grant])
-        .build(tauri::test::mock_context(tauri::test::noop_assets()))
-        .map_err(Into::into)
-}
-
-#[tauri::command(rename = "perm_grant")]
-fn agent_perm_grant(
-    project_id: but_ctx::ProjectHandleOrLegacyProjectId,
-    target_ref: String,
-    principal: String,
-    authorities: Vec<String>,
-) -> Result<but_api::legacy::governance::GrantOutcome, but_api::json::Error> {
-    gitbutler_tauri::governance::perm_grant_for_agent_env(
-        project_id,
-        target_ref,
-        principal,
-        authorities,
-    )
 }
 
 fn governance_webview(

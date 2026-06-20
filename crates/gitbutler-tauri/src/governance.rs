@@ -306,6 +306,22 @@ pub mod tauri_perm_grant {
     }
 }
 
+/// Tauri command wrapper for agent/env-authorized `perm_grant`.
+pub mod tauri_agent_perm_grant {
+    use super::{GrantOutcome, ProjectHandleOrLegacyProjectId, json};
+
+    /// Grant direct governance permissions through the server-side agent/env boundary.
+    #[tauri::command]
+    pub fn agent_perm_grant(
+        project_id: ProjectHandleOrLegacyProjectId,
+        target_ref: String,
+        principal: String,
+        authorities: Vec<String>,
+    ) -> Result<GrantOutcome, json::Error> {
+        super::perm_grant_for_agent_env(project_id, target_ref, principal, authorities)
+    }
+}
+
 /// Tauri command wrapper for desktop fleet-owner `perm_revoke`.
 pub mod tauri_perm_revoke {
     use super::{DesktopSessionState, PermWriteOutcome, ProjectHandleOrLegacyProjectId, json};
