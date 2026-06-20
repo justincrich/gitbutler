@@ -17,7 +17,7 @@ transforming...
 /images/icons/success-alt.svg referenced in /images/icons/success-alt.svg didn't resolve at build time, it will remain unchanged to be resolved at runtime
 ✓ 2483 modules transformed.
 rendering chunks...
-[plugin vite:reporter] 
+[plugin vite:reporter]
 (!) /Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-002/node_modules/.pnpm/@tauri-apps+api@2.11.0/node_modules/@tauri-apps/api/path.js is dynamically imported by /Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-002/apps/desktop/src/lib/backend/tauri.ts but also statically imported by /Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-002/apps/desktop/src/lib/backend/tauri.ts, /Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-002/node_modules/.pnpm/@tauri-apps+plugin-fs@2.5.1/node_modules/@tauri-apps/plugin-fs/dist-js/index.js, dynamic import will not move module into another chunk.
 
 computing gzip size...
@@ -348,21 +348,21 @@ computing gzip size...
 .cache/assets/emacs-lisp-CliwIWLo.js                         782.45 kB │ gzip:   196.20 kB │ map:    789.89 kB
 .cache/assets/typescript-JnEQfM6Q.js                         915.03 kB │ gzip:   216.94 kB │ map:     35.31 kB
 .cache/assets/ProjectSettingsModalContent-CKdvgXMM.js      6,461.25 kB │ gzip: 1,488.39 kB │ map: 10,850.83 kB
-✓ built in 4.12s
-(node:25310) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+✓ built in 4.42s
+(node:82774) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
 (Use `node --trace-warnings ...` to show where the warning was created)
-(node:25309) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(node:82775) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
 (Use `node --trace-warnings ...` to show where the warning was created)
-(node:25308) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(node:82776) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
 (Use `node --trace-warnings ...` to show where the warning was created)
-(node:25309) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(node:82775) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
 (Use `node --trace-warnings ...` to show where the warning was created)
-(node:25310) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(node:82774) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
 (Use `node --trace-warnings ...` to show where the warning was created)
-(node:25308) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(node:82776) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
 (Use `node --trace-warnings ...` to show where the warning was created)
-  ✓  2 [chromium] › tests/governance/SettingsModalLayoutAdmin.spec.ts:27:2 › ProjectSettingsModalContent admin settings › renders governance settings when the governance page is selected (286ms)
-  ✓  3 [chromium] › tests/governance/SettingsModalLayoutAdmin.spec.ts:5:2 › ProjectSettingsModalContent admin settings › shows Permissions & Governance in the sidebar for admin users (279ms)
-  ✓  1 [chromium] › tests/governance/SettingsModalLayoutAdmin.spec.ts:15:2 › ProjectSettingsModalContent admin settings › hides Permissions & Governance in the sidebar for non-admin users (279ms)
+  ✓  2 [chromium] › tests/governance/SettingsModalLayoutAdmin.spec.ts:27:2 › ProjectSettingsModalContent admin settings › renders governance settings when the governance page is selected (437ms)
+  ✓  3 [chromium] › tests/governance/SettingsModalLayoutAdmin.spec.ts:5:2 › ProjectSettingsModalContent admin settings › shows Permissions & Governance in the sidebar for admin users (438ms)
+  ✓  1 [chromium] › tests/governance/SettingsModalLayoutAdmin.spec.ts:15:2 › ProjectSettingsModalContent admin settings › hides Permissions & Governance in the sidebar for non-admin users (451ms)
 
-  3 passed (5.8s)
+  3 passed (6.5s)

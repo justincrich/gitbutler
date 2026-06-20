@@ -2,40 +2,92 @@
 	"task_id": "MGMT-UI-002",
 	"status": "complete",
 	"blocker_classification": "none",
-	"summary": "Remediated the governance settings CT coverage by replacing browser-side dynamic imports with a real Svelte CT harness that provides USER_SERVICE and UI_STATE context. Added a ProjectSettingsModalContentGovernance selector-matching spec. Historical RED evidence remains in AC-*-red-against-start.txt and red-output.txt; final GREEN evidence is in the current command output files.",
+	"commit_sha": null,
+	"commit_sha_note": "The final commit SHA is reported in the implementer handoff. A committed evidence file cannot contain its own final SHA without changing that SHA.",
+	"summary": "Refreshed stale bundler-failure evidence with assertion-level RED controls and current GREEN CT/typecheck/prettier outputs for ProjectSettingsModalContent governance settings.",
 	"verification": {
-		"install": ".tmp/MGMT-UI-002/install-output.txt: pnpm install --frozen-lockfile passed",
-		"package": ".tmp/MGMT-UI-002/package-output.txt: pnpm package passed",
-		"tests": ".tmp/MGMT-UI-002/test-output.txt: SettingsModalLayoutAdmin CT passed 3/3",
-		"projectSettingsGovernanceSelector": ".tmp/MGMT-UI-002/project-settings-governance-output.txt: ProjectSettingsModalContentGovernance CT passed 1/1",
-		"typecheck": ".tmp/MGMT-UI-002/typecheck-output.txt: pnpm -F @gitbutler/desktop check passed with 0 errors and 0 warnings",
-		"scopedPrettier": ".tmp/MGMT-UI-002/prettier-check-output.txt: scoped files pass Prettier"
+		"install": {
+			"status": "passed",
+			"evidence": ".tmp/MGMT-UI-002/install-output.txt"
+		},
+		"package": {
+			"status": "passed",
+			"evidence": ".tmp/MGMT-UI-002/package-output.txt"
+		},
+		"settingsModalLayoutCt": {
+			"status": "passed",
+			"evidence": ".tmp/MGMT-UI-002/test-output.txt",
+			"command": "pnpm -F @gitbutler/desktop test:ct:desktop -- SettingsModalLayoutAdmin",
+			"result": "3 passed"
+		},
+		"projectSettingsGovernanceCt": {
+			"status": "passed",
+			"evidence": ".tmp/MGMT-UI-002/project-settings-governance-output.txt",
+			"command": "pnpm -F @gitbutler/desktop test:ct:desktop -- ProjectSettingsModalContentGovernance",
+			"result": "1 passed"
+		},
+		"typecheck": {
+			"status": "passed",
+			"evidence": ".tmp/MGMT-UI-002/typecheck-output.txt",
+			"command": "pnpm -F @gitbutler/desktop check",
+			"result": "svelte-check found 0 errors and 0 warnings"
+		},
+		"focusedPrettier": {
+			"status": "passed",
+			"evidence": ".tmp/MGMT-UI-002/focused-prettier-output.txt",
+			"command": "pnpm exec prettier --check apps/desktop/src/components/settings/ProjectSettingsModalContent.svelte apps/desktop/tests/governance/SettingsModalLayoutAdmin.spec.ts apps/desktop/tests/governance/SettingsModalLayoutAdminHarness.svelte apps/desktop/tests/governance/ProjectSettingsModalContentGovernance.spec.ts",
+			"result": "All matched files use Prettier code style"
+		},
+		"rootLint": {
+			"status": "known_unrelated_failure_not_rerun_for_remediation",
+			"evidence": ".tmp/MGMT-UI-002/lint-output.txt",
+			"note": "Previous evidence records unrelated Markdown/spec Prettier warnings. This remediation does not claim root pnpm lint passed."
+		}
 	},
 	"requirements": [
 		{
 			"id": "AC-1",
-			"satisfied": true,
-			"evidence": ".tmp/MGMT-UI-002/test-output.txt shows admin users see Permissions & Governance in the sidebar"
+			"red": {
+				"status": "failed_as_expected",
+				"evidence": ".tmp/MGMT-UI-002/AC-1-red-against-start.txt",
+				"negative_control": "Temporarily reversed the ProjectSettingsModalContent governance/isAdmin implementation patch.",
+				"assertion": "Admin fixture expected the Permissions & Governance sidebar button to be visible; Playwright failed with element(s) not found."
+			},
+			"green": {
+				"status": "passed",
+				"evidence": ".tmp/MGMT-UI-002/AC-1-green.txt",
+				"assertion": "Admin fixture sees the Permissions & Governance sidebar button."
+			}
 		},
 		{
 			"id": "AC-2",
-			"satisfied": true,
-			"evidence": ".tmp/MGMT-UI-002/test-output.txt shows member users do not see Permissions & Governance in the sidebar"
+			"red": {
+				"status": "failed_as_expected",
+				"evidence": ".tmp/MGMT-UI-002/AC-2-red-leak-control.txt",
+				"negative_control": "Leak control: temporarily forced ProjectSettingsModalContent to pass isAdmin={true} into SettingsModalLayout.",
+				"assertion": "Member fixture expected zero Permissions & Governance buttons; Playwright failed with received count 1."
+			},
+			"green": {
+				"status": "passed",
+				"evidence": ".tmp/MGMT-UI-002/AC-2-green.txt",
+				"assertion": "Member fixture does not see the Permissions & Governance sidebar button."
+			}
 		},
 		{
 			"id": "AC-3",
-			"satisfied": true,
-			"evidence": ".tmp/MGMT-UI-002/test-output.txt and .tmp/MGMT-UI-002/project-settings-governance-output.txt show the governance selected state renders the real heading and not the not-found fallback"
-		},
-		{
-			"id": "AC-4",
-			"satisfied": true,
-			"evidence": ".tmp/MGMT-UI-002/isadmin-grep-output.txt shows USER_SERVICE injection and $derived(userService.user?.role === \"admin\")"
-		},
-		{
-			"id": "AC-5",
-			"satisfied": true,
-			"evidence": ".tmp/MGMT-UI-002/routes-governance-output.txt is 0"
+			"red": {
+				"status": "failed_as_expected",
+				"evidence": ".tmp/MGMT-UI-002/AC-3-red-against-start.txt",
+				"negative_control": "Temporarily reversed the ProjectSettingsModalContent governance/isAdmin implementation patch.",
+				"assertion": "Admin governance selection expected the Permissions & Governance heading; Playwright failed with element(s) not found."
+			},
+			"green": {
+				"status": "passed",
+				"evidence": ".tmp/MGMT-UI-002/AC-3-green.txt",
+				"assertion": "Governance selection renders the real Permissions & Governance heading and no not-found fallback."
+			}
 		}
-	]
+	],
+	"temporary_source_mutations_restored": true,
+	"evidence_path": ".tmp/MGMT-UI-002/"
 }

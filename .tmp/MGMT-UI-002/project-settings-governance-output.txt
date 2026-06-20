@@ -5,10 +5,10 @@
 
 Running 1 test using 1 worker
 
-(node:26137) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(node:83479) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
 (Use `node --trace-warnings ...` to show where the warning was created)
-(node:26137) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(node:83479) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
 (Use `node --trace-warnings ...` to show where the warning was created)
-  ✓  1 [chromium] › tests/governance/ProjectSettingsModalContentGovernance.spec.ts:5:2 › ProjectSettingsModalContentGovernance › renders governance settings when selected by an admin user (230ms)
+  ✓  1 [chromium] › tests/governance/ProjectSettingsModalContentGovernance.spec.ts:5:2 › ProjectSettingsModalContentGovernance › renders governance settings when selected by an admin user (236ms)
 
-  1 passed (1.6s)
+  1 passed (1.7s)
