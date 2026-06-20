@@ -1,0 +1,66 @@
+{
+  "task_id": "DESIGN-MGMT-003",
+  "timestamp": "2026-06-20T05:54:25Z",
+  "commit_sha": "b0db768d222e81b02ad4c331a83e497fceb8c130",
+  "typecheck": {
+    "exit_code": 0
+  },
+  "lint": {
+    "exit_code": 0,
+    "warnings": 0
+  },
+  "pre_existing_issues": false,
+  "requirement_results": [
+    {
+      "id": "AC-1",
+      "verify": "bash .tmp/DESIGN-MGMT-003/verify-design-review.sh AC-1",
+      "exit_code": 0,
+      "output_file": ".tmp/DESIGN-MGMT-003/ac-1-output.txt"
+    },
+    {
+      "id": "AC-2",
+      "verify": "bash .tmp/DESIGN-MGMT-003/verify-design-review.sh AC-2",
+      "exit_code": 0,
+      "output_file": ".tmp/DESIGN-MGMT-003/ac-2-output.txt"
+    },
+    {
+      "id": "AC-3",
+      "verify": "bash .tmp/DESIGN-MGMT-003/verify-design-review.sh AC-3",
+      "exit_code": 0,
+      "output_file": ".tmp/DESIGN-MGMT-003/ac-3-output.txt"
+    },
+    {
+      "id": "AC-4",
+      "verify": "bash .tmp/DESIGN-MGMT-003/verify-design-review.sh AC-4",
+      "exit_code": 0,
+      "output_file": ".tmp/DESIGN-MGMT-003/ac-4-output.txt"
+    },
+    {
+      "id": "TC-1",
+      "verify": "bash .tmp/DESIGN-MGMT-003/verify-design-review.sh TC-1",
+      "exit_code": 0,
+      "output_file": ".tmp/DESIGN-MGMT-003/tc-1-output.txt"
+    },
+    {
+      "id": "TC-2",
+      "verify": "bash .tmp/DESIGN-MGMT-003/verify-design-review.sh TC-2",
+      "exit_code": 0,
+      "output_file": ".tmp/DESIGN-MGMT-003/tc-2-output.txt"
+    },
+    {
+      "id": "TC-3",
+      "verify": "bash .tmp/DESIGN-MGMT-003/verify-design-review.sh TC-3",
+      "exit_code": 0,
+      "output_file": ".tmp/DESIGN-MGMT-003/tc-3-output.txt"
+    },
+    {
+      "id": "TC-4",
+      "verify": "bash .tmp/DESIGN-MGMT-003/verify-design-review.sh TC-4",
+      "exit_code": 0,
+      "output_file": ".tmp/DESIGN-MGMT-003/tc-4-output.txt"
+    }
+  ],
+  "red_evidence": {
+    "required": false
+  }
+}

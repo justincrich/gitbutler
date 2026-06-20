@@ -1,0 +1,6 @@
+found: SettingsModalLayout.svelte:53
+found: pages.filter((p) => !p.adminOnly || isAdmin)
+found: Read-only is the functional
+found: permission state for a viewer who can navigate
+found: These layers are independent
+found: `administration:write`
