@@ -1,0 +1,126 @@
+
+> @gitbutler/desktop@0.0.0 test:ct:desktop /Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-006/apps/desktop
+> playwright test -c playwright-ct.config.ts -- governance/PrincipalsList.spec.ts --grep PrincipalsListRows --workers=1
+
+
+Running 4 tests using 4 workers
+
+(node:17491) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:17492) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:17489) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:17490) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:17489) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:17491) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:17492) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:17490) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  2 [chromium] › tests/governance/PrincipalsList.spec.ts:109:1 › PrincipalsListPending marks pending row and keeps effective grants committed (5.2s)
+  ✘  3 [chromium] › tests/governance/PrincipalsList.spec.ts:128:1 › PrincipalsListEmpty renders empty state and add action (5.2s)
+  ✘  4 [chromium] › tests/governance/PrincipalsList.spec.ts:72:1 › PrincipalsListRows renders seeded principals and grant sources (5.2s)
+  ✘  1 [chromium] › tests/governance/PrincipalsList.spec.ts:93:1 › PrincipalsListEditorToggle opens PrincipalEditor inline without navigation (10.0s)
+
+
+  1) [chromium] › tests/governance/PrincipalsList.spec.ts:72:1 › PrincipalsListRows renders seeded principals and grant sources 
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoHaveCount[2m([22m[32mexpected[39m[2m)[22m failed
+
+    Locator:  locator('#root').locator('internal:control=component').getByTestId('principals-list-row')
+    Expected: [32m3[39m
+    Received: [31m0[39m
+    Timeout:  5000ms
+
+    Call log:
+    [2m  - Expect "toHaveCount" with timeout 5000ms[22m
+    [2m  - waiting for locator('#root').locator('internal:control=component').getByTestId('principals-list-row')[22m
+    [2m    9 × locator resolved to 0 elements[22m
+    [2m      - unexpected value "0"[22m
+
+
+      75 | 	});
+      76 |
+    > 77 | 	await expect(component.getByTestId("principals-list-row")).toHaveCount(3);
+         | 	                                                           ^
+      78 | 	await expect(component.getByTestId("principals-list-row-codex-agent")).toContainText(
+      79 | 		"codex-agent",
+      80 | 	);
+        at /Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-006/apps/desktop/tests/governance/PrincipalsList.spec.ts:77:61
+
+  2) [chromium] › tests/governance/PrincipalsList.spec.ts:93:1 › PrincipalsListEditorToggle opens PrincipalEditor inline without navigation 
+
+    [31mTest timeout of 10000ms exceeded.[39m
+
+    Error: locator.click: Test timeout of 10000ms exceeded.
+    Call log:
+    [2m  - waiting for locator('#root').locator('internal:control=component').getByTestId('principals-list-row-claude-agent')[22m
+
+
+      100 | 	const beforeUrl = page.url();
+      101 |
+    > 102 | 	await component.getByTestId("principals-list-row-claude-agent").click();
+          | 	                                                                ^
+      103 |
+      104 | 	await expect(component.getByTestId("principal-editor")).toBeVisible();
+      105 | 	await expect(component.getByTestId("principal-editor")).toContainText("claude-agent");
+        at /Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-006/apps/desktop/tests/governance/PrincipalsList.spec.ts:102:66
+
+  3) [chromium] › tests/governance/PrincipalsList.spec.ts:109:1 › PrincipalsListPending marks pending row and keeps effective grants committed 
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoContainText[2m([22m[32mexpected[39m[2m)[22m failed
+
+    Locator: locator('#root').locator('internal:control=component').getByTestId('principals-list-row-cursor-bot')
+    Expected substring: [32m"○"[39m
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+    [2m  - Expect "toContainText" with timeout 5000ms[22m
+    [2m  - waiting for locator('#root').locator('internal:control=component').getByTestId('principals-list-row-cursor-bot')[22m
+
+
+      114 | 	});
+      115 |
+    > 116 | 	await expect(component.getByTestId("principals-list-row-cursor-bot")).toContainText("○");
+          | 	                                                                      ^
+      117 | 	await expect(component.getByTestId("principals-list-row-cursor-bot")).toContainText(
+      118 | 		"contents:read",
+      119 | 	);
+        at /Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-006/apps/desktop/tests/governance/PrincipalsList.spec.ts:116:72
+
+  4) [chromium] › tests/governance/PrincipalsList.spec.ts:128:1 › PrincipalsListEmpty renders empty state and add action 
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoContainText[2m([22m[32mexpected[39m[2m)[22m failed
+
+    Locator: locator('#root').locator('internal:control=component').getByTestId('principals-list-empty')
+    Expected substring: [32m"No principals configured"[39m
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+    [2m  - Expect "toContainText" with timeout 5000ms[22m
+    [2m  - waiting for locator('#root').locator('internal:control=component').getByTestId('principals-list-empty')[22m
+
+
+      131 | 	});
+      132 |
+    > 133 | 	await expect(component.getByTestId("principals-list-empty")).toContainText(
+          | 	                                                             ^
+      134 | 		"No principals configured",
+      135 | 	);
+      136 | 	await expect(component.getByRole("button", { name: "+ Add first" })).toBeVisible();
+        at /Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-006/apps/desktop/tests/governance/PrincipalsList.spec.ts:133:63
+
+  4 failed
+    [chromium] › tests/governance/PrincipalsList.spec.ts:72:1 › PrincipalsListRows renders seeded principals and grant sources 
+    [chromium] › tests/governance/PrincipalsList.spec.ts:93:1 › PrincipalsListEditorToggle opens PrincipalEditor inline without navigation 
+    [chromium] › tests/governance/PrincipalsList.spec.ts:109:1 › PrincipalsListPending marks pending row and keeps effective grants committed 
+    [chromium] › tests/governance/PrincipalsList.spec.ts:128:1 › PrincipalsListEmpty renders empty state and add action 
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-006/apps/desktop:
+ ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  @gitbutler/desktop@0.0.0 test:ct:desktop: `playwright test -c playwright-ct.config.ts -- governance/PrincipalsList.spec.ts --grep PrincipalsListRows --workers=1`
+Exit status 1

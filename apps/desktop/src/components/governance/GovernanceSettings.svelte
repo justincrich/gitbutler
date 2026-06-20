@@ -1,4 +1,5 @@
 <script lang="ts">
+	import PrincipalsList from "$components/governance/PrincipalsList.svelte";
 	import TabContent from "$components/shared/TabContent.svelte";
 	import TabList from "$components/shared/TabList.svelte";
 	import Tabs from "$components/shared/Tabs.svelte";
@@ -49,6 +50,10 @@
 	function commitChanges() {
 		void pendingStore?.commit();
 	}
+
+	function refreshGovernance() {
+		void pendingStore?.refresh();
+	}
 </script>
 
 <section class="governance-settings" data-testid="governance-settings">
@@ -94,16 +99,18 @@
 		</TabList>
 
 		<TabContent value="principals">
-			<section class="governance-panel" data-testid="governance-principals-panel">
+			<section
+				class="governance-panel governance-panel--principals"
+				data-testid="governance-principals-panel"
+			>
 				<h3>Principals</h3>
-				<button
-					type="button"
-					class="governance-button"
-					disabled={isReadOnly}
-					data-testid="governance-principals-control"
-				>
-					Add principal
-				</button>
+				<PrincipalsList
+					{projectId}
+					{targetRef}
+					{isReadOnly}
+					{service}
+					onRefresh={refreshGovernance}
+				/>
 			</section>
 		</TabContent>
 
@@ -209,5 +216,9 @@
 		min-height: 120px;
 		padding: var(--clr-space-8) 0;
 		gap: var(--clr-space-8);
+	}
+
+	.governance-panel--principals {
+		flex-direction: column;
 	}
 </style>

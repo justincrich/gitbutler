@@ -13,5 +13,6 @@ test("keeps controls disabled for admin users without backend administration:wri
 		"administration:write",
 	);
 	await expect(component.getByTestId("governance-commit-button")).toBeDisabled();
-	await expect(component.getByTestId("governance-principals-control")).toBeDisabled();
+	await expect(component.getByTestId("principals-list")).toBeVisible();
+	await expect(component.getByTestId("governance-principals-control")).toHaveCount(0);
 });
