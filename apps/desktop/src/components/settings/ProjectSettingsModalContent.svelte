@@ -4,19 +4,32 @@
 	import GitForm from "$components/projectSettings/GitForm.svelte";
 	import GovernanceSettings from "$components/governance/GovernanceSettings.svelte";
 	import PreferencesForm from "$components/projectSettings/PreferencesForm.svelte";
+	import { BACKEND } from "$lib/backend";
+	import {
+		createGovernanceRendererContract,
+		type GovernanceRendererContract,
+	} from "$lib/governance";
 	import SettingsModalLayout from "$components/settings/SettingsModalLayout.svelte";
 	import { projectSettingsPages } from "$lib/settings/projectSettingsPages";
 	import type { ProjectSettingsModalState, ProjectSettingsPageId } from "$lib/state/uiState.svelte";
 	import { USER_SERVICE } from "$lib/user/userService.svelte";
-	import { inject } from "@gitbutler/core/context";
+	import { inject, injectOptional } from "@gitbutler/core/context";
+	import { untrack } from "svelte";
 
 	type Props = {
 		data: ProjectSettingsModalState;
+		governanceService?: GovernanceRendererContract;
 	};
 
-	const { data }: Props = $props();
+	const { data, governanceService: providedGovernanceService }: Props = $props();
 
 	const userService = inject(USER_SERVICE);
+	const backend = injectOptional(BACKEND, undefined);
+	const governanceService = untrack(
+		() =>
+			providedGovernanceService ??
+			(backend ? createGovernanceRendererContract(backend) : undefined),
+	);
 	const isAdmin = $derived(userService.user?.role === "admin");
 	const pages = projectSettingsPages;
 
@@ -45,7 +58,7 @@
 			{:else if currentPage.id === "experimental"}
 				<PreferencesForm projectId={data.projectId} />
 			{:else if currentPage.id === "governance"}
-				<GovernanceSettings />
+				<GovernanceSettings projectId={data.projectId} service={governanceService} />
 			{:else}
 				Settings page {currentPage.id} not Found.
 			{/if}

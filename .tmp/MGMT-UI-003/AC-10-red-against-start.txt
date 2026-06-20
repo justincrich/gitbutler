@@ -1,0 +1,46 @@
+
+> @gitbutler/desktop@0.0.0 test:ct:desktop /Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-003/apps/desktop
+> playwright test -c playwright-ct.config.ts -- GovernanceSettingsCrossTabPending
+
+
+Running 1 test using 1 worker
+
+Dev Server is already running at http://localhost:3101/, using it.
+
+(node:41913) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:41913) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  1 [chromium] › tests/governance/GovernanceSettingsCrossTabPending.spec.ts:4:1 › preserves pending count when switching tabs (5.1s)
+
+
+  1) [chromium] › tests/governance/GovernanceSettingsCrossTabPending.spec.ts:4:1 › preserves pending count when switching tabs 
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoContainText[2m([22m[32mexpected[39m[2m)[22m failed
+
+    Locator: locator('#root').locator('internal:control=component').getByTestId('governance-pending-banner')
+    Expected substring: [32m"3"[39m
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+    [2m  - Expect "toContainText" with timeout 5000ms[22m
+    [2m  - waiting for locator('#root').locator('internal:control=component').getByTestId('governance-pending-banner')[22m
+
+
+       7 | 	});
+       8 |
+    >  9 | 	await expect(component.getByTestId("governance-pending-banner")).toContainText("3");
+         | 	                                                                 ^
+      10 | 	await component.getByRole("tab", { name: "Groups" }).click();
+      11 | 	await expect(component.getByTestId("governance-pending-banner")).toContainText("3");
+      12 | 	await expect(component.getByTestId("governance-groups-panel")).toBeVisible();
+        at /Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-003/apps/desktop/tests/governance/GovernanceSettingsCrossTabPending.spec.ts:9:67
+
+    Error Context: test-results/governance-GovernanceSetti-a0058-g-count-when-switching-tabs-chromium/error-context.md
+
+  1 failed
+    [chromium] › tests/governance/GovernanceSettingsCrossTabPending.spec.ts:4:1 › preserves pending count when switching tabs 
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-003/apps/desktop:
+ ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  @gitbutler/desktop@0.0.0 test:ct:desktop: `playwright test -c playwright-ct.config.ts -- GovernanceSettingsCrossTabPending`
+Exit status 1

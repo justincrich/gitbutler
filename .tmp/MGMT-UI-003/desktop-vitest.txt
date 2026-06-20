@@ -1,0 +1,230 @@
+
+> @gitbutler/desktop@0.0.0 test /Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-003/apps/desktop
+> vitest run --mode development
+
+
+ RUN  v3.2.6 /Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-003/apps/desktop
+
+ ✓ src/lib/upstream/branchIntegrationEditor.test.ts (4 tests) 2ms
+ ✓ src/lib/upstream/branchIntegrationView.test.ts (3 tests) 2ms
+ ✓ src/lib/error/normalizedError.test.ts (12 tests) 3ms
+ ✓ src/lib/analytics/sentry.test.ts (10 tests) 2ms
+ ✓ src/lib/hunks/dependencies.test.ts (13 tests) 3ms
+ ✓ src/lib/upstream/branchIntegrationCurrentStateDisplay.test.ts (6 tests) 4ms
+ ✓ src/lib/stacks/staleStateUpdaters.test.ts (10 tests) 2ms
+ ✓ src/lib/forge/shared/pullRequestTargets.test.ts (11 tests) 3ms
+ ✓ src/lib/state/initUserSettings.test.ts (11 tests) 7ms
+ ✓ src/lib/error/errorClassification.test.ts (14 tests) 3ms
+ ✓ src/lib/stacks/stackEndpoints.test.ts (10 tests) 4ms
+ ✓ src/lib/hunks/hunk.test.ts (55 tests) 9ms
+ ✓ src/lib/selection/fileSelectionManager.test.ts (21 tests) 7ms
+ ✓ src/components/test/edit-mode-conflict-states/ConflictStatesHarness.svelte.test.ts (5 tests) 44ms
+ ✓ src/lib/selection/fileListController.svelte.test.ts (24 tests) 14ms
+ ✓ src/lib/updater/updater.test.ts (8 tests) 8ms
+ ✓ src/lib/ai/service.test.ts (23 tests) 15ms
+ ✓ src/lib/backend/tauri.test.ts (18 tests) 3ms
+ ✓ src/lib/stacks/headInfoAdapters.test.ts (2 tests) 3ms
+ ✓ src/lib/state/helpers.test.ts (6 tests) 2ms
+ ✓ src/lib/commits/commitMessage.test.ts (9 tests) 2ms
+ ✓ src/lib/forge/github/githubUserService.test.ts (8 tests) 2ms
+ ✓ src/lib/governance/governanceService.test.ts (3 tests) 2ms
+ ✓ src/lib/utils/filters.test.ts (6 tests) 2ms
+ ✓ src/lib/forge/gitlab/gitlabUserService.test.ts (6 tests) 2ms
+ ✓ src/lib/user/tokenMemoryService.test.ts (4 tests) 2ms
+ ✓ src/lib/files/conflictCheck.test.ts (3 tests) 2ms
+ ✓ src/lib/branches/branchUtils.test.ts (8 tests) 2ms
+ ✓ src/lib/stacks/stackService.test.ts (1 test) 2ms
+ ✓ src/components/shared/Resizer.test.ts (2 tests) 19ms
+ ✓ src/lib/polyfills/abortSignal.test.ts (5 tests) 461ms
+ ✓ src/lib/forge/shared/prFooter.test.ts (3 tests) 2ms
+ ✓ src/components/test/change-during-async-capturing-state-with-assignment-two-components/Component.svelte.test.ts (1 test) 46ms
+ ✓ src/components/test/change-during-async-capturing-state-with-assignment/Component.svelte.test.ts (1 test) 45ms
+ ✓ src/lib/stacks/commitMovePlacement.test.ts (2 tests) 2ms
+ ✓ src/lib/utils/unsubscribe.test.ts (4 tests) 2ms
+ ✓ src/lib/backend/url.test.ts (10 tests) 4ms
+ ✓ src/components/test/change-during-async-sees-updates/Component.svelte.test.ts (1 test) 48ms
+ ✓ src/components/test/change-during-async-sees-updates-two-components/Component.svelte.test.ts (1 test) 50ms
+12:24:45 PM [vite-plugin-svelte] tests/governance/GovernanceSettingsHarness.svelte:8:33 This reference only captures the initial value of `pendingCount`. Did you mean to reference it inside a closure instead?
+https://svelte.dev/e/state_referenced_locally
+ ✓ src/lib/upstream/upstreamIntegrationService.test.ts (1 test) 3ms
+ ✓ src/lib/stacks/stack.test.ts (3 tests) 2ms
+ ✓ src/lib/upstream/types.test.ts (5 tests) 3ms
+ ✓ src/components/shared/AppUpdater.test.ts (4 tests) 63ms
+
+⎯⎯⎯⎯⎯⎯ Failed Suites 11 ⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/governance/GovernanceSettings.spec.ts [ tests/governance/GovernanceSettings.spec.ts ]
+Error: Playwright Test did not expect test.describe() to be called here.
+Most common reasons include:
+- You are calling test.describe() in a configuration file.
+- You are calling test.describe() in a file that is imported by the configuration file.
+- You have two different versions of @playwright/test. This usually happens
+  when one of the dependencies in your package.json depends on @playwright/test.
+ ❯ TestTypeImpl._currentSuite ../../node_modules/.pnpm/playwright@1.58.2/node_modules/playwright/lib/common/testType.js:75:13
+ ❯ TestTypeImpl._describe ../../node_modules/.pnpm/playwright@1.58.2/node_modules/playwright/lib/common/testType.js:115:24
+ ❯ Function.describe ../../node_modules/.pnpm/playwright@1.58.2/node_modules/playwright/lib/transform/transform.js:282:12
+ ❯ tests/governance/GovernanceSettings.spec.ts:5:6
+      3| import { expect, test } from "@playwright/experimental-ct-svelte";
+      4| 
+      5| test.describe("GovernanceSettings", () => {
+       |      ^
+      6|  test("mounts the governance settings scaffold", async ({ mount }) => {
+      7|   const component = await mount(GovernanceSettings);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/11]⎯
+
+ FAIL  tests/governance/GovernanceSettingsAdminRoleNoWrite.spec.ts [ tests/governance/GovernanceSettingsAdminRoleNoWrite.spec.ts ]
+Error: Playwright Test did not expect test() to be called here.
+Most common reasons include:
+- You are calling test() in a configuration file.
+- You are calling test() in a file that is imported by the configuration file.
+- You have two different versions of @playwright/test. This usually happens
+  when one of the dependencies in your package.json depends on @playwright/test.
+ ❯ TestTypeImpl._currentSuite ../../node_modules/.pnpm/playwright@1.58.2/node_modules/playwright/lib/common/testType.js:75:13
+ ❯ TestTypeImpl._createTest ../../node_modules/.pnpm/playwright@1.58.2/node_modules/playwright/lib/common/testType.js:88:24
+ ❯ ../../node_modules/.pnpm/playwright@1.58.2/node_modules/playwright/lib/transform/transform.js:282:12
+ ❯ tests/governance/GovernanceSettingsAdminRoleNoWrite.spec.ts:4:1
+      2| import GovernanceSettingsHarness from "./GovernanceSettingsHarness.sve…
+      3| 
+      4| test("keeps controls disabled for admin users without backend administ…
+       | ^
+      5|  mount,
+      6| }) => {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/11]⎯
+
+ FAIL  tests/governance/GovernanceSettingsCleanMount.spec.ts [ tests/governance/GovernanceSettingsCleanMount.spec.ts ]
+Error: Playwright Test did not expect test() to be called here.
+Most common reasons include:
+- You are calling test() in a configuration file.
+- You are calling test() in a file that is imported by the configuration file.
+- You have two different versions of @playwright/test. This usually happens
+  when one of the dependencies in your package.json depends on @playwright/test.
+ ❯ TestTypeImpl._currentSuite ../../node_modules/.pnpm/playwright@1.58.2/node_modules/playwright/lib/common/testType.js:75:13
+ ❯ TestTypeImpl._createTest ../../node_modules/.pnpm/playwright@1.58.2/node_modules/playwright/lib/common/testType.js:88:24
+ ❯ ../../node_modules/.pnpm/playwright@1.58.2/node_modules/playwright/lib/transform/transform.js:282:12
+ ❯ tests/governance/GovernanceSettingsCleanMount.spec.ts:4:1
+      2| import GovernanceSettingsHarness from "./GovernanceSettingsHarness.sve…
+      3| 
+      4| test("does not render the pending banner for a seeded clean mount", as…
+       | ^
+      5|  const component = await mount(GovernanceSettingsHarness, {
+      6|   props: { pendingCount: 0 },
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/11]⎯
+
+ FAIL  tests/governance/GovernanceSettingsCommit.spec.ts [ tests/governance/GovernanceSettingsCommit.spec.ts ]
+Error: Playwright Test did not expect test() to be called here.
+Most common reasons include:
+- You are calling test() in a configuration file.
+- You are calling test() in a file that is imported by the configuration file.
+- You have two different versions of @playwright/test. This usually happens
+  when one of the dependencies in your package.json depends on @playwright/test.
+ ❯ TestTypeImpl._currentSuite ../../node_modules/.pnpm/playwright@1.58.2/node_modules/playwright/lib/common/testType.js:75:13
+ ❯ TestTypeImpl._createTest ../../node_modules/.pnpm/playwright@1.58.2/node_modules/playwright/lib/common/testType.js:88:24
+ ❯ ../../node_modules/.pnpm/playwright@1.58.2/node_modules/playwright/lib/transform/transform.js:282:12
+ ❯ tests/governance/GovernanceSettingsCommit.spec.ts:4:1
+      2| import GovernanceSettingsHarness from "./GovernanceSettingsHarness.sve…
+      3| 
+      4| test("commits pending governance changes and clears pending state", as…
+       | ^
+      5|  const component = await mount(GovernanceSettingsHarness, {
+      6|   props: { pendingCount: 3, pendingCountAfterCommit: 0 },
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/11]⎯
+
+ FAIL  tests/governance/GovernanceSettingsCrossTabPending.spec.ts [ tests/governance/GovernanceSettingsCrossTabPending.spec.ts ]
+Error: Playwright Test did not expect test() to be called here.
+Most common reasons include:
+- You are calling test() in a configuration file.
+- You are calling test() in a file that is imported by the configuration file.
+- You have two different versions of @playwright/test. This usually happens
+  when one of the dependencies in your package.json depends on @playwright/test.
+ ❯ TestTypeImpl._currentSuite ../../node_modules/.pnpm/playwright@1.58.2/node_modules/playwright/lib/common/testType.js:75:13
+ ❯ TestTypeImpl._createTest ../../node_modules/.pnpm/playwright@1.58.2/node_modules/playwright/lib/common/testType.js:88:24
+ ❯ ../../node_modules/.pnpm/playwright@1.58.2/node_modules/playwright/lib/transform/transform.js:282:12
+ ❯ tests/governance/GovernanceSettingsCrossTabPending.spec.ts:4:1
+      2| import GovernanceSettingsHarness from "./GovernanceSettingsHarness.sve…
+      3| 
+      4| test("preserves pending count when switching tabs", async ({ mount }) …
+       | ^
+      5|  const component = await mount(GovernanceSettingsHarness, {
+      6|   props: { pendingCount: 3 },
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/11]⎯
+
+ FAIL  tests/governance/GovernanceSettingsPendingBanner.spec.ts [ tests/governance/GovernanceSettingsPendingBanner.spec.ts ]
+Error: Playwright Test did not expect test() to be called here.
+Most common reasons include:
+- You are calling test() in a configuration file.
+- You are calling test() in a file that is imported by the configuration file.
+- You have two different versions of @playwright/test. This usually happens
+  when one of the dependencies in your package.json depends on @playwright/test.
+ ❯ TestTypeImpl._currentSuite ../../node_modules/.pnpm/playwright@1.58.2/node_modules/playwright/lib/common/testType.js:75:13
+ ❯ TestTypeImpl._createTest ../../node_modules/.pnpm/playwright@1.58.2/node_modules/playwright/lib/common/testType.js:88:24
+ ❯ ../../node_modules/.pnpm/playwright@1.58.2/node_modules/playwright/lib/transform/transform.js:282:12
+ ❯ tests/governance/GovernanceSettingsPendingBanner.spec.ts:4:1
+      2| import GovernanceSettingsHarness from "./GovernanceSettingsHarness.sve…
+      3| 
+      4| test("shows pending count and commit action only when changes are pend…
+       | ^
+      5|  const dirty = await mount(GovernanceSettingsHarness, {
+      6|   props: { pendingCount: 3 },
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/11]⎯
+
+ FAIL  tests/governance/GovernanceSettingsReadOnly.spec.ts [ tests/governance/GovernanceSettingsReadOnly.spec.ts ]
+Error: Playwright Test did not expect test() to be called here.
+Most common reasons include:
+- You are calling test() in a configuration file.
+- You are calling test() in a file that is imported by the configuration file.
+- You have two different versions of @playwright/test. This usually happens
+  when one of the dependencies in your package.json depends on @playwright/test.
+ ❯ TestTypeImpl._currentSuite ../../node_modules/.pnpm/playwright@1.58.2/node_modules/playwright/lib/common/testType.js:75:13
+ ❯ TestTypeImpl._createTest ../../node_modules/.pnpm/playwright@1.58.2/node_modules/playwright/lib/common/testType.js:88:24
+ ❯ ../../node_modules/.pnpm/playwright@1.58.2/node_modules/playwright/lib/transform/transform.js:282:12
+ ❯ tests/governance/GovernanceSettingsReadOnly.spec.ts:4:1
+      2| import GovernanceSettingsHarness from "./GovernanceSettingsHarness.sve…
+      3| 
+      4| test("uses backend hasAdminWrite=false to explain and disable governan…
+       | ^
+      5|  mount,
+      6| }) => {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/11]⎯
+
+ FAIL  tests/governance/GovernanceSettingsTabs.spec.ts [ tests/governance/GovernanceSettingsTabs.spec.ts ]
+Error: Playwright Test did not expect test() to be called here.
+Most common reasons include:
+- You are calling test() in a configuration file.
+- You are calling test() in a file that is imported by the configuration file.
+- You have two different versions of @playwright/test. This usually happens
+  when one of the dependencies in your package.json depends on @playwright/test.
+ ❯ TestTypeImpl._currentSuite ../../node_modules/.pnpm/playwright@1.58.2/node_modules/playwright/lib/common/testType.js:75:13
+ ❯ TestTypeImpl._createTest ../../node_modules/.pnpm/playwright@1.58.2/node_modules/playwright/lib/common/testType.js:88:24
+ ❯ ../../node_modules/.pnpm/playwright@1.58.2/node_modules/playwright/lib/transform/transform.js:282:12
+ ❯ tests/governance/GovernanceSettingsTabs.spec.ts:4:1
+      2| import GovernanceSettingsHarness from "./GovernanceSettingsHarness.sve…
+      3| 
+      4| test("renders the four governance tabs", async ({ mount }) => {
+       | ^
+      5|  const component = await mount(GovernanceSettingsHarness, {
+      6|   props: { pendingCount: 0 },
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/11]⎯
+
+ FAIL  tests/governance/ProjectSettingsModalContentCtHarness.spec.ts [ tests/governance/ProjectSettingsModalContentCtHarness.spec.ts ]
+ FAIL  tests/governance/ProjectSettingsModalContentGovernance.spec.ts [ tests/governance/ProjectSettingsModalContentGovernance.spec.ts ]
+ FAIL  tests/governance/SettingsModalLayoutAdmin.spec.ts [ tests/governance/SettingsModalLayoutAdmin.spec.ts ]
+Error: Cannot find package '$app' imported from /Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-003/node_modules/.pnpm/@sentry+sveltekit@10.44.0_@sveltejs+kit@2.52.2_@opentelemetry+api@1.9.0_@sveltejs+vite-_d02b1cfdf836e86adebb11fdaf130872/node_modules/@sentry/sveltekit/build/esm/client/browserTracingIntegration.js
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/11]⎯
+
+
+ Test Files  11 failed | 43 passed (54)
+      Tests  357 passed (357)
+   Start at  12:24:41
+   Duration  5.94s (transform 4.29s, setup 16.25s, collect 15.92s, tests 907ms, environment 16.30s, prepare 2.56s)
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-003/apps/desktop:
+ ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  @gitbutler/desktop@0.0.0 test: `vitest run --mode development`
+Exit status 1
