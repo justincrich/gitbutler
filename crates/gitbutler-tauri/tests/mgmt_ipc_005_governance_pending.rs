@@ -197,6 +197,41 @@ permissions = ["contents:write"]
     Ok(())
 }
 
+#[test]
+#[serial_test::serial]
+fn governance_pending_missing_worktree_gates_fails_closed() -> anyhow::Result<()> {
+    let (repo, _tmp) = governance_repo(
+        r#"
+[[principal]]
+id = "dev"
+permissions = ["contents:write"]
+"#,
+    );
+    fs::remove_file(worktree_path(&repo, GATES_PATH)?)?;
+
+    let error = invoke_pending_err(&repo)?;
+    assert_eq!(
+        error.get("code").and_then(Value::as_str),
+        Some("config.invalid"),
+        "missing working-tree gates.toml must fail closed as config.invalid: {error:?}"
+    );
+    assert!(
+        error
+            .get("message")
+            .and_then(Value::as_str)
+            .is_some_and(|message| message.contains(GATES_PATH)),
+        "config.invalid message must name the unreadable governed config file: {error:?}"
+    );
+    assert!(
+        error
+            .get("remediation_hint")
+            .and_then(Value::as_str)
+            .is_some_and(|hint| !hint.is_empty()),
+        "config.invalid transport error must carry a non-empty remediation_hint: {error:?}"
+    );
+    Ok(())
+}
+
 fn invoke_pending(repo: &gix::Repository) -> anyhow::Result<Value> {
     invoke_pending_result(repo)?.map_err(|error| anyhow::anyhow!("unexpected IPC error: {error:?}"))
 }

@@ -429,8 +429,12 @@ fn read_worktree_permissions_for_pending(
     repo: &gix::Repository,
 ) -> anyhow::Result<PermissionsWire> {
     let path = worktree_permissions_path(repo)?;
-    let text = fs::read_to_string(&path)
-        .with_context(|| format!("reading working-tree {}", permissions_path()))?;
+    let text = fs::read_to_string(&path).map_err(|error| {
+        config_invalid(format!(
+            "reading working-tree {} failed: {error}",
+            permissions_path()
+        ))
+    })?;
     toml::from_str::<PermissionsWire>(&text).map_err(|error| {
         anyhow::Error::new(json::ConfigInvalid {
             code: "config.invalid",
@@ -444,8 +448,9 @@ fn read_worktree_permissions_for_pending(
 
 fn read_worktree_gates_for_pending(repo: &gix::Repository) -> anyhow::Result<GatesFile> {
     let path = worktree_gates_path(repo)?;
-    let text =
-        fs::read_to_string(&path).with_context(|| format!("reading working-tree {GATES_PATH}"))?;
+    let text = fs::read_to_string(&path).map_err(|error| {
+        config_invalid(format!("reading working-tree {GATES_PATH} failed: {error}"))
+    })?;
     toml::from_str::<GatesFile>(&text).map_err(|error| {
         anyhow::Error::new(json::ConfigInvalid {
             code: "config.invalid",
