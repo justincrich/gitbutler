@@ -5,6 +5,7 @@ use but_authz::Authority;
 use serde_json::Value;
 
 const MAIN_REF: &str = "refs/heads/main";
+const TARGET_REF: &str = "refs/remotes/origin/main";
 const PERMISSIONS_PATH: &str = ".gitbutler/permissions.toml";
 
 #[test]
@@ -17,7 +18,7 @@ fn governance_api_perm_grant_admin_lands_inert() -> anyhow::Result<()> {
     let outcome = temp_env::with_var("BUT_AGENT_HANDLE", Some("admin"), || {
         perm_grant_cmd(
             &ctx,
-            MAIN_REF.to_owned(),
+            TARGET_REF.to_owned(),
             "rust-implementer".to_owned(),
             vec!["reviews:write".to_owned()],
         )
@@ -54,7 +55,7 @@ fn governance_api_perm_grant_non_admin_denied_with_hint() -> anyhow::Result<()> 
     let result = temp_env::with_var("BUT_AGENT_HANDLE", Some("rust-implementer"), || {
         perm_grant_cmd(
             &ctx,
-            MAIN_REF.to_owned(),
+            TARGET_REF.to_owned(),
             "rust-implementer".to_owned(),
             vec!["administration:write".to_owned()],
         )
@@ -109,7 +110,7 @@ fn governance_api_group_add_member_non_admin_denied_with_hint() -> anyhow::Resul
     let result = temp_env::with_var("BUT_AGENT_HANDLE", Some("rust-reviewer"), || {
         group_add_member_cmd(
             &ctx,
-            MAIN_REF.to_owned(),
+            TARGET_REF.to_owned(),
             "eng".to_owned(),
             "rust-reviewer".to_owned(),
         )
@@ -207,6 +208,7 @@ EOF
 
 git add .gitbutler/permissions.toml .gitbutler/gates.toml
 git commit -m "governance api config"
+git update-ref refs/remotes/origin/main refs/heads/main
 "#,
         &repo,
     );
@@ -216,8 +218,8 @@ git commit -m "governance api config"
 fn context_for(repo: &gix::Repository) -> anyhow::Result<but_ctx::Context> {
     let ctx = but_ctx::Context::from_repo(repo.clone())?.with_memory_app_cache();
     let mut project_meta = ctx.project_meta()?;
-    project_meta.target_ref = Some(MAIN_REF.try_into()?);
-    project_meta.target_commit_id = Some(ref_id(repo, MAIN_REF)?);
+    project_meta.target_ref = Some(TARGET_REF.try_into()?);
+    project_meta.target_commit_id = Some(ref_id(repo, TARGET_REF)?);
     ctx.set_project_meta(project_meta)?;
     Ok(ctx)
 }

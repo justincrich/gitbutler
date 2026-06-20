@@ -1,0 +1,144 @@
+{
+  "task_id": "MGMT-IPC-001",
+  "status": "complete",
+  "commit_sha": null,
+  "commit_sha_note": "The evidence summary is committed with the evidence package, so it cannot contain its own final commit hash. The final SHA is returned by the implementer response.",
+  "red_evidence": ".tmp/MGMT-IPC-001/red-output.txt",
+  "tests": {
+    "cargo test -p but-api --test governance_api": {
+      "exit_code": 0,
+      "output_file": ".tmp/MGMT-IPC-001/green-but-api-governance_api_all.txt"
+    },
+    "cargo test -p but-authz invariant_build_gates": {
+      "exit_code": 0,
+      "output_file": ".tmp/MGMT-IPC-001/but-authz-invariant_build_gates.txt"
+    }
+  },
+  "typecheck": {
+    "cargo check -p but-api --all-targets": {
+      "exit_code": 0,
+      "output_file": ".tmp/MGMT-IPC-001/green-cargo-check-but-api-all-targets.txt"
+    }
+  },
+  "lint": {
+    "cargo clippy -p but-api --all-targets -- -D warnings": {
+      "exit_code": 0,
+      "output_file": ".tmp/MGMT-IPC-001/green-cargo-clippy-but-api-all-targets.txt"
+    },
+    "cargo fmt --check": {
+      "exit_code": 0,
+      "output_file": ".tmp/MGMT-IPC-001/green-cargo-fmt-check.txt"
+    }
+  },
+  "requirement_results": [
+    {
+      "id": "AC-1",
+      "status": "pass",
+      "command": "cargo test -p but-api --test governance_api governance_api_perm_grant_admin_lands_inert",
+      "output_file": ".tmp/MGMT-IPC-001/green-governance_api_perm_grant_admin_lands_inert.txt",
+      "exit_code": 0
+    },
+    {
+      "id": "AC-2",
+      "status": "pass",
+      "command": "cargo test -p but-api --test governance_api governance_api_perm_grant_non_admin_denied_with_hint",
+      "output_file": ".tmp/MGMT-IPC-001/green-governance_api_perm_grant_non_admin_denied_with_hint.txt",
+      "exit_code": 0
+    },
+    {
+      "id": "AC-3",
+      "status": "pass",
+      "command": "cargo test -p but-api --test governance_api governance_api_status_read_returns_own_effective_set",
+      "output_file": ".tmp/MGMT-IPC-001/green-governance_api_status_read_returns_own_effective_set.txt",
+      "exit_code": 0
+    },
+    {
+      "id": "AC-4",
+      "status": "pass",
+      "command": "cargo test -p but-api --test governance_api governance_api_group_add_member_non_admin_denied_with_hint",
+      "output_file": ".tmp/MGMT-IPC-001/green-governance_api_group_add_member_non_admin_denied_with_hint.txt",
+      "exit_code": 0
+    },
+    {
+      "id": "AC-5",
+      "status": "pass",
+      "command": "cargo test -p but-api --test governance_api governance_api_status_read_is_self_scoped_no_foreign_principal",
+      "output_file": ".tmp/MGMT-IPC-001/green-governance_api_status_read_is_self_scoped_no_foreign_principal.txt",
+      "exit_code": 0
+    },
+    {
+      "id": "TC-1",
+      "status": "pass",
+      "command": "cargo test -p but-api --test governance_api governance_api_perm_grant_admin_lands_inert",
+      "output_file": ".tmp/MGMT-IPC-001/green-governance_api_perm_grant_admin_lands_inert.txt",
+      "exit_code": 0
+    },
+    {
+      "id": "TC-2",
+      "status": "pass",
+      "command": "cargo test -p but-api --test governance_api governance_api_perm_grant_admin_lands_inert",
+      "output_file": ".tmp/MGMT-IPC-001/green-governance_api_perm_grant_admin_lands_inert.txt",
+      "exit_code": 0
+    },
+    {
+      "id": "TC-3",
+      "status": "pass",
+      "command": "cargo test -p but-api --test governance_api governance_api_perm_grant_non_admin_denied_with_hint",
+      "output_file": ".tmp/MGMT-IPC-001/green-governance_api_perm_grant_non_admin_denied_with_hint.txt",
+      "exit_code": 0
+    },
+    {
+      "id": "TC-4",
+      "status": "pass",
+      "command": "cargo test -p but-api --test governance_api governance_api_perm_grant_non_admin_denied_with_hint",
+      "output_file": ".tmp/MGMT-IPC-001/green-governance_api_perm_grant_non_admin_denied_with_hint.txt",
+      "exit_code": 0
+    },
+    {
+      "id": "TC-5",
+      "status": "pass",
+      "command": "cargo test -p but-api --test governance_api governance_api_status_read_returns_own_effective_set",
+      "output_file": ".tmp/MGMT-IPC-001/green-governance_api_status_read_returns_own_effective_set.txt",
+      "exit_code": 0
+    },
+    {
+      "id": "TC-6",
+      "status": "pass",
+      "command": "cargo test -p but-api --test governance_api governance_api_status_read_returns_own_effective_set",
+      "output_file": ".tmp/MGMT-IPC-001/green-governance_api_status_read_returns_own_effective_set.txt",
+      "exit_code": 0
+    },
+    {
+      "id": "TC-7",
+      "status": "pass",
+      "command": "cargo test -p but-api --test governance_api governance_api_group_add_member_non_admin_denied_with_hint",
+      "output_file": ".tmp/MGMT-IPC-001/green-governance_api_group_add_member_non_admin_denied_with_hint.txt",
+      "exit_code": 0
+    },
+    {
+      "id": "TC-8",
+      "status": "pass",
+      "command": "cargo test -p but-api --test governance_api governance_api_group_add_member_non_admin_denied_with_hint",
+      "output_file": ".tmp/MGMT-IPC-001/green-governance_api_group_add_member_non_admin_denied_with_hint.txt",
+      "exit_code": 0
+    },
+    {
+      "id": "TC-9",
+      "status": "pass",
+      "command": "cargo test -p but-authz invariant_build_gates",
+      "output_file": ".tmp/MGMT-IPC-001/but-authz-invariant_build_gates.txt",
+      "exit_code": 0
+    },
+    {
+      "id": "TC-10",
+      "status": "pass",
+      "command": "cargo test -p but-api --test governance_api governance_api_status_read_is_self_scoped_no_foreign_principal",
+      "output_file": ".tmp/MGMT-IPC-001/green-governance_api_status_read_is_self_scoped_no_foreign_principal.txt",
+      "exit_code": 0
+    }
+  ],
+  "notes": [
+    "Governance API evidence was rerun against the actual integration test target with --test governance_api.",
+    "The governance API fixture uses refs/remotes/origin/main as the Context target because current Context metadata only persists remote-tracking default targets; refs/heads/main is still asserted unchanged for the inert write proof."
+  ]
+}
