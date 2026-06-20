@@ -13,4 +13,8 @@ test("uses backend hasAdminWrite=false to explain and disable governance control
 	);
 	await expect(component.getByTestId("governance-commit-button")).toBeDisabled();
 	await expect(component.getByTestId("governance-principals-control")).toBeDisabled();
+	await component.getByRole("tab", { name: "Groups" }).click();
+	await expect(component.getByTestId("governance-groups-panel")).toBeVisible();
+	await expect(component.getByTestId("governance-groups-control")).toBeDisabled();
+	await expect(component.getByTestId("governance-read-only-message")).toBeVisible();
 });

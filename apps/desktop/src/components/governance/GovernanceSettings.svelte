@@ -11,7 +11,7 @@
 	import { createGovernancePendingStore } from "$lib/governance/pendingStore.svelte";
 	import { injectOptional } from "@gitbutler/core/context";
 	import { InfoMessage } from "@gitbutler/ui";
-	import { onMount, untrack } from "svelte";
+	import { untrack } from "svelte";
 
 	type Props = {
 		projectId?: string;
@@ -38,9 +38,11 @@
 		isReadOnly || pendingCount === 0 || Boolean(pendingStore?.isCommitting),
 	);
 
-	onMount(() => {
+	$effect(() => {
 		if (pendingStore && projectId) {
-			void pendingStore.refresh();
+			untrack(() => {
+				void pendingStore.refresh();
+			});
 		}
 	});
 
@@ -85,10 +87,10 @@
 
 	<Tabs defaultSelected="principals">
 		<TabList>
-			<TabTrigger value="principals" disabled={isReadOnly}>Principals</TabTrigger>
-			<TabTrigger value="groups" disabled={isReadOnly}>Groups</TabTrigger>
-			<TabTrigger value="branch-gates" disabled={isReadOnly}>Branch Gates</TabTrigger>
-			<TabTrigger value="rules" disabled={isReadOnly}>Rules</TabTrigger>
+			<TabTrigger value="principals">Principals</TabTrigger>
+			<TabTrigger value="groups">Groups</TabTrigger>
+			<TabTrigger value="branch-gates">Branch Gates</TabTrigger>
+			<TabTrigger value="rules">Rules</TabTrigger>
 		</TabList>
 
 		<TabContent value="principals">
