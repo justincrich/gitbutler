@@ -1,4 +1,5 @@
-    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.29s
+   Compiling but-api v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/CLI-REM-001/crates/but-api)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 17.25s
      Running unittests src/lib.rs (target/debug/deps/but_api-b39b2d81e53be874)
 
 running 0 tests

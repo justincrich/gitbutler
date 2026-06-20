@@ -1,5 +1,5 @@
    Compiling but-api v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/CLI-REM-001/crates/but-api)
-    Finished `test` profile [unoptimized + debuginfo] target(s) in 9.67s
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 15.60s
      Running unittests src/lib.rs (target/debug/deps/but_api-b39b2d81e53be874)
 
 running 0 tests
@@ -41,7 +41,7 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 4 filtered out; fini
 running 1 test
 test group_ops_non_admin_denied_all_mutating_verbs ... ok
 
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 8 filtered out; finished in 0.08s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 8 filtered out; finished in 0.06s
 
      Running tests/merge_gate.rs (target/debug/deps/merge_gate-a9a7eef08cb3c05c)
 
