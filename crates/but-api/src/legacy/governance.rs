@@ -21,7 +21,7 @@ use super::config_mutate::enforce_administration_write_gate;
 pub const REF_PIN_CAVEAT: &str = "takes effect once committed to the target branch";
 
 /// Result of a governance permission write.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, schemars::JsonSchema)]
 pub struct PermWriteOutcome {
     /// Principal whose direct permissions were changed or inspected.
     pub principal: String,
@@ -32,7 +32,7 @@ pub struct PermWriteOutcome {
 }
 
 /// Result of a governance permission grant exposed through the API boundary.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, schemars::JsonSchema)]
 pub struct GrantOutcome {
     /// Principal whose direct permissions were changed or inspected.
     pub principal: String,
@@ -53,7 +53,7 @@ impl From<PermWriteOutcome> for GrantOutcome {
 }
 
 /// Serializable authority set returned by generated governance API wrappers.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, schemars::JsonSchema)]
 pub struct GovernanceStatus {
     /// Effective functional authority tokens for the caller.
     pub authorities: Vec<String>,
@@ -71,7 +71,7 @@ impl From<AuthoritySet> for GovernanceStatus {
 }
 
 /// Listed authority for one principal.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, schemars::JsonSchema)]
 pub struct PermListEntry {
     /// Functional authority token.
     pub authority: String,
@@ -81,7 +81,7 @@ pub struct PermListEntry {
 }
 
 /// Result of listing one principal's permissions.
-#[derive(Clone, PartialEq, Eq, Serialize)]
+#[derive(Clone, PartialEq, Eq, Serialize, schemars::JsonSchema)]
 pub struct PermListOutcome {
     /// Principal whose permissions were listed.
     pub principal: String,
@@ -103,7 +103,7 @@ impl std::fmt::Debug for PermListOutcome {
 }
 
 /// Result of a governance group write.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, schemars::JsonSchema)]
 pub struct GroupWriteOutcome {
     /// Group whose grants or membership were changed or inspected.
     pub group: String,
@@ -118,7 +118,7 @@ pub struct GroupWriteOutcome {
 }
 
 /// Listed group grants and members.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, schemars::JsonSchema)]
 pub struct GroupListEntry {
     /// Group name.
     pub name: String,
@@ -129,7 +129,7 @@ pub struct GroupListEntry {
 }
 
 /// Result of listing governed groups.
-#[derive(Clone, PartialEq, Eq, Serialize)]
+#[derive(Clone, PartialEq, Eq, Serialize, schemars::JsonSchema)]
 pub struct GroupListOutcome {
     /// Groups from the working-tree governance config.
     pub groups: Vec<GroupListEntry>,
@@ -139,7 +139,7 @@ pub struct GroupListOutcome {
 const GATES_PATH: &str = ".gitbutler/gates.toml";
 
 /// Caller-supplied branch protection update payload.
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct BranchProtectionInput {
     /// Whether the branch requires administration:write to mutate.
@@ -147,7 +147,7 @@ pub struct BranchProtectionInput {
 }
 
 /// One branch gate entry returned through the API boundary.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, schemars::JsonSchema)]
 pub struct BranchGateEntry {
     /// Branch name.
     pub name: String,
@@ -156,14 +156,14 @@ pub struct BranchGateEntry {
 }
 
 /// Result of reading or updating branch gates.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, schemars::JsonSchema)]
 pub struct BranchGatesOutcome {
     /// Branch gate entries from the working-tree `gates.toml`.
     pub branches: Vec<BranchGateEntry>,
 }
 
 /// Structured governance error payload for CLI and API callers.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, schemars::JsonSchema)]
 pub struct GovernanceErrorPayload {
     /// Stable consumer-facing error code.
     pub code: &'static str,
@@ -173,6 +173,31 @@ pub struct GovernanceErrorPayload {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub remediation_hint: Option<String>,
 }
+
+#[cfg(feature = "export-schema")]
+but_schemars::register_sdk_type!(PermWriteOutcome);
+#[cfg(feature = "export-schema")]
+but_schemars::register_sdk_type!(GrantOutcome);
+#[cfg(feature = "export-schema")]
+but_schemars::register_sdk_type!(GovernanceStatus);
+#[cfg(feature = "export-schema")]
+but_schemars::register_sdk_type!(PermListEntry);
+#[cfg(feature = "export-schema")]
+but_schemars::register_sdk_type!(PermListOutcome);
+#[cfg(feature = "export-schema")]
+but_schemars::register_sdk_type!(GroupWriteOutcome);
+#[cfg(feature = "export-schema")]
+but_schemars::register_sdk_type!(GroupListEntry);
+#[cfg(feature = "export-schema")]
+but_schemars::register_sdk_type!(GroupListOutcome);
+#[cfg(feature = "export-schema")]
+but_schemars::register_sdk_type!(BranchProtectionInput);
+#[cfg(feature = "export-schema")]
+but_schemars::register_sdk_type!(BranchGateEntry);
+#[cfg(feature = "export-schema")]
+but_schemars::register_sdk_type!(BranchGatesOutcome);
+#[cfg(feature = "export-schema")]
+but_schemars::register_sdk_type!(GovernanceErrorPayload);
 
 impl std::fmt::Debug for GroupListOutcome {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -189,16 +214,16 @@ impl std::fmt::Debug for GroupListOutcome {
     }
 }
 
-/// List governed groups through the but-api boundary.
-#[but_api]
+/// List governed groups through the but-api boundary (`group_list`).
+#[but_api(napi)]
 pub fn group_list(ctx: &Context) -> anyhow::Result<GroupListOutcome> {
     let repo = ctx.repo.get()?;
     let target_ref = target_ref_from_ctx(ctx, None)?;
     group_list_with_repo(&repo, &target_ref)
 }
 
-/// Create a governed group through the but-api boundary.
-#[but_api]
+/// Create a governed group through the but-api boundary (`group_create`).
+#[but_api(napi)]
 pub fn group_create(
     ctx: &Context,
     target_ref: String,
@@ -211,8 +236,8 @@ pub fn group_create(
     group_create_with_repo(&repo, &target_ref, &group, &authorities)
 }
 
-/// Grant governed group permissions through the but-api boundary.
-#[but_api]
+/// Grant governed group permissions through the but-api boundary (`group_grant`).
+#[but_api(napi)]
 pub fn group_grant(
     ctx: &Context,
     target_ref: String,
@@ -225,8 +250,8 @@ pub fn group_grant(
     group_grant_with_repo(&repo, &target_ref, &group, &authorities)
 }
 
-/// Add a principal to a governed group through the but-api boundary.
-#[but_api]
+/// Add a principal to a governed group through the but-api boundary (`group_add_member`).
+#[but_api(napi)]
 pub fn group_add_member(
     ctx: &Context,
     target_ref: String,
@@ -238,8 +263,8 @@ pub fn group_add_member(
     group_add_member_with_repo(&repo, &target_ref, &group, &member)
 }
 
-/// Remove a principal from a governed group through the but-api boundary.
-#[but_api]
+/// Remove a principal from a governed group through the but-api boundary (`group_remove_member`).
+#[but_api(napi)]
 pub fn group_remove_member(
     ctx: &Context,
     target_ref: String,
@@ -251,8 +276,8 @@ pub fn group_remove_member(
     group_remove_member_with_repo(&repo, &target_ref, &group, &member)
 }
 
-/// Delete a governed group through the but-api boundary.
-#[but_api]
+/// Delete a governed group through the but-api boundary (`group_delete`).
+#[but_api(napi)]
 pub fn group_delete(
     ctx: &Context,
     target_ref: String,
@@ -263,16 +288,16 @@ pub fn group_delete(
     group_delete_with_repo(&repo, &target_ref, &group)
 }
 
-/// List governed direct permissions through the but-api boundary.
-#[but_api]
+/// List governed direct permissions through the but-api boundary (`perm_list`).
+#[but_api(napi)]
 pub fn perm_list(ctx: &Context, principal: Option<String>) -> anyhow::Result<PermListOutcome> {
     let repo = ctx.repo.get()?;
     let target_ref = target_ref_from_ctx(ctx, None)?;
     perm_list_with_repo(&repo, &target_ref, principal.as_deref())
 }
 
-/// Grant governed direct permissions through the but-api boundary.
-#[but_api]
+/// Grant governed direct permissions through the but-api boundary (`perm_grant`).
+#[but_api(napi)]
 pub fn perm_grant(
     ctx: &Context,
     target_ref: String,
@@ -285,8 +310,8 @@ pub fn perm_grant(
     Ok(perm_grant_with_repo(&repo, &target_ref, &principal, &authorities)?.into())
 }
 
-/// Revoke governed direct permissions through the but-api boundary.
-#[but_api]
+/// Revoke governed direct permissions through the but-api boundary (`perm_revoke`).
+#[but_api(napi)]
 pub fn perm_revoke(
     ctx: &Context,
     target_ref: String,
@@ -299,8 +324,8 @@ pub fn perm_revoke(
     perm_revoke_with_repo(&repo, &target_ref, &principal, &authorities)
 }
 
-/// Return the caller's own effective governance authorities.
-#[but_api(GovernanceStatus)]
+/// Return the caller's own effective governance authorities (`governance_status_read`).
+#[but_api(napi, GovernanceStatus)]
 pub fn governance_status_read(ctx: &Context) -> anyhow::Result<AuthoritySet> {
     let repo = ctx.repo.get()?;
     let target_ref = target_ref_from_ctx(ctx, None)?;
@@ -309,16 +334,16 @@ pub fn governance_status_read(ctx: &Context) -> anyhow::Result<AuthoritySet> {
     Ok(but_authz::effective_authority(&caller, &config))
 }
 
-/// Read branch gates (`gates.toml`) for the target ref through the but-api boundary.
-#[but_api]
+/// Read branch gates (`branch_gates_read`) for the target ref through the but-api boundary.
+#[but_api(napi)]
 pub fn branch_gates_read(ctx: &Context, target_ref: String) -> anyhow::Result<BranchGatesOutcome> {
     let repo = ctx.repo.get()?;
     let target_ref = target_ref_from_ctx(ctx, Some(&target_ref))?;
     branch_gates_read_with_repo(&repo, &target_ref)
 }
 
-/// Update one branch gate entry (`gates.toml`) through the but-api boundary.
-#[but_api]
+/// Update one branch gate entry (`branch_gates_update`) through the but-api boundary.
+#[but_api(napi)]
 pub fn branch_gates_update(
     ctx: &Context,
     target_ref: String,

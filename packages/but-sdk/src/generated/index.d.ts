@@ -37,6 +37,9 @@ export declare function apply(projectId: string, existingBranch: string): Promis
  */
 export declare function applyBranchIntegration(projectId: string, branch: string, integration: InteractiveIntegration, dryRun: boolean): Promise<IntegrateBranchResult>
 
+/** Approve a branch review locally after enforcing `reviews:write`. */
+export declare function approveReview(projectId: string, branch: string): Promise<void>
+
 /**
  * Persists `assignments` for the current workspace and records an oplog
  * snapshot on success.
@@ -88,6 +91,12 @@ export declare function branchDetails(projectId: string, branchName: string, rem
  */
 export declare function branchDiff(projectId: string, branch: string): Promise<TreeChanges>
 
+/** Read branch gates (`branch_gates_read`) for the target ref through the but-api boundary. */
+export declare function branchGatesRead(projectId: string, targetRef: string): Promise<BranchGatesOutcome>
+
+/** Update one branch gate entry (`branch_gates_update`) through the but-api boundary. */
+export declare function branchGatesUpdate(projectId: string, targetRef: string, branch: string, protection: BranchProtectionInput): Promise<BranchGatesOutcome>
+
 /** See [`changes_in_worktree_with_perm()`]. */
 export declare function changesInWorktree(projectId: string): Promise<WorktreeChanges>
 
@@ -108,6 +117,12 @@ export declare function changesInWorktree(projectId: string): Promise<WorktreeCh
  * [`but_hunk_dependency::ui::hunk_dependencies_for_workspace_changes_by_worktree_dir()`].
  */
 export declare function changesInWorktreeWithPerm(projectId: string): Promise<WorktreeChanges>
+
+/** Close a branch review after enforcing `pull_requests:write`. */
+export declare function closeReview(projectId: string, branch: string): Promise<void>
+
+/** Comment on a branch review after enforcing `comments:write`. */
+export declare function commentReview(projectId: string, branch: string, message: string): Promise<void>
 
 /**
  * Amend the commit at `commit_id` with `changes` and record an oplog snapshot on success.
@@ -306,6 +321,27 @@ export declare function getReviewMergeStatus(projectId: string, reviewId: number
  */
 export declare function getUndoTargetSnapshot(projectId: string): Promise<Snapshot | null>
 
+/** Return the caller's own effective governance authorities (`governance_status_read`). */
+export declare function governanceStatusRead(projectId: string): Promise<GovernanceStatus>
+
+/** Add a principal to a governed group through the but-api boundary (`group_add_member`). */
+export declare function groupAddMember(projectId: string, targetRef: string, group: string, member: string): Promise<GroupWriteOutcome>
+
+/** Create a governed group through the but-api boundary (`group_create`). */
+export declare function groupCreate(projectId: string, targetRef: string, group: string, authorities: Array<string>): Promise<GroupWriteOutcome>
+
+/** Delete a governed group through the but-api boundary (`group_delete`). */
+export declare function groupDelete(projectId: string, targetRef: string, group: string): Promise<GroupWriteOutcome>
+
+/** Grant governed group permissions through the but-api boundary (`group_grant`). */
+export declare function groupGrant(projectId: string, targetRef: string, group: string, authorities: Array<string>): Promise<GroupWriteOutcome>
+
+/** List governed groups through the but-api boundary (`group_list`). */
+export declare function groupList(projectId: string): Promise<GroupListOutcome>
+
+/** Remove a principal from a governed group through the but-api boundary (`group_remove_member`). */
+export declare function groupRemoveMember(projectId: string, targetRef: string, group: string, member: string): Promise<GroupWriteOutcome>
+
 export declare function headInfo(projectId: string): Promise<RefInfo>
 
 /**
@@ -375,6 +411,15 @@ export declare function openInEditor(projectId: string, editorId: string, path: 
  */
 export declare function peelRestoreSnapshot(projectId: string, sha: string): Promise<Snapshot | null>
 
+/** Grant governed direct permissions through the but-api boundary (`perm_grant`). */
+export declare function permGrant(projectId: string, targetRef: string, principal: string, authorities: Array<string>): Promise<GrantOutcome>
+
+/** List governed direct permissions through the but-api boundary (`perm_list`). */
+export declare function permList(projectId: string, principal: string | null): Promise<PermListOutcome>
+
+/** Revoke governed direct permissions through the but-api boundary (`perm_revoke`). */
+export declare function permRevoke(projectId: string, targetRef: string, principal: string, authorities: Array<string>): Promise<PermWriteOutcome>
+
 export declare function publishReview(projectId: string, params: CreateForgeReviewParams): Promise<ForgeReview>
 
 export declare function pushStack(projectId: string, stackId: string, withForce: boolean, skipForcePushProtection: boolean, branch: string, runHooks: boolean, pushOpts: Array<PushFlag>): Promise<PushResult>
@@ -389,6 +434,9 @@ export declare function pushStack(projectId: string, stackId: string, withForce:
  * or on a branch that's empty.
  */
 export declare function removeBranch(projectId: string, stackId: string, branchName: string): Promise<void>
+
+/** Request changes on a branch review after enforcing `reviews:write`. */
+export declare function requestChangesReview(projectId: string, branch: string, message: string | null): Promise<void>
 
 /**
  * Restores the project to a specific snapshot using a specific kind of restore. This operation
@@ -769,6 +817,20 @@ export type BranchDetails = {
   isRemoteHead: boolean;
 };
 
+/** One branch gate entry returned through the API boundary. */
+export type BranchGateEntry = {
+  /** Branch name. */
+  name: string;
+  /** Whether the branch is protected. */
+  protected: boolean;
+};
+
+/** Result of reading or updating branch gates. */
+export type BranchGatesOutcome = {
+  /** Branch gate entries from the working-tree `gates.toml`. */
+  branches: Array<BranchGateEntry>;
+};
+
 /**
  * The identity of a branch as to allow to group similar branches together.
  *
@@ -868,6 +930,12 @@ export type BranchListingFilter = {
    * If the value is false, the listing will only include branches that are not applied in the workspace.
    */
   applied: boolean | null;
+};
+
+/** Caller-supplied branch protection update payload. */
+export type BranchProtectionInput = {
+  /** Whether the branch requires administration:write to mutate. */
+  protected: boolean;
 };
 
 /** A reference in `refs/heads`. */
@@ -1528,6 +1596,60 @@ export type GixTime = {
   offset: number;
 };
 
+/** Structured governance error payload for CLI and API callers. */
+export type GovernanceErrorPayload = {
+  /** Stable consumer-facing error code. */
+  code: string;
+  /** Human-readable error message. */
+  message: string;
+  /** Optional actionable recovery hint. */
+  remediation_hint: string | null;
+};
+
+/** Serializable authority set returned by generated governance API wrappers. */
+export type GovernanceStatus = {
+  /** Effective functional authority tokens for the caller. */
+  authorities: Array<string>;
+};
+
+/** Result of a governance permission grant exposed through the API boundary. */
+export type GrantOutcome = {
+  /** Principal whose direct permissions were changed or inspected. */
+  principal: string;
+  /** Parsed authority tokens supplied by the caller. */
+  authorities: Array<string>;
+  /** Ref-pin caveat for the operator. */
+  caveat: string;
+};
+
+/** Listed group grants and members. */
+export type GroupListEntry = {
+  /** Group name. */
+  name: string;
+  /** Functional authorities granted to the group. */
+  authorities: Array<string>;
+  /** Principals listed as group members. */
+  members: Array<string>;
+};
+
+/** Result of listing governed groups. */
+export type GroupListOutcome = {
+  /** Groups from the working-tree governance config. */
+  groups: Array<GroupListEntry>;
+};
+
+/** Result of a governance group write. */
+export type GroupWriteOutcome = {
+  /** Group whose grants or membership were changed or inspected. */
+  group: string;
+  /** Parsed authority tokens supplied by the caller. */
+  authorities: Array<string>;
+  /** Principal membership changed by this operation. */
+  member: string | null;
+  /** Ref-pin caveat for the operator. */
+  caveat: string;
+};
+
 export type HeadAndMode = {
   head: string | null;
   operatingMode: OperatingMode;
@@ -1876,6 +1998,32 @@ export type OutsideWorkspaceMetadata = {
   branchName: string | null;
   /** The paths of any files that would conflict with the workspace as it currently is */
   worktreeConflicts: Array<string>;
+};
+
+/** Listed authority for one principal. */
+export type PermListEntry = {
+  /** Functional authority token. */
+  authority: string;
+  /** Literal marker for a working-tree grant not committed at the target ref. */
+  marker: string | null;
+};
+
+/** Result of listing one principal's permissions. */
+export type PermListOutcome = {
+  /** Principal whose permissions were listed. */
+  principal: string;
+  /** Committed authorities plus pending working-tree direct grants. */
+  authorities: Array<PermListEntry>;
+};
+
+/** Result of a governance permission write. */
+export type PermWriteOutcome = {
+  /** Principal whose direct permissions were changed or inspected. */
+  principal: string;
+  /** Parsed authority tokens supplied by the caller. */
+  authorities: Array<string>;
+  /** Ref-pin caveat for the operator. */
+  caveat: string;
 };
 
 /**

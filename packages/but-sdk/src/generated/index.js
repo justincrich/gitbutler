@@ -579,19 +579,24 @@ if (!nativeBinding) {
   throw new Error(`Failed to load native binding`)
 }
 
-const { absorb, absorptionPlan, apply, applyBranchIntegration, assignHunk, branchCheckout, branchCheckoutNew, branchCreate, branchDetails, branchDiff, changesInWorktree, changesInWorktreeWithPerm, commitAmend, commitCreate, commitDetailsWithLineStats, commitDiscard, commitDiscardChanges, commitInsertBlank, commitMove, commitMoveChangesBetween, commitReword, commitSquash, commitUncommit, commitUncommitChanges, discardWorktreeChanges, forgeCompareBranchUrl, forgeInfo, forgeProvider, getInitialBranchIntegration, getRedoTargetSnapshot, getRepoInfo, getReview, getReviewBaseRepoUrl, getReviewMergeStatus, getUndoTargetSnapshot, headInfo, initApplicationNamespace, listAvailableReviewTemplates, listBranches, listCiChecks, listEditors, listProjectsStateless, listReviews, listReviewsForBranch, mergeReview, moveBranch, openInEditor, peelRestoreSnapshot, publishReview, pushStack, removeBranch, restoreSnapshotWithKind, reviewTemplate, setReviewAutoMerge, setReviewDraftiness, setReviewTemplate, tearOffBranch, treeChangeDiffs, unapplyStack, updateBranchName, updateReview, updateReviewFooters, warmCiChecksCache, workspaceBranchAndAncestorsPush, workspaceIntegrateUpstream, WatcherHandle, askpassInit, askpassSubmitPromptResponse, watcherStart } = nativeBinding
+const { absorb, absorptionPlan, apply, applyBranchIntegration, approveReview, assignHunk, branchCheckout, branchCheckoutNew, branchCreate, branchDetails, branchDiff, branchGatesRead, branchGatesUpdate, changesInWorktree, changesInWorktreeWithPerm, closeReview, commentReview, commitAmend, commitCreate, commitDetailsWithLineStats, commitDiscard, commitDiscardChanges, commitInsertBlank, commitMove, commitMoveChangesBetween, commitReword, commitSquash, commitUncommit, commitUncommitChanges, discardWorktreeChanges, forgeCompareBranchUrl, forgeInfo, forgeProvider, getInitialBranchIntegration, getRedoTargetSnapshot, getRepoInfo, getReview, getReviewBaseRepoUrl, getReviewMergeStatus, getUndoTargetSnapshot, governanceStatusRead, groupAddMember, groupCreate, groupDelete, groupGrant, groupList, groupRemoveMember, headInfo, initApplicationNamespace, listAvailableReviewTemplates, listBranches, listCiChecks, listEditors, listProjectsStateless, listReviews, listReviewsForBranch, mergeReview, moveBranch, openInEditor, peelRestoreSnapshot, permGrant, permList, permRevoke, publishReview, pushStack, removeBranch, requestChangesReview, restoreSnapshotWithKind, reviewTemplate, setReviewAutoMerge, setReviewDraftiness, setReviewTemplate, tearOffBranch, treeChangeDiffs, unapplyStack, updateBranchName, updateReview, updateReviewFooters, warmCiChecksCache, workspaceBranchAndAncestorsPush, workspaceIntegrateUpstream, WatcherHandle, askpassInit, askpassSubmitPromptResponse, watcherStart } = nativeBinding
 export { absorb }
 export { absorptionPlan }
 export { apply }
 export { applyBranchIntegration }
+export { approveReview }
 export { assignHunk }
 export { branchCheckout }
 export { branchCheckoutNew }
 export { branchCreate }
 export { branchDetails }
 export { branchDiff }
+export { branchGatesRead }
+export { branchGatesUpdate }
 export { changesInWorktree }
 export { changesInWorktreeWithPerm }
+export { closeReview }
+export { commentReview }
 export { commitAmend }
 export { commitCreate }
 export { commitDetailsWithLineStats }
@@ -615,6 +620,13 @@ export { getReview }
 export { getReviewBaseRepoUrl }
 export { getReviewMergeStatus }
 export { getUndoTargetSnapshot }
+export { governanceStatusRead }
+export { groupAddMember }
+export { groupCreate }
+export { groupDelete }
+export { groupGrant }
+export { groupList }
+export { groupRemoveMember }
 export { headInfo }
 export { initApplicationNamespace }
 export { listAvailableReviewTemplates }
@@ -628,9 +640,13 @@ export { mergeReview }
 export { moveBranch }
 export { openInEditor }
 export { peelRestoreSnapshot }
+export { permGrant }
+export { permList }
+export { permRevoke }
 export { publishReview }
 export { pushStack }
 export { removeBranch }
+export { requestChangesReview }
 export { restoreSnapshotWithKind }
 export { reviewTemplate }
 export { setReviewAutoMerge }
