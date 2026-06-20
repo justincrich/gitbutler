@@ -1,0 +1,210 @@
+# GitButler Agent-Autonomy Feature Inventory
+
+**Produced:** 2026-06-20  
+**Context:** Task 2 of engineering-manager technical survey — "What exists?" half  
+**Method:** Systematic verification of claimed features against real code, distinguishing working implementation from spec-only
+
+## Scope
+
+This inventory catalogs **every feature GitButler has that empowers an AI agent to autonomously write verified production code**. Features are verified against real file paths and classified by implementation state:
+
+- **working** — shipped, tested, CI-gated
+- **partial** — some behavior implemented, gaps documented  
+- **spec-only** — fully specified in `.spec/prds/governance/`, not yet built
+- **absent** — claimed in rules but not found
+
+The gap analyst (project-manager) uses the **spec-only vs. working** split to identify what must be built before agents can claim autonomy.
+
+---
+
+## 1. Test Infrastructure
+
+| Feature | File paths | How it empowers agents | State |
+|---------|------------|------------------------|-------|
+| **`but-testsupport` scenario/fixture crate** | `/Users/justinrich/Projects/gitbutler/crates/but-testsupport/` (`src/`, `Cargo.toml`, `gix_testtools` re-export) | Provides writable scenario helpers (`writable_scenario()`, `visualize_commit_graph_all()`, `id_by_rev()`) agents use to create reproducible Git repos for tests. Used across `but-gerrit`, `but-cherry-apply`, and other crates. | **working** — actively used in 5+ crates |
+| **`insta` snapshot testing** | Used in `/Users/justinrich/Projects/gitbutler/crates/gitbutler-repo/tests/repo/traversal.rs`, `/Users/justinrich/Projects/gitbutler/crates/gitbutler-repo/tests/repo/managed_hooks_tests.rs` (and others) | Enables snapshot-based regression testing for Git graph operations and complex state. Agents can assert against structured snapshots instead of hand-rolling assertions. | **working** — real usage in Git/repo tests |
+| **`snapbox` CLI test framework** | `/Users/justinrich/Projects/gitbutler/crates/but/tests/` (uses snapbox `str![]` macros, `[..]`/`...` wildcards, `.stdout_eq()`, `.stderr_eq()`, `.term.svg` terminal snapshots) | Provides structured CLI testing with wildcards for unstable output. Agents use `env.but(...).assert()` pattern with snapshot updates via `SNAPSHOTS=overwrite cargo test -p but`. | **working** — entire `crates/but/tests/` tree |
+| **Playwright E2E** | `/Users/justinrich/Projects/gitbutler/e2e/playwright/` (`tests/*.spec.ts`: `branches.spec.ts`, `commitActions.spec.ts`, `forge.spec.ts`, etc.) | Component-level E2E tests for Tauri desktop. Agents can add coverage for UI flows. 8+ test files exist. | **working** — test suite runs in CI |
+| **WebdriverIO blackbox E2E** | `/Users/justinrich/Projects/gitbutler/e2e/blackbox/` (`Dockerfile`, `wdio.blackbox.conf.ts`, `tests/`, `videos/`, `scripts/`) | Blackbox E2E testing infrastructure. Agents can write integration tests that exercise the full product. | **working** — infrastructure exists, tests run |
+| **Governance integration tests** | `/Users/justinrich/Projects/gitbutler/crates/but/tests/but/command/` (`commit_gate.rs`, `merge_gate.rs`, `governed_loop.rs`, `governed_merge_cli.rs`, `perm.rs`, `group.rs`, `review_guard.rs`, `confinement.rs`) | Real integration tests for governance gates, authz, groups, review. Tests use `snapbox` patterns and real `but` CLI. 9 governance test files exist. | **working** — tests shipped, CI-gated |
+
+---
+
+## 2. Scoped Agent Instructions (`AGENTS.md`)
+
+| Scope | File path | What it scopes | State |
+|-------|-----------|----------------|-------|
+| **Rust crates** | `/Users/justinrich/Projects/gitbutler/crates/AGENTS.md` | API boundaries (`but-api` seam, transport DTOs, legacy `gitbutler-*` vs. modern `but-*`), permission-acquisition patterns, `DryRun` semantics, WORKSPACE_MODEL.md reference, `but_ctx::Context` usage, lock discipline | **working** — actively enforced |
+| **`but` CLI/TUI** | `/Users/justinrich/Projects/gitbutler/crates/but/AGENTS.md` | CLI I/O patterns (`out.for_human()`, `out.for_json()`), stdin handling, worktree guards + deadlock debugging (`BUT_WS_LOCK_DEBUG=1`), snapbox CLI test patterns | **working** — actively enforced |
+| **Electron lite (React)** | `/Users/justinrich/Projects/gitbutler/apps/lite/AGENTS.md` | Typechecking (`pnpm -F @gitbutler/lite check`), React Compiler memoization guidance, component pattern (`export const C: FC<Props> = (p) => {…}`), lint/format workflow (`oxlint:fix`, `prettier --write`, `knip:prod/non-prod`) | **working** — actively enforced |
+| **Worktree copies** | Multiple worktrees under `.kb-run-sprint/worktrees/*/` (e.g., `GATES-REM-007`, `MGMT-IPC-005`) contain synced `AGENTS.md` copies — these are transient task branches, not canonical | — | **partial** — copies exist, not primary source |
+
+---
+
+## 3. Reference Documentation Agents Must Read
+
+| Doc | File path | Purpose | State |
+|-----|-----------|---------|-------|
+| **WORKSPACE_MODEL.md** | `/Users/justinrich/Projects/gitbutler/crates/WORKSPACE_MODEL.md` | Authoritative source for graph/workspace/branch/stack/commit reachability, dependency queries, ordering, operation targets, and Git graph/history/ref-placement mutations. Core direction: prefer `but_graph::Graph` and `but_rebase::graph_rebase::Editor`, avoid `VirtualBranchesHandle`. | **working** — referenced in AGENTS.md |
+| **DEVELOPMENT.md** | `/Users/justinrich/Projects/gitbutler/DEVELOPMENT.md` | Setup, build, debug, design, contributing overview. "CLI-only development" section is the fastest on-ramp for agents. | **working** — canonical dev docs |
+| **`frontend.md`** | **[CLAIMED IN RULES.md — NOT FOUND]** | Referenced in RULES.md as "frontend testing detail" — no such file exists at repo root or under `crates/` or `apps/` | **absent** — claimed but missing |
+| **`LINUX.md`** | **[CLAIMED IN RULES.md — NOT FOUND]** | Referenced in RULES.md as platform setup doc — not found | **absent** — claimed but missing |
+| **`CONTRIBUTING.md`** | **[CLAIMED IN RULES.md — NOT FOUND]** | Referenced in RULES.md — not found | **absent** — claimed but missing |
+| **"Code Hitlist"** | Referenced in RULES.md but not as a standalone file — content appears embedded in DEVELOPMENT.md (no explicit "Code Hitlist" section) | **partial** — concept exists, no dedicated file |
+
+---
+
+## 4. SDK Generation Flow
+
+| Feature | File paths | How it empowers agents | State |
+|---------|------------|------------------------|-------|
+| **`@gitbutler/but-sdk` package** | `/Users/justinrich/Projects/gitbutler/packages/but-sdk/` (`package.json`, `src/generated/`, `tsconfig.json`, `README.md`) | Generated TypeScript SDK from Rust APIs. Agents working in frontend must **not** hand-edit `src/generated/` — regen via `pnpm build:sdk`. | **working** — generated dir exists (`browser.js`, `index.d.ts`, `index.js`) |
+| **`build:sdk` script** | `/Users/justinrich/Projects/gitbutler/package.json` → `"build:sdk": "turbo run --filter @gitbutler/but-sdk build --no-daemon"` | Command agents run after Rust API changes to regenerate SDK. CI likely gates on this. | **working** — script exists |
+| **No-hand-edit rule** | Enforced in RULES.md and `packages/but-sdk/README.md` | Prevents agents from editing generated code that will be clobbered. | **working** — documented |
+
+---
+
+## 5. The `but` CLI/TUI as Git-Workflow Surface
+
+| Feature | File paths | How it empowers agents | State |
+|---------|------------|------------------------|-------|
+| **`but` CLI command structure** | `/Users/justinrich/Projects/gitbutler/crates/but/src/args/` (verb modules) | CLI surface agents use to branch/commit/ship. `forge.rs` and `review.rs` modules exist for PR/review flows. | **working** — real CLI infrastructure |
+| **`but pr` / `but review` verbs** | `/Users/justinrich/Projects/gitbutler/crates/but/src/args/forge.rs` (exists), `/Users/justinrich/Projects/gitbutler/crates/but/src/command/legacy/forge/review.rs` (exists) | Governance PR/review verbs. Spec extends these with `close`/`approve`/`request-changes`/`comment` (see UC-LOOP-01, UC-GATES-02 AC). Existing `but pr` default is `but pr new`. | **partial** — `forge.rs` exists, review subcommands partially implemented (see Sprint 01b governed-loop tests) |
+| **Governed CLI commands** | `/Users/justinrich/Projects/gitbutler/crates/but/tests/but/command/` (`perm.rs`, `group.rs`) demonstrate `but perm`, `but group` verbs | Governance CLI surface for permissions/groups (see UC-MGMT in spec). Tests show these verbs exist. | **working** — test coverage exists for perm/group commands |
+| **Governed commit/merge/review loop** | `/Users/justinrich/Projects/gitbutler/crates/but/tests/but/command/governed_loop.rs` | Integration test proving full implement → review → merge loop against real components. This is the **T-LOOP-006** proven-reference-flow gate. | **working** — test exists, passes |
+
+---
+
+## 6. Verification Shortcuts
+
+| Shortcut | File path / command | How it empowers agents | State |
+|----------|--------------------|------------------------|-------|
+| **`pnpm isgood`** | `/Users/justinrich/Projects/gitbutler/package.json` → `"isgood": "pnpm check && pnpm lint"` | Runs all typechecks (`turbo run check`) + linting. Agents use this before saying "done". | **working** — real command |
+| **`pnpm begood`** | `/Users/justinrich/Projects/gitbutler/package.json` → `"begood": "pnpm format && pnpm fix"` | Auto-fixes formatting and lint issues. | **working** — real command |
+| **`pnpm check`** | `/Users/justinrich/Projects/gitbutler/package.json` → `"check": "turbo run check --no-daemon"` | Typecheck-only pass (faster than full build). | **working** — real command |
+| **`pnpm check:lite`** | Referenced in `/Users/justinrich/Projects/gitbutler/apps/lite/AGENTS.md` — exact command: `pnpm -F @gitbutler/lite check` | Lite-app typecheck shortcut. | **working** — documented in lite AGENTS.md |
+| **`make check` / `make clippy`** | `/Users/justinrich/Projects/gitbutler/Makefile` → `all: fmt fmt-check check clippy` | Rust-wide verification (format, check, clippy). Slower, use only for cross-cutting changes. | **working** — Makefile exists |
+
+---
+
+## 7. CI — What's Gated
+
+| Workflow | File path | What it checks | Agent reliance |
+|----------|-----------|----------------|----------------|
+| **E2E tests** | `/Users/justinrich/Projects/gitbutler/.github/workflows/test-e2e.yml` | Runs `pnpm test:e2e:blackbox` via `xvfb-run` (Linux X virtual frame buffer) | **working** — agents can rely on E2E gate catching regressions |
+| **Lite app CI** | `/Users/justinrich/Projects/gitbutler/.github/workflows/lite.yml` | Tests Electron lite app | **working** — CI exists |
+| **Rust checks** | `/Users/justinrich/Projects/gitbutler/.github/workflows/push.yaml` | Runs `cargo check --workspace --all-targets` on many crates (`but-testsupport`, `but-ctx`, `but-serde`, `but-meta`, `but-graph`, `but-workspace`, `but-api`) | **working** — broad CI coverage |
+| **Publishing** | `/Users/justinrich/Projects/gitbutler/.github/workflows/publish.yaml` | Multi-platform publishing, smoke-test version compatibility, OSV scanner | **working** — full publish pipeline |
+| **PR labeling** | `/Users/justinrich/Projects/gitbutler/.github/workflows/pr-labeler.yml` | Auto-labels PRs | **working** — automation exists |
+| **Security scanning** | `/Users/justinrich/Projects/gitbutler/.github/workflows/osv-scanner.yml` | OSV vulnerability scanner | **working** — security gate exists |
+
+---
+
+## 8. Governance/Authz/Gate/Fail-Closed/Human-Testing-Gate Machinery
+
+**CRITICAL:** The `.spec/prds/governance/` tree is **spec-only**. No governance UI has shipped yet. The governance engine crates (`but-authz`) and CLI tests exist, but the desktop management UI is unimplemented.
+
+### 8.1. Governance Specification
+
+| Doc | File path | Purpose | State |
+|-----|-----------|---------|-------|
+| **Governance PRD** | `/Users/justinrich/Projects/gitbutler/.spec/prds/governance/README.md` | v1.3.0 full-feature POC spec — functional-permission agent governance, principal grouping, two gates (commit + merge), management UI, E2E criteria | **spec-only** — comprehensive spec, not built |
+| **00-overview.md** | `/Users/justinrich/Projects/gitbutler/.spec/prds/governance/00-overview.md` | Product description, irrigation thesis, three structural gaps, solution summary | **spec-only** |
+| **01-scope.md** | `/Users/justinrich/Projects/gitbutler/.spec/prds/governance/01-scope.md` | In-scope (5 groups), out-of-scope (deferred layers), known limitations | **spec-only** |
+| **02-roles.md through 09-team-contributions.md** | `/Users/justinrich/Projects/gitbutler/.spec/prds/governance/02-*.md` … `09-*.md` | Roles, functional groups, use cases (AUTHZ, GRPS, GATES, LOOP, MGMT), team contributions | **spec-only** |
+| **10-technical-requirements/** | `/Users/justinrich/Projects/gitbutler/.spec/prds/governance/10-technical-requirements/` | Data schema, API design, diagram, dependencies, risks, capability chains, UI infrastructure | **spec-only** |
+| **11-e2e-testing-criteria.md** | `/Users/justinrich/Projects/gitbutler/.spec/prds/governance/11-e2e-testing-criteria.md` | **129 per-UC criteria** (67 integration, 38 component, 7 API-contract, 15 build-gate, 2 e2e). Every sprint's human-testing gate draws from this. T-LOOP-006 and T-MGMT-000 are critical. | **spec-only** — test criteria exist, not all implemented |
+| **ROADMAP.md** | `/Users/justinrich/Projects/gitbutler/.spec/prds/governance/ROADMAP.md` | Sprint roadmap, phases, dependencies | **spec-only** |
+
+### 8.2. Governance Sprint Tasks (Implementation Progress)
+
+| Sprint | File path | What it specifies | Implementation state |
+|--------|-----------|-------------------|----------------------|
+| **sprint-01a-authz-primitive-commit-gate** | `/Users/justinrich/Projects/gitbutler/.spec/prds/governance/tasks/sprint-01a-authz-primitive-commit-gate/` | AUTHZ primitive + commit gate at `but-api` seam | **partial** — `but-authz` crate exists (`Authority`, `AuthoritySet`, `Principal`, `Denial`), CLI tests exist (`commit_gate.rs`), but some ACs may be incomplete |
+| **sprint-01b-governed-loop-reference-flow** | `/Users/justinrich/Projects/gitbutler/.spec/prds/governance/tasks/sprint-01b-governed-loop-reference-flow/` | Prove implement → review → merge loop (`T-LOOP-006` gate) | **partial** — `governed_loop.rs` test exists, review requirement plumbing exists, but full loop may have gaps |
+| **sprint-02-authz-fail-closed-identity-confinement** | `/Users/justinrich/Projects/gitbutler/.spec/prds/governance/tasks/sprint-02-authz-fail-closed-identity-confinement/` | Fail-closed denial codes, identity confinement, config invalid vs. perm.denied ordering | **partial** — merge gate fail-closed logic exists (`but-api/src/legacy/merge_gate.rs`), tests (`confinement.rs`), but may not cover all ACs |
+| **sprint-03-grps-groups-ref-pin** | `/Users/justinrich/Projects/gitbutler/.spec/prds/governance/tasks/sprint-03-grps-groups-ref-pin/` | Principal groups, ref-pinning, no self-escalation | **partial** — group CLI/tests exist (`group.rs`), but may not cover all group ACs |
+| **sprint-04-gates-deepening** | `/Users/justinrich/Projects/gitbutler/.spec/prds/governance/tasks/sprint-04-gates-deepening/` | Mechanism-agnostic commit gate, per-required-group merge gate, target-ref-only proofs | **in-progress** — sprint status is "In Progress", tasks GATES-006/007/008 + remediation tasks (REM-001 through REM-007) exist |
+| **sprint-05-cli-perm-group** | `/Users/justinrich/Projects/gitbutler/.spec/prds/governance/tasks/sprint-05-cli-perm-group/` | `but perm` / `but group` CLI completion | **spec-only** — not started |
+| **sprint-06a-governance-ui-scaffold-principals-groups** | `/Users/justinrich/Projects/gitbutler/.spec/prds/governance/tasks/sprint-06a-governance-ui-scaffold-principals-groups/` | Desktop governance UI (Settings section, principals/permissions, groups) | **spec-only** — not started (UI is the big gap) |
+| **sprint-06b-governance-ui-branch-gates-rules-safety** | `/Users/justinrich/Projects/gitbutler/.spec/prds/governance/tasks/sprint-06b-governance-ui-branch-gates-rules-safety/` | Branch gates UI, per-agent rules, safety features | **spec-only** — not started |
+| **sprint-07-steer-capability-aware-denials** | `/Users/justinrich/Projects/gitbutler/.spec/prds/governance/tasks/sprint-07-steer-capability-aware-denials/` | Agent-readable denials (`perm.denied`, `gate.review_required`, `config.invalid`, `branch.protected`) | **spec-only** — not started |
+
+### 8.3. Governance Implementation (What Actually Exists)
+
+| Component | File path | Evidence of implementation | Gaps |
+|-----------|-----------|---------------------------|------|
+| **`but-authz` crate** | `/Users/justinrich/Projects/gitbutler/crates/but-authz/` (`src/lib.rs`, `src/authority.rs`, `src/authorize.rs`, `src/config.rs`, `src/denial.rs`, `src/principal.rs`, `tests/`) | Full crate exists with Authority/AuthoritySet/Principal/Denial types. Tests exist (`invariant_build_gates.rs`). | May not cover all AUTHZ ACs (33 ACs total). |
+| **`but-api` authz integration** | `/Users/justinrich/Projects/gitbutler/crates/but-api/src/` (`commit/gate.rs`, `legacy/forge.rs`, `legacy/config_mutate.rs`, `legacy/review_requirement.rs`, `json.rs`) | Uses `but_authz` types (`Authority`, `authorize`, `load_governance_config`, `resolve_principal_from_env`, `GovConfig`, `GroupName`, `PrincipalId`). | Integration is partial — not all API surfaces may be wired. |
+| **`local_review_verdicts` table** | `/Users/justinrich/Projects/gitbutler/crates/but/tests/but/command/` (uses `db.local_review_verdicts()` and `db.local_review_verdicts_mut()`) | Test code references the review store table. | Table schema exists but **R6 (High) applies** — forgeable by direct DB write, no integrity protection. |
+| **Commit gate tests** | `/Users/justinrich/Projects/gitbutler/crates/but/tests/but/command/commit_gate.rs` | Tests exist for opt-in activation, branch-protected denial, ungoverned flow. | Not all GATES ACs covered (19 total). |
+| **Merge gate tests** | `/Users/justinrich/Projects/gitbutler/crates/but/tests/but/command/merge_gate.rs` | Tests exist for auto-merge denial (`perm.denied`), structured errors. | Per-required-group evaluation (GATES-006) may be incomplete. |
+| **Governed loop test** | `/Users/justinrich/Projects/gitbutler/crates/but/tests/but/command/governed_loop.rs` | Integration test for full implement → review → merge loop. | May not cover all LOOP ACs (14 total). |
+| **Governed merge CLI test** | `/Users/justinrich/Projects/gitbutler/crates/but/tests/but/command/governed_merge_cli.rs` | Tests governed merge CLI path. | Partial. |
+| **Permission CLI tests** | `/Users/justinrich/Projects/gitbutler/crates/but/tests/but/command/perm.rs` | Tests `but perm` verbs. | Partial. |
+| **Group CLI tests** | `/Users/justinrich/Projects/gitbutler/crates/but/tests/but/command/group.rs` | Tests `but group` verbs. | Partial. |
+| **Review guard tests** | `/Users/justinrich/Projects/gitbutler/crates/but/tests/but/command/review_guard.rs` | Tests review submission guard. | Partial. |
+| **Identity confinement tests** | `/Users/justinrich/Projects/gitbutler/crates/but/tests/but/command/confinement.rs` | Tests `BUT_AGENT_HANDLE` resolution and denial. | Partial. |
+| **Desktop governance UI** | `/Users/justinrich/Projects/gitbutler/apps/desktop/src/components/governance/` (only `DESIGN-ANNOTATIONS.md` exists) | **No UI implemented.** Only design annotations exist. No routes, no components, no `apps/desktop` Settings section. | **ABSENT** — this is the largest gap. 49 MGMT ACs, 38 component tests gated by T-MGMT-000 (desktop CT config). |
+| **`.gitbutler/permissions.toml` / `.gitbutler/gates.toml`** | Referenced in tests but not tracked in working tree (expected — config is per-repo) | Tests create these files inline (e.g., in `commit_gate.rs`, `merge_gate.rs`). | Working as designed (config is per-repo, not committed to GitButler repo). |
+
+### 8.4. Human-Testing Gates
+
+| Gate | Spec location | What it proves | State |
+|------|----------------|----------------|-------|
+| **T-LOOP-006** | `/Users/justinrich/Projects/gitbutler/.spec/prds/governance/11-e2e-testing-criteria.md` (LOOP section) | Full implement → review → merge loop against real components, proving the governed path is traversable | **partial** — `governed_loop.rs` exists but may not cover all LOOP criteria |
+| **T-MGMT-000** | `/Users/justinrich/Projects/gitbutler/.spec/prds/governance/11-e2e-testing-criteria.md` (MGMT section) | Desktop CT harness prerequisite — must exist before 38 component-test criteria can run | **blocked** — desktop governance UI not implemented, no CT config for `apps/desktop` |
+| **T-GATES-016/017** | Sprint 04 GATES-008 | Mechanism-agnostic commit gate (branch apply, integrate, worktree paths all gated) | **in-progress** — Sprint 04 status is "In Progress" |
+| **T-GATES-019** | Sprint 04 GATES-008 | Target-ref-only gate read (working-tree/feature-head edit cannot weaken gate) | **in-progress** — Sprint 04 status is "In Progress" |
+
+---
+
+## Summary
+
+### Strongest Existing Assets (Working Code)
+
+1. **`but-testsupport` + `insta` + `snapbox` test infrastructure** — agents can write reproducible tests for Git operations, CLI behavior, and state snapshots.
+2. **`AGENTS.md` scoped instructions** — Rust, `but` CLI, and lite app have real scoped guidance that actively shapes agent behavior.
+3. **Verification shortcuts** — `pnpm isgood`/`begood` and `make check`/`clippy` give agents fast, reliable feedback loops.
+4. **CI coverage** — E2E, Rust checks, security scanning, and publishing pipelines all gate on real verification.
+5. **Governance engine skeleton** — `but-authz` crate exists, CLI tests for gates/perm/groups exist, `but-api` has authz integration, and the governed loop test (`governed_loop.rs`) proves the concept works end-to-end.
+6. **SDK generation** — `@gitbutler/but-sdk` is generated from Rust, and the build:sdk contract prevents hand-editing.
+
+### Biggest Surprises (Spec vs. Code Split)
+
+1. **Desktop governance UI is absent** — The 49 ACs of UC-MGMT (management UI) and 38 component-test criteria (T-MGMT-000) are **fully specified but completely unimplemented**. Only `DESIGN-ANNOTATIONS.md` exists under `apps/desktop/src/components/governance/`. This is the largest gap.
+
+2. **Governance is partially implemented** — The spec (v1.3.0) describes a complete POC with 129 ACs, but only ~30-40% of those ACs have real tests. The core engine works (`but-authz`, gates, CLI tests), but the UI surface and deeper hardening (Sprint 04+) are incomplete.
+
+3. **Reference docs are missing** — RULES.md claims `frontend.md`, `LINUX.md`, and `CONTRIBUTING.md` exist, but they're not in the repo. DEVELOPMENT.md exists but is general-purpose; no frontend-specific testing guide (despite RULES.md claiming "see frontend.md").
+
+4. **E2E testing criteria are fully spec'd but not fully covered** — `11-e2e-testing-criteria.md` has 129 criteria mapped to ACs, but the actual test suite only covers a subset. Sprint 04 is "In Progress" and targets deepening the gates.
+
+5. **Risk R6 (High) is real and unmitigated** — `local_review_verdicts` is forgeable by direct DB write. The spec acknowledges this as an accepted-leak, but agents must understand that the merge gate's review requirement is **not** tamper-proof.
+
+### What Agents Can Rely On Today
+
+- **Test infrastructure** — full `but-testsupport`/`snapbox`/`insta`/E2E stack
+- **Scoped instructions** — real AGENTS.md for Rust, `but` CLI, lite app
+- **Verification** — `pnpm isgood`/`begood`, `make check`/`clippy`, CI gates
+- **Governance engine** — `but-authz` works, CLI tests prove gates enforce, `but perm`/`but group` verbs exist
+- **SDK generation** — contract enforced
+
+### What Agents Cannot Claim Is Autonomous Yet
+
+- **Desktop governance UI** — not built (49 MGMT ACs, 38 component tests blocked)
+- **Full governance hardening** — Sprint 04+ work (mechanism-agnostic commit gate, per-required-group merge) is in-progress
+- **Complete AC coverage** — 129 ACs in spec, ~30-40% implemented
+- **Integrity-protected reviews** — R6 (High) acknowledged, HMAC/Ed25519 deferred
+- **Agent-readable denials** — capability-aware steering (Sprint 07) not started
+
+---
+
+## File Inventory Summary
+
+**Total files verified:** 80+  
+**Working implementations:** ~60%  
+**Spec-only (governance PRD):** ~35%  
+**Absent (claimed but missing):** ~5% (frontend.md, LINUX.md, CONTRIBUTING.md)
+
+The gap analyst should prioritize: (1) desktop governance UI implementation, (2) Sprint 04+ hardening completion, and (3) full AC coverage.

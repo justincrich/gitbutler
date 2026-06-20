@@ -63,10 +63,10 @@ CRITICAL CONSTRAINTS
 --------------------------------------------------------------------------------
 DONE WHEN
 --------------------------------------------------------------------------------
-- [ ] AC-1 [PRIMARY]: `but perm` uses workspace target ref instead of HEAD.
-- [ ] AC-2: `but group` uses workspace target ref instead of HEAD.
-- [ ] AC-3: feature HEAD self-grant cannot authorize group grant when target ref lacks admin.
-- [ ] All verification gates pass; only writeAllowed files modified.
+- [x] AC-1 [PRIMARY]: `but perm` uses workspace target ref instead of HEAD.
+- [x] AC-2: `but group` uses workspace target ref instead of HEAD.
+- [x] AC-3: feature HEAD self-grant cannot authorize group grant when target ref lacks admin.
+- [x] All verification gates pass; only writeAllowed files modified.
 
 --------------------------------------------------------------------------------
 ACCEPTANCE CRITERIA
