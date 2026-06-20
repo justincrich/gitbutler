@@ -122,8 +122,8 @@ TEST CRITERIA (boolean; maps to ACs)
     VERIFY: cargo test -p but-api commit_gate_apply_integrate_dryrun_targetref_pinned
 - TC-6 (-> AC-3, edge): a working-tree gates.toml edit cannot weaken; the workspace-target-ref blob governs apply/integrate/worktree (T-GATES-019 family, CAP-CONFIG-01)
     VERIFY: cargo test -p but-api commit_gate_apply_integrate_dryrun_targetref_pinned
-- TC-7 (-> AC-3, structural): all three entry points call the SAME commit::gate::enforce_commit_gate_for_target decision (mechanism parity, PER-FILE: branch.rs >= 2 AND worktree.rs >= 1, not a parallel gate)
-    VERIFY: ./tools/governance-checks/check_gate_before_guard.py
+- TC-7 (-> AC-3, structural): all three entry points call the SAME commit::gate::enforce_commit_gate_for_target decision (mechanism parity, PER-FILE: branch.rs >= 2 AND worktree.rs >= 1, not a parallel gate) — the per-file parity script (REM-005) AND the gate-before-guard source-contract script (REM-006) both pass
+    VERIFY: ./tools/governance-checks/check_gate_helper_parity.sh && ./tools/governance-checks/check_gate_before_guard.py
 - TC-8 (-> AC-2, edge): (S9b) branch::apply AND apply_branch_integration on a repo with NO configured default target are PERMITTED — the gate is SKIPPED (target_ref_or_err() Err(DefaultTargetNotFound) MATCHED, not ?-propagated) so a legitimate ungoverned no-target apply does NOT hard-error (parity with commit_gate_absent_config_is_ungoverned, commit_gate.rs:255-289; apply.rs:44-46)
     VERIFY: cargo test -p but-api commit_gate_apply_integrate_no_target_ungoverned
 

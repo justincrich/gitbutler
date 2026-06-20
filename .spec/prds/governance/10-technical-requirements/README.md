@@ -1,0 +1,57 @@
+---
+stability: CONSTITUTION
+last_validated: 2026-06-18
+prd_version: 1.3.0
+section: technical-requirements
+---
+# Technical Requirements — Functional-Permission Agent Governance for GitButler (POC)
+
+Constitution-layer engineering contract for turning **GitButler into a commit/merge policy-enforcement layer** for orchestrated agents: a **functional permission system** + **principal grouping** + **two thin gates** on GitButler's own action surface. This folder grounds every claim in the GitButler codebase scanned during design (`crates/AGENTS.md`, the crate map, the `_with_perm` composition idiom); where a precise function or module is not yet verified, the file says so and marks it a planning-time confirmation rather than asserting it.
+
+> **The integration-shape precedent.** GitButler's `crates/AGENTS.md` already prescribes the composition this PRD reuses: *"For permissioned `but-api` functions, follow the existing composition shape: acquire permission near the wrapper and delegate to a `_with_perm` … implementation."* That existing `Permission` is a **repository-access lock** (concurrency), **not** principal authorization — so this initiative mirrors the *shape* (`_with_authz`) without overloading the *type*. This is the single most important grain-fitting decision in the build.
+
+## Section Index
+
+| # | File | Topic | Stability |
+|---|---|---|---|
+| 01 | `01-architecture-posture.md` | The irrigation thesis; control on the git ACTION not the tool; functional (not role) permissions; the TWO gates as deterministic on-action code; the accepted-leak fence vs the steel-trap boundary; the `_with_perm`-vs-`_with_authz` naming invariant; trust boundary | CONSTITUTION |
+| 02 | `02-system-components.md` | NEW `but-authz` crate + EXTENDED `but-api`/`but-action`/the `but` CLI verb modules (`crates/but/src/args/`)/stack-integration; the four-caller seam note (incl. the N-API audit, R14); per-crate module map; the naming-collision guardrail | CONSTITUTION |
+| 03 | `03-data-schema.md` | NEW Rust types (`Authority`/`AuthoritySet`/`Principal`/`Group`); 2 committed config files (`.gitbutler/permissions.toml`, `.gitbutler/gates.toml`, ref-pinned); 1 local review record; what is NOT a DB table | CONSTITUTION |
+| 04 | `04-api-design.md` | New CLI verbs (`but perm`, `but group`, the governed `but pr`/`but review` extensions — defined in `crates/but/src/args/`); the `authorize()` + `_with_authz` contract; the two gate entry points; the agent-readable rejection contract | CONSTITUTION |
+| 05 | `05-architecture-diagram.md` | The orchestrator → Butler action surface → two gates → `but-authz` → ref-pinned config flow, plus the accepted-leak fence (ASCII) | CONSTITUTION |
+| 06 | `06-external-dependencies.md` | None required (verification table) | CONSTITUTION |
+| 07 | `07-technical-risks.md` | Risks carried to implementation — 14 risks (accepted-leak fence R1, identity-via-env R2, ref-pin correctness R4, `Permission` name collision R3, review-state location + **forgeability** R6 **High**, **N-API bypass R14 Medium**) | CONSTITUTION |
+| 08 | `08-capability-chains.md` | `CAP-AUTHZ-*` (resolve principal → authorize at the action boundary) and `CAP-CONFIG-*` (ref-pinned config read at the target ref) with contracts, failure modes, owners, proof | CONSTITUTION |
+| 09 | `09-e2e-testing.md` | The harness constitution: real `but-authz` + real `but-api` + real git; the determinism seam; the proven-reference-flow gate (the LOOP integration test) | CONSTITUTION |
+| 10 | `10-ui-infrastructure.md` | **MGMT desktop UI** (v1.1.0): placement (admin-only Project Settings page in `apps/desktop`), Routing & Views (a settings-section *state*, not a route), the governed front-end wiring (`but-api`→Tauri→`but-sdk`), ASCII wireframes, the verified component-reuse table + the 7 net-new components, the desktop-CT-harness prerequisite (B14 / T-MGMT-000) | CONSTITUTION |
+
+## Routing & Views
+
+**Routing: the desktop Settings modal gains a `Permissions & Governance` section (a STATE of the existing settings surface) — no new top-level route, and no new app.** The backend/CLI layers (`but-authz`, `but-api`/the `but` CLI verb modules, the commit narrow-waist `but-workspace`, the `but-api` PR-merge action) add no route. The **MGMT** group (v1.1.0) adds a human management UI as an admin-only settings section **inside the existing `apps/desktop` SvelteKit app** — see [`10-ui-infrastructure.md`](./10-ui-infrastructure.md) for placement, the Route Delta, the governed front-end wiring, wireframes, and the component-reuse map.
+
+## Cross-References
+
+| Target | Path |
+|---|---|
+| Parent PRD (this initiative) | `.spec/prds/governance/README.md` |
+| Prior art (concept only — NOT a dependency) | Spoke — a separate project that prototyped the functional-permission + gated-loop concept; borrowed conceptually, no package/path reference |
+| GitButler integration-shape precedent | `crates/AGENTS.md` (the `_with_perm` composition idiom) |
+| GitButler CLI verb surface | `crates/but/src/args/` (the `but` crate's per-noun modules; `but-clap` only generates CLI docs) |
+| GitButler workspace/branch model | `crates/WORKSPACE_MODEL.md` (virtual branches, graph/ref model, single-branch mode) |
+
+## Functional-group cross-walk
+
+| Group | What it establishes | Primary crates |
+|---|---|---|
+| **AUTHZ** | `Authority`/`AuthoritySet` + role-preset desugar; `.gitbutler/permissions.toml` loader; `authorize()`/`Denial`; per-action enforcement at the `but-api` boundary (all four callers — incl. the N-API audit, R14); identity confinement; config-change authority | `but-authz` (NEW), `but-api`, `but-action`, the `but` CLI verb modules (`crates/but/src/args/`) |
+| **GRPS** | `Group` type; effective-set union; ref-pinned governed membership read at the target ref; `but group` CLI (incl. `delete`) | `but-authz` (NEW), the `but` CLI verb modules (`crates/but/src/args/`) |
+| **GATES** | commit gate (`contents:write` + branch protection) in the commit path; merge gate (`merge` + configurable review requirement @head, reading the forgeable `local_review_verdicts` store — R6 High) in the PR-merge path; `.gitbutler/gates.toml` reader | `but-action`, `but-api`, `but-workspace`/`gitbutler-stack`, `but-authz` |
+| **LOOP** | the integration demonstration: role separation from permissions; human/AI two-tier as `gates.toml` config; the governed `but pr`/`but review` action surface | all of the above (the proven-reference-flow test) |
+
+## Version History
+
+| Version | Date | Change |
+|---|---|---|
+| 1.3.0 | 2026-06-18 | Red-hat fold-in (13 findings). R6 Medium→**High** (the merge gate's review store is forgeable by direct DB write); new **R14** (N-API / direct-caller bypass of the `but-api` seam, Medium/Accepted) + the four-caller seam note; A1.12 governed `but pr`/`but review` surface reconciled against the existing `crates/but/src/args/forge.rs` (`but pr new` ships; `close`/`approve`/`request-changes`/`comment` named as governed verbs to add); B13 `but-clap` corrected to a CLI-**docs** generator (verb surface is `crates/but/src/args/`); B11 `but group delete` + `group_delete` Tauri command; B14 desktop-CT-harness prerequisite (T-MGMT-000); B15 commit semantics; B16 batch-save model; B18 cloud-role-vs-`administration:write` reconciliation. Documentation-only. |
+| 1.2.0 | 2026-06-18 | Review remediation (kb-prd-plan `[12.5]`): DryRun-doesn't-bypass-authz (CAP-AUTHZ-01); `_with_authz` lock-discipline ordering + module-path/macro-axis in the naming guardrail; governed-`but`-push vs raw-`git push` accepted-leak + `branch unapply` enumeration (Stance 1b); `forge_reviews` runtime-DELETE citation (`:153`); Tauri command surface table + renderer-adminOnly-is-UX; SDK-regen build-gate; pending-until-committed IPC contract + client-only (adapter-static) store; `GovernanceErrorBoundary`; denial-code meaning. |
+| 1.0.0 | 2026-06-18 | Initial technical-requirements folder for the GitButler governance POC (functional permissions + grouping + two gates), grounded in the scanned GitButler crate map. |
