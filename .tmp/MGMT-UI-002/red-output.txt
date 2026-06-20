@@ -1,0 +1,27 @@
+
+> @gitbutler/desktop@0.0.0 test:ct:desktop /Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-002/apps/desktop
+> playwright test -c playwright-ct.config.ts -- SettingsModalLayoutAdmin
+
+
+Running 3 tests using 3 workers
+
+vite v6.4.3 building for production...
+transforming...
+✓ 125 modules transformed.
+✗ Build failed in 1.05s
+Error: [vite]: Rollup failed to resolve import "$app/navigation" from "/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-002/apps/desktop/src/components/projectSettings/RemoveProjectForm.svelte".
+This is most likely unintended because it can break your application at runtime.
+If you do want to externalize this module explicitly add it to
+`build.rollupOptions.external`
+    at viteLog (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-002/node_modules/.pnpm/vite@6.4.3_@types+node@22.19.15_jiti@2.7.0_sass-embedded@1.98.0_sass@1.98.0_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:46504:15)
+    at onRollupLog (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-002/node_modules/.pnpm/vite@6.4.3_@types+node@22.19.15_jiti@2.7.0_sass-embedded@1.98.0_sass@1.98.0_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:46554:5)
+    at onLog (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-002/node_modules/.pnpm/vite@6.4.3_@types+node@22.19.15_jiti@2.7.0_sass-embedded@1.98.0_sass@1.98.0_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:46202:7)
+    at /Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-002/node_modules/.pnpm/rollup@4.60.3/node_modules/rollup/dist/es/shared/node-entry.js:21389:32
+    at Object.logger (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-002/node_modules/.pnpm/rollup@4.60.3/node_modules/rollup/dist/es/shared/node-entry.js:23384:9)
+    at ModuleLoader.handleInvalidResolvedId (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-002/node_modules/.pnpm/rollup@4.60.3/node_modules/rollup/dist/es/shared/node-entry.js:22128:26)
+    at /Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-002/node_modules/.pnpm/rollup@4.60.3/node_modules/rollup/dist/es/shared/node-entry.js:22086:26
+
+  3 did not run
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-002/apps/desktop:
+ ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  @gitbutler/desktop@0.0.0 test:ct:desktop: `playwright test -c playwright-ct.config.ts -- SettingsModalLayoutAdmin`
+Exit status 1

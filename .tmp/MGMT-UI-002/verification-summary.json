@@ -1,0 +1,44 @@
+{
+  "task_id": "MGMT-UI-002",
+  "status": "blocked",
+  "blocker_classification": "external_project_defect",
+  "summary": "Implemented ProjectSettingsModalContent governance branch and USER_SERVICE-derived isAdmin wiring. The targeted CT spec was added but the desktop CT harness fails before running assertions because ProjectSettingsModalContent statically imports projectSettings/GeneralSettings.svelte, which imports RemoveProjectForm.svelte -> $app/navigation; apps/desktop/playwright-ct.config.ts does not resolve SvelteKit $app virtual modules.",
+  "verification": {
+    "red": ".tmp/MGMT-UI-002/red-output.txt: CT discovered tests but Vite failed resolving $app/navigation before assertions",
+    "tests": ".tmp/MGMT-UI-002/test-output.txt: same CT harness resolver failure",
+    "projectSettingsGovernanceSelector": ".tmp/MGMT-UI-002/project-settings-governance-output.txt: task-specified selector does not match an allowed test file",
+    "typecheck": ".tmp/MGMT-UI-002/typecheck-output.txt: pnpm -F @gitbutler/desktop check passed",
+    "lint": ".tmp/MGMT-UI-002/lint-output.txt failed on unrelated pre-existing Markdown/spec Prettier warnings; see .tmp/MGMT-UI-002/pre-existing-issues.md",
+    "scopedPrettier": ".tmp/MGMT-UI-002/prettier-check-output.txt: scoped files pass",
+    "build": ".tmp/MGMT-UI-002/build-output.txt: pnpm build passed with adapter-static",
+    "isAdmin": ".tmp/MGMT-UI-002/isadmin-grep-output.txt",
+    "routes": ".tmp/MGMT-UI-002/routes-governance-output.txt"
+  },
+  "requirements": [
+    {
+      "id": "AC-1",
+      "satisfied": false,
+      "evidence": ".tmp/MGMT-UI-002/AC-1-green.txt blocked by CT $app/navigation resolver before assertion"
+    },
+    {
+      "id": "AC-2",
+      "satisfied": false,
+      "evidence": ".tmp/MGMT-UI-002/AC-2-green.txt blocked by CT $app/navigation resolver before assertion"
+    },
+    {
+      "id": "AC-3",
+      "satisfied": false,
+      "evidence": ".tmp/MGMT-UI-002/AC-3-green.txt blocked by CT $app/navigation resolver before assertion; source branch added"
+    },
+    {
+      "id": "AC-4",
+      "satisfied": true,
+      "evidence": ".tmp/MGMT-UI-002/isadmin-grep-output.txt shows USER_SERVICE injection and $derived(userService.user?.role === \"admin\")"
+    },
+    {
+      "id": "AC-5",
+      "satisfied": true,
+      "evidence": ".tmp/MGMT-UI-002/routes-governance-output.txt is 0"
+    }
+  ]
+}

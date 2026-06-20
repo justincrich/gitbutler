@@ -1,0 +1,11 @@
+
+> @gitbutler/desktop@0.0.0 test:ct:desktop /Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-002/apps/desktop
+> playwright test -c playwright-ct.config.ts -- ProjectSettingsModalContentGovernance
+
+Error: No tests found.
+Make sure that arguments are regular expressions matching test files.
+You may need to escape symbols like "$" or "*" and quote the arguments.
+
+/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-002/apps/desktop:
+ ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  @gitbutler/desktop@0.0.0 test:ct:desktop: `playwright test -c playwright-ct.config.ts -- ProjectSettingsModalContentGovernance`
+Exit status 1
