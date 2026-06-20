@@ -278,12 +278,153 @@ mod error {
     #[cfg(test)]
     mod tests {
         use anyhow::anyhow;
+        use but_authz::{Authority, AuthoritySet, Denial};
         use but_error::{Code, Context};
+        use serde_json::{Map, Value};
+
+        use crate::legacy::merge_gate::MergeGateError;
 
         use super::*;
 
         fn json(err: anyhow::Error) -> String {
             serde_json::to_string(&Error(err)).unwrap()
+        }
+
+        fn json_object(err: anyhow::Error) -> Map<String, Value> {
+            serde_json::from_str::<Value>(&json(err))
+                .unwrap()
+                .as_object()
+                .cloned()
+                .unwrap()
+        }
+
+        fn assert_remediation_hint(
+            object: &Map<String, Value>,
+            expected_code: &str,
+            expected_hint: &str,
+        ) {
+            assert_eq!(
+                object.get("code").and_then(Value::as_str),
+                Some(expected_code),
+                "structured carrier code should cross the JSON error transport"
+            );
+            assert_eq!(
+                object.len(),
+                3,
+                "only code, message, and remediation_hint should cross the JSON error transport"
+            );
+            let hint = object
+                .get("remediation_hint")
+                .and_then(Value::as_str)
+                .expect(
+                    "structured carrier remediation_hint should cross the JSON error transport",
+                );
+            assert!(
+                hint.contains(expected_hint),
+                "remediation_hint should come from the structured error carrier"
+            );
+        }
+
+        #[test]
+        fn error_serializes_remediation_hint_from_denial() {
+            let denial =
+                Denial::missing_permission(Authority::ReviewsWrite, &AuthoritySet::empty());
+            let object = json_object(anyhow::Error::from(denial));
+
+            assert_remediation_hint(
+                &object,
+                Denial::PERM_DENIED_CODE,
+                "request a reviewed merge or ask a maintainer to grant reviews:write",
+            );
+            assert!(
+                object
+                    .get("message")
+                    .and_then(Value::as_str)
+                    .is_some_and(|message| message.contains("reviews:write")),
+                "the carrier message should still name the denied authority"
+            );
+        }
+
+        #[test]
+        fn error_serializes_remediation_hint_from_merge_gate_error() {
+            let error = MergeGateError {
+                code: "gate.review_required",
+                message: "review requirement for refs/heads/main is not satisfied: min_approvals"
+                    .to_owned(),
+                remediation_hint: "collect the required approvals at the current review head"
+                    .to_owned(),
+                unmet: vec!["min_approvals".to_owned()],
+            };
+            let object = json_object(anyhow::Error::from(error));
+
+            assert_remediation_hint(
+                &object,
+                "gate.review_required",
+                "collect the required approvals at the current review head",
+            );
+            assert!(
+                !object.contains_key("unmet"),
+                "carrier-private unmet fragments must not cross the JSON error transport"
+            );
+        }
+
+        #[test]
+        fn error_without_denial_keeps_two_field_shape() {
+            let err = anyhow!("err msg").context(Code::Validation);
+            let object = json_object(err);
+
+            assert_eq!(
+                serde_json::to_string(&object).unwrap(),
+                "{\"code\":\"Validation\",\"message\":\"err msg\"}",
+                "plain errors without a hint carrier keep the existing two-field JSON shape"
+            );
+            assert_eq!(
+                object.len(),
+                2,
+                "plain errors without a hint carrier should serialize exactly two fields"
+            );
+            assert!(
+                !object.contains_key("remediation_hint"),
+                "plain errors without a hint carrier should not emit remediation_hint"
+            );
+        }
+
+        #[test]
+        fn error_recovers_hint_from_nested_denial() {
+            let err = anyhow::Error::from(Denial::no_handle())
+                .context("failed to authorize governance write");
+            let object = json_object(err);
+
+            assert_remediation_hint(
+                &object,
+                Denial::PERM_DENIED_CODE,
+                "set BUT_AGENT_HANDLE to a principal committed in governance config",
+            );
+        }
+
+        #[test]
+        fn error_serializes_remediation_hint_from_config_invalid() {
+            let carrier = Denial {
+                code: "config.invalid",
+                message: "governance config .gitbutler/permissions.toml is malformed".to_owned(),
+                remediation_hint:
+                    "fix the malformed governance config and recommit it to the target branch"
+                        .to_owned(),
+            };
+            let object = json_object(anyhow::Error::from(carrier));
+
+            assert_remediation_hint(
+                &object,
+                "config.invalid",
+                "fix the malformed governance config",
+            );
+            assert!(
+                object
+                    .get("remediation_hint")
+                    .and_then(Value::as_str)
+                    .is_some_and(|hint| !hint.is_empty()),
+                "config.invalid carrier should provide a non-empty remediation_hint"
+            );
         }
 
         #[test]
