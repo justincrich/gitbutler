@@ -1,6 +1,6 @@
 # `.spec/` — Agent Governance & Verification for GitButler
 
-> *Holding agents to the same gates as humans — and making "done" provable.*
+> *Holding agents accountable to the same standards as humans — and making "done" provable.*
 
 GitButler calls itself "Git, *but* better" — "built from the ground up for AI-powered
 workflows … a friendlier, more powerful Git replacement, **for you and your agents**."
@@ -15,8 +15,7 @@ depth and not yet built. I've tried to be exact about which is which throughout.
 .spec/
 ├── prds/
 │   ├── governance/          # PRD #1 — permission + gates over GitButler's own actions (core BUILT)
-│   ├── check-runner/        # PRD #2 — local deterministic checks that gate a change (SPECCED)
-│   └── actions.superseded/  # the earlier, over-scoped design check-runner replaced (archived)
+│   └── check-runner/        # PRD #2 — local deterministic checks that gate a change (SPECCED)
 ├── artifacts/team-product/  # the doctrine + gap analysis the PRDs answer
 └── reviews/                 # adversarial spec audits
 ```
@@ -49,7 +48,7 @@ GitButler's verification *bar* is high (it's a Git engine with strict semantics)
 
 ---
 
-## Deliverable 1 — Governance: hold agents to the same gates as humans
+## Deliverable 1 — Governance: hold agents accountable to the same standards as humans
 
 **Full PRD → [`prds/governance/`](./prds/governance/README.md)** · v1.3.0 · 5 functional
 groups · 17 use cases · 129 acceptance criteria · 8 sprints.
@@ -106,12 +105,11 @@ is the cheapest path for an agent that optimizes for least resistance.
 mechanism-agnostic local-merge entry point) and the #1 risk (a clean head-OID checkout in
 GitButler's one-worktree model) are written down, not glossed over.
 
-**A judgment note.** This PRD *supersedes* an earlier one
-([`actions.superseded/`](./prds/actions.superseded/README.md)) that I scoped **down**: that
-design tried to make results cryptographically "agent-non-forgeable" (signed ledger, HMAC →
-Ed25519, sandboxed executor). Under the real personal-tenant threat model — the agent shares
-the OS user with the runner — signing can't actually close forgery, and a reproducible check
-doesn't need it to. Cutting a feature to fit the threat model is itself part of the work.
+**A judgment note.** An earlier draft of this design chased a cryptographic
+"agent-non-forgeable" guarantee (signed ledger, HMAC → Ed25519, sandboxed executor). Under
+the real personal-tenant threat model — the agent shares the OS user with the runner —
+signing can't actually close forgery, and a reproducible check doesn't need it to. I scoped
+it down; cutting a feature to fit the threat model is part of the work.
 
 ---
 
@@ -184,7 +182,6 @@ projection scales from one excellent local working tree toward a cross-machine f
 | [`prds/governance/enrichments/`](./prds/governance/enrichments/) | STEER — capability-aware denials (planned) |
 | [`prds/check-runner/`](./prds/check-runner/README.md) | PRD #2 — local deterministic checks + the required-checks merge clause |
 | [`artifacts/team-product/`](./artifacts/team-product/04-synthesis-report.md) | The agent-verification definition-of-done, feature inventory, gap analysis, and synthesis |
-| [`prds/actions.superseded/`](./prds/actions.superseded/README.md) | The earlier over-scoped design, archived for the record |
 | [`reviews/`](./reviews/) | Adversarial spec audits |
 
 ---
