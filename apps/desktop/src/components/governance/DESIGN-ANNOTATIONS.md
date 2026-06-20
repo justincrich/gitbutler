@@ -181,9 +181,9 @@ therefore persist while switching between `Principals`, `Groups`,
 | Principal editor title and close | `PrincipalEditor` composition; close action is `Button` at `packages/ui/src/lib/components/Button.svelte` or icon button equivalent from the existing button component, visible label or accessible label `Close`. | Close remains available. | Close remains available. | Close remains available after denial. | Not rendered. |
 | Role preset strip | `SegmentControl` at `packages/ui/src/lib/components/segmentControl/SegmentControl.svelte` with `selected="write"` in the wireframe; each role is `Segment` at `packages/ui/src/lib/components/segmentControl/Segment.svelte` with ids `read`, `triage`, `write`, `maintain`, `admin`. | Selecting a role marks the editor dirty; save button carries pending text. | Every `Segment` gets `disabled=true`. | Denied self-escalation leaves the prior selected segment active and shows danger `InfoMessage`. | Not rendered. |
 | Functional permission rows | `PrincipalEditor` composition uses row text plus `Toggle` at `packages/ui/src/lib/components/Toggle.svelte`; `checked=true` for ON and `checked=false` for OFF. | Dirty or saved pending permission row gets `Badge style="warning" kind="soft" size="icon"` children `○`. | `Toggle disabled=true` for every editable row. | Denied row's `Toggle` remains at the last committed value; show `InfoMessage style="danger"`. | Not rendered. |
-| Inherited permission row | `Toggle` at `packages/ui/src/lib/components/Toggle.svelte` with `disabled=true`; source label text `[group: eng]`; grant text `inherited`. | Inherited state does not become editable; pending state only applies to local own-grant edits. | Same disabled state. | Not applicable unless a group-removal action is denied; then use danger banner. | Not rendered. |
+| Inherited permission row | `Toggle` at `packages/ui/src/lib/components/Toggle.svelte` with `disabled=true`; SOURCE column uses `Badge style='gray' kind='soft'` with label `[group: {groupName}]`; GRANT column shows `── inherited ──` in `var(--text-3)`; row background remains default `var(--bg-1)`. | Inherited state does not become editable; no pending `Badge` renders on inherited rows; pending state only applies to local own-grant edits. | Same disabled state. | Not applicable unless a group-removal action is denied; then use danger banner. | Not rendered. |
 | Editor inherited explainer | `InfoMessage` at `packages/ui/src/lib/components/InfoMessage.svelte` with `style="info"`, `outlined=true`, title `Inherited permissions`, content `Inherited rows come from groups; remove a group to revoke.` | Same message. | Same message. | Can sit below denial banner if both are present. | Not rendered. |
-| Editor groups chips | `TagInput` at `packages/ui/src/lib/components/TagInput.svelte` with `tags` labels `eng` and `platform`; add-group affordance uses `Button` or `Select` at `packages/ui/src/lib/components/select/Select.svelte`. | Chip additions/removals mark save button pending. | `TagInput readonly=true`; add-group `Button` disabled. | Denied chip change is not applied and shows `InfoMessage style="danger"`. | Not rendered. |
+| Editor groups chips | `TagInput` at `packages/ui/src/lib/components/TagInput.svelte` with `tags` labels `eng` and `platform`; `[+ Add to group]` uses `Select` at `packages/ui/src/lib/components/select/Select.svelte` and `SelectItem` at `packages/ui/src/lib/components/select/SelectItem.svelte`. | Chip additions/removals mark save button pending; remove creates a staged group removal that is batch-saved with `[Save changes]`. | `TagInput readonly=true`; add-group `Select disabled`. | Denied chip change is not applied and shows `InfoMessage style="danger"`. | Not rendered. |
 | Editor footer buttons | `Button` at `packages/ui/src/lib/components/Button.svelte`; labels `Cancel` and `Save changes ○ pending`. | Save button remains visible until the staged editor change is saved. | Save button disabled; Cancel stays available. | Save button stops loading and denial banner appears. | Not rendered. |
 | Groups tab header | `GroupsList` at `apps/desktop/src/components/governance/GroupsList.svelte`; add action uses `Button` label `New group`. | Header remains; pending group rows show pending badge. | New group `Button` disabled. | Danger `InfoMessage` above group list. | `EmptyStatePlaceholder` path and slots listed in the Empty States section. |
 | Group expandable row | `ExpandableSection` at `apps/desktop/src/components/shared/ExpandableSection.svelte`; `label="eng"` or group name; `summary` includes member count and `KebabButton`. | Summary includes `Badge style="warning" kind="soft" size="icon"` children `○` when group changes are pending. | Row expands but contained controls are disabled or readonly. | Denial banner appears inside `GroupsList` or above affected section. | Not rendered. |
@@ -200,6 +200,75 @@ therefore persist while switching between `Principals`, `Groups`,
 | Rules tab principal selector | `CardGroupRoot` and `CardGroupItem` at `packages/ui/src/lib/components/cardGroup/CardGroupRoot.svelte` and `packages/ui/src/lib/components/cardGroup/CardGroupItem.svelte`; committed principal rows have no pending `Badge`. | Pending principals use `Badge style="warning" kind="soft" size="icon"` children `○`; selected row points to the rules panel. | Selector remains readable; rule creation/edit actions disabled. | Denial banner appears above rules panel. | If no principals exist, use Rules tab empty state listed below. |
 | Rules tab rule panel | `RulesList` at `apps/desktop/src/components/rules/RulesList.svelte` with optional `principalId`; existing `Rule`, `RuleEditor`, `RuleFiltersEditor`, and `NewRuleMenu` paths listed in inventory. | Existing rules UI displays pending state via governance wrapper only; rules components remain visually unchanged. | Rule create/edit/delete actions disabled by wrapper or readonly state. | IPC or auth denial uses `InfoMessage style="danger"` with Retry when applicable. | If a selected principal has no rules, use Rules tab empty state listed below. |
 | Governance render error fallback | `GovernanceErrorBoundary` at `apps/desktop/src/components/governance/GovernanceErrorBoundary.svelte`; fallback visual uses `InfoMessage` at `packages/ui/src/lib/components/InfoMessage.svelte` with `style="danger"`, `outlined=true`, and optional `primaryLabel="Retry"`. | Same fallback; pending state is not shown while boundary fallback is active. | Same fallback; retry may be disabled if unavailable. | Same fallback. | Not applicable. |
+
+## PrincipalEditor Inherited-Vs-Own Row Contract
+
+The `PrincipalEditor` FUNCTIONAL PERMISSIONS table is a two-column source/grant
+contract rendered inside the editor's inline slide-in panel. The permission name
+is the row label, the SOURCE column explains why the effective permission is
+present, and the GRANT column shows the editable control only when the grant is
+an own grant. Effective permission is own ∪ group; group-inherited grants are
+visible in this table but are revoked through the Groups tab, not from the
+permission row.
+
+### Row Types
+
+| Row type | SOURCE column | GRANT column | Pending treatment | Revocation path |
+|---|---|---|---|---|
+| Inherited group grant | `Badge style='gray' kind='soft'` with label `[group: {groupName}]`; never plain `own grant`. | No editable control. The row's effective grant is represented by `Toggle disabled=true`; the displayed grant text is `── inherited ──` in `var(--text-3)`. The row background remains the default `var(--bg-1)` with no inherited-only background or border. | No pending `Badge` on inherited rows. Do not show the pending `Badge` merely because a group membership change is staged elsewhere. | The inherited grant cannot be revoked from `PrincipalEditor`; remove the principal from the group in the Groups tab first. |
+| Own-grant active | `own grant` in `var(--text-2)`. | `Toggle disabled=false checked=true`; this `Toggle` is the GRANT column control. | When the own grant is toggled but not yet batch-saved, show the pending `Badge style='warning' kind='soft'` inline with adjacent `pending` copy. | The enabled `Toggle` stages the local own-grant change; `[Save changes]` writes it. |
+| Own-grant inactive | `own grant` in `var(--text-2)`. | `Toggle disabled=false checked=false`; this `Toggle` is the GRANT column control. | Same pending `Badge style='warning' kind='soft'` treatment only after an own-grant staged change. | The enabled `Toggle` stages the local own-grant change; `[Save changes]` writes it. |
+| Both own-grant and group-inherited | Inherited source takes precedence: `Badge style='gray' kind='soft'` with label `[group: {groupName}]`, not `own grant`. | Render as inherited and disabled: `Toggle disabled=true` and `── inherited ──` in `var(--text-3)`. The row background remains default `var(--bg-1)`. | No pending `Badge`. A tooltip or muted sub-text may state that an own grant also exists, but it must not present a revocation control while inheritance exists. | The own grant cannot be revoked from `PrincipalEditor` while the inherited grant exists. Remove the principal from the group in the Groups tab first; after that removal is saved and effective, the row transitions to an own-grant row and becomes editable. |
+
+Concrete example rows:
+
+| Principal | Permission | SOURCE | GRANT | Behavior |
+|---|---|---|---|---|
+| `alice` | `contents:write` | `Badge style='gray' kind='soft'` label `[group: eng]` | `Toggle disabled=true`; text `── inherited ──` in `var(--text-3)` | Alice inherits the grant from `eng`; no pending `Badge`; revoke by removing Alice from `eng` in the Groups tab. |
+| `alice` | `pull_requests:write` | `own grant` in `var(--text-2)` | `Toggle disabled=false checked=true` | Toggling stages an own-grant change and may show `Badge style='warning' kind='soft'` with `pending` copy. |
+| `alice` | `reviews:write` | `own grant` in `var(--text-2)` | `Toggle disabled=false checked=false` | Toggling stages an own-grant change and may show `Badge style='warning' kind='soft'` with `pending` copy. |
+| `alice` | `contents:write` with explicit own grant and group `eng` inheritance | `Badge style='gray' kind='soft'` label `[group: eng]`, not `own grant` | `Toggle disabled=true`; text `── inherited ──` in `var(--text-3)` | This is the explicit "both" row: inherited source takes precedence, no pending `Badge`, own grant cannot be revoked from `PrincipalEditor`; Groups tab removal is required first. |
+
+### SegmentControl Interaction
+
+`SegmentControl` at
+`packages/ui/src/lib/components/segmentControl/SegmentControl.svelte` presents
+the role presets in this order: `read`, `triage`, `write`, `maintain`, `admin`.
+Each role option is a `Segment` at
+`packages/ui/src/lib/components/segmentControl/Segment.svelte`.
+
+Selecting a preset through `onselect` updates local UI state only and performs no
+immediate SDK write. The preset desugars to own-grant `Toggle` states: own-grant
+rows in the preset set become `checked=true`, own-grant rows outside the preset
+become `checked=false`, and each changed own-grant row can receive the pending
+`Badge style='warning' kind='soft'` after it is staged. Inherited rows are never
+touched by the preset: their `Toggle disabled=true` state stays disabled and
+unchanged, their SOURCE column keeps the group `Badge style='gray' kind='soft'`,
+their GRANT column keeps `── inherited ──` in `var(--text-3)`, and they never
+receive a pending `Badge`.
+
+Example: if Alice has an inherited `contents:write` grant from group `eng`, then
+choosing the `read` preset does not remove that effective permission even though
+the read preset omits it. The effective set remains own ∪ group, and the row
+continues to show `[group: eng]` with `Toggle disabled=true`; the revoke path is
+removing Alice from `eng` in the Groups tab.
+
+### Groups Region
+
+The editor's GROUPS region uses `TagInput` at
+`packages/ui/src/lib/components/TagInput.svelte` for existing memberships. Each
+membership tag uses the group name as its label, such as `eng` or `platform`.
+Removing a tag with the component's remove affordance creates a staged group
+removal in local editor state; it is batch-saved with `[Save changes]` alongside
+permission changes and is not an immediate SDK write.
+
+`[+ Add to group]` uses `Select` at
+`packages/ui/src/lib/components/select/Select.svelte` with options from the
+groups list, and each option renders through `SelectItem` at
+`packages/ui/src/lib/components/select/SelectItem.svelte`. Do not build a custom
+dropdown for this affordance. In read-only mode, render `TagInput readonly=true`
+and the add-group `Select disabled`; membership tags remain visible and no
+removal or add action is available.
 
 ## Empty States
 
