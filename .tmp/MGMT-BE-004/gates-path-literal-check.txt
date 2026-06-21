@@ -1,0 +1,1 @@
+ok: governance.rs uses gates_path() accessor instead of a .gitbutler/gates.toml literal

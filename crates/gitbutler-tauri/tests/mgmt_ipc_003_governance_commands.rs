@@ -142,6 +142,66 @@ fn mgmt_nonadmin_env_handle_does_not_shadow_fleet_owner() -> anyhow::Result<()> 
 
 #[test]
 #[serial_test::serial]
+fn branch_gates_desktop_identity_uses_principal_authorization_path() -> anyhow::Result<()> {
+    let (repo, _tmp) = governance_api_repo(true);
+    let project_id = project_id_for(&repo)?;
+
+    let admin_app = governance_app(desktop_session_with_login("admin"))?;
+    let admin_webview = governance_webview(&admin_app)?;
+    temp_env::with_var("BUT_AGENT_HANDLE", None::<&str>, || {
+        invoke_ok(
+            &admin_webview,
+            "branch_gates_read",
+            json!({ "projectId": project_id, "targetRef": TARGET_REF }),
+        )
+    })?;
+
+    let admin_update = temp_env::with_var("BUT_AGENT_HANDLE", Some("rust-implementer"), || {
+        invoke_ok(
+            &admin_webview,
+            "branch_gates_update",
+            json!({
+                "projectId": project_id,
+                "targetRef": TARGET_REF,
+                "branch": "main",
+                "protection": { "protected": false }
+            }),
+        )
+    })?;
+    assert!(
+        admin_update
+            .get("branches")
+            .and_then(Value::as_array)
+            .and_then(|branches| branches
+                .iter()
+                .find(|branch| { branch.get("name").and_then(Value::as_str) == Some("main") }))
+            .and_then(|branch| branch.get("protected"))
+            .and_then(Value::as_bool)
+            == Some(false),
+        "non-admin BUT_AGENT_HANDLE must not shadow desktop principal admin authority"
+    );
+
+    let denied_app = governance_app(desktop_session_with_login("rust-implementer"))?;
+    let denied_webview = governance_webview(&denied_app)?;
+    let denial = temp_env::with_var("BUT_AGENT_HANDLE", Some("admin"), || {
+        invoke_err(
+            &denied_webview,
+            "branch_gates_update",
+            json!({
+                "projectId": project_id,
+                "targetRef": TARGET_REF,
+                "branch": "release",
+                "protection": { "protected": true }
+            }),
+        )
+    })?;
+    assert_perm_denied_with_hint(&denial, "administration:write");
+
+    Ok(())
+}
+
+#[test]
+#[serial_test::serial]
 fn mgmt_governance_commands_registered_and_invokable() -> anyhow::Result<()> {
     let (repo, _tmp) = governance_api_repo(true);
     let project_id = project_id_for(&repo)?;
@@ -574,9 +634,13 @@ fn project_id_for(
 }
 
 fn test_desktop_session() -> gitbutler_tauri::governance::TestDesktopSession {
+    desktop_session_with_login("admin")
+}
+
+fn desktop_session_with_login(login: &str) -> gitbutler_tauri::governance::TestDesktopSession {
     gitbutler_tauri::governance::TestDesktopSession {
         user_id: 42,
-        login: Some("fleet-owner".to_owned()),
+        login: Some(login.to_owned()),
     }
 }
 

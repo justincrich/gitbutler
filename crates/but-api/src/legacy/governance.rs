@@ -9,7 +9,7 @@ use anyhow::{Context as _, anyhow};
 use but_api_macros::but_api;
 use but_authz::{
     Authority, AuthoritySet, BranchName, BranchProtection, Denial, GovConfig, Group, GroupName,
-    GroupWire, PermissionsWire, PrincipalId, PrincipalWire, load_governance_config,
+    GroupWire, PermissionsWire, PrincipalId, PrincipalWire, gates_path, load_governance_config,
     permissions_path,
 };
 use but_core::RepositoryExt as _;
@@ -139,12 +139,9 @@ pub struct GroupListOutcome {
     pub groups: Vec<GroupListEntry>,
 }
 
-/// Repository-relative path of the working-tree branch gates file.
-const GATES_PATH: &str = ".gitbutler/gates.toml";
 const GOVERNANCE_COMMIT_MESSAGE: &str = "chore: update governance config";
 type PrincipalAuthorityRows = Vec<(PrincipalId, AuthoritySet)>;
 type GroupRows = Vec<(GroupName, Group)>;
-const GOVERNANCE_COMMIT_PATHS: [&str; 2] = [GATES_PATH, ".gitbutler/permissions.toml"];
 
 /// Caller-supplied branch protection update payload.
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, schemars::JsonSchema)]
@@ -152,6 +149,12 @@ const GOVERNANCE_COMMIT_PATHS: [&str; 2] = [GATES_PATH, ".gitbutler/permissions.
 pub struct BranchProtectionInput {
     /// Whether the branch requires administration:write to mutate.
     pub protected: bool,
+    /// Minimum review approvals required for this branch.
+    pub min_approvals: Option<usize>,
+    /// Whether approvals must come from a user distinct from the author.
+    pub require_distinct_from_author: Option<bool>,
+    /// Groups from which approval is required.
+    pub require_approval_from_group: Option<Vec<String>>,
 }
 
 /// One branch gate entry returned through the API boundary.
@@ -161,13 +164,23 @@ pub struct BranchGateEntry {
     pub name: String,
     /// Whether the branch is protected.
     pub protected: bool,
+    /// Minimum review approvals required by the committed or working-tree gate.
+    pub min_approvals: usize,
+    /// Whether approvals must be distinct from the commit author.
+    pub require_distinct_from_author: bool,
+    /// Groups from which approval is required.
+    pub require_approval_from_group: Vec<String>,
+    /// Whether the working-tree gate differs from the committed target-ref gate.
+    pub pending: bool,
 }
 
 /// Result of reading or updating branch gates.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, schemars::JsonSchema)]
 pub struct BranchGatesOutcome {
-    /// Branch gate entries from the working-tree `gates.toml`.
+    /// Branch gate entries.
     pub branches: Vec<BranchGateEntry>,
+    /// Ref-pin caveat for branch gate writes.
+    pub caveat: &'static str,
 }
 
 /// Read-only working-tree-vs-target-ref governance diff.
@@ -528,20 +541,26 @@ pub fn branch_gates_read_with_repo(
 ) -> anyhow::Result<BranchGatesOutcome> {
     let config = load_governance_config(repo, target_ref)?;
     let caller = but_authz::resolve_principal_from_env(&config)?;
-    let held = but_authz::effective_authority(&caller, &config);
-    if !held.contains(Authority::AdministrationRead)
-        && !held.contains(Authority::AdministrationWrite)
-    {
-        return Err(Denial::missing_permission(Authority::AdministrationRead, &held).into());
-    }
+    enforce_branch_gates_read_authority(&config, caller.id())?;
 
-    let gates = load_gates_for_write(repo, target_ref)?;
-    let branches = gates
-        .branch
-        .into_iter()
-        .map(BranchGateEntry::from)
-        .collect();
-    Ok(BranchGatesOutcome { branches })
+    let committed = read_committed_gates_file(repo, target_ref)?;
+    let working = read_worktree_gates(repo)?;
+    Ok(branch_gates_outcome_from_committed(&committed, &working))
+}
+
+/// Read branch gates for a principal resolved by the desktop command boundary.
+pub fn branch_gates_read_with_repo_as_principal(
+    repo: &gix::Repository,
+    target_ref: &str,
+    principal: &str,
+) -> anyhow::Result<BranchGatesOutcome> {
+    let config = load_governance_config(repo, target_ref)?;
+    let principal = PrincipalId::new(principal);
+    enforce_branch_gates_read_authority(&config, &principal)?;
+
+    let committed = read_committed_gates_file(repo, target_ref)?;
+    let working = read_worktree_gates(repo)?;
+    Ok(branch_gates_outcome_from_committed(&committed, &working))
 }
 
 /// Update one branch gate entry under administration-write authority.
@@ -555,15 +574,45 @@ pub fn branch_gates_update_with_repo(
     branch_gates_update_authorized(repo, target_ref, branch, protection)
 }
 
-/// Update one branch gate entry after the desktop fleet-owner boundary has
-/// asserted unconditional administration-write authority.
-pub fn branch_gates_update_with_repo_as_fleet_owner(
+/// Update one branch gate entry for a principal resolved by the desktop command boundary.
+pub fn branch_gates_update_with_repo_as_principal(
     repo: &gix::Repository,
     target_ref: &str,
+    principal: &str,
     branch: &str,
     protection: BranchProtectionInput,
 ) -> anyhow::Result<BranchGatesOutcome> {
+    let config = load_governance_config(repo, target_ref)?;
+    let principal = PrincipalId::new(principal);
+    let held = effective_authority_for_principal(&config, &principal)?;
+    if !held.contains(Authority::AdministrationWrite) {
+        return Err(Denial::missing_permission(Authority::AdministrationWrite, &held).into());
+    }
+
     branch_gates_update_authorized(repo, target_ref, branch, protection)
+}
+
+fn enforce_branch_gates_read_authority(
+    config: &GovConfig,
+    principal: &PrincipalId,
+) -> anyhow::Result<()> {
+    let held = effective_authority_for_principal(config, principal)?;
+    if held.contains(Authority::AdministrationRead) || held.contains(Authority::AdministrationWrite)
+    {
+        Ok(())
+    } else {
+        Err(Denial::missing_permission(Authority::AdministrationRead, &held).into())
+    }
+}
+
+fn effective_authority_for_principal(
+    config: &GovConfig,
+    principal: &PrincipalId,
+) -> anyhow::Result<AuthoritySet> {
+    config
+        .principal_authorities(principal)
+        .cloned()
+        .ok_or_else(|| Denial::unknown_principal(principal.as_str()).into())
 }
 
 fn branch_gates_update_authorized(
@@ -581,14 +630,20 @@ fn branch_gates_update_authorized(
             protected: protection.protected,
         });
     }
+    let gate = gate_entry_mut(&mut gates, branch)?;
+    if let Some(min_approvals) = protection.min_approvals {
+        gate.min_approvals = min_approvals;
+    }
+    if let Some(require_distinct_from_author) = protection.require_distinct_from_author {
+        gate.require_distinct_from_author = require_distinct_from_author;
+    }
+    if let Some(require_approval_from_group) = protection.require_approval_from_group {
+        gate.require_approval_from_group = require_approval_from_group;
+    }
     write_worktree_gates(repo, &gates)?;
 
-    let branches = gates
-        .branch
-        .into_iter()
-        .map(BranchGateEntry::from)
-        .collect();
-    Ok(BranchGatesOutcome { branches })
+    let committed = read_committed_gates_file(repo, target_ref)?;
+    Ok(branch_gates_outcome_from_working(&gates, &committed))
 }
 
 /// Commit only governance config files from the worktree onto the target ref.
@@ -651,7 +706,7 @@ fn upsert_changed_governance_paths(
     tree: &mut gix::object::tree::Editor<'_>,
 ) -> anyhow::Result<Vec<String>> {
     let mut committed_paths = Vec::new();
-    for path in GOVERNANCE_COMMIT_PATHS {
+    for path in governance_commit_paths() {
         let worktree = read_worktree_governance_file(repo, path)?;
         if committed_file_bytes(repo, parent_tree_id, path)?.as_deref() == Some(worktree.as_slice())
         {
@@ -662,6 +717,10 @@ fn upsert_changed_governance_paths(
         committed_paths.push(path.to_owned());
     }
     Ok(committed_paths)
+}
+
+fn governance_commit_paths() -> [&'static str; 2] {
+    [gates_path(), permissions_path()]
 }
 
 fn read_worktree_governance_file(repo: &gix::Repository, path: &str) -> anyhow::Result<Vec<u8>> {
@@ -1018,12 +1077,15 @@ fn read_worktree_permissions_for_pending(
 fn read_worktree_gates_for_pending(repo: &gix::Repository) -> anyhow::Result<GatesFile> {
     let path = worktree_gates_path(repo)?;
     let text = fs::read_to_string(&path).map_err(|error| {
-        config_invalid(format!("reading working-tree {GATES_PATH} failed: {error}"))
+        config_invalid(format!(
+            "reading working-tree {} failed: {error}",
+            gates_path()
+        ))
     })?;
     toml::from_str::<GatesFile>(&text).map_err(|error| {
         anyhow::Error::new(json::ConfigInvalid {
             code: "config.invalid",
-            message: format!("malformed working-tree {GATES_PATH}: {error}"),
+            message: format!("malformed working-tree {}: {error}", gates_path()),
             remediation_hint:
                 "fix the malformed governance config and recommit it to the target branch"
                     .to_owned(),
@@ -1826,35 +1888,142 @@ fn read_committed_permissions(repo: &gix::Repository, target_ref: &str) -> anyho
 
 /// Working-tree `gates.toml` wire format.
 ///
-/// Mirrors the `[[branch]]` shape parsed by `but_authz` so round-tripping the
-/// file preserves the on-disk layout exactly.
+/// Mirrors the full `[[branch]]` and `[[gate]]` shape consumed by the merge gate
+/// so branch edits cannot drop review requirements.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 struct GatesFile {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     branch: Vec<GatesBranchWire>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    gate: Vec<GatesGateWire>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 struct GatesBranchWire {
     name: String,
     protected: bool,
 }
 
-impl From<GatesBranchWire> for BranchGateEntry {
-    fn from(branch: GatesBranchWire) -> Self {
-        Self {
-            name: branch.name,
-            protected: branch.protected,
-        }
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct GatesGateWire {
+    branch: String,
+    #[serde(rename = "type")]
+    kind: String,
+    #[serde(default)]
+    min_approvals: usize,
+    #[serde(default)]
+    require_approval_from_group: Vec<String>,
+    #[serde(default)]
+    require_distinct_from_author: bool,
+}
+
+fn branch_gates_outcome_from_committed(
+    committed: &GatesFile,
+    working: &GatesFile,
+) -> BranchGatesOutcome {
+    let mut branches = committed
+        .branch
+        .iter()
+        .map(|branch| branch_gate_entry(branch, committed.gate_for(&branch.name), working))
+        .collect::<Vec<_>>();
+    branches.extend(
+        working
+            .branch
+            .iter()
+            .filter(|branch| committed.branch_for(&branch.name).is_none())
+            .map(|branch| branch_gate_entry(branch, working.gate_for(&branch.name), committed)),
+    );
+
+    BranchGatesOutcome {
+        branches,
+        caveat: REF_PIN_CAVEAT,
     }
 }
 
-fn load_gates_for_write(repo: &gix::Repository, target_ref: &str) -> anyhow::Result<GatesFile> {
-    if let Ok(worktree) = read_worktree_gates(repo) {
-        return Ok(worktree);
+fn branch_gates_outcome_from_working(
+    working: &GatesFile,
+    committed: &GatesFile,
+) -> BranchGatesOutcome {
+    BranchGatesOutcome {
+        branches: working
+            .branch
+            .iter()
+            .map(|branch| branch_gate_entry(branch, working.gate_for(&branch.name), committed))
+            .collect(),
+        caveat: REF_PIN_CAVEAT,
     }
-    let committed = read_committed_gates(repo, target_ref)?;
-    parse_gates_text(&committed)
+}
+
+fn branch_gate_entry(
+    branch: &GatesBranchWire,
+    gate: Option<&GatesGateWire>,
+    comparison: &GatesFile,
+) -> BranchGateEntry {
+    BranchGateEntry {
+        name: branch.name.clone(),
+        protected: branch.protected,
+        min_approvals: gate.map_or(0, |gate| gate.min_approvals),
+        require_distinct_from_author: gate.is_some_and(|gate| gate.require_distinct_from_author),
+        require_approval_from_group: gate
+            .map(|gate| gate.require_approval_from_group.clone())
+            .unwrap_or_default(),
+        pending: gates_entry_pending(branch, gate, comparison),
+    }
+}
+
+fn gates_entry_pending(
+    branch: &GatesBranchWire,
+    gate: Option<&GatesGateWire>,
+    comparison: &GatesFile,
+) -> bool {
+    let Some(comparison_branch) = comparison.branch_for(&branch.name) else {
+        return true;
+    };
+    if comparison_branch != branch {
+        return true;
+    }
+    comparison.gate_for(&branch.name) != gate
+}
+
+impl GatesFile {
+    fn branch_for(&self, name: &str) -> Option<&GatesBranchWire> {
+        self.branch.iter().find(|branch| branch.name == name)
+    }
+
+    fn gate_for(&self, branch: &str) -> Option<&GatesGateWire> {
+        self.gate.iter().find(|gate| gate.branch == branch)
+    }
+}
+
+fn gate_entry_mut<'a>(
+    gates: &'a mut GatesFile,
+    branch: &str,
+) -> anyhow::Result<&'a mut GatesGateWire> {
+    if let Some(position) = gates.gate.iter().position(|entry| entry.branch == branch) {
+        return gates
+            .gate
+            .get_mut(position)
+            .ok_or_else(|| anyhow!("gate position disappeared while preparing gates rewrite"));
+    }
+
+    gates.gate.push(GatesGateWire {
+        branch: branch.to_owned(),
+        kind: "review".to_owned(),
+        min_approvals: 0,
+        require_approval_from_group: Vec::new(),
+        require_distinct_from_author: false,
+    });
+    gates
+        .gate
+        .last_mut()
+        .ok_or_else(|| anyhow!("gate entry was not available after seeding"))
+}
+
+fn load_gates_for_write(repo: &gix::Repository, _target_ref: &str) -> anyhow::Result<GatesFile> {
+    read_worktree_gates(repo)
 }
 
 fn read_worktree_gates(repo: &gix::Repository) -> anyhow::Result<GatesFile> {
@@ -1862,8 +2031,8 @@ fn read_worktree_gates(repo: &gix::Repository) -> anyhow::Result<GatesFile> {
     if !path.is_file() {
         return Ok(GatesFile::default());
     }
-    let text =
-        fs::read_to_string(&path).with_context(|| format!("reading working-tree {GATES_PATH}"))?;
+    let text = fs::read_to_string(&path)
+        .with_context(|| format!("reading working-tree {}", gates_path()))?;
     parse_gates_text(&text)
 }
 
@@ -1871,19 +2040,20 @@ fn parse_gates_text(text: &str) -> anyhow::Result<GatesFile> {
     if text.trim().is_empty() {
         return Ok(GatesFile::default());
     }
-    toml::from_str::<GatesFile>(text).with_context(|| format!("parsing working-tree {GATES_PATH}"))
+    toml::from_str::<GatesFile>(text)
+        .with_context(|| format!("parsing working-tree {}", gates_path()))
 }
 
 fn write_worktree_gates(repo: &gix::Repository, gates: &GatesFile) -> anyhow::Result<()> {
     let path = worktree_gates_path(repo)?;
     let parent = path
         .parent()
-        .ok_or_else(|| anyhow!("{GATES_PATH} must have a parent directory"))?;
+        .ok_or_else(|| anyhow!("{} must have a parent directory", gates_path()))?;
     fs::create_dir_all(parent)
         .with_context(|| format!("creating working-tree {}", parent.display()))?;
-    let encoded =
-        toml::to_string(gates).with_context(|| format!("serializing working-tree {GATES_PATH}"))?;
-    fs::write(&path, encoded).with_context(|| format!("writing working-tree {GATES_PATH}"))?;
+    let encoded = toml::to_string(gates)
+        .with_context(|| format!("serializing working-tree {}", gates_path()))?;
+    fs::write(&path, encoded).with_context(|| format!("writing working-tree {}", gates_path()))?;
     Ok(())
 }
 
@@ -1891,7 +2061,14 @@ fn worktree_gates_path(repo: &gix::Repository) -> anyhow::Result<PathBuf> {
     let workdir = repo
         .workdir()
         .ok_or_else(|| anyhow!("governance gates writes require a non-bare repository"))?;
-    Ok(workdir.join(GATES_PATH))
+    Ok(workdir.join(gates_path()))
+}
+
+fn read_committed_gates_file(
+    repo: &gix::Repository,
+    target_ref: &str,
+) -> anyhow::Result<GatesFile> {
+    parse_gates_text(&read_committed_gates(repo, target_ref)?)
 }
 
 fn read_committed_gates(repo: &gix::Repository, target_ref: &str) -> anyhow::Result<String> {
@@ -1905,16 +2082,16 @@ fn read_committed_gates(repo: &gix::Repository, target_ref: &str) -> anyhow::Res
         .tree()
         .with_context(|| format!("reading tree for {target_ref}"))?;
     let Some(entry) = tree
-        .lookup_entry_by_path(Path::new(GATES_PATH))
-        .with_context(|| format!("looking up {GATES_PATH} in {target_ref}"))?
+        .lookup_entry_by_path(Path::new(gates_path()))
+        .with_context(|| format!("looking up {} in {target_ref}", gates_path()))?
     else {
         return Ok(String::new());
     };
     let blob = repo
         .find_blob(entry.id())
-        .with_context(|| format!("reading {GATES_PATH} blob at {target_ref}"))?;
+        .with_context(|| format!("reading {} blob at {target_ref}", gates_path()))?;
     let content = std::str::from_utf8(&blob.data)
-        .with_context(|| format!("decoding {GATES_PATH} at {target_ref} as UTF-8"))?;
+        .with_context(|| format!("decoding {} at {target_ref} as UTF-8", gates_path()))?;
     Ok(content.to_owned())
 }
 

@@ -59,7 +59,6 @@ pub mod rules {
             .map_err(json::Error::from)?;
             serde_json::to_value(rules)
                 .context("serializing workspace rules")
-                .map_err(anyhow::Error::from)
                 .map_err(json::Error::from)
         }
 
@@ -213,7 +212,7 @@ macro_rules! gitbutler_governance_command_rows {
             but_api::legacy::governance::tauri_perm_list::perm_list,
             $crate::governance::tauri_perm_grant::perm_grant,
             $crate::governance::tauri_perm_revoke::perm_revoke,
-            but_api::legacy::governance::tauri_branch_gates_read::branch_gates_read,
+            $crate::governance::tauri_branch_gates_read::branch_gates_read,
             $crate::governance::tauri_branch_gates_update::branch_gates_update,
             but_api::legacy::governance::tauri_governance_status_read::governance_status_read,
             $crate::governance::tauri_governance_principals_list::governance_principals_list,
