@@ -1,5 +1,6 @@
 import {
 	collectGovernanceWriteRequests,
+	expectActionBlocked,
 	openGovernanceProject,
 	openGovernanceTab,
 	openGroup,
@@ -28,15 +29,32 @@ test.describe("governance tabs and read-only admin", () => {
 		);
 
 		const editor = await openPrincipalEditor(page, "test-principal");
-		await expect(editor.getByTestId("principal-editor-toggle-reviews-write")).toBeDisabled();
-		await expect(editor.getByTestId("principal-editor-toggle-administration-write")).toBeDisabled();
-		await expect(editor.getByTestId("principal-editor-save")).toBeDisabled();
+		const principalReviewsToggle = editor.getByTestId("principal-editor-toggle-reviews-write");
+		const principalAdminToggle = editor.getByTestId("principal-editor-toggle-administration-write");
+		const principalSave = editor.getByTestId("principal-editor-save");
+		await expect(principalReviewsToggle).toBeDisabled();
+		await expect(principalAdminToggle).toBeDisabled();
+		await expect(principalSave).toBeDisabled();
+		await expectActionBlocked(() => principalReviewsToggle.click({ timeout: 500 }));
+		await principalAdminToggle.click({ force: true });
+		await principalSave.click({ force: true });
+		await expect(principalReviewsToggle).not.toBeChecked();
+		await expect(principalAdminToggle).not.toBeChecked();
+		await expect(page.getByTestId("governance-pending-banner")).toHaveCount(0);
 
 		await openGovernanceTab(page, "Groups");
 		const group = await openGroup(page, "test-group");
-		await expect(group.getByTestId("groups-list-toggle-test-group-reviews-write")).toBeDisabled();
-		await expect(page.getByTestId("groups-list-create-name")).toBeDisabled();
-		await expect(group.getByTestId("groups-list-delete-test-group")).toBeDisabled();
+		const groupReviewsToggle = group.getByTestId("groups-list-toggle-test-group-reviews-write");
+		const groupCreateName = page.getByTestId("groups-list-create-name");
+		const groupDelete = group.getByTestId("groups-list-delete-test-group");
+		await expect(groupReviewsToggle).toBeDisabled();
+		await expect(groupCreateName).toBeDisabled();
+		await expect(groupDelete).toBeDisabled();
+		await expectActionBlocked(() => groupReviewsToggle.click({ timeout: 500 }));
+		await expectActionBlocked(() => groupCreateName.fill("blocked-group", { timeout: 500 }));
+		await groupDelete.click({ force: true });
+		await expect(groupReviewsToggle).not.toBeChecked();
+		await expect(page.getByTestId("groups-list-delete-modal")).toHaveCount(0);
 
 		await openGovernanceTab(page, "Branch Gates");
 		await expect(page.getByTestId("governance-branch-gates-panel")).toBeVisible();
@@ -46,6 +64,7 @@ test.describe("governance tabs and read-only admin", () => {
 		await expect(page.getByTestId("governance-rules-panel")).toBeVisible();
 		await expect(page.getByTestId("governance-rules-control")).toBeDisabled();
 		await expect(page.getByTestId("governance-commit-button")).toHaveCount(0);
+		await page.waitForTimeout(100);
 		expect(writeRequests).toEqual([]);
 	});
 });

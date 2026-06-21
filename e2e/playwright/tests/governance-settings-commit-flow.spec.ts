@@ -39,10 +39,12 @@ test.describe("governance commit flow", () => {
 		await expect(
 			pendingGroup.getByTestId("groups-list-toggle-test-group-reviews-write"),
 		).toBeChecked();
+		await expect(page.getByTestId("groups-list-pending-test-group")).toContainText("Pending");
 		await expect(page.getByTestId("governance-pending-banner")).toContainText("2 pending changes");
 
 		await page.getByTestId("governance-commit-button").click();
 		await expect(page.getByTestId("governance-pending-banner")).toHaveCount(0);
+		await expect(page.getByTestId("groups-list-pending-test-group")).toHaveCount(0);
 
 		await openGovernanceTab(page, "Principals");
 		await expect(page.getByTestId("principals-list-pending-test-principal")).toHaveCount(0);
@@ -51,6 +53,7 @@ test.describe("governance commit flow", () => {
 
 		await openGovernanceTab(page, "Groups");
 		const committedGroup = await openGroup(page, "test-group");
+		await expect(page.getByTestId("groups-list-pending-test-group")).toHaveCount(0);
 		await expect(
 			committedGroup.getByTestId("groups-list-toggle-test-group-reviews-write"),
 		).toBeChecked();

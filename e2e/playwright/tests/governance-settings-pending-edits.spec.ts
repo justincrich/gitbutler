@@ -1,8 +1,10 @@
 import {
+	expectPendingGrant,
 	openGovernanceProject,
 	openGovernanceTab,
 	openGroup,
 	openPrincipalEditor,
+	readGovernancePending,
 	stageGroupReviewsGrant,
 	stagePrincipalReviewsGrant,
 } from "../src/governance.ts";
@@ -25,7 +27,12 @@ test.describe("governance pending edits", () => {
 		await stageGroupReviewsGrant(page);
 		const group = await openGroup(page, "test-group");
 		await expect(group.getByTestId("groups-list-toggle-test-group-reviews-write")).toBeChecked();
+		await expect(page.getByTestId("groups-list-pending-test-group")).toContainText("Pending");
 		await expect(page.getByTestId("governance-pending-banner")).toContainText("2 pending changes");
+
+		const pending = await readGovernancePending(page);
+		expectPendingGrant(pending, "test-principal", "reviews:write");
+		expectPendingGrant(pending, "group-principal", "reviews:write");
 
 		await openGovernanceTab(page, "Principals");
 		await expect(page.getByTestId("principals-list-pending-test-principal")).toBeVisible();

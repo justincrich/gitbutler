@@ -69,8 +69,10 @@
 		isReadOnly?: boolean;
 		groups?: GroupListEntry[];
 		gateReferencedGroups?: string[];
+		pendingGroups?: string[];
 		service?: GroupsListService;
 		onRefresh?: () => void;
+		onGroupPending?: (groupName: string) => void;
 	};
 
 	const permissionRows = [
@@ -87,8 +89,10 @@
 		isReadOnly = false,
 		groups: providedGroups,
 		gateReferencedGroups = [],
+		pendingGroups = [],
 		service: providedService,
 		onRefresh,
+		onGroupPending,
 	}: Props = $props();
 
 	const backend = injectOptional(BACKEND, undefined);
@@ -111,6 +115,7 @@
 		[...groups].sort((left, right) => left.name.localeCompare(right.name)),
 	);
 	const hasGroups = $derived(sortedGroups.length > 0);
+	const pendingGroupSet = $derived(new Set(pendingGroups));
 
 	$effect(() => {
 		if (providedGroups !== undefined) {
@@ -247,6 +252,10 @@
 		}
 	}
 
+	function markGroupPending(groupName: string) {
+		onGroupPending?.(groupName);
+	}
+
 	async function createGroup() {
 		const group = createGroupName.trim();
 		if (!group || isReadOnly) return;
@@ -256,6 +265,7 @@
 			await service.groupCreate(projectId, targetRef, group, []);
 			groups = [...groups, { name: group, authorities: [], members: [] }];
 			createGroupName = "";
+			markGroupPending(group);
 			await refreshAfterWrite();
 		} catch (error) {
 			writeError = errorCode(error);
@@ -282,6 +292,7 @@
 					authorities: group.authorities.filter((grant) => grant !== authority),
 				}));
 			}
+			markGroupPending(groupName);
 			await refreshAfterWrite();
 		} catch (error) {
 			groups = previousGroups;
@@ -302,6 +313,7 @@
 				...group,
 				members: uniqueSorted([...group.members, member]),
 			}));
+			markGroupPending(groupName);
 			await refreshAfterWrite();
 		} catch (error) {
 			groups = previousGroups;
@@ -336,6 +348,7 @@
 				...group,
 				members: group.members.filter((value) => value !== member),
 			}));
+			markGroupPending(groupName);
 			await refreshAfterWrite();
 		} catch (error) {
 			groups = previousGroups;
@@ -438,6 +451,16 @@
 						}}
 					>
 						{#snippet summary()}
+							{#if pendingGroupSet.has(group.name)}
+								<Badge
+									testId={`groups-list-pending-${groupSlug}`}
+									style="warning"
+									kind="soft"
+									size="tag"
+								>
+									Pending
+								</Badge>
+							{/if}
 							<Badge style="gray" kind="soft" size="tag">{group.members.length} members</Badge>
 							<Badge style="gray" kind="soft" size="tag">
 								{group.authorities.length} grants

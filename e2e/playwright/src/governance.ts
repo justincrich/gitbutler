@@ -28,6 +28,26 @@ type ButlerResponse<T> =
 			subject: unknown;
 	  };
 
+type GovernancePendingToken = {
+	authority: string;
+	committed: boolean;
+	working: boolean;
+	pending: boolean;
+	change?: "grant" | "revoke";
+};
+
+type GovernancePendingPrincipal = {
+	id: string;
+	committedEffective: string[];
+	workingEffective: string[];
+	tokens: GovernancePendingToken[];
+};
+
+export type GovernancePendingResponse = {
+	principals: GovernancePendingPrincipal[];
+	pendingCount: number;
+};
+
 const usersByRole: Record<TestUserRole, TestUser> = {
 	admin: {
 		id: 6101,
@@ -134,7 +154,68 @@ export async function stageGroupReviewsGrant(page: Page): Promise<void> {
 	const toggle = group.getByTestId("groups-list-toggle-test-group-reviews-write");
 	await toggle.check();
 	await expect(toggle).toBeChecked();
+	await expect(page.getByTestId("groups-list-pending-test-group")).toContainText("Pending");
 	await expect(page.getByTestId("governance-pending-banner")).toContainText("2 pending changes");
+}
+
+export async function expectActionBlocked(action: () => Promise<unknown>): Promise<void> {
+	let blocked = false;
+	try {
+		await action();
+	} catch {
+		blocked = true;
+	}
+	expect(blocked).toBe(true);
+}
+
+export function currentProjectId(page: Page): string {
+	const projectId = page.url().split("/")[3];
+	if (!projectId) {
+		throw new Error(`Could not parse project id from URL ${page.url()}`);
+	}
+	return projectId;
+}
+
+export async function readGovernancePending(page: Page): Promise<GovernancePendingResponse> {
+	const response = await page.request.post(
+		`http://localhost:${getButlerPort()}/governance_pending`,
+		{
+			data: {
+				projectId: currentProjectId(page),
+				targetRef: "refs/remotes/origin/main",
+			},
+		},
+	);
+
+	if (!response.ok()) {
+		throw new Error(`governance_pending returned HTTP ${response.status()}`);
+	}
+
+	const payload = (await response.json()) as ButlerResponse<GovernancePendingResponse>;
+	if (payload.type !== "success") {
+		throw new Error(`governance_pending failed: ${JSON.stringify(payload.subject)}`);
+	}
+	return payload.subject;
+}
+
+export function expectPendingGrant(
+	pending: GovernancePendingResponse,
+	principalId: string,
+	authority: string,
+): void {
+	const principal = pending.principals.find((entry) => entry.id === principalId);
+	expect(principal, `pending principal ${principalId} should exist`).toBeTruthy();
+	expect(principal?.committedEffective).not.toContain(authority);
+	expect(principal?.workingEffective).toContain(authority);
+	expect(principal?.tokens).toContainEqual(
+		expect.objectContaining({
+			authority,
+			committed: false,
+			working: true,
+			pending: true,
+			change: "grant",
+		}),
+	);
 }
 
 const governanceWriteCommands = [
