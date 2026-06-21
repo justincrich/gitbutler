@@ -1,0 +1,105 @@
+{
+  "fixtures": {
+    "governance_fixture_admin_member": {
+      "description": "Vite governance fixture with admin and member persona buttons and labeled fixture-only banner.",
+      "seed_method": "ui_flow",
+      "records": [
+        "persona button `Admin`",
+        "persona button `Member`",
+        "settings entry `Permissions & Governance`"
+      ]
+    }
+  },
+  "requirements": [
+    {
+      "id": "AC-1",
+      "type": "acceptance_criterion",
+      "primary": true,
+      "description": "GIVEN admin fixture persona WHEN Project Settings is shown THEN Permissions & Governance is visible with normal settings entries.",
+      "verify": "pnpm --filter @gitbutler/e2e run test:e2e:governance-fixture --grep \"admin can see\"",
+      "maps_to_ac": null,
+      "scenario": {
+        "test_tier": "e2e",
+        "tier": "visible",
+        "verification_service": "vite-governance-fixture",
+        "negative_control": {
+          "would_fail_if": [
+            "static shell omits persona-driven sidebar changes",
+            "empty sidebar",
+            "member persona selected"
+          ]
+        },
+        "evidence": {
+          "artifact_type": "screenshot",
+          "required_capture": true
+        },
+        "cases": [
+          {
+            "start_ref": "governance_fixture_admin_member",
+            "action": {
+              "actor": "playwright_user",
+              "steps": [
+                "open fixture",
+                "select admin",
+                "open Permissions & Governance"
+              ]
+            },
+            "end_state": {
+              "must_observe": [
+                "settings entry `Permissions & Governance` count 1",
+                "settings entry `Project` count 1",
+                "settings entry `AI options` count 1"
+              ],
+              "must_not_observe": [
+                "governance settings entry count 0",
+                "empty sidebar"
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "AC-2",
+      "type": "acceptance_criterion",
+      "description": "GIVEN member fixture persona WHEN Project Settings is shown THEN Permissions & Governance is absent and normal settings remain visible.",
+      "verify": "pnpm --filter @gitbutler/e2e run test:e2e:governance-fixture --grep \"non-admin\"",
+      "maps_to_ac": null
+    },
+    {
+      "id": "AC-3",
+      "type": "acceptance_criterion",
+      "description": "GIVEN admin fixture persona WHEN governance is opened THEN the four tabs render and the not-found fallback is absent.",
+      "verify": "pnpm --filter @gitbutler/e2e run test:e2e:governance-fixture --grep \"four tabs\"",
+      "maps_to_ac": null
+    },
+    {
+      "id": "TC-1",
+      "type": "test_criterion",
+      "description": "Admin fixture persona sees the governance settings entry.",
+      "verify": "pnpm --filter @gitbutler/e2e run test:e2e:governance-fixture --grep \"admin can see\"",
+      "maps_to_ac": "AC-1"
+    },
+    {
+      "id": "TC-2",
+      "type": "test_criterion",
+      "description": "Member fixture persona cannot see the governance settings entry.",
+      "verify": "pnpm --filter @gitbutler/e2e run test:e2e:governance-fixture --grep \"non-admin\"",
+      "maps_to_ac": "AC-2"
+    },
+    {
+      "id": "TC-3",
+      "type": "test_criterion",
+      "description": "Admin fixture persona can open governance and see the four expected tabs.",
+      "verify": "pnpm --filter @gitbutler/e2e run test:e2e:governance-fixture --grep \"four tabs\"",
+      "maps_to_ac": "AC-3"
+    },
+    {
+      "id": "TC-4",
+      "type": "test_criterion",
+      "description": "Fixture evidence label says Not product E2E evidence.",
+      "verify": "rg -n \"Not product E2E evidence|Fixture governance harness\" e2e/playwright/tests/governance-fixture e2e/playwright/fixtures/governance-app",
+      "maps_to_ac": "AC-1"
+    }
+  ]
+}
