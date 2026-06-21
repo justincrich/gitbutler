@@ -1,175 +1,49 @@
-import BranchGatesList from "$components/governance/BranchGatesList.svelte";
+import BranchGatesListBackendHarness from "$tests/governance/BranchGatesListBackendHarness.svelte";
 import { expect, test } from "@playwright/experimental-ct-svelte";
-import type { GroupListEntry, GroupListOutcome } from "@gitbutler/but-sdk";
-import type {
-	BranchGateEntry,
-	BranchGatesOutcome,
-	BranchProtectionInput,
-} from "$components/governance/BranchGatesList.svelte";
+import type { Locator } from "@playwright/test";
 
-const projectId = "project-1";
-const targetRef = "refs/remotes/origin/main";
-
-const seededDefinedGroups: GroupListEntry[] = [
-	{
-		name: "eng",
-		authorities: ["reviews:write"],
-		members: ["alice"],
-	},
-	{
-		name: "security",
-		authorities: ["reviews:write"],
-		members: ["bob"],
-	},
-	{
-		name: "platform",
-		authorities: ["reviews:write"],
-		members: ["carol"],
-	},
-];
-
-const seededGatesTwoBranches: BranchGateEntry[] = [
-	{
-		name: "main",
-		protected: true,
-		min_approvals: 2,
-		require_distinct_from_author: true,
-		require_approval_from_group: ["eng", "security"],
-		pending: false,
-	},
-	{
-		name: "release",
-		protected: true,
-		min_approvals: 1,
-		require_distinct_from_author: false,
-		require_approval_from_group: ["platform"],
-		pending: false,
-	},
-];
-
-function cloneGate(gate: BranchGateEntry): BranchGateEntry {
-	return {
-		...gate,
-		require_approval_from_group: [...gate.require_approval_from_group],
+type BackendCall = {
+	command: string;
+	args: {
+		projectId?: string;
+		targetRef?: string;
+		branch?: string;
+		protection?: {
+			protected: boolean;
+			min_approvals: number | null;
+			require_distinct_from_author: boolean | null;
+			require_approval_from_group: string[] | null;
+		};
 	};
-}
-
-type Call = {
-	command: "branch_gates_read" | "branch_gates_update" | "group_list";
-	branch?: string;
-	protection?: BranchProtectionInput;
 };
 
-function createOutcome(branches: BranchGateEntry[]): BranchGatesOutcome {
-	return {
-		branches: branches.map(cloneGate),
-		caveat: targetRef,
-	};
+async function backendCalls(component: Locator) {
+	const rawCalls = await component.getByTestId("branch-gates-backend-calls").textContent();
+	return JSON.parse(rawCalls ?? "[]") as BackendCall[];
 }
 
-function createService(branches = seededGatesTwoBranches, rejectWrites = false) {
-	const calls: Call[] = [];
-	let currentBranches = branches.map(cloneGate);
-
-	return {
-		calls,
-		service: {
-			async branchGatesRead(): Promise<BranchGatesOutcome> {
-				calls.push({ command: "branch_gates_read" });
-				return createOutcome(currentBranches);
-			},
-			async branchGatesUpdate(
-				_projectId: string,
-				_targetRef: string,
-				branch: string,
-				protection: BranchProtectionInput,
-			): Promise<BranchGatesOutcome> {
-				calls.push({ command: "branch_gates_update", branch, protection });
-				if (rejectWrites) {
-					return {
-						code: "perm.denied",
-						message: "Permission denied",
-					} as unknown as BranchGatesOutcome;
-				}
-				const nextBranch: BranchGateEntry = {
-					name: branch,
-					protected: protection.protected,
-					min_approvals: protection.min_approvals ?? 0,
-					require_distinct_from_author: protection.require_distinct_from_author ?? false,
-					require_approval_from_group: protection.require_approval_from_group ?? [],
-					pending: true,
-				};
-				const exists = currentBranches.some((entry) => entry.name === branch);
-				currentBranches = exists
-					? currentBranches.map((entry) => (entry.name === branch ? nextBranch : entry))
-					: [...currentBranches, nextBranch];
-				return createOutcome(currentBranches);
-			},
-			async listGroups(): Promise<GroupListOutcome> {
-				calls.push({ command: "group_list" });
-				return { groups: seededDefinedGroups };
-			},
-		},
-	};
+async function waitForBackendCall(component: Locator, command: string) {
+	await expect
+		.poll(async () => (await backendCalls(component)).some((call) => call.command === command))
+		.toBe(true);
 }
 
-function props(branches = seededGatesTwoBranches, rejectWrites = false) {
-	const { calls, service } = createService(branches, rejectWrites);
-	return {
-		calls,
-		mountProps: {
-			projectId,
-			targetRef,
-			branches,
-			definedGroups: seededDefinedGroups,
-			service,
-		},
-	};
+function updateCalls(calls: BackendCall[]): BackendCall[] {
+	return calls.filter((call) => call.command === "branch_gates_update");
 }
 
-function deniedProps() {
-	const calls: Call[] = [];
-
-	return {
-		calls,
-		mountProps: {
-			projectId,
-			targetRef,
-			branches: seededGatesTwoBranches,
-			definedGroups: seededDefinedGroups,
-			service: {
-				branchGatesUpdateError: "perm.denied Permission denied",
-				async branchGatesRead(): Promise<BranchGatesOutcome> {
-					calls.push({ command: "branch_gates_read" });
-					return createOutcome(seededGatesTwoBranches);
-				},
-				async branchGatesUpdate(
-					_projectId: string,
-					_targetRef: string,
-					branch: string,
-					protection: BranchProtectionInput,
-				): Promise<BranchGatesOutcome> {
-					calls.push({ command: "branch_gates_update", branch, protection });
-					return {
-						branches: seededGatesTwoBranches.map(cloneGate),
-						caveat: "perm.denied Permission denied",
-					};
-				},
-				async listGroups(): Promise<GroupListOutcome> {
-					calls.push({ command: "group_list" });
-					return { groups: seededDefinedGroups };
-				},
-			},
-		},
-	};
+function latestUpdate(calls: BackendCall[]): BackendCall | undefined {
+	return updateCalls(calls).at(-1);
 }
 
 test("BranchGatesListRows renders expandable branch gate fields", async ({ mount }) => {
-	const { mountProps } = props();
-	const component = await mount(BranchGatesList, { props: mountProps });
+	const component = await mount(BranchGatesListBackendHarness);
 
 	await expect(component.getByTestId("branch-gates-list-row-main")).toContainText("main");
 	await expect(component.getByTestId("branch-gates-list-row-release")).toContainText("release");
+
+	await waitForBackendCall(component, "branch_gates_read");
+	await waitForBackendCall(component, "group_list");
 
 	await component
 		.getByTestId("branch-gates-list-row-main")
@@ -181,11 +55,24 @@ test("BranchGatesListRows renders expandable branch gate fields", async ({ mount
 	await expect(component.getByTestId("branch-gates-list-distinct-main")).toBeChecked();
 	await expect(component.getByTestId("branch-gates-list-groups-main")).toContainText("eng");
 	await expect(component.getByTestId("branch-gates-list-groups-main")).toContainText("security");
+
+	const calls = await backendCalls(component);
+	expect(calls).toEqual(
+		expect.arrayContaining([
+			expect.objectContaining({
+				command: "branch_gates_read",
+				args: { projectId: "project-1", targetRef: "refs/remotes/origin/main" },
+			}),
+			expect.objectContaining({
+				command: "group_list",
+				args: { projectId: "project-1" },
+			}),
+		]),
+	);
 });
 
 test("BranchGatesListEdit writes min approvals and marks the row pending", async ({ mount }) => {
-	const { calls, mountProps } = props();
-	const component = await mount(BranchGatesList, { props: mountProps });
+	const component = await mount(BranchGatesListBackendHarness);
 
 	await component
 		.getByTestId("branch-gates-list-row-main")
@@ -194,26 +81,40 @@ test("BranchGatesListEdit writes min approvals and marks the row pending", async
 	await component.getByTestId("branch-gates-list-min-approvals-main").fill("3");
 	await component.getByTestId("branch-gates-list-min-approvals-main").blur();
 
-	expect(calls).toContainEqual({
-		command: "branch_gates_update",
-		branch: "main",
-		protection: {
-			protected: true,
-			min_approvals: 3,
-			require_distinct_from_author: true,
-			require_approval_from_group: ["eng", "security"],
-		},
-	});
 	await expect(component.getByTestId("branch-gates-list-pending-main")).toHaveText("Pending");
+
+	const calls = await backendCalls(component);
+	expect(latestUpdate(calls)).toEqual(
+		expect.objectContaining({
+			command: "branch_gates_update",
+			args: {
+				projectId: "project-1",
+				targetRef: "refs/remotes/origin/main",
+				branch: "main",
+				protection: {
+					protected: true,
+					min_approvals: 3,
+					require_distinct_from_author: true,
+					require_approval_from_group: ["eng", "security"],
+				},
+			},
+		}),
+	);
 });
 
 test("BranchGatesListEmpty renders empty state and adds a staging gate", async ({ mount }) => {
-	const { calls, mountProps } = props([]);
-	const component = await mount(BranchGatesList, { props: mountProps });
+	const component = await mount(BranchGatesListBackendHarness, {
+		props: {
+			scenario: "seeded_empty_gates",
+		},
+	});
 
 	await expect(component.getByTestId("branch-gates-list-empty")).toContainText(
 		"No branch gates yet",
 	);
+	await waitForBackendCall(component, "branch_gates_read");
+	await waitForBackendCall(component, "group_list");
+
 	await component
 		.getByTestId("branch-gates-list-empty")
 		.getByRole("button", { name: "+ Add" })
@@ -223,21 +124,27 @@ test("BranchGatesListEmpty renders empty state and adds a staging gate", async (
 	await component.getByTestId("branch-gates-list-add-pattern").fill("staging");
 	await component.getByRole("button", { name: "Add gate" }).click();
 
-	expect(calls).toContainEqual({
-		command: "branch_gates_update",
-		branch: "staging",
-		protection: {
-			protected: true,
-			min_approvals: 1,
-			require_distinct_from_author: true,
-			require_approval_from_group: [],
-		},
-	});
+	const calls = await backendCalls(component);
+	expect(latestUpdate(calls)).toEqual(
+		expect.objectContaining({
+			command: "branch_gates_update",
+			args: {
+				projectId: "project-1",
+				targetRef: "refs/remotes/origin/main",
+				branch: "staging",
+				protection: {
+					protected: true,
+					min_approvals: 1,
+					require_distinct_from_author: true,
+					require_approval_from_group: [],
+				},
+			},
+		}),
+	);
 });
 
 test("BranchGatesListGroupSelector offers only defined groups", async ({ mount }) => {
-	const { mountProps } = props();
-	const component = await mount(BranchGatesList, { props: mountProps });
+	const component = await mount(BranchGatesListBackendHarness);
 
 	await component
 		.getByTestId("branch-gates-list-row-main")
@@ -251,14 +158,16 @@ test("BranchGatesListGroupSelector offers only defined groups", async ({ mount }
 	await expect(component.getByTestId("branch-gates-list-group-options-main")).not.toContainText(
 		"undefined-group",
 	);
+
+	const calls = await backendCalls(component);
+	expect(calls.some((call) => call.command === "group_list")).toBe(true);
 });
 
 test("BranchGatesListUnprotectConfirm gates protected off behind a modal", async ({
 	mount,
 	page,
 }) => {
-	const { calls, mountProps } = props();
-	const component = await mount(BranchGatesList, { props: mountProps });
+	const component = await mount(BranchGatesListBackendHarness);
 
 	await component
 		.getByTestId("branch-gates-list-row-main")
@@ -268,12 +177,12 @@ test("BranchGatesListUnprotectConfirm gates protected off behind a modal", async
 	await expect(page.getByTestId("branch-gates-list-unprotect-modal")).toContainText(
 		"Unprotect branch main? Merges will no longer require review.",
 	);
-	expect(calls.filter((call) => call.command === "branch_gates_update")).toHaveLength(0);
+	expect(updateCalls(await backendCalls(component))).toHaveLength(0);
 	await expect(component.getByTestId("branch-gates-list-protected-main")).toBeChecked();
 
 	await page.getByRole("button", { name: "Cancel" }).click();
 	await expect(page.getByTestId("branch-gates-list-unprotect-modal")).toBeHidden();
-	expect(calls.filter((call) => call.command === "branch_gates_update")).toHaveLength(0);
+	expect(updateCalls(await backendCalls(component))).toHaveLength(0);
 	await expect(component.getByTestId("branch-gates-list-protected-main")).toBeChecked();
 
 	await component.getByTestId("branch-gates-list-protected-main").click();
@@ -282,25 +191,33 @@ test("BranchGatesListUnprotectConfirm gates protected off behind a modal", async
 		.getByRole("button", { name: "Unprotect branch" })
 		.click();
 
-	expect(calls).toContainEqual({
-		command: "branch_gates_update",
-		branch: "main",
-		protection: {
-			protected: false,
-			min_approvals: 2,
-			require_distinct_from_author: true,
-			require_approval_from_group: ["eng", "security"],
-		},
-	});
+	await expect
+		.poll(async () => updateCalls(await backendCalls(component)).length)
+		.toBeGreaterThan(0);
+	expect(latestUpdate(await backendCalls(component))).toEqual(
+		expect.objectContaining({
+			command: "branch_gates_update",
+			args: {
+				projectId: "project-1",
+				targetRef: "refs/remotes/origin/main",
+				branch: "main",
+				protection: {
+					protected: false,
+					min_approvals: 2,
+					require_distinct_from_author: true,
+					require_approval_from_group: ["eng", "security"],
+				},
+			},
+		}),
+	);
 });
 
 test("BranchGatesListReadOnly disables mutating controls and fires zero SDK calls", async ({
 	mount,
 }) => {
-	const { calls, mountProps } = props();
-	const component = await mount(BranchGatesList, {
+	const component = await mount(BranchGatesListBackendHarness, {
 		props: {
-			...mountProps,
+			scenario: "seeded_gates_readonly",
 			isReadOnly: true,
 		},
 	});
@@ -320,14 +237,17 @@ test("BranchGatesListReadOnly disables mutating controls and fires zero SDK call
 	await component.getByTestId("branch-gates-list-min-approvals-main").fill("3", { force: true });
 	await component.getByLabel("eng").click({ force: true });
 
-	expect(calls.filter((call) => call.command === "branch_gates_update")).toHaveLength(0);
+	expect(updateCalls(await backendCalls(component))).toHaveLength(0);
 });
 
 test("BranchGatesListWriteDenied shows permission error and reverts min approvals", async ({
 	mount,
 }) => {
-	const { mountProps } = deniedProps();
-	const component = await mount(BranchGatesList, { props: mountProps });
+	const component = await mount(BranchGatesListBackendHarness, {
+		props: {
+			scenario: "seeded_write_denied",
+		},
+	});
 
 	await component
 		.getByTestId("branch-gates-list-row-main")
@@ -341,4 +261,15 @@ test("BranchGatesListWriteDenied shows permission error and reverts min approval
 		"Permission denied",
 	);
 	await expect(component.getByTestId("branch-gates-list-min-approvals-main")).toHaveValue("2");
+
+	const calls = await backendCalls(component);
+	expect(latestUpdate(calls)).toEqual(
+		expect.objectContaining({
+			command: "branch_gates_update",
+			args: expect.objectContaining({
+				branch: "main",
+				protection: expect.objectContaining({ min_approvals: 3 }),
+			}),
+		}),
+	);
 });

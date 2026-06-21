@@ -22,7 +22,7 @@
 		require_approval_from_group: string[] | null;
 	};
 
-	export type BranchGatesListService = {
+	type BranchGatesListService = {
 		branchGatesRead: (projectId: string, targetRef: string) => Promise<BranchGatesOutcome>;
 		branchGatesUpdate: (
 			projectId: string,
@@ -58,10 +58,7 @@
 		projectId: string;
 		targetRef: string;
 		isReadOnly?: boolean;
-		branches?: BranchGateEntry[];
-		definedGroups?: DefinedGroup[];
 		pendingBranches?: string[];
-		service?: BranchGatesListService;
 		onRefresh?: () => void;
 		onBranchPending?: (branchName: string) => void;
 	};
@@ -75,25 +72,18 @@
 		projectId,
 		targetRef,
 		isReadOnly = false,
-		branches: providedBranches,
-		definedGroups: providedDefinedGroups,
 		pendingBranches = [],
-		service: providedService,
 		onRefresh,
 		onBranchPending,
 	}: Props = $props();
 
 	const backend = injectOptional(BACKEND, undefined);
-	const service = untrack(() => providedService ?? createBackendService());
-	const initialBranches = untrack(() => providedBranches ?? []);
-	const initialDefinedGroups = untrack(() => providedDefinedGroups ?? []);
+	const service = untrack(() => createBackendService());
 
-	let branches = $state<BranchGateEntry[]>(cloneBranches(initialBranches));
-	let definedGroups = $state<DefinedGroup[]>(cloneDefinedGroups(initialDefinedGroups));
+	let branches = $state<BranchGateEntry[]>([]);
+	let definedGroups = $state<DefinedGroup[]>([]);
 	let expandedBranches = $state<string[]>([]);
-	let isLoading = $state(
-		untrack(() => providedBranches === undefined || providedDefinedGroups === undefined),
-	);
+	let isLoading = $state(true);
 	let loadError = $state<string | undefined>();
 	let writeError = $state<string | undefined>();
 	let addBranchName = $state("");
@@ -110,17 +100,6 @@
 	const groupOptions = $derived(uniqueInOrder(definedGroups.map((group) => group.name)));
 
 	$effect(() => {
-		if (providedBranches !== undefined) {
-			branches = cloneBranches(providedBranches);
-		}
-		if (providedDefinedGroups !== undefined) {
-			definedGroups = cloneDefinedGroups(providedDefinedGroups);
-		}
-		if (providedBranches !== undefined && providedDefinedGroups !== undefined) {
-			isLoading = false;
-			return;
-		}
-
 		if (!projectId) {
 			branches = [];
 			definedGroups = [];
@@ -222,12 +201,8 @@
 
 		try {
 			const [branchOutcome, groupOutcome] = await Promise.all([
-				providedBranches === undefined
-					? service.branchGatesRead(projectId, targetRef)
-					: Promise.resolve({ branches: providedBranches, caveat: targetRef }),
-				providedDefinedGroups === undefined
-					? service.listGroups(projectId, targetRef)
-					: Promise.resolve({ groups: providedDefinedGroups }),
+				service.branchGatesRead(projectId, targetRef),
+				service.listGroups(projectId, targetRef),
 			]);
 			branches = cloneBranches(branchOutcome.branches);
 			definedGroups = cloneDefinedGroups(groupOutcome.groups);
@@ -242,9 +217,7 @@
 
 	async function refreshAfterWrite() {
 		onRefresh?.();
-		if (providedBranches === undefined || providedDefinedGroups === undefined) {
-			await loadBranchGates();
-		}
+		await loadBranchGates();
 	}
 
 	function markBranchPending(branchName: string) {
