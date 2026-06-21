@@ -1571,6 +1571,7 @@ mod tests {
     const MAIN_REF: &str = "refs/heads/main";
     const TARGET_REF: &str = "refs/remotes/origin/main";
     const PERMISSIONS_PATH: &str = ".gitbutler/permissions.toml";
+    const GATES_PATH: &str = ".gitbutler/gates.toml";
 
     #[test]
     fn localhost_origin_accepts_valid() {
@@ -1816,6 +1817,156 @@ mod tests {
         Ok(())
     }
 
+    #[tokio::test]
+    #[serial_test::serial]
+    async fn governance_routes_reads_admin() -> anyhow::Result<()> {
+        let (repo, _tmp) = governance_route_repo()?;
+        let project_id = project_id_for(&repo)?;
+        let router = add_governance_routes(Router::new());
+
+        let status = temp_env::async_with_vars([("BUT_AGENT_HANDLE", Some("admin"))], async {
+            post_json(
+                router.clone(),
+                "/governance_status_read",
+                json!({ "projectId": &project_id }),
+            )
+            .await
+        })
+        .await?;
+        let authorities = success_subject(&status)
+            .get("authorities")
+            .and_then(Value::as_array)
+            .context("governance_status_read success must include authorities")?;
+        assert!(
+            authorities
+                .iter()
+                .any(|authority| authority.as_str() == Some("administration:write")),
+            "admin status read must report administration:write through the route: {status:?}"
+        );
+
+        let gates = temp_env::async_with_vars([("BUT_AGENT_HANDLE", Some("admin"))], async {
+            post_json(
+                router,
+                "/branch_gates_read",
+                json!({ "projectId": &project_id, "targetRef": TARGET_REF }),
+            )
+            .await
+        })
+        .await?;
+        assert_branch_gate(success_subject(&gates), "main", true);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    #[serial_test::serial]
+    async fn governance_routes_write_admin_roundtrip() -> anyhow::Result<()> {
+        let (repo, _tmp) = governance_route_repo()?;
+        let project_id = project_id_for(&repo)?;
+        let router = add_governance_routes(Router::new());
+
+        let update = temp_env::async_with_vars([("BUT_AGENT_HANDLE", Some("admin"))], async {
+            post_json(
+                router.clone(),
+                "/branch_gates_update",
+                json!({
+                    "projectId": &project_id,
+                    "targetRef": TARGET_REF,
+                    "branch": "release",
+                    "protection": { "protected": true }
+                }),
+            )
+            .await
+        })
+        .await?;
+        assert_branch_gate(success_subject(&update), "release", true);
+
+        let read = temp_env::async_with_vars([("BUT_AGENT_HANDLE", Some("admin"))], async {
+            post_json(
+                router,
+                "/branch_gates_read",
+                json!({ "projectId": &project_id, "targetRef": TARGET_REF }),
+            )
+            .await
+        })
+        .await?;
+        assert_branch_gate(success_subject(&read), "release", true);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    #[serial_test::serial]
+    async fn governance_routes_write_nonadmin_denied() -> anyhow::Result<()> {
+        let (repo, _tmp) = governance_route_repo()?;
+        let project_id = project_id_for(&repo)?;
+        let router = add_governance_routes(Router::new());
+        let before = worktree_gates_bytes(&repo)?;
+
+        let denied =
+            temp_env::async_with_vars([("BUT_AGENT_HANDLE", Some("rust-implementer"))], async {
+                post_json(
+                    router,
+                    "/branch_gates_update",
+                    json!({
+                        "projectId": &project_id,
+                        "targetRef": TARGET_REF,
+                        "branch": "release",
+                        "protection": { "protected": true }
+                    }),
+                )
+                .await
+            })
+            .await?;
+        assert_error_code(&denied, "perm.denied");
+        assert_eq!(
+            worktree_gates_bytes(&repo)?,
+            before,
+            "non-admin branch_gates_update route denial must leave gates.toml byte-for-byte unchanged"
+        );
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    #[serial_test::serial]
+    async fn governance_routes_target_ref_contract() -> anyhow::Result<()> {
+        let (repo, _tmp) = governance_route_repo()?;
+        let project_id = project_id_for(&repo)?;
+        let router = add_governance_routes(Router::new());
+        let before = worktree_gates_bytes(&repo)?;
+
+        let mismatch = temp_env::async_with_vars([("BUT_AGENT_HANDLE", Some("admin"))], async {
+            post_json(
+                router,
+                "/branch_gates_update",
+                json!({
+                    "projectId": &project_id,
+                    "targetRef": MAIN_REF,
+                    "branch": "release",
+                    "protection": { "protected": true }
+                }),
+            )
+            .await
+        })
+        .await?;
+        let mismatch_error = error_subject(&mismatch);
+        assert!(
+            mismatch_error
+                .get("message")
+                .and_then(Value::as_str)
+                .is_some_and(|message| message.contains("does not match workspace target")),
+            "write target-ref mismatch must be rejected by the route contract: {mismatch:?}"
+        );
+        assert_eq!(
+            worktree_gates_bytes(&repo)?,
+            before,
+            "target-ref mismatch in branch_gates_update must leave gates.toml byte-for-byte unchanged"
+        );
+
+        Ok(())
+    }
+
     async fn post_json(router: Router, path: &str, payload: Value) -> anyhow::Result<Value> {
         let request = HttpRequest::builder()
             .method("POST")
@@ -1860,6 +2011,24 @@ mod tests {
             error.get("code").and_then(Value::as_str),
             Some(expected),
             "error response must serialize as {expected}: {response:?}"
+        );
+    }
+
+    fn assert_branch_gate(subject: &Value, name: &str, protected: bool) {
+        let branches = subject
+            .get("branches")
+            .and_then(Value::as_array)
+            .unwrap_or_else(|| panic!("branch_gates response must include branches: {subject:?}"));
+        let branch = branches
+            .iter()
+            .find(|branch| branch.get("name").and_then(Value::as_str) == Some(name))
+            .unwrap_or_else(|| {
+                panic!("branch_gates response must include branch {name}: {subject:?}")
+            });
+        assert_eq!(
+            branch.get("protected").and_then(Value::as_bool),
+            Some(protected),
+            "branch_gates branch {name} must have protected={protected}: {subject:?}"
         );
     }
 
@@ -1931,6 +2100,13 @@ git update-ref refs/remotes/origin/main refs/heads/main
             .workdir()
             .ok_or_else(|| anyhow::anyhow!("test repository must be non-bare"))?;
         Ok(std::fs::read(workdir.join(PERMISSIONS_PATH))?)
+    }
+
+    fn worktree_gates_bytes(repo: &gix::Repository) -> anyhow::Result<Vec<u8>> {
+        let workdir = repo
+            .workdir()
+            .ok_or_else(|| anyhow::anyhow!("test repository must be non-bare"))?;
+        Ok(std::fs::read(workdir.join(GATES_PATH))?)
     }
 
     fn committed_blob(repo: &gix::Repository, path: &str) -> anyhow::Result<String> {
