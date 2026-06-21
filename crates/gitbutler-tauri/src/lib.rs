@@ -38,6 +38,44 @@ pub mod zip;
 
 pub mod env;
 pub mod governance;
+pub mod rules {
+    pub mod tauri_list_workspace_rules {
+        use anyhow::{Context as _, anyhow};
+        use but_api::json;
+        use but_ctx::{Context, ProjectHandleOrLegacyProjectId};
+
+        #[tauri::command(async, rename = "list_workspace_rules")]
+        pub fn list_workspace_rules(
+            project_id: ProjectHandleOrLegacyProjectId,
+            principal_id: Option<String>,
+        ) -> Result<serde_json::Value, json::Error> {
+            let ctx = Context::try_from(project_id)
+                .map(Context::with_memory_app_cache)
+                .map_err(json::Error::from)?;
+            let rules = if principal_id.is_some() && std::env::var_os("BUT_AGENT_HANDLE").is_none()
+            {
+                but_api::legacy::users::get_user()
+                    .map_err(json::Error::from)?
+                    .ok_or_else(|| {
+                        json::Error::from(anyhow!(
+                            "a signed-in desktop user is required to scope workspace rules"
+                        ))
+                    })?;
+                but_api::legacy::rules::list_workspace_rules_scoped(&ctx, principal_id.as_deref())
+            } else {
+                but_api::legacy::rules::list_workspace_rules_scoped_for_caller(
+                    &ctx,
+                    principal_id.as_deref(),
+                )
+            }
+            .map_err(json::Error::from)?;
+            serde_json::to_value(rules)
+                .context("serializing workspace rules")
+                .map_err(anyhow::Error::from)
+                .map_err(json::Error::from)
+        }
+    }
+}
 
 pub mod csp;
 
@@ -222,7 +260,7 @@ pub fn invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Sen
         legacy::rules::tauri_create_workspace_rule::create_workspace_rule,
         legacy::rules::tauri_delete_workspace_rule::delete_workspace_rule,
         legacy::rules::tauri_update_workspace_rule::update_workspace_rule,
-        legacy::rules::tauri_list_workspace_rules::list_workspace_rules,
+        rules::tauri_list_workspace_rules::list_workspace_rules,
         legacy::workspace::tauri_head_info::head_info,
         legacy::workspace::tauri_branch_details::branch_details,
         legacy::workspace::tauri_discard_worktree_changes::discard_worktree_changes,

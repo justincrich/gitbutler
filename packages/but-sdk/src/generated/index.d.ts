@@ -321,6 +321,15 @@ export declare function getReviewMergeStatus(projectId: string, reviewId: number
  */
 export declare function getUndoTargetSnapshot(projectId: string): Promise<Snapshot | null>
 
+/** Commit pending governance config files to the target ref (`governance_commit`). */
+export declare function governanceCommit(projectId: string, targetRef: string): Promise<GovernanceCommitOutcome>
+
+/** Read the working-tree-vs-target-ref pending governance diff (`governance_pending`). */
+export declare function governancePending(projectId: string, targetRef: string): Promise<GovernancePending>
+
+/** List all principals needed by the governance renderer (`governance_principals_list`). */
+export declare function governancePrincipalsList(projectId: string, targetRef: string): Promise<GovernancePrincipalsList>
+
 /** Return the caller's own effective governance authorities (`governance_status_read`). */
 export declare function governanceStatusRead(projectId: string): Promise<GovernanceStatus>
 
@@ -371,6 +380,8 @@ export declare function listProjectsStateless(): Promise<Array<ProjectForFronten
 export declare function listReviews(projectId: string, cacheConfig: CacheConfig | null): Promise<Array<ForgeReview>>
 
 export declare function listReviewsForBranch(projectId: string, branch: string, filter: ForgeReviewFilter | null): Promise<Array<ForgeReview>>
+
+export declare function listWorkspaceRules(projectId: string, principalId?: string | undefined | null): Promise<Array<any>>
 
 /** Merge a review on the forge. */
 export declare function mergeReview(projectId: string, reviewId: number, mergeMethod: ReviewMergeMethod | null): Promise<void>
@@ -1599,6 +1610,16 @@ export type GixTime = {
   offset: number;
 };
 
+/** Result of committing pending governance config files to the target ref. */
+export type GovernanceCommitOutcome = {
+  /** Newly created governance commit id. */
+  commitId: string;
+  /** Fixed governance commit message used by the desktop contract. */
+  message: string;
+  /** Governance paths included in the commit. */
+  committedPaths: Array<string>;
+};
+
 /** Structured governance error payload for CLI and API callers. */
 export type GovernanceErrorPayload = {
   /** Stable consumer-facing error code. */
@@ -1607,6 +1628,74 @@ export type GovernanceErrorPayload = {
   message: string;
   /** Optional actionable recovery hint. */
   remediation_hint: string | null;
+};
+
+/** Renderer display source for a group-inherited grant. */
+export type GovernanceInheritedGrant = {
+  /** Functional authority token. */
+  authority: string;
+  /** Human-readable inheritance source. */
+  sourceLabel: string;
+};
+
+/** Read-only working-tree-vs-target-ref governance diff. */
+export type GovernancePending = {
+  /** Per-principal effective authority comparison. */
+  principals: Array<GovernancePendingPrincipal>;
+  /** Number of authority tokens that differ between committed and working-tree config. */
+  pendingCount: number;
+};
+
+/** Direction of a pending authority-token change. */
+export type GovernancePendingChange = "grant" | "revoke";
+
+/** Pending authority diff for one principal. */
+export type GovernancePendingPrincipal = {
+  /** Principal identifier. */
+  id: string;
+  /** Effective authorities from the committed target-ref governance config. */
+  committedEffective: Array<string>;
+  /** Effective authorities from the working-tree governance config. */
+  workingEffective: Array<string>;
+  /** Per-token comparison records. */
+  tokens: Array<GovernancePendingToken>;
+};
+
+/** Pending status for one authority token. */
+export type GovernancePendingToken = {
+  /** Functional authority token. */
+  authority: string;
+  /** Whether the committed target-ref config grants this authority effectively. */
+  committed: boolean;
+  /** Whether the working-tree config grants this authority effectively. */
+  working: boolean;
+  /** Whether committed and working-tree effective values differ. */
+  pending: boolean;
+  /** Direction of the pending change. */
+  change: GovernancePendingChange | null;
+};
+
+/** Renderer row for one governance principal. */
+export type GovernancePrincipalListEntry = {
+  /** Stable principal identifier. */
+  principalId: string;
+  /** Direct grants from the committed target-ref principal entry. */
+  ownGrants: Array<string>;
+  /** Grants inherited from committed target-ref group memberships. */
+  inheritedGrants: Array<GovernanceInheritedGrant>;
+  /** Group memberships from the committed target-ref config. */
+  groupMemberships: Array<string>;
+  /** True only when direct working-tree principal grants differ from committed direct grants. */
+  pending: boolean;
+};
+
+/** Read-only renderer contract for all principals present in governance config. */
+export type GovernancePrincipalsList = {
+  /**
+   * Principals present in committed direct principals, committed group members,
+   * working-tree direct principals, or working-tree group members.
+   */
+  principals: Array<GovernancePrincipalListEntry>;
 };
 
 /** Serializable authority set returned by generated governance API wrappers. */

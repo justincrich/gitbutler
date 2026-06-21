@@ -579,7 +579,7 @@ if (!nativeBinding) {
   throw new Error(`Failed to load native binding`)
 }
 
-const { absorb, absorptionPlan, apply, applyBranchIntegration, approveReview, assignHunk, branchCheckout, branchCheckoutNew, branchCreate, branchDetails, branchDiff, branchGatesRead, branchGatesUpdate, changesInWorktree, changesInWorktreeWithPerm, closeReview, commentReview, commitAmend, commitCreate, commitDetailsWithLineStats, commitDiscard, commitDiscardChanges, commitInsertBlank, commitMove, commitMoveChangesBetween, commitReword, commitSquash, commitUncommit, commitUncommitChanges, discardWorktreeChanges, forgeCompareBranchUrl, forgeInfo, forgeProvider, getInitialBranchIntegration, getRedoTargetSnapshot, getRepoInfo, getReview, getReviewBaseRepoUrl, getReviewMergeStatus, getUndoTargetSnapshot, governanceStatusRead, groupAddMember, groupCreate, groupDelete, groupGrant, groupList, groupRemoveMember, groupRevoke, headInfo, initApplicationNamespace, listAvailableReviewTemplates, listBranches, listCiChecks, listEditors, listProjectsStateless, listReviews, listReviewsForBranch, mergeReview, moveBranch, openInEditor, peelRestoreSnapshot, permGrant, permList, permRevoke, publishReview, pushStack, removeBranch, requestChangesReview, restoreSnapshotWithKind, reviewTemplate, setReviewAutoMerge, setReviewDraftiness, setReviewTemplate, tearOffBranch, treeChangeDiffs, unapplyStack, updateBranchName, updateReview, updateReviewFooters, warmCiChecksCache, workspaceBranchAndAncestorsPush, workspaceIntegrateUpstream, WatcherHandle, askpassInit, askpassSubmitPromptResponse, watcherStart } = nativeBinding
+const { absorb, absorptionPlan, apply, applyBranchIntegration, approveReview, assignHunk, branchCheckout, branchCheckoutNew, branchCreate, branchDetails, branchDiff, branchGatesRead, branchGatesUpdate, changesInWorktree, changesInWorktreeWithPerm, closeReview, commentReview, commitAmend, commitCreate, commitDetailsWithLineStats, commitDiscard, commitDiscardChanges, commitInsertBlank, commitMove, commitMoveChangesBetween, commitReword, commitSquash, commitUncommit, commitUncommitChanges, discardWorktreeChanges, forgeCompareBranchUrl, forgeInfo, forgeProvider, getInitialBranchIntegration, getRedoTargetSnapshot, getRepoInfo, getReview, getReviewBaseRepoUrl, getReviewMergeStatus, getUndoTargetSnapshot, governanceCommit, governancePending, governancePrincipalsList, governanceStatusRead, groupAddMember, groupCreate, groupDelete, groupGrant, groupList, groupRemoveMember, groupRevoke, headInfo, initApplicationNamespace, listAvailableReviewTemplates, listBranches, listCiChecks, listEditors, listProjectsStateless, listReviews, listReviewsForBranch, listWorkspaceRules, mergeReview, moveBranch, openInEditor, peelRestoreSnapshot, permGrant, permList, permRevoke, publishReview, pushStack, removeBranch, requestChangesReview, restoreSnapshotWithKind, reviewTemplate, setReviewAutoMerge, setReviewDraftiness, setReviewTemplate, tearOffBranch, treeChangeDiffs, unapplyStack, updateBranchName, updateReview, updateReviewFooters, warmCiChecksCache, workspaceBranchAndAncestorsPush, workspaceIntegrateUpstream, WatcherHandle, askpassInit, askpassSubmitPromptResponse, watcherStart } = nativeBinding
 export { absorb }
 export { absorptionPlan }
 export { apply }
@@ -620,6 +620,9 @@ export { getReview }
 export { getReviewBaseRepoUrl }
 export { getReviewMergeStatus }
 export { getUndoTargetSnapshot }
+export { governanceCommit }
+export { governancePending }
+export { governancePrincipalsList }
 export { governanceStatusRead }
 export { groupAddMember }
 export { groupCreate }
@@ -637,6 +640,7 @@ export { listEditors }
 export { listProjectsStateless }
 export { listReviews }
 export { listReviewsForBranch }
+export { listWorkspaceRules }
 export { mergeReview }
 export { moveBranch }
 export { openInEditor }

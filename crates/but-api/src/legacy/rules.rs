@@ -3,6 +3,7 @@ use std::str::FromStr;
 
 use anyhow::Result;
 use but_api_macros::but_api;
+use but_authz::{Authority, PrincipalId, load_governance_config};
 use but_core::ref_metadata::StackId;
 use but_ctx::Context;
 use but_rules::{
@@ -66,4 +67,81 @@ pub fn list_workspace_rules(ctx: &Context) -> Result<Vec<WorkspaceRule>> {
         .collect();
 
     Ok(rules)
+}
+
+#[instrument(err(Debug))]
+pub fn list_workspace_rules_scoped(
+    ctx: &Context,
+    principal_id: Option<&str>,
+) -> Result<Vec<WorkspaceRule>> {
+    let rules = list_workspace_rules(ctx)?;
+    let Some(principal_id) = principal_id else {
+        return Ok(rules);
+    };
+
+    Ok(rules
+        .into_iter()
+        .filter(|rule| rule.session_id().as_deref() == Some(principal_id))
+        .collect())
+}
+
+#[instrument(err(Debug))]
+pub fn list_workspace_rules_scoped_for_caller(
+    ctx: &Context,
+    principal_id: Option<&str>,
+) -> Result<Vec<WorkspaceRule>> {
+    let Some(principal_id) = principal_id else {
+        return list_workspace_rules_scoped(ctx, None);
+    };
+
+    let repo = ctx.repo.get()?;
+    let target_ref = ctx.project_meta()?.target_ref_or_err()?.to_string();
+    let config = load_governance_config(&repo, &target_ref)?;
+    let caller = but_authz::resolve_principal_from_env(&config)?;
+    let target = PrincipalId::new(principal_id);
+
+    if caller.id() != &target {
+        let held = but_authz::effective_authority(&caller, &config);
+        if !held.contains(Authority::AdministrationRead)
+            && !held.contains(Authority::AdministrationWrite)
+        {
+            return Ok(Vec::new());
+        }
+    }
+
+    list_workspace_rules_scoped(ctx, Some(principal_id))
+}
+
+#[cfg(all(feature = "napi", feature = "legacy"))]
+#[napi_derive::napi(ts_return_type = "Promise<Array<any>>", js_name = "listWorkspaceRules")]
+pub async fn list_workspace_rules_napi(
+    project_id: String,
+    principal_id: Option<String>,
+) -> napi::Result<serde_json::Value> {
+    tokio::task::spawn_blocking(move || {
+        let result = (|| -> anyhow::Result<serde_json::Value> {
+            let project_id: but_ctx::ProjectHandleOrLegacyProjectId = project_id.parse()?;
+            let ctx = Context::try_from(project_id)?.with_memory_app_cache();
+            let rules = list_workspace_rules_scoped_for_caller(&ctx, principal_id.as_deref())?;
+            Ok(serde_json::to_value(rules)?)
+        })();
+        result.map_err(napi_error)
+    })
+    .await
+    .map_err(|error| {
+        napi::Error::new(
+            napi::Status::GenericFailure,
+            format!("spawn_blocking join error: {error}"),
+        )
+    })?
+}
+
+#[cfg(all(feature = "napi", feature = "legacy"))]
+fn napi_error(error: anyhow::Error) -> napi::Error {
+    let context = but_error::AnyhowContextExt::custom_context_or_error_chain(&error);
+    let message = context
+        .message
+        .map(|message| message.to_string())
+        .unwrap_or_else(|| format!("{error:#}"));
+    napi::Error::new(napi::Status::GenericFailure, message)
 }
