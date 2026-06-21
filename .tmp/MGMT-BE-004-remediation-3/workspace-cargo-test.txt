@@ -223,12 +223,12 @@ test command::legacy::status::tui::tests::branch_picker_tests::goto_unassigned_c
 Usage: /Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-BE-004-implementation-1/target/debug/deps/but-30a5930787b47af6 [OPTIONS] [FILTERS...]
 
 Options:
-        --include-ignored 
+        --include-ignored
                         Run ignored and not ignored tests
         --ignored       Run only ignored tests
-        --force-run-in-process 
+        --force-run-in-process
                         Forces tests to run in-process when panic=abort
-        --exclude-should-panic 
+        --exclude-should-panic
                         Excludes tests marked as should_panic
         --test          Run tests and not benchmarks
         --bench         Run benchmarks instead of tests
