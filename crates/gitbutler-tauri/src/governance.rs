@@ -19,6 +19,16 @@ pub struct FleetOwnerIdentity {
     pub login: Option<String>,
 }
 
+impl FleetOwnerIdentity {
+    fn principal_handle(&self) -> String {
+        self.login
+            .as_ref()
+            .filter(|login| !login.is_empty())
+            .cloned()
+            .unwrap_or_else(|| format!("user:{}", self.user_id))
+    }
+}
+
 /// Source of the signed-in desktop user at the command boundary.
 pub trait DesktopSession: Send + Sync {
     /// Resolve the signed-in desktop user that acts as the v1 fleet-owner.
@@ -247,10 +257,14 @@ pub fn branch_gates_read_for_desktop_session(
     project_id: ProjectHandleOrLegacyProjectId,
     target_ref: String,
 ) -> Result<BranchGatesOutcome, json::Error> {
-    let (ctx, _owner) = fleet_owner_context(session, project_id, &target_ref)?;
+    let (ctx, owner) = fleet_owner_context(session, project_id, &target_ref)?;
     let repo = ctx.repo.get().map_err(json::Error::from)?;
-    but_api::legacy::governance::branch_gates_read_with_repo_as_fleet_owner(&repo, &target_ref)
-        .map_err(json::Error::from)
+    but_api::legacy::governance::branch_gates_read_with_repo_as_principal(
+        &repo,
+        &target_ref,
+        &owner.principal_handle(),
+    )
+    .map_err(json::Error::from)
 }
 
 /// Invoke `branch_gates_update` as the signed-in desktop fleet-owner.
@@ -261,11 +275,12 @@ pub fn branch_gates_update_for_desktop_session(
     branch: String,
     protection: BranchProtectionInput,
 ) -> Result<BranchGatesOutcome, json::Error> {
-    let (ctx, _owner) = fleet_owner_context(session, project_id, &target_ref)?;
+    let (ctx, owner) = fleet_owner_context(session, project_id, &target_ref)?;
     let repo = ctx.repo.get().map_err(json::Error::from)?;
-    but_api::legacy::governance::branch_gates_update_with_repo_as_fleet_owner(
+    but_api::legacy::governance::branch_gates_update_with_repo_as_principal(
         &repo,
         &target_ref,
+        &owner.principal_handle(),
         &branch,
         protection,
     )
