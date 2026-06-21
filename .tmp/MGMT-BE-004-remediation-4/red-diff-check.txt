@@ -1,0 +1,9 @@
+.tmp/MGMT-BE-004-remediation-3/but-api-branch-gates-tests.txt:99: new blank line at EOF.
+.tmp/MGMT-BE-004-remediation-3/green-but-server-roundtrip.txt:14: new blank line at EOF.
+.tmp/MGMT-BE-004-remediation-3/tauri-branch-gates-tests.txt:34: new blank line at EOF.
+.tmp/MGMT-BE-004-remediation-3/workspace-cargo-test.txt:226: trailing whitespace.
++        --include-ignored
+.tmp/MGMT-BE-004-remediation-3/workspace-cargo-test.txt:229: trailing whitespace.
++        --force-run-in-process
+.tmp/MGMT-BE-004-remediation-3/workspace-cargo-test.txt:231: trailing whitespace.
++        --exclude-should-panic
