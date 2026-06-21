@@ -40,7 +40,7 @@ pub mod env;
 pub mod governance;
 pub mod rules {
     pub mod tauri_list_workspace_rules {
-        use anyhow::{Context as _, anyhow};
+        use anyhow::Context as _;
         use but_api::json;
         use but_ctx::{Context, ProjectHandleOrLegacyProjectId};
 
@@ -52,27 +52,120 @@ pub mod rules {
             let ctx = Context::try_from(project_id)
                 .map(Context::with_memory_app_cache)
                 .map_err(json::Error::from)?;
-            let rules = if principal_id.is_some() && std::env::var_os("BUT_AGENT_HANDLE").is_none()
-            {
-                but_api::legacy::users::get_user()
-                    .map_err(json::Error::from)?
-                    .ok_or_else(|| {
-                        json::Error::from(anyhow!(
-                            "a signed-in desktop user is required to scope workspace rules"
-                        ))
-                    })?;
-                but_api::legacy::rules::list_workspace_rules_scoped(&ctx, principal_id.as_deref())
-            } else {
-                but_api::legacy::rules::list_workspace_rules_scoped_for_caller(
-                    &ctx,
-                    principal_id.as_deref(),
-                )
-            }
+            let rules = but_api::legacy::rules::list_workspace_rules_scoped_for_caller(
+                &ctx,
+                principal_id.as_deref(),
+            )
             .map_err(json::Error::from)?;
             serde_json::to_value(rules)
                 .context("serializing workspace rules")
                 .map_err(anyhow::Error::from)
                 .map_err(json::Error::from)
+        }
+
+        #[cfg(test)]
+        mod tests {
+            use anyhow::Context as _;
+            use serde_json::Value;
+
+            const TARGET_REF: &str = "refs/remotes/origin/main";
+
+            #[test]
+            #[serial_test::serial]
+            fn scoped_principal_requires_governed_caller_when_agent_handle_unset()
+            -> anyhow::Result<()> {
+                let (repo, _tmp) = rules_governance_repo();
+                context_with_target(&repo)?;
+
+                let project_id = project_id_for(&repo)?;
+                let error = temp_env::with_var("BUT_AGENT_HANDLE", None::<&str>, || {
+                    super::list_workspace_rules(project_id, Some("agent-B".to_owned()))
+                })
+                .expect_err(
+                    "scoped workspace rules command must fail closed without governed caller identity",
+                );
+                let error = serde_json::to_value(error)?;
+
+                assert_eq!(
+                    error.get("code"),
+                    Some(&Value::String("perm.denied".to_owned())),
+                    "unset BUT_AGENT_HANDLE must surface the governed-auth denial code at the Tauri command boundary"
+                );
+                assert!(
+                    error
+                        .get("message")
+                        .and_then(Value::as_str)
+                        .is_some_and(|message| message.contains("BUT_AGENT_HANDLE")),
+                    "scoped workspace rules denial should name the missing governed caller identity"
+                );
+
+                Ok(())
+            }
+
+            fn rules_governance_repo() -> (gix::Repository, tempfile::TempDir) {
+                let tmp = tempfile::TempDir::new()
+                    .unwrap_or_else(|error| panic!("creating temp repository failed: {error}"));
+                but_testsupport::invoke_bash_at_dir(
+                    r#"
+git init --initial-branch=main
+git config user.name "GitButler Test"
+git config user.email "gitbutler@example.com"
+mkdir -p .gitbutler
+cat >.gitbutler/permissions.toml <<'EOF'
+[[principal]]
+id = "agent-A"
+permissions = ["contents:read"]
+
+[[principal]]
+id = "agent-B"
+permissions = ["contents:read"]
+EOF
+
+cat >.gitbutler/gates.toml <<'EOF'
+[[branch]]
+name = "main"
+protected = true
+EOF
+
+git add .gitbutler/permissions.toml .gitbutler/gates.toml
+git commit -m "rules governance config"
+git update-ref refs/remotes/origin/main refs/heads/main
+"#,
+                    tmp.path(),
+                );
+                let repo = gix::open(tmp.path()).unwrap_or_else(|error| {
+                    panic!("opening {} failed: {error}", tmp.path().display())
+                });
+                (repo, tmp)
+            }
+
+            fn context_with_target(repo: &gix::Repository) -> anyhow::Result<but_ctx::Context> {
+                let ctx = but_ctx::Context::from_repo(repo.clone())?.with_memory_app_cache();
+                let mut project_meta = ctx.project_meta()?;
+                project_meta.target_ref = Some(TARGET_REF.try_into()?);
+                project_meta.target_commit_id = Some(ref_id(repo, TARGET_REF)?);
+                ctx.set_project_meta(project_meta)?;
+                Ok(ctx)
+            }
+
+            fn ref_id(repo: &gix::Repository, ref_name: &str) -> anyhow::Result<gix::ObjectId> {
+                let mut reference = repo
+                    .find_reference(ref_name)
+                    .with_context(|| format!("resolving target ref {ref_name}"))?;
+                Ok(reference
+                    .peel_to_commit()
+                    .with_context(|| format!("peeling {ref_name} to a commit"))?
+                    .id)
+            }
+
+            fn project_id_for(
+                repo: &gix::Repository,
+            ) -> anyhow::Result<but_ctx::ProjectHandleOrLegacyProjectId> {
+                let handle = but_ctx::ProjectHandle::from_path(repo.git_dir())?;
+                Ok(but_ctx::ProjectHandleOrLegacyProjectId::ProjectHandle(
+                    handle,
+                ))
+            }
         }
     }
 }
