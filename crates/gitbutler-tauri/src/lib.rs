@@ -59,7 +59,6 @@ pub mod rules {
             .map_err(json::Error::from)?;
             serde_json::to_value(rules)
                 .context("serializing workspace rules")
-                .map_err(anyhow::Error::from)
                 .map_err(json::Error::from)
         }
 
