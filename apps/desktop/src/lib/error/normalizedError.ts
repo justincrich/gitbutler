@@ -1,4 +1,3 @@
-import type { Code } from "@gitbutler/but-sdk";
 import type { ErrorEvent, EventHint } from "@sentry/sveltekit";
 
 /**
@@ -14,7 +13,8 @@ export type NormalizedError = {
 	origin?: "ipc" | "http" | "frontend" | "unknown";
 	name?: string;
 	message: string;
-	code?: Code;
+	code?: string;
+	remediation_hint?: string;
 	/**
 	 * Optional Sentry fingerprint. Carried through the plain-object hop in
 	 * `tauriBaseQuery` so `applyIpcFingerprint` can still find it after the
@@ -61,7 +61,8 @@ export function isNormalizedError(something: unknown): something is NormalizedEr
 	return (
 		typeof r.message === "string" &&
 		(r.name === undefined || typeof r.name === "string") &&
-		(r.code === undefined || typeof r.code === "string")
+		(r.code === undefined || typeof r.code === "string") &&
+		(r.remediation_hint === undefined || typeof r.remediation_hint === "string")
 	);
 }
 
@@ -81,7 +82,8 @@ export function isNormalizedError(something: unknown): something is NormalizedEr
 export class IpcError extends Error implements NormalizedError {
 	override readonly name: string;
 	override readonly message: string;
-	readonly code?: Code;
+	readonly code?: string;
+	readonly remediation_hint?: string;
 	readonly origin = "ipc" as const;
 	/**
 	 * Stable Sentry fingerprint, applied by `beforeSend` in
@@ -103,6 +105,7 @@ export class IpcError extends Error implements NormalizedError {
 		// shape callers used to see.
 		this.message = raw.message;
 		this.code = raw.code;
+		this.remediation_hint = raw.remediation_hint;
 		this.fingerprint = ["ipc", command, normalizeForFingerprint(raw.message)];
 	}
 }
@@ -117,6 +120,7 @@ export function normalizedErrorToException(error: {
 	name?: string;
 	message: string;
 	code?: string;
+	remediation_hint?: string;
 	fingerprint?: readonly string[];
 }): Error {
 	const err = new Error(error.message);
@@ -126,6 +130,9 @@ export function normalizedErrorToException(error: {
 	err.name = error.name || "Error";
 	if (error.code) {
 		(err as Error & { code?: string }).code = error.code;
+	}
+	if (error.remediation_hint) {
+		(err as Error & { remediation_hint?: string }).remediation_hint = error.remediation_hint;
 	}
 	if (error.fingerprint) {
 		// `applyIpcFingerprint` (Sentry `beforeSend`) reads from this field
