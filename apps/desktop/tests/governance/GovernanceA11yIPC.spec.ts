@@ -120,6 +120,7 @@ test("GovernanceWriteResultFailureBanner: structured SDK result keeps remediatio
 test("GovernanceSelfEscalationNoFlip: denied administration grant shows banner and leaves toggle off", async ({
 	mount,
 }) => {
+	const serviceCalls: ServiceCall[] = [];
 	const component = await mount(PrincipalEditor, {
 		props: {
 			projectId,
@@ -129,7 +130,7 @@ test("GovernanceSelfEscalationNoFlip: denied administration grant shows banner a
 			groupMemberships: [],
 			inheritedGrants: [],
 			isCurrentUser: true,
-			service: selfEscalationDeniedService(),
+			service: selfEscalationDeniedService(serviceCalls),
 		},
 	});
 
@@ -146,6 +147,13 @@ test("GovernanceSelfEscalationNoFlip: denied administration grant shows banner a
 	);
 	await expect(component.getByRole("button", { name: "Retry" })).toHaveCount(0);
 	await expect(adminToggle).not.toBeChecked();
+	await expect(component.getByTestId("principal-editor-save")).toBeDisabled();
+	expect(serviceCalls).toEqual([
+		{
+			name: "permGrant",
+			args: [projectId, targetRef, "settings-agent", "administration:write"],
+		},
+	]);
 });
 
 test("GovernanceReadOnlyA11y: missing administration:write explains and disables write controls", async ({
@@ -177,13 +185,24 @@ test("GovernanceReadOnlyA11y: missing administration:write explains and disables
 	await expect(component.getByTestId("governance-rules-control")).toBeDisabled();
 });
 
-function selfEscalationDeniedService(): PrincipalEditorService {
+type ServiceCall = {
+	name: keyof PrincipalEditorService;
+	args: string[];
+};
+
+function selfEscalationDeniedService(serviceCalls: ServiceCall[]): PrincipalEditorService {
 	return {
-		async permGrant(_projectId, _targetRef, _principal, authorities) {
+		async permGrant(projectId, targetRef, principal, authorities) {
+			serviceCalls.push({
+				name: "permGrant",
+				args: [projectId, targetRef, principal, ...authorities],
+			});
 			if (authorities.includes("administration:write")) {
-				throw Object.assign(new Error("You cannot modify your own administration grants"), {
+				return {
 					code: "perm.denied",
-				});
+					message: "You cannot modify your own administration grants",
+					remediation_hint: "Self-escalation is not permitted.",
+				};
 			}
 			return {
 				authorities,
