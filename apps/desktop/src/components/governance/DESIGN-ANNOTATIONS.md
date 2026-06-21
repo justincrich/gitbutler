@@ -276,13 +276,26 @@ Each empty state uses `EmptyStatePlaceholder` at
 `packages/ui/src/lib/components/EmptyStatePlaceholder.svelte`. The listed text is
 the slot contract for `title`, `caption`, and `actions`; actions render with
 `Button` at `packages/ui/src/lib/components/Button.svelte`.
+This section extends the Sprint 06a `DESIGN-MGMT-001` empty-state contract:
+`Principals` and `Groups` keep the entries from `DESIGN-MGMT-001` AC-3/TC-3 and
+are cited here by reference only. Sprint 06b adds the `Branch Gates` and `Rules`
+contracts below.
 
 | Tab | Empty state component and slots | Populated state component |
 |---|---|---|
-| Principals | `EmptyStatePlaceholder`; `title` slot `No principals configured`; `caption` slot `Grant a permission to register the first principal.`; `actions` slot `Button` label `Add first`. | `PrincipalsList` at `apps/desktop/src/components/governance/PrincipalsList.svelte` with rows built from `CardGroupRoot` and `CardGroupItem`. |
-| Groups | `EmptyStatePlaceholder`; `title` slot `No groups yet…`; `caption` slot `Create a group to share inherited permissions across principals.`; `actions` slot `Button` label `Create group`. | `GroupsList` at `apps/desktop/src/components/governance/GroupsList.svelte` using `ExpandableSection` for each group. |
-| Branch Gates | `EmptyStatePlaceholder`; `title` slot `No branch gates configured.`; `caption` slot `Add a protected branch rule before merges require review.`; `actions` slot `Button` label `Add gate`. | `BranchGatesList` at `apps/desktop/src/components/governance/BranchGatesList.svelte` using `ExpandableSection` for each branch. |
-| Rules | `EmptyStatePlaceholder`; `title` slot `No rules for this principal`; `caption` slot `Select a principal or create an automation rule for the selected principal.`; `actions` slot `Button` label `Create rule`. | `RulesList` at `apps/desktop/src/components/rules/RulesList.svelte` with optional `principalId`, plus `Rule`, `RuleEditor`, `RuleFiltersEditor`, and `NewRuleMenu`. |
+| Principals | See `DESIGN-MGMT-001` AC-3/TC-3 for the existing `EmptyStatePlaceholder` `title`, `caption`, and `actions` slot contract. Do not duplicate or override it in Sprint 06b. | `PrincipalsList` at `apps/desktop/src/components/governance/PrincipalsList.svelte` with rows built from `CardGroupRoot` and `CardGroupItem`. |
+| Groups | See `DESIGN-MGMT-001` AC-3/TC-3 for the existing `EmptyStatePlaceholder` `title`, `caption`, and `actions` slot contract. Do not duplicate or override it in Sprint 06b. | `GroupsList` at `apps/desktop/src/components/governance/GroupsList.svelte` using `ExpandableSection` for each group. |
+| Branch Gates | When the SDK returns an empty gates array, render `EmptyStatePlaceholder` with `title` slot `No branch gates configured.`, `caption` slot `Branch gates control which branches require merge review and approval requirements before merging.`, and an `actions` slot containing a primary `Button` labeled `+ Add` that opens the add-gate flow. Pass `disabled=true` to this `Button` when `isReadOnly=true`. | `BranchGatesList` at `apps/desktop/src/components/governance/BranchGatesList.svelte` using `ExpandableSection` for each branch. |
+| Rules | Two sub-cases: when no principal is selected, render `EmptyStatePlaceholder` with `title` slot `Select a principal to view their rules`, no primary action button, and no custom action slot; when a principal is selected but that principal has no rules, defer to the existing `RulesList` built-in empty state. The `RulesList` empty state is owned by `apps/desktop/src/components/rules/RulesList.svelte` and must not be overridden by the governance tab wrapper. | `RulesList` at `apps/desktop/src/components/rules/RulesList.svelte` with optional `principalId`, plus `Rule`, `RuleEditor`, `RuleFiltersEditor`, and `NewRuleMenu`. |
+
+Empty-state read-only treatment is action-only. Every primary action `Button`
+inside an empty state receives `disabled=true` when `isReadOnly=true`, derived in
+`GovernanceSettings.svelte` per `DESIGN-MGMT-003`. The
+`EmptyStatePlaceholder` remains visible in read-only mode; do not hide the
+placeholder or replace it with a read-only-specific layout. Empty-state visual
+attributes come from `EmptyStatePlaceholder`, `Button`, and their existing
+component stylesheets; this section introduces no new color, spacing, or
+typography tokens.
 
 ## Cross-Cutting Visual States
 
