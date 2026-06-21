@@ -29,6 +29,75 @@ use tokio::sync::Mutex;
 use tower::ServiceBuilder;
 use tower_http::cors::{self, CorsLayer};
 
+type SyncCommandHandler = fn(serde_json::Value) -> anyhow::Result<serde_json::Value>;
+
+const GOVERNANCE_COMMAND_ROUTES: &[(&str, SyncCommandHandler)] = &[
+    (
+        "/perm_list",
+        legacy::governance::perm_list_cmd as SyncCommandHandler,
+    ),
+    (
+        "/perm_grant",
+        legacy::governance::perm_grant_cmd as SyncCommandHandler,
+    ),
+    (
+        "/perm_revoke",
+        legacy::governance::perm_revoke_cmd as SyncCommandHandler,
+    ),
+    (
+        "/group_create",
+        legacy::governance::group_create_cmd as SyncCommandHandler,
+    ),
+    (
+        "/group_grant",
+        legacy::governance::group_grant_cmd as SyncCommandHandler,
+    ),
+    (
+        "/group_revoke",
+        legacy::governance::group_revoke_cmd as SyncCommandHandler,
+    ),
+    (
+        "/group_add_member",
+        legacy::governance::group_add_member_cmd as SyncCommandHandler,
+    ),
+    (
+        "/group_remove_member",
+        legacy::governance::group_remove_member_cmd as SyncCommandHandler,
+    ),
+    (
+        "/group_delete",
+        legacy::governance::group_delete_cmd as SyncCommandHandler,
+    ),
+    (
+        "/group_list",
+        legacy::governance::group_list_cmd as SyncCommandHandler,
+    ),
+    (
+        "/branch_gates_read",
+        legacy::governance::branch_gates_read_cmd as SyncCommandHandler,
+    ),
+    (
+        "/branch_gates_update",
+        legacy::governance::branch_gates_update_cmd as SyncCommandHandler,
+    ),
+    (
+        "/governance_status_read",
+        legacy::governance::governance_status_read_cmd as SyncCommandHandler,
+    ),
+    (
+        "/governance_principals_list",
+        legacy::governance::governance_principals_list_cmd as SyncCommandHandler,
+    ),
+    (
+        "/governance_pending",
+        legacy::governance::governance_pending_cmd as SyncCommandHandler,
+    ),
+    (
+        "/governance_commit",
+        legacy::governance::governance_commit_cmd as SyncCommandHandler,
+    ),
+];
+
 #[cfg(feature = "irc")]
 mod irc;
 #[cfg(feature = "irc")]
@@ -97,6 +166,17 @@ where
         let res = f(params).await;
         cmd_result_to_json(res)
     })
+}
+
+fn add_governance_routes<S>(router: Router<S>) -> Router<S>
+where
+    S: Clone + Send + Sync + 'static,
+{
+    GOVERNANCE_COMMAND_ROUTES
+        .iter()
+        .fold(router, |router, (path, handler)| {
+            router.route(path, but_post(*handler))
+        })
 }
 
 fn server_capabilities(_params: serde_json::Value) -> anyhow::Result<serde_json::Value> {
@@ -578,6 +658,8 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
         "/show_graph_svg",
         but_post(legacy::workspace::show_graph_svg_cmd),
     );
+
+    let app = add_governance_routes(app);
 
     let app = app
         .route(
@@ -1545,5 +1627,35 @@ mod tests {
 
         // Empty
         assert!(!is_localhost_host(b""));
+    }
+
+    #[test]
+    fn governance_routes_cover_web_command_surface() {
+        let routes = GOVERNANCE_COMMAND_ROUTES
+            .iter()
+            .map(|(route, _handler)| *route)
+            .collect::<Vec<_>>();
+        assert_eq!(
+            routes,
+            vec![
+                "/perm_list",
+                "/perm_grant",
+                "/perm_revoke",
+                "/group_create",
+                "/group_grant",
+                "/group_revoke",
+                "/group_add_member",
+                "/group_remove_member",
+                "/group_delete",
+                "/group_list",
+                "/branch_gates_read",
+                "/branch_gates_update",
+                "/governance_status_read",
+                "/governance_principals_list",
+                "/governance_pending",
+                "/governance_commit",
+            ],
+            "but-server governance route table must cover every web governance command"
+        );
     }
 }
