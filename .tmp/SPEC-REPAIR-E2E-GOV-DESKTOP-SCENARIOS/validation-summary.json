@@ -1,0 +1,22 @@
+{
+  "E2E-GOV-101": {
+    "returncode": 0,
+    "contract": ".tmp/SPEC-REPAIR-E2E-GOV-DESKTOP-SCENARIOS/E2E-GOV-101-contract.json",
+    "output": ".tmp/SPEC-REPAIR-E2E-GOV-DESKTOP-SCENARIOS/E2E-GOV-101-validate.out.json"
+  },
+  "E2E-GOV-102": {
+    "returncode": 0,
+    "contract": ".tmp/SPEC-REPAIR-E2E-GOV-DESKTOP-SCENARIOS/E2E-GOV-102-contract.json",
+    "output": ".tmp/SPEC-REPAIR-E2E-GOV-DESKTOP-SCENARIOS/E2E-GOV-102-validate.out.json"
+  },
+  "E2E-GOV-103": {
+    "returncode": 0,
+    "contract": ".tmp/SPEC-REPAIR-E2E-GOV-DESKTOP-SCENARIOS/E2E-GOV-103-contract.json",
+    "output": ".tmp/SPEC-REPAIR-E2E-GOV-DESKTOP-SCENARIOS/E2E-GOV-103-validate.out.json"
+  },
+  "E2E-GOV-104": {
+    "returncode": 0,
+    "contract": ".tmp/SPEC-REPAIR-E2E-GOV-DESKTOP-SCENARIOS/E2E-GOV-104-contract.json",
+    "output": ".tmp/SPEC-REPAIR-E2E-GOV-DESKTOP-SCENARIOS/E2E-GOV-104-validate.out.json"
+  }
+}
