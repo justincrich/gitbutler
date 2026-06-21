@@ -8,6 +8,12 @@ type GateResult = {
 	stderr: string;
 };
 
+type SourceLine = {
+	filePath: string;
+	lineNumber: number;
+	text: string;
+};
+
 function findRepoRoot(startPath: string): string {
 	let currentPath = startPath;
 
@@ -38,14 +44,18 @@ function walkFiles(targetPath: string): string[] {
 	});
 }
 
-function readScopedLines(relativePaths: string[]): string[] {
+function readScopedLines(relativePaths: string[]): SourceLine[] {
 	return relativePaths.flatMap((relativePath) =>
 		fs.existsSync(path.join(repoRoot, relativePath))
 			? walkFiles(path.join(repoRoot, relativePath)).flatMap((filePath) =>
 					fs
 						.readFileSync(filePath, "utf8")
 						.split(/\r?\n/)
-						.map((line, index) => `${path.relative(repoRoot, filePath)}:${index + 1}:${line}`),
+						.map((line, index) => ({
+							filePath: path.relative(repoRoot, filePath),
+							lineNumber: index + 1,
+							text: line,
+						})),
 				)
 			: [],
 	);
@@ -79,17 +89,63 @@ function runGateCommand(command: string, args: string[]): GateResult {
 	return { stdout: result.stdout, stderr: result.stderr };
 }
 
+function formatSourceLine(line: SourceLine): string {
+	return `${line.filePath}:${line.lineNumber}:${line.text}`;
+}
+
+function isCommentOnlyLine(line: SourceLine): boolean {
+	const text = line.text.trim();
+	return (
+		text.startsWith("//") ||
+		text.startsWith("/*") ||
+		text.startsWith("*") ||
+		text.startsWith("<!--")
+	);
+}
+
+function findDirectGovernanceWrites(lines: SourceLine[]): string[] {
+	const directWritePattern =
+		/@tauri-apps\/plugin-fs|\bplugin-fs\b|\bwriteFile\s*\(|\bwriteTextFile\s*\(|\bwriteBinaryFile\s*\(|\bfs\s*\.\s*write\b/;
+	const gitbutlerConfigWriteCallPattern =
+		/\b(write|save|persist|commit|update|mutate|create|delete)[A-Za-z0-9_]*\s*\(/i;
+
+	return lines
+		.filter((line) => {
+			if (isCommentOnlyLine(line)) return false;
+			if (directWritePattern.test(line.text)) return true;
+			if (/\.gitbutler\/.*\.toml|gitbutler.*\.toml/i.test(line.text)) {
+				return gitbutlerConfigWriteCallPattern.test(line.text);
+			}
+			return false;
+		})
+		.map(formatSourceLine);
+}
+
+function extractRustFunctionBody(source: string, functionName: string): string {
+	const declaration = `pub fn ${functionName}`;
+	const declarationIndex = source.indexOf(declaration);
+	if (declarationIndex < 0) throw new Error(`Missing Rust function ${functionName}`);
+
+	const bodyStart = source.indexOf("{", declarationIndex);
+	if (bodyStart < 0) throw new Error(`Missing body for Rust function ${functionName}`);
+
+	let depth = 0;
+	for (let index = bodyStart; index < source.length; index++) {
+		const char = source[index];
+		if (char === "{") depth += 1;
+		if (char === "}") depth -= 1;
+		if (depth === 0) return source.slice(bodyStart, index + 1);
+	}
+
+	throw new Error(`Unterminated Rust function ${functionName}`);
+}
+
 test.describe("governance build gates", () => {
 	test.describe.configure({ mode: "serial" });
 	test.setTimeout(180_000);
 
 	test("blocks direct governance file writes from governed desktop components", () => {
-		const prohibitedPattern =
-			/gitbutler.*\.toml|writeFile|fs\.write|writeTextFile|writeBinaryFile|plugin-fs/;
-		const ignoredPattern = /but-sdk|import|\/\/|warn|error|log/;
-		const prohibitedLines = readScopedLines(governanceComponentPaths).filter(
-			(line) => prohibitedPattern.test(line) && !ignoredPattern.test(line),
-		);
+		const prohibitedLines = findDirectGovernanceWrites(readScopedLines(governanceComponentPaths));
 
 		expect(prohibitedLines).toEqual([]);
 	});
@@ -105,24 +161,32 @@ test.describe("governance build gates", () => {
 	});
 
 	test("keeps governance Tauri command wiring on the fleet-owner identity shim", () => {
-		const tauriLines = readScopedLines(["crates/gitbutler-tauri/src"]);
-		const governanceCommandPattern = /governance|perm_|group_|branch_gates/i;
-		const commentPattern = /\/\//;
-		const fleetOwnerLines = tauriLines.filter(
-			(line) =>
-				/fleet_owner|with_fleet_owner_identity|UserService|forge_session/.test(line) &&
-				governanceCommandPattern.test(line) &&
-				!commentPattern.test(line),
+		const governanceSource = fs.readFileSync(
+			path.join(repoRoot, "crates/gitbutler-tauri/src/governance.rs"),
+			"utf8",
 		);
-		const envPrincipalLines = tauriLines.filter(
-			(line) =>
-				line.includes("resolve_principal_from_env") &&
-				governanceCommandPattern.test(line) &&
-				!commentPattern.test(line),
+		const desktopWriteFunctions = [
+			"perm_grant_for_desktop_session",
+			"perm_revoke_for_desktop_session",
+			"group_create_for_desktop_session",
+			"group_grant_for_desktop_session",
+			"group_revoke_for_desktop_session",
+			"group_add_member_for_desktop_session",
+			"group_remove_member_for_desktop_session",
+			"group_delete_for_desktop_session",
+			"branch_gates_read_for_desktop_session",
+			"branch_gates_update_for_desktop_session",
+			"governance_commit_for_desktop_session",
+		];
+		const functionsWithoutFleetOwnerContext = desktopWriteFunctions.filter(
+			(functionName) =>
+				!extractRustFunctionBody(governanceSource, functionName)
+					.split(/\r?\n/)
+					.some((line) => !line.trim().startsWith("//") && line.includes("fleet_owner_context(")),
 		);
 
-		expect(fleetOwnerLines.length).toBeGreaterThan(0);
-		expect(envPrincipalLines).toEqual([]);
+		expect(governanceSource).not.toContain("resolve_principal_from_env");
+		expect(functionsWithoutFleetOwnerContext).toEqual([]);
 	});
 
 	test("does not add a governance-specific error boundary component", () => {
@@ -130,9 +194,9 @@ test.describe("governance build gates", () => {
 	});
 
 	test("blocks direct Tauri fs imports from governed desktop components", () => {
-		const fsImportLines = readScopedLines(governanceComponentPaths).filter((line) =>
-			line.includes("@tauri-apps/plugin-fs"),
-		);
+		const fsImportLines = readScopedLines(governanceComponentPaths)
+			.filter((line) => line.text.includes("@tauri-apps/plugin-fs"))
+			.map(formatSourceLine);
 
 		expect(fsImportLines).toEqual([]);
 	});
