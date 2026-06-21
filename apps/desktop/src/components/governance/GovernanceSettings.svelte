@@ -1,6 +1,7 @@
 <script lang="ts">
 	import GroupsList from "$components/governance/GroupsList.svelte";
 	import PrincipalsList from "$components/governance/PrincipalsList.svelte";
+	import RulesList from "$components/rules/RulesList.svelte";
 	import TabContent from "$components/shared/TabContent.svelte";
 	import TabList from "$components/shared/TabList.svelte";
 	import Tabs from "$components/shared/Tabs.svelte";
@@ -12,7 +13,7 @@
 	} from "$lib/governance";
 	import { createGovernancePendingStore } from "$lib/governance/pendingStore.svelte";
 	import { injectOptional } from "@gitbutler/core/context";
-	import { InfoMessage } from "@gitbutler/ui";
+	import { EmptyStatePlaceholder, InfoMessage } from "@gitbutler/ui";
 	import { untrack } from "svelte";
 	import type { GroupListEntry } from "@gitbutler/but-sdk";
 
@@ -22,6 +23,7 @@
 		service?: GovernanceRendererContract;
 		initialGroups?: GroupListEntry[];
 		initialPendingGroups?: string[];
+		rulesPrincipalId?: string;
 	};
 
 	const {
@@ -30,6 +32,7 @@
 		service: providedService,
 		initialGroups,
 		initialPendingGroups = [],
+		rulesPrincipalId,
 	}: Props = $props();
 
 	const backend = injectOptional(BACKEND, undefined);
@@ -170,16 +173,22 @@
 		</TabContent>
 
 		<TabContent value="rules">
-			<section class="governance-panel" data-testid="governance-rules-panel">
+			<section
+				class="governance-panel governance-panel--rules"
+				data-testid="governance-rules-panel"
+			>
 				<h3>Rules</h3>
-				<button
-					type="button"
-					class="governance-button"
-					disabled={isReadOnly}
-					data-testid="governance-rules-control"
-				>
-					Add rule
-				</button>
+				{#if rulesPrincipalId}
+					<div class="governance-rules-list" data-testid="governance-rules-list">
+						<RulesList {projectId} principalId={rulesPrincipalId} />
+					</div>
+				{:else}
+					<div data-testid="governance-rules-no-principal">
+						<EmptyStatePlaceholder gap={12} topBottomPadding={24}>
+							{#snippet title()}Select a principal to view their rules{/snippet}
+						</EmptyStatePlaceholder>
+					</div>
+				{/if}
 			</section>
 		</TabContent>
 	</Tabs>
@@ -264,7 +273,12 @@
 	}
 
 	.governance-panel--principals,
-	.governance-panel--groups {
+	.governance-panel--groups,
+	.governance-panel--rules {
 		flex-direction: column;
+	}
+
+	.governance-rules-list {
+		width: 100%;
 	}
 </style>

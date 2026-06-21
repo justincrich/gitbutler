@@ -32,6 +32,10 @@ export default class RulesService {
 		return this.backendApi.endpoints.listWorkspaceRules.useQuery({ projectId });
 	}
 
+	principalRules(projectId: string, principalId: string) {
+		return this.backendApi.endpoints.listWorkspaceRules.useQuery({ projectId, principalId });
+	}
+
 	async fetchListWorkspaceRules(projectId: string) {
 		return await this.backendApi.endpoints.listWorkspaceRules.fetch(
 			{ projectId },
