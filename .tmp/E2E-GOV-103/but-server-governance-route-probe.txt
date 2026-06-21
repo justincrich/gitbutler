@@ -1,0 +1,6 @@
+$ curl -sS -X POST http://127.0.0.1:7792/perm_grant -H content-type:application/json -d {}
+{"type":"error","subject":{"code":"Unknown","message":"Command perm_grant not found!"}}
+$ curl -sS -X POST http://127.0.0.1:7792/group_grant -H content-type:application/json -d {}
+{"type":"error","subject":{"code":"Unknown","message":"Command group_grant not found!"}}
+$ curl -sS -X POST http://127.0.0.1:7792/governance_principals_list -H content-type:application/json -d {}
+{"type":"error","subject":{"code":"Unknown","message":"Command governance_principals_list not found!"}}

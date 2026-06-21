@@ -1,0 +1,7 @@
+$ rg -n "governance_status_read|governance_pending|governance_principals_list|governance_commit|perm_grant|group_grant" crates/but-server/src/lib.rs
+rg_exit=1
+
+$ rg -n "route\(\"/\{command\}\"|Command \{command\} not found" crates/but-server/src/lib.rs
+980:        .route("/{command}", post(post_handle_command_with_path))
+1465:        _ => Err(anyhow::anyhow!("Command {command} not found!")),
+rg_exit=0

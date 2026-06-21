@@ -1,0 +1,4 @@
+$ curl -sS -X POST http://127.0.0.1:7791/governance_status_read -H content-type:application/json -d {}
+{"type":"error","subject":{"code":"Unknown","message":"Command governance_status_read not found!"}}
+$ curl -sS -X POST http://127.0.0.1:7791/governance_pending -H content-type:application/json -d {}
+{"type":"error","subject":{"code":"Unknown","message":"Command governance_pending not found!"}}
