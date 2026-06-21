@@ -1,6 +1,17 @@
-import { getButlerPort, openWorkspace as openWorkspaceFromSetup } from "./setup.ts";
-import { clickByTestId } from "./util.ts";
-import { expect, type Locator, type Page } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
+
+export const ADMIN_HANDLE = "admin";
+export const NONADMIN_HANDLE = "dev";
+export const GOVERNANCE_TARGET_REF = "refs/heads/master";
+export const GOVERNANCE_PROTECTED_BRANCH = "master";
+export const GOVERNANCE_ADMIN_GROUP = "maintainers";
+export const GOVERNANCE_NONADMIN_GROUP = "code-reviewers";
+export const GOVERNANCE_ADMIN_AUTHORITIES = ["administration:write", "merge"] as const;
+export const GOVERNANCE_NONADMIN_AUTHORITIES = ["contents:write"] as const;
+export const GOVERNANCE_BRANCH_GATE = {
+	name: GOVERNANCE_PROTECTED_BRANCH,
+	protected: true,
+} as const;
 
 type TestUserRole = "admin" | "member";
 
@@ -77,8 +88,24 @@ const usersByRole: Record<TestUserRole, TestUser> = {
 	},
 };
 
+async function getButlerPort(): Promise<number> {
+	const setup = await import("./setup.ts");
+	return setup.getButlerPort();
+}
+
+async function openWorkspaceFromSetup(page: Page): Promise<void> {
+	const setup = await import("./setup.ts");
+	await setup.openWorkspace(page);
+}
+
+async function playwrightExpect() {
+	const { expect } = await import("@playwright/test");
+	return expect;
+}
+
 export async function seedSignedInUser(role: TestUserRole): Promise<void> {
-	const response = await fetch(`http://localhost:${getButlerPort()}/set_user`, {
+	const port = await getButlerPort();
+	const response = await fetch(`http://localhost:${port}/set_user`, {
 		method: "POST",
 		headers: { "content-type": "application/json" },
 		body: JSON.stringify({ user: usersByRole[role] }),
@@ -95,6 +122,10 @@ export async function seedSignedInUser(role: TestUserRole): Promise<void> {
 }
 
 export async function openProjectSettings(page: Page): Promise<void> {
+	const [{ clickByTestId }, expect] = await Promise.all([
+		import("./util.ts"),
+		playwrightExpect(),
+	]);
 	await clickByTestId(page, "chrome-sidebar-project-settings-button");
 	await expect(page.getByTestId("project-settings-modal")).toBeVisible();
 }
@@ -104,6 +135,7 @@ export function projectSettingsSidebar(page: Page): Locator {
 }
 
 export async function openPermissionsGovernanceSettings(page: Page): Promise<void> {
+	const expect = await playwrightExpect();
 	await projectSettingsSidebar(page)
 		.getByRole("button", { name: "Permissions & Governance", exact: true })
 		.click();
@@ -126,6 +158,7 @@ export async function openGovernanceTab(page: Page, name: string): Promise<void>
 }
 
 export async function openPrincipalEditor(page: Page, principalId: string): Promise<Locator> {
+	const expect = await playwrightExpect();
 	await page.getByTestId(`principals-list-row-${governanceSlug(principalId)}`).click();
 	const editor = page.getByTestId("principal-editor");
 	await expect(editor).toBeVisible();
@@ -133,6 +166,7 @@ export async function openPrincipalEditor(page: Page, principalId: string): Prom
 }
 
 export async function openGroup(page: Page, groupName: string): Promise<Locator> {
+	const expect = await playwrightExpect();
 	const group = page.getByTestId(`groups-list-row-${governanceSlug(groupName)}`);
 	await expect(group).toBeVisible();
 	await group.click();
@@ -140,6 +174,7 @@ export async function openGroup(page: Page, groupName: string): Promise<Locator>
 }
 
 export async function stagePrincipalReviewsGrant(page: Page): Promise<void> {
+	const expect = await playwrightExpect();
 	const editor = await openPrincipalEditor(page, "test-principal");
 	await expect(editor.getByTestId("principal-editor-toggle-contents-write")).toBeDisabled();
 	await editor.getByTestId("principal-editor-toggle-reviews-write").check();
@@ -149,6 +184,7 @@ export async function stagePrincipalReviewsGrant(page: Page): Promise<void> {
 }
 
 export async function stageGroupReviewsGrant(page: Page): Promise<void> {
+	const expect = await playwrightExpect();
 	await openGovernanceTab(page, "Groups");
 	const group = await openGroup(page, "test-group");
 	const toggle = group.getByTestId("groups-list-toggle-test-group-reviews-write");
@@ -165,7 +201,9 @@ export async function expectActionBlocked(action: () => Promise<unknown>): Promi
 	} catch {
 		blocked = true;
 	}
-	expect(blocked).toBe(true);
+	if (!blocked) {
+		throw new Error("Expected action to be blocked");
+	}
 }
 
 export function currentProjectId(page: Page): string {
@@ -177,8 +215,9 @@ export function currentProjectId(page: Page): string {
 }
 
 export async function readGovernancePending(page: Page): Promise<GovernancePendingResponse> {
+	const port = await getButlerPort();
 	const response = await page.request.post(
-		`http://localhost:${getButlerPort()}/governance_pending`,
+		`http://localhost:${port}/governance_pending`,
 		{
 			data: {
 				projectId: currentProjectId(page),
@@ -204,18 +243,26 @@ export function expectPendingGrant(
 	authority: string,
 ): void {
 	const principal = pending.principals.find((entry) => entry.id === principalId);
-	expect(principal, `pending principal ${principalId} should exist`).toBeTruthy();
-	expect(principal?.committedEffective).not.toContain(authority);
-	expect(principal?.workingEffective).toContain(authority);
-	expect(principal?.tokens).toContainEqual(
-		expect.objectContaining({
-			authority,
-			committed: false,
-			working: true,
-			pending: true,
-			change: "grant",
-		}),
+	if (!principal) {
+		throw new Error(`pending principal ${principalId} should exist`);
+	}
+	if (principal.committedEffective.includes(authority)) {
+		throw new Error(`${principalId} must not have committed ${authority}`);
+	}
+	if (!principal.workingEffective.includes(authority)) {
+		throw new Error(`${principalId} must have working ${authority}`);
+	}
+	const hasGrantToken = principal.tokens.some(
+		(token) =>
+			token.authority === authority &&
+			!token.committed &&
+			token.working &&
+			token.pending &&
+			token.change === "grant",
 	);
+	if (!hasGrantToken) {
+		throw new Error(`${principalId} must have a pending grant token for ${authority}`);
+	}
 }
 
 const governanceWriteCommands = [
