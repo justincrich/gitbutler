@@ -69,6 +69,115 @@ The tab strip is one shared tab set, not four independent screens.
 
 Tab order is fixed: `principals`, `groups`, `branch-gates`, `rules`.
 
+## Four-Tab Accessibility Contract
+
+This section extends the `Tab IA Contract` above for Sprint 06b. It does not
+change the component choice: the implementation vehicle remains the shared
+`Tabs` composition at `apps/desktop/src/components/shared/Tabs.svelte`,
+`TabList.svelte`, `TabTrigger.svelte`, and `TabContent.svelte`. The contract
+follows the WAI-ARIA Tabs pattern with automatic activation: the active tab is
+the selected tab, Arrow focus changes activate the destination tab immediately,
+and exactly one associated `TabContent` panel is rendered.
+
+### Aria Attribute Specification
+
+The `TabList` wrapper for this governance tab set has:
+
+- `role="tablist"`
+- `aria-label="Governance configuration tabs"`
+
+Every `TabTrigger` has:
+
+- `role="tab"`
+- `id="{tab-id}"`
+- `aria-selected="true"` when active and `aria-selected="false"` otherwise
+- `aria-controls="{panel-id}"`
+
+Every `TabContent` has:
+
+- `role="tabpanel"`
+- `id="{panel-id}"`
+- `aria-labelledby="{tab-id}"`
+
+The stable id pairs are, in canonical order:
+
+| Order | TabTrigger value | TabTrigger `id` | TabContent `id` |
+|---|---|---|---|
+| 1 | `principals` | `principals` | `principals-panel` |
+| 2 | `groups` | `groups` | `groups-panel` |
+| 3 | `branch-gates` | `branch-gates` | `branch-gates-panel` |
+| 4 | `rules` | `rules` | `rules-panel` |
+
+The `aria-controls` value on each trigger is the matching panel id from this
+table, and the `aria-labelledby` value on each panel is the matching trigger id
+from this table. These IDs are static strings, not generated per render.
+
+### Keyboard Navigation Contract
+
+Keyboard interaction uses the WAI-ARIA automatic-activation model for a
+horizontal tab list:
+
+1. `Tab` from outside the tablist moves focus to the currently active
+   `TabTrigger`, not to the first tab unless `principals` is already active.
+2. `Arrow Left` moves focus to the previous `TabTrigger` in the fixed order and
+   wraps from `principals` to `rules`; the newly focused tab becomes active,
+   sets `aria-selected="true"`, and renders its panel.
+3. `Arrow Right` moves focus to the next `TabTrigger` in the fixed order and
+   wraps from `rules` to `principals`; the newly focused tab becomes active,
+   sets `aria-selected="true"`, and renders its panel.
+4. `Enter` or `Space` activates the focused `TabTrigger` if it is not already
+   active, sets `aria-selected="true"`, and renders the associated panel.
+5. `Tab` from within a `TabContent` panel follows normal document tab order and
+   leaves the tabpanel for the next focusable element; it does not return focus
+   to the tablist.
+
+The roving tabindex rule is: only the currently active `TabTrigger` is in the
+page tab sequence with `tabindex="0"`; all inactive triggers use
+`tabindex="-1"`. Arrow keys, not repeated Tab presses, move focus among the four
+triggers inside the tablist.
+
+### Focus-Visible Treatment
+
+The active-focus `TabTrigger` must show a visible `:focus-visible` indicator.
+If the shared Tabs component delegates to the browser's native
+`:focus-visible` outline, keep that native outline. If the component needs an
+explicit replacement, use the existing project focus treatment such as
+`var(--focus-outline)` only if that variable is already present in the design
+tokens. Do not introduce a new focus token, do not add a governance-specific
+focus ring, and do not suppress focus with `outline: none` unless an equivalent
+visible replacement is applied.
+
+### Shared Tabs Component Audit Note
+
+Audit source:
+
+- `apps/desktop/src/components/shared/Tabs.svelte` provides the shared context
+  and wrapper only.
+- `apps/desktop/src/components/shared/TabList.svelte` currently renders the list
+  wrapper without `role="tablist"` and without an `aria-label` prop.
+- `apps/desktop/src/components/shared/TabTrigger.svelte` currently sets
+  `role="tab"` and `aria-selected`, but does not set `aria-controls`, does not
+  implement Arrow Left/Right navigation, and does not expose the complete
+  roving-tabindex behavior required above.
+- `apps/desktop/src/components/shared/TabContent.svelte` currently renders the
+  active panel without `role="tabpanel"`, `id`, or `aria-labelledby`.
+
+Concrete action item for the sveltekit implementer: augment the shared Tabs
+family so `TabList` accepts and applies `aria-label="Governance configuration
+tabs"` with `role="tablist"`, `TabTrigger` applies `role="tab"`,
+`aria-selected`, `aria-controls`, stable `id`, roving tabindex, and Arrow
+Left/Right plus Enter/Space activation, and `TabContent` applies
+`role="tabpanel"`, stable `id`, and `aria-labelledby`.
+
+### Token Constraint
+
+The a11y layer introduces no colors, spacing values, typography values, or
+design-system variables. Visual treatment for keyboard focus either uses the
+browser's native `:focus-visible` outline or an existing project focus token
+already present in the design system. It must not add hex color literals and
+must not add accessibility-prefixed, management-prefixed, or other
+governance-specific tokens.
+
 ## Pending-State Visual Contract
 
 Pending state is visual-only. It indicates that governed configuration has been
