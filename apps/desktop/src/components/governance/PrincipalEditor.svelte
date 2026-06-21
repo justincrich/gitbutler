@@ -216,17 +216,32 @@
 		return found?.[0] ?? "read";
 	}
 
-	function setAuthority(authority: string, checked: boolean) {
-		saveError = undefined;
-		retryFailedWrite = undefined;
+	async function denySelfEscalationThroughService(authority: string) {
+		isSaving = true;
 
-		if (isCurrentUser && authority === "administration:write" && checked) {
+		try {
+			assertWriteSucceeded(await service.permGrant(projectId, targetRef, principalId, [authority]));
+			assertServiceAllowed();
 			saveError = {
 				code: "perm.denied",
 				message: "You cannot modify your own administration grants",
 				remediationHint: "Self-escalation is not permitted.",
 				canRetry: false,
 			};
+		} catch (error) {
+			saveError = writeDenial(error, false);
+		} finally {
+			isSaving = false;
+			resetStaged();
+		}
+	}
+
+	function setAuthority(authority: string, checked: boolean) {
+		saveError = undefined;
+		retryFailedWrite = undefined;
+
+		if (isCurrentUser && authority === "administration:write" && checked) {
+			void denySelfEscalationThroughService(authority);
 			return;
 		}
 
