@@ -246,6 +246,71 @@ fn branch_gates_read_returns_committed_set_with_pending_signal() -> anyhow::Resu
 
 #[test]
 #[serial_test::serial]
+fn branch_gates_read_includes_pending_worktree_only_branch() -> anyhow::Result<()> {
+    let (repo, _tmp) = branch_gates_contract_base();
+
+    let update = temp_env::with_var("BUT_AGENT_HANDLE", Some("admin"), || {
+        branch_gates_update_with_repo(
+            &repo,
+            MAIN_REF,
+            "feature/x",
+            BranchProtectionInput {
+                protected: true,
+                min_approvals: Some(1),
+                require_distinct_from_author: Some(false),
+                require_approval_from_group: Some(vec!["maintainers".to_owned()]),
+            },
+        )
+    })?;
+    let updated_feature = branch(&update, "feature/x");
+    assert!(
+        updated_feature.protected,
+        "update outcome must include the new protected branch"
+    );
+    assert!(
+        updated_feature.pending,
+        "new branch gate must be pending until committed to the target ref"
+    );
+
+    let read = temp_env::with_var("BUT_AGENT_HANDLE", Some("admin"), || {
+        branch_gates_read_with_repo(&repo, MAIN_REF)
+    })?;
+    let read_feature = branch(&read, "feature/x");
+    assert!(
+        read_feature.protected,
+        "read outcome must include the new protected branch"
+    );
+    assert_eq!(
+        read_feature.min_approvals, 1,
+        "read outcome must expose the working-tree review requirement for new branches"
+    );
+    assert_eq!(
+        read_feature.require_approval_from_group,
+        vec!["maintainers"],
+        "read outcome must expose the working-tree approval groups for new branches"
+    );
+    assert!(
+        read_feature.pending,
+        "working-tree-only branch gates must be reported as pending"
+    );
+    let main = branch(&read, "main");
+    assert_eq!(
+        main.min_approvals, 2,
+        "read outcome must keep committed target-ref values for existing branches"
+    );
+    assert!(
+        !main.pending,
+        "unchanged committed branches must not be marked pending because another branch was added"
+    );
+    println!(
+        "AC-5b seeded: feature_pending={}; feature_min={}; main_min={}; main_pending={}",
+        read_feature.pending, read_feature.min_approvals, main.min_approvals, main.pending
+    );
+    Ok(())
+}
+
+#[test]
+#[serial_test::serial]
 fn branch_gates_update_sets_distinct_and_required_groups() -> anyhow::Result<()> {
     let (repo, _tmp) = branch_gates_contract_base();
 

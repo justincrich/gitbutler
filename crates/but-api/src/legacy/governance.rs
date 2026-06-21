@@ -1924,12 +1924,21 @@ fn branch_gates_outcome_from_committed(
     committed: &GatesFile,
     working: &GatesFile,
 ) -> BranchGatesOutcome {
-    BranchGatesOutcome {
-        branches: committed
+    let mut branches = committed
+        .branch
+        .iter()
+        .map(|branch| branch_gate_entry(branch, committed.gate_for(&branch.name), working))
+        .collect::<Vec<_>>();
+    branches.extend(
+        working
             .branch
             .iter()
-            .map(|branch| branch_gate_entry(branch, committed.gate_for(&branch.name), working))
-            .collect(),
+            .filter(|branch| committed.branch_for(&branch.name).is_none())
+            .map(|branch| branch_gate_entry(branch, working.gate_for(&branch.name), committed)),
+    );
+
+    BranchGatesOutcome {
+        branches,
         caveat: REF_PIN_CAVEAT,
     }
 }
