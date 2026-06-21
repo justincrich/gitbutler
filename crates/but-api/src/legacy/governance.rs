@@ -189,7 +189,7 @@ pub struct BranchGatesOutcome {
 pub struct GovernancePending {
     /// Per-principal effective authority comparison.
     pub principals: Vec<GovernancePendingPrincipal>,
-    /// Number of authority tokens that differ between committed and working-tree config.
+    /// Number of governance changes between committed and working-tree config.
     pub pending_count: usize,
 }
 
@@ -760,7 +760,9 @@ pub fn governance_pending_with_repo(
 ) -> anyhow::Result<GovernancePending> {
     let committed = load_governance_config(repo, target_ref)?;
     let working = load_worktree_governance_config(repo)?;
-    Ok(pending_diff(&committed, &working))
+    let mut pending = pending_diff(&committed, &working);
+    pending.pending_count += pending_gates_file_count(repo, target_ref)?;
+    Ok(pending)
 }
 
 /// Return all governance principals needed by the renderer.
@@ -868,6 +870,12 @@ fn pending_diff(committed: &GovConfig, working: &GovConfig) -> GovernancePending
         principals,
         pending_count,
     }
+}
+
+fn pending_gates_file_count(repo: &gix::Repository, target_ref: &str) -> anyhow::Result<usize> {
+    let committed = read_committed_gates(repo, target_ref)?;
+    let working = read_worktree_governance_file(repo, gates_path())?;
+    Ok(usize::from(committed.as_bytes() != working.as_slice()))
 }
 
 #[derive(Debug, Clone)]
