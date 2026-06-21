@@ -22,18 +22,58 @@ test("GovernanceTabsA11y: tablist is labelled and supports roving keyboard activ
 
 	const principalsTab = component.getByRole("tab", { name: "Principals" });
 	const groupsTab = component.getByRole("tab", { name: "Groups" });
+	const branchGatesTab = component.getByRole("tab", { name: "Branch Gates" });
+	const rulesTab = component.getByRole("tab", { name: "Rules" });
 
 	await page.keyboard.press("Tab");
 	await expect(principalsTab).toBeFocused();
 	await expect(principalsTab).toHaveAttribute("aria-selected", "true");
+	await expect(principalsTab).toHaveAttribute("tabindex", "0");
 
 	await page.keyboard.press("ArrowRight");
 	await expect(groupsTab).toBeFocused();
+	await expect(groupsTab).toHaveAttribute("aria-selected", "true");
+	await expect(groupsTab).toHaveAttribute("tabindex", "0");
+	await expect(principalsTab).toHaveAttribute("aria-selected", "false");
+	await expect(principalsTab).toHaveAttribute("tabindex", "-1");
+	await expect(component.getByTestId("governance-groups-panel")).toBeVisible();
+
+	await page.keyboard.press("ArrowRight");
+	await expect(branchGatesTab).toBeFocused();
+	await expect(branchGatesTab).toHaveAttribute("aria-selected", "true");
+	await expect(groupsTab).toHaveAttribute("aria-selected", "false");
+	await expect(component.getByTestId("governance-branch-gates-panel")).toBeVisible();
+
+	await page.keyboard.press("ArrowRight");
+	await expect(rulesTab).toBeFocused();
+	await expect(rulesTab).toHaveAttribute("aria-selected", "true");
+	await expect(branchGatesTab).toHaveAttribute("aria-selected", "false");
+	await expect(component.getByTestId("governance-rules-panel")).toBeVisible();
+
+	await page.keyboard.press("Home");
+	await expect(principalsTab).toBeFocused();
+	await expect(principalsTab).toHaveAttribute("aria-selected", "true");
+	await expect(rulesTab).toHaveAttribute("aria-selected", "false");
+	await expect(component.getByTestId("governance-principals-panel")).toBeVisible();
+
+	await groupsTab.evaluate((tab) => {
+		(tab as HTMLButtonElement).disabled = true;
+	});
+
+	await page.keyboard.press("ArrowRight");
+	await expect(branchGatesTab).toBeFocused();
+	await expect(branchGatesTab).toHaveAttribute("aria-selected", "true");
 	await expect(groupsTab).toHaveAttribute("aria-selected", "false");
 
-	await page.keyboard.press("Enter");
-	await expect(groupsTab).toHaveAttribute("aria-selected", "true");
-	await expect(component.getByTestId("governance-groups-panel")).toBeVisible();
+	await page.keyboard.press("End");
+	await expect(rulesTab).toBeFocused();
+	await expect(rulesTab).toHaveAttribute("aria-selected", "true");
+	await expect(branchGatesTab).toHaveAttribute("aria-selected", "false");
+
+	await page.keyboard.press("ArrowLeft");
+	await expect(branchGatesTab).toBeFocused();
+	await expect(branchGatesTab).toHaveAttribute("aria-selected", "true");
+	await expect(rulesTab).toHaveAttribute("aria-selected", "false");
 });
 
 test("GovernanceIPCFailureBanner: structured write denial renders danger InfoMessage with Retry", async ({
