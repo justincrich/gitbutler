@@ -292,12 +292,15 @@ pub fn governance_principals_list_for_project(
 }
 
 /// Commit pending governance config files to the target ref.
-pub fn governance_commit_for_project(
+pub fn governance_commit_for_desktop_session(
+    session: &dyn DesktopSession,
     project_id: ProjectHandleOrLegacyProjectId,
     target_ref: String,
 ) -> Result<GovernanceCommitOutcome, json::Error> {
-    let ctx = context_for_project(project_id, &target_ref).map_err(json::Error::from)?;
-    but_api::legacy::governance::governance_commit(&ctx, target_ref).map_err(json::Error::from)
+    let (ctx, _owner) = fleet_owner_context(session, project_id, &target_ref)?;
+    let repo = ctx.repo.get().map_err(json::Error::from)?;
+    but_api::legacy::governance::governance_commit_with_repo_as_fleet_owner(&repo, &target_ref)
+        .map_err(json::Error::from)
 }
 
 fn context_for_project(
@@ -400,15 +403,22 @@ pub mod tauri_governance_principals_list {
 
 /// Tauri command wrapper for committing pending governance config.
 pub mod tauri_governance_commit {
-    use super::{GovernanceCommitOutcome, ProjectHandleOrLegacyProjectId, json};
+    use super::{
+        DesktopSessionState, GovernanceCommitOutcome, ProjectHandleOrLegacyProjectId, json,
+    };
 
-    /// Commit pending governance config files to the target ref.
+    /// Commit pending governance config files as the signed-in desktop fleet-owner.
     #[tauri::command]
     pub fn governance_commit(
+        desktop_session: tauri::State<'_, DesktopSessionState>,
         project_id: ProjectHandleOrLegacyProjectId,
         target_ref: String,
     ) -> Result<GovernanceCommitOutcome, json::Error> {
-        super::governance_commit_for_project(project_id, target_ref)
+        super::governance_commit_for_desktop_session(
+            desktop_session.session(),
+            project_id,
+            target_ref,
+        )
     }
 }
 

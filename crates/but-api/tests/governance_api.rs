@@ -254,7 +254,9 @@ protected = true
     )?;
     write_worktree_file(&repo, "unrelated.txt", "must not be included")?;
 
-    let outcome = governance_commit(&ctx, TARGET_REF.to_owned())?;
+    let outcome = temp_env::with_var("BUT_AGENT_HANDLE", Some("admin"), || {
+        governance_commit(&ctx, TARGET_REF.to_owned())
+    })?;
 
     assert_eq!(
         outcome.message, "chore: update governance config",
@@ -277,6 +279,59 @@ protected = true
         committed_blob(&repo, "unrelated.txt").is_err(),
         "unrelated worktree files must not be included in the governance commit"
     );
+    Ok(())
+}
+
+#[test]
+#[serial_test::serial]
+fn governance_api_commit_requires_admin_write_and_leaves_target_inert() -> anyhow::Result<()> {
+    for (case, handle) in [
+        ("non-admin", Some("rust-implementer")),
+        ("unset handle", None::<&str>),
+    ] {
+        let (repo, _tmp) = governance_api_repo();
+        let ctx = context_for(&repo)?;
+        let target_before = ref_id(&repo, TARGET_REF)?;
+        let committed_before = committed_blob(&repo, PERMISSIONS_PATH)?;
+        let permissions = worktree_permissions(&repo)?.replace(
+            r#"permissions = ["contents:write"]"#,
+            r#"permissions = ["contents:write", "administration:write"]"#,
+        );
+        write_worktree_file(&repo, PERMISSIONS_PATH, &permissions)?;
+        let worktree_before = worktree_permissions_bytes(&repo)?;
+
+        let result = temp_env::with_var("BUT_AGENT_HANDLE", handle, || {
+            governance_commit(&ctx, TARGET_REF.to_owned())
+        });
+        let error = match result {
+            Ok(outcome) => anyhow::bail!(
+                "{case} governance_commit must be denied, got commit {:?}",
+                outcome.commit_id
+            ),
+            Err(error) => error,
+        };
+        let error = json_error_value(error)?;
+        assert_eq!(
+            error.get("code").and_then(Value::as_str),
+            Some("perm.denied"),
+            "{case} governance_commit must serialize as perm.denied: {error:?}"
+        );
+        assert_eq!(
+            ref_id(&repo, TARGET_REF)?,
+            target_before,
+            "{case} governance_commit denial must leave target ref unmoved"
+        );
+        assert_eq!(
+            committed_blob(&repo, PERMISSIONS_PATH)?,
+            committed_before,
+            "{case} governance_commit denial must not commit pending governance bytes"
+        );
+        assert_eq!(
+            worktree_permissions_bytes(&repo)?,
+            worktree_before,
+            "{case} governance_commit denial must leave worktree governance bytes intact"
+        );
+    }
     Ok(())
 }
 

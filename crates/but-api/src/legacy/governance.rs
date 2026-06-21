@@ -596,6 +596,23 @@ pub fn governance_commit_with_repo(
     repo: &gix::Repository,
     target_ref: &str,
 ) -> anyhow::Result<GovernanceCommitOutcome> {
+    enforce_administration_write_gate(repo, target_ref)?;
+    governance_commit_authorized(repo, target_ref)
+}
+
+/// Commit governance config files after the desktop fleet-owner boundary has
+/// asserted unconditional administration-write authority.
+pub fn governance_commit_with_repo_as_fleet_owner(
+    repo: &gix::Repository,
+    target_ref: &str,
+) -> anyhow::Result<GovernanceCommitOutcome> {
+    governance_commit_authorized(repo, target_ref)
+}
+
+fn governance_commit_authorized(
+    repo: &gix::Repository,
+    target_ref: &str,
+) -> anyhow::Result<GovernanceCommitOutcome> {
     load_worktree_governance_config(repo)?;
     let parent_id = ref_id(repo, target_ref)?;
     let parent = repo.find_commit(parent_id)?;
