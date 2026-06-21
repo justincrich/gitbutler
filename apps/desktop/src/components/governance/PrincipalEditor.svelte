@@ -9,6 +9,7 @@
 	export type PrincipalEditorWriteFailure = {
 		code: string;
 		message?: string;
+		remediation_hint?: string;
 	};
 
 	export type PrincipalEditorWriteResult<T> = T | PrincipalEditorWriteFailure;
@@ -69,6 +70,22 @@
 		label: string;
 	};
 
+	type WriteDenial = {
+		code: string;
+		message: string;
+		remediationHint?: string;
+		canRetry: boolean;
+	};
+
+	type WriteSet = {
+		ownGrants: string[];
+		groups: string[];
+		grantsToAdd: string[];
+		grantsToRemove: string[];
+		groupsToAdd: string[];
+		groupsToRemove: string[];
+	};
+
 	const permissionRows: PermissionRow[] = [
 		{ authority: "contents:read", label: "Read contents" },
 		{ authority: "contents:write", label: "Write contents" },
@@ -112,8 +129,11 @@
 	let committedGroups = $state([...initialGroups]);
 	let stagedGroups = $state([...initialGroups]);
 	let selectedPreset = $state(untrack(() => resolvePreset(initialOwnGrants)));
-	let saveError = $state<string | undefined>();
+	let saveError = $state<WriteDenial | undefined>();
+	let retryFailedWrite = $state<(() => Promise<void>) | undefined>();
 	let isSaving = $state(false);
+	const isWriteLocked = $derived(Boolean(saveError?.canRetry));
+	const controlsDisabled = $derived(isReadOnly || isSaving || isWriteLocked);
 	const hasStagedChanges = $derived(
 		!sameMembers(committedOwnGrants, stagedOwnGrants) ||
 			!sameMembers(committedGroups, stagedGroups),
@@ -198,6 +218,16 @@
 
 	function setAuthority(authority: string, checked: boolean) {
 		saveError = undefined;
+		retryFailedWrite = undefined;
+
+		if (isCurrentUser && authority === "administration:write" && checked) {
+			saveError = {
+				code: "perm.denied",
+				message: "You cannot modify your own administration grants",
+				canRetry: false,
+			};
+			return;
+		}
 
 		if (checked) {
 			stagedOwnGrants = uniqueSorted([...stagedOwnGrants, authority]);
@@ -210,6 +240,7 @@
 
 	function applyPreset(preset: string) {
 		saveError = undefined;
+		retryFailedWrite = undefined;
 		selectedPreset = preset;
 
 		const inheritedAuthorities = new Set(inheritedGrants.map((grant) => grant.authority));
@@ -227,6 +258,7 @@
 
 	function setGroups(tags: Tag[]) {
 		saveError = undefined;
+		retryFailedWrite = undefined;
 		const allowedGroups = availableGroups.length > 0 ? new Set(availableGroups) : undefined;
 		stagedGroups = uniqueSorted(
 			tags
@@ -241,18 +273,61 @@
 		selectedPreset = resolvePreset(stagedOwnGrants);
 	}
 
-	function errorCode(error: unknown): string {
+	function parseStructuredError(value: string): WriteDenial | undefined {
+		try {
+			const parsed: unknown = JSON.parse(value);
+			if (typeof parsed !== "object" || parsed === null || !("code" in parsed)) return undefined;
+
+			const code = (parsed as { code: unknown }).code;
+			if (typeof code !== "string") return undefined;
+
+			const message = (parsed as { message?: unknown }).message;
+			const remediationHint = (parsed as { remediation_hint?: unknown }).remediation_hint;
+
+			return {
+				code,
+				message: typeof message === "string" ? message : code,
+				remediationHint: typeof remediationHint === "string" ? remediationHint : undefined,
+				canRetry: true,
+			};
+		} catch {
+			return undefined;
+		}
+	}
+
+	function writeDenial(error: unknown, canRetry: boolean): WriteDenial {
 		if (error instanceof Error && error.message) {
 			const candidate = error as Error & { code?: unknown };
-			return typeof candidate.code === "string" ? candidate.code : error.message;
+			const structured = parseStructuredError(error.message);
+			if (structured) return { ...structured, canRetry };
+
+			return {
+				code: typeof candidate.code === "string" ? candidate.code : "governance.write_failed",
+				message: error.message,
+				canRetry,
+			};
 		}
 
 		if (typeof error === "object" && error !== null && "code" in error) {
 			const code = (error as { code: unknown }).code;
-			if (typeof code === "string") return code;
+			if (typeof code === "string") {
+				const message = (error as { message?: unknown }).message;
+				const remediationHint = (error as { remediation_hint?: unknown }).remediation_hint;
+
+				return {
+					code,
+					message: typeof message === "string" ? message : code,
+					remediationHint: typeof remediationHint === "string" ? remediationHint : undefined,
+					canRetry,
+				};
+			}
 		}
 
-		return "governance.write_failed";
+		return {
+			code: "governance.write_failed",
+			message: "The requested governance write failed.",
+			canRetry,
+		};
 	}
 
 	function isWriteFailure(result: unknown): result is PrincipalEditorWriteFailure {
@@ -276,55 +351,76 @@
 		throw Object.assign(new Error(service.deniedCode), { code: service.deniedCode });
 	}
 
-	async function save() {
-		if (isSaving || !hasStagedChanges || isReadOnly) return;
+	function createWriteSet(): WriteSet {
+		return {
+			ownGrants: [...stagedOwnGrants],
+			groups: [...stagedGroups],
+			grantsToAdd: difference(stagedOwnGrants, committedOwnGrants),
+			grantsToRemove: difference(committedOwnGrants, stagedOwnGrants),
+			groupsToAdd: difference(stagedGroups, committedGroups),
+			groupsToRemove: difference(committedGroups, stagedGroups),
+		};
+	}
 
+	async function applyWriteSet(writeSet: WriteSet) {
+		if (writeSet.grantsToAdd.length > 0) {
+			assertWriteSucceeded(
+				await service.permGrant(projectId, targetRef, principalId, writeSet.grantsToAdd),
+			);
+			assertServiceAllowed();
+		}
+
+		if (writeSet.grantsToRemove.length > 0) {
+			assertWriteSucceeded(
+				await service.permRevoke(projectId, targetRef, principalId, writeSet.grantsToRemove),
+			);
+			assertServiceAllowed();
+		}
+
+		for (const group of writeSet.groupsToAdd) {
+			assertWriteSucceeded(await service.groupAddMember(projectId, targetRef, group, principalId));
+			assertServiceAllowed();
+		}
+
+		for (const group of writeSet.groupsToRemove) {
+			assertWriteSucceeded(
+				await service.groupRemoveMember(projectId, targetRef, group, principalId),
+			);
+			assertServiceAllowed();
+		}
+
+		committedOwnGrants = [...writeSet.ownGrants];
+		stagedOwnGrants = [...writeSet.ownGrants];
+		committedGroups = [...writeSet.groups];
+		stagedGroups = [...writeSet.groups];
+		selectedPreset = resolvePreset(stagedOwnGrants);
+		onSaved?.();
+	}
+
+	async function runWriteSet(writeSet: WriteSet) {
 		isSaving = true;
 		saveError = undefined;
 
-		const grantsToAdd = difference(stagedOwnGrants, committedOwnGrants);
-		const grantsToRemove = difference(committedOwnGrants, stagedOwnGrants);
-		const groupsToAdd = difference(stagedGroups, committedGroups);
-		const groupsToRemove = difference(committedGroups, stagedGroups);
-
 		try {
-			if (grantsToAdd.length > 0) {
-				assertWriteSucceeded(
-					await service.permGrant(projectId, targetRef, principalId, grantsToAdd),
-				);
-				assertServiceAllowed();
-			}
-
-			if (grantsToRemove.length > 0) {
-				assertWriteSucceeded(
-					await service.permRevoke(projectId, targetRef, principalId, grantsToRemove),
-				);
-				assertServiceAllowed();
-			}
-
-			for (const group of groupsToAdd) {
-				assertWriteSucceeded(
-					await service.groupAddMember(projectId, targetRef, group, principalId),
-				);
-				assertServiceAllowed();
-			}
-
-			for (const group of groupsToRemove) {
-				assertWriteSucceeded(
-					await service.groupRemoveMember(projectId, targetRef, group, principalId),
-				);
-				assertServiceAllowed();
-			}
-
-			committedOwnGrants = [...stagedOwnGrants];
-			committedGroups = [...stagedGroups];
-			onSaved?.();
+			await applyWriteSet(writeSet);
+			retryFailedWrite = undefined;
 		} catch (error) {
-			saveError = errorCode(error);
+			retryFailedWrite = () => runWriteSet(writeSet);
+			saveError = writeDenial(error, true);
 			resetStaged();
 		} finally {
 			isSaving = false;
 		}
+	}
+
+	function save() {
+		if (isSaving || !hasStagedChanges || isReadOnly || isWriteLocked) return;
+
+		void runWriteSet(createWriteSet());
+	}
+
+	function retryWrite() {
+		void retryFailedWrite?.();
 	}
 </script>
 
@@ -340,20 +436,29 @@
 	</header>
 
 	{#if saveError}
+		{@const denial = saveError}
 		<InfoMessage testId="principal-editor-denial" style="danger" outlined>
-			{#snippet title()}{saveError}{/snippet}
-			{#snippet content()}The requested governance write was denied and staged changes were reset.{/snippet}
+			{#snippet title()}{denial.code}{/snippet}
+			{#snippet content()}
+				{denial.message}
+				{#if denial.remediationHint}
+					{denial.remediationHint}
+				{/if}
+				{#if denial.canRetry}
+					<button class="principal-editor__retry" type="button" onclick={retryWrite}>Retry</button>
+				{/if}
+			{/snippet}
 		</InfoMessage>
 	{/if}
 
 	<div class="principal-editor__section">
 		<span class="principal-editor__label">Preset</span>
 		<SegmentControl selected={selectedPreset} onselect={applyPreset}>
-			<SegmentControl.Item id="read" disabled={isReadOnly}>Read</SegmentControl.Item>
-			<SegmentControl.Item id="triage" disabled={isReadOnly}>Triage</SegmentControl.Item>
-			<SegmentControl.Item id="write" disabled={isReadOnly}>Write</SegmentControl.Item>
-			<SegmentControl.Item id="maintain" disabled={isReadOnly}>Maintain</SegmentControl.Item>
-			<SegmentControl.Item id="admin" disabled={isReadOnly}>Admin</SegmentControl.Item>
+			<SegmentControl.Item id="read" disabled={controlsDisabled}>Read</SegmentControl.Item>
+			<SegmentControl.Item id="triage" disabled={controlsDisabled}>Triage</SegmentControl.Item>
+			<SegmentControl.Item id="write" disabled={controlsDisabled}>Write</SegmentControl.Item>
+			<SegmentControl.Item id="maintain" disabled={controlsDisabled}>Maintain</SegmentControl.Item>
+			<SegmentControl.Item id="admin" disabled={controlsDisabled}>Admin</SegmentControl.Item>
 		</SegmentControl>
 	</div>
 
@@ -378,11 +483,11 @@
 					{:else if includes(committedOwnGrants, row.authority) !== includes(stagedOwnGrants, row.authority)}
 						<Badge style="warning" kind="soft" size="icon">o</Badge>
 					{/if}
-					{#key `${row.authority}-${isChecked}-${isReadOnly || isInherited}`}
+					{#key `${row.authority}-${isChecked}-${controlsDisabled || isInherited}-${saveError?.message ?? ""}`}
 						<Toggle
 							testId={`principal-editor-toggle-${slug(row.authority)}`}
 							checked={isChecked}
-							disabled={isReadOnly || isInherited}
+							disabled={controlsDisabled || isInherited}
 							onchange={(checked) => setAuthority(row.authority, checked)}
 						/>
 					{/key}
@@ -403,7 +508,7 @@
 			testId="principal-editor-groups"
 			label="Groups"
 			tags={groupTags}
-			readonly={isReadOnly}
+			readonly={controlsDisabled}
 			placeholder="Add group"
 			onTagsChange={setGroups}
 			wide
@@ -417,7 +522,7 @@
 		<Button
 			testId="principal-editor-save"
 			style="pop"
-			disabled={!hasStagedChanges || isReadOnly || isSaving}
+			disabled={!hasStagedChanges || controlsDisabled}
 			loading={isSaving}
 			onclick={save}
 		>
@@ -504,5 +609,17 @@
 		display: flex;
 		justify-content: flex-end;
 		gap: var(--clr-space-6);
+	}
+
+	.principal-editor__retry {
+		display: inline-flex;
+		margin-left: var(--clr-space-6);
+		padding: var(--clr-space-2) var(--clr-space-6);
+		border: 1px solid currentColor;
+		border-radius: var(--radius-s);
+		background: transparent;
+		color: inherit;
+		font: inherit;
+		cursor: pointer;
 	}
 </style>

@@ -114,7 +114,7 @@
 	{/if}
 
 	<Tabs defaultSelected="principals">
-		<TabList>
+		<TabList ariaLabel="Governance sections">
 			<TabTrigger value="principals">Principals</TabTrigger>
 			<TabTrigger value="groups">Groups</TabTrigger>
 			<TabTrigger value="branch-gates">Branch Gates</TabTrigger>
