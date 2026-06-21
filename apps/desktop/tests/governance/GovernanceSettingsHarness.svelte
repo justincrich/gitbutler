@@ -1,5 +1,6 @@
 <script lang="ts">
 	import GovernanceSettings from "$components/governance/GovernanceSettings.svelte";
+	import { IpcError } from "$lib/error/normalizedError";
 	import { untrack } from "svelte";
 	import type {
 		GovernanceAccess,
@@ -17,6 +18,7 @@
 		pendingCount: number;
 		pendingCountAfterCommit?: number;
 		hasAdminWrite?: boolean;
+		readFailure?: boolean;
 		role?: UserRole;
 		principals?: PrincipalListEntry[];
 		pendingGroups?: string[];
@@ -26,6 +28,7 @@
 		pendingCount,
 		pendingCountAfterCommit = 0,
 		hasAdminWrite = true,
+		readFailure = false,
 		role = "member",
 		pendingGroups = [],
 		principals = [
@@ -41,6 +44,7 @@
 
 	let currentPendingCount = $state(untrack(() => pendingCount));
 	let commitCount = $state(0);
+	let readPendingCount = $state(0);
 	let lastCommitMessage = $state("");
 	let currentPendingGroups = $state(untrack(() => [...pendingGroups]));
 
@@ -53,6 +57,17 @@
 
 	const service: GovernanceRendererContract = {
 		async readPending(_target: GovernanceTarget) {
+			readPendingCount += 1;
+			if (readFailure) {
+				throw new IpcError(
+					{
+						code: "network.error",
+						message: "Backend unreachable",
+						remediation_hint: "Check the desktop backend connection and retry.",
+					},
+					"governance_status_read",
+				);
+			}
 			return pending();
 		},
 		async readPrincipals(_target: GovernanceTarget): Promise<GovernancePrincipalsList> {
@@ -99,4 +114,5 @@
 
 <output data-testid="governance-user-role">{role}</output>
 <output data-testid="governance-commit-count">{commitCount}</output>
+<output data-testid="governance-read-pending-count">{readPendingCount}</output>
 <output data-testid="governance-commit-message">{lastCommitMessage}</output>

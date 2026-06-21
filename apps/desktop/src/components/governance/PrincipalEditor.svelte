@@ -224,6 +224,7 @@
 			saveError = {
 				code: "perm.denied",
 				message: "You cannot modify your own administration grants",
+				remediationHint: "Self-escalation is not permitted.",
 				canRetry: false,
 			};
 			return;

@@ -185,8 +185,22 @@
 	</Tabs>
 
 	{#if pendingStore?.error}
-		<InfoMessage style="danger" error={pendingStore.error}>
-			{#snippet title()}Governance settings failed{/snippet}
+		{@const readFailure = pendingStore.error}
+		<InfoMessage testId="governance-read-failure" style="danger" outlined>
+			{#snippet title()}{readFailure.code}{/snippet}
+			{#snippet content()}
+				{readFailure.message}
+				{#if readFailure.remediationHint}
+					{readFailure.remediationHint}
+				{/if}
+				<button
+					class="governance-button governance-button--retry"
+					type="button"
+					onclick={refreshGovernance}
+				>
+					Retry
+				</button>
+			{/snippet}
 		</InfoMessage>
 	{/if}
 </section>
@@ -229,6 +243,10 @@
 		border-color: var(--clr-theme-pop-element);
 		background: var(--clr-theme-pop-element);
 		color: var(--clr-white);
+	}
+
+	.governance-button--retry {
+		margin-left: var(--clr-space-6);
 	}
 
 	.governance-button:disabled {
