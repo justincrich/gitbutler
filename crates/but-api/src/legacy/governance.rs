@@ -541,24 +541,23 @@ pub fn branch_gates_read_with_repo(
 ) -> anyhow::Result<BranchGatesOutcome> {
     let config = load_governance_config(repo, target_ref)?;
     let caller = but_authz::resolve_principal_from_env(&config)?;
-    let held = but_authz::effective_authority(&caller, &config);
-    if !held.contains(Authority::AdministrationRead)
-        && !held.contains(Authority::AdministrationWrite)
-    {
-        return Err(Denial::missing_permission(Authority::AdministrationRead, &held).into());
-    }
+    enforce_branch_gates_read_authority(&config, caller.id())?;
 
     let committed = read_committed_gates_file(repo, target_ref)?;
     let working = read_worktree_gates(repo)?;
     Ok(branch_gates_outcome_from_committed(&committed, &working))
 }
 
-/// Read branch gates after the desktop fleet-owner boundary has asserted
-/// unconditional administration-read authority.
-pub fn branch_gates_read_with_repo_as_fleet_owner(
+/// Read branch gates for a principal resolved by the desktop command boundary.
+pub fn branch_gates_read_with_repo_as_principal(
     repo: &gix::Repository,
     target_ref: &str,
+    principal: &str,
 ) -> anyhow::Result<BranchGatesOutcome> {
+    let config = load_governance_config(repo, target_ref)?;
+    let principal = PrincipalId::new(principal);
+    enforce_branch_gates_read_authority(&config, &principal)?;
+
     let committed = read_committed_gates_file(repo, target_ref)?;
     let working = read_worktree_gates(repo)?;
     Ok(branch_gates_outcome_from_committed(&committed, &working))
@@ -575,15 +574,45 @@ pub fn branch_gates_update_with_repo(
     branch_gates_update_authorized(repo, target_ref, branch, protection)
 }
 
-/// Update one branch gate entry after the desktop fleet-owner boundary has
-/// asserted unconditional administration-write authority.
-pub fn branch_gates_update_with_repo_as_fleet_owner(
+/// Update one branch gate entry for a principal resolved by the desktop command boundary.
+pub fn branch_gates_update_with_repo_as_principal(
     repo: &gix::Repository,
     target_ref: &str,
+    principal: &str,
     branch: &str,
     protection: BranchProtectionInput,
 ) -> anyhow::Result<BranchGatesOutcome> {
+    let config = load_governance_config(repo, target_ref)?;
+    let principal = PrincipalId::new(principal);
+    let held = effective_authority_for_principal(&config, &principal)?;
+    if !held.contains(Authority::AdministrationWrite) {
+        return Err(Denial::missing_permission(Authority::AdministrationWrite, &held).into());
+    }
+
     branch_gates_update_authorized(repo, target_ref, branch, protection)
+}
+
+fn enforce_branch_gates_read_authority(
+    config: &GovConfig,
+    principal: &PrincipalId,
+) -> anyhow::Result<()> {
+    let held = effective_authority_for_principal(config, principal)?;
+    if held.contains(Authority::AdministrationRead) || held.contains(Authority::AdministrationWrite)
+    {
+        Ok(())
+    } else {
+        Err(Denial::missing_permission(Authority::AdministrationRead, &held).into())
+    }
+}
+
+fn effective_authority_for_principal(
+    config: &GovConfig,
+    principal: &PrincipalId,
+) -> anyhow::Result<AuthoritySet> {
+    config
+        .principal_authorities(principal)
+        .cloned()
+        .ok_or_else(|| Denial::unknown_principal(principal.as_str()).into())
 }
 
 fn branch_gates_update_authorized(
