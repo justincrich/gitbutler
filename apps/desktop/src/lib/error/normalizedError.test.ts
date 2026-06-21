@@ -17,6 +17,26 @@ describe("IpcError.fingerprint", () => {
 		expect(err.fingerprint).toEqual(["ipc", "noop_command", "something went wrong"]);
 	});
 
+	test("preserves remediation_hint without changing fingerprint", () => {
+		const err = new IpcError(
+			{
+				code: "perm.denied",
+				message: "Governance write denied by branch protection policy",
+				remediation_hint: "Ask an administrator with administration:write to approve this change.",
+			},
+			"perm_grant",
+		);
+
+		expect(err.remediation_hint).toBe(
+			"Ask an administrator with administration:write to approve this change.",
+		);
+		expect(err.fingerprint).toEqual([
+			"ipc",
+			"perm_grant",
+			"Governance write denied by branch protection policy",
+		]);
+	});
+
 	test("only the first line of multi-line messages drives the bucket", () => {
 		const err = new IpcError(
 			{

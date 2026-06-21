@@ -297,13 +297,15 @@
 
 	function writeDenial(error: unknown, canRetry: boolean): WriteDenial {
 		if (error instanceof Error && error.message) {
-			const candidate = error as Error & { code?: unknown };
+			const candidate = error as Error & { code?: unknown; remediation_hint?: unknown };
 			const structured = parseStructuredError(error.message);
 			if (structured) return { ...structured, canRetry };
+			const remediationHint = candidate.remediation_hint;
 
 			return {
 				code: typeof candidate.code === "string" ? candidate.code : "governance.write_failed",
 				message: error.message,
+				remediationHint: typeof remediationHint === "string" ? remediationHint : undefined,
 				canRetry,
 			};
 		}
@@ -342,7 +344,10 @@
 	function assertWriteSucceeded(result: unknown) {
 		if (!isWriteFailure(result)) return;
 
-		throw Object.assign(new Error(result.message ?? result.code), { code: result.code });
+		throw Object.assign(new Error(result.message ?? result.code), {
+			code: result.code,
+			remediation_hint: result.remediation_hint,
+		});
 	}
 
 	function assertServiceAllowed() {

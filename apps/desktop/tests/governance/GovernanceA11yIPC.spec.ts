@@ -1,18 +1,11 @@
 import { expect, test } from "@playwright/experimental-ct-svelte";
 import PrincipalEditor from "$components/governance/PrincipalEditor.svelte";
 import GovernanceSettingsHarness from "./GovernanceSettingsHarness.svelte";
+import PrincipalEditorIpcErrorHarness from "./PrincipalEditorIpcErrorHarness.svelte";
 import type { PrincipalEditorService } from "$components/governance/PrincipalEditor.svelte";
 
 const targetRef = "refs/remotes/origin/main";
 const projectId = "ct-project";
-
-function structuredDenial() {
-	return {
-		code: "perm.denied",
-		message: "Governance write denied by branch protection policy",
-		remediation_hint: "Ask an administrator with administration:write to approve this change.",
-	};
-}
 
 test("GovernanceTabsA11y: tablist is labelled and supports roving keyboard activation", async ({
 	mount,
@@ -46,18 +39,7 @@ test("GovernanceTabsA11y: tablist is labelled and supports roving keyboard activ
 test("GovernanceIPCFailureBanner: structured write denial renders danger InfoMessage with Retry", async ({
 	mount,
 }) => {
-	const { service } = structuredPrincipalDenialService();
-	const component = await mount(PrincipalEditor, {
-		props: {
-			projectId,
-			targetRef,
-			principalId: "settings-agent",
-			ownGrants: ["contents:read"],
-			groupMemberships: [],
-			inheritedGrants: [],
-			service,
-		},
-	});
+	const component = await mount(PrincipalEditorIpcErrorHarness);
 
 	await component.getByTestId("principal-editor-toggle-reviews-write").click();
 	await expect(component.getByTestId("principal-editor-save")).toBeEnabled();
@@ -75,33 +57,40 @@ test("GovernanceIPCFailureBanner: structured write denial renders danger InfoMes
 test("GovernanceIPCRetry: retry reissues the failing SDK call and persistent failure stays read-only", async ({
 	mount,
 }) => {
-	const { calls, service } = structuredPrincipalDenialService();
-	const component = await mount(PrincipalEditor, {
-		props: {
-			projectId,
-			targetRef,
-			principalId: "settings-agent",
-			ownGrants: ["contents:read"],
-			groupMemberships: [],
-			inheritedGrants: [],
-			service,
-		},
-	});
+	const component = await mount(PrincipalEditorIpcErrorHarness);
 
 	await component.getByTestId("principal-editor-toggle-reviews-write").click();
 	await expect(component.getByTestId("principal-editor-save")).toBeEnabled();
 	await component.getByTestId("principal-editor-save").click();
 	await expect(component.getByTestId("principal-editor-denial")).toBeVisible();
-	expect(calls).toHaveLength(1);
+	await expect(component.getByTestId("principal-editor-ipc-error-calls")).toHaveText("1");
 
 	await component.getByRole("button", { name: "Retry" }).click();
 
-	expect(calls).toHaveLength(2);
+	await expect(component.getByTestId("principal-editor-ipc-error-calls")).toHaveText("2");
 	await expect(component.getByTestId("principal-editor-denial")).toBeVisible();
 	await expect(
 		component.getByTestId("principal-editor-toggle-administration-write"),
 	).toBeDisabled();
 	await expect(component.getByTestId("principal-editor-save")).toBeDisabled();
+});
+
+test("GovernanceWriteResultFailureBanner: structured SDK result keeps remediation hint", async ({
+	mount,
+}) => {
+	const component = await mount(PrincipalEditorIpcErrorHarness, {
+		props: {
+			failureMode: "result",
+		},
+	});
+
+	await component.getByTestId("principal-editor-toggle-reviews-write").click();
+	await component.getByTestId("principal-editor-save").click();
+
+	const denial = component.getByTestId("principal-editor-denial");
+	await expect(denial).toContainText("perm.denied");
+	await expect(denial).toContainText("Governance write denied by branch protection policy");
+	await expect(denial).toContainText("administration:write");
 });
 
 test("GovernanceSelfEscalationNoFlip: denied administration grant shows banner and leaves toggle off", async ({
@@ -159,41 +148,6 @@ test("GovernanceReadOnlyA11y: missing administration:write explains and disables
 	await component.getByRole("tab", { name: "Rules" }).click();
 	await expect(component.getByTestId("governance-rules-control")).toBeDisabled();
 });
-
-function structuredPrincipalDenialService(): { calls: string[]; service: PrincipalEditorService } {
-	const calls: string[] = [];
-
-	return {
-		calls,
-		service: {
-			deniedCode: JSON.stringify(structuredDenial()),
-			async permGrant(_projectId, _targetRef, _principal, authorities) {
-				calls.push("perm_grant");
-				return {
-					authorities,
-					caveat: "",
-					principal: "settings-agent",
-				};
-			},
-			async permRevoke(_projectId, _targetRef, _principal, authorities) {
-				calls.push("perm_revoke");
-				return {
-					authorities,
-					caveat: "",
-					principal: "settings-agent",
-				};
-			},
-			async groupAddMember(_projectId, _targetRef, group, member) {
-				calls.push("group_add_member");
-				return { authorities: [], caveat: "", group, member };
-			},
-			async groupRemoveMember(_projectId, _targetRef, group, member) {
-				calls.push("group_remove_member");
-				return { authorities: [], caveat: "", group, member };
-			},
-		},
-	};
-}
 
 function selfEscalationDeniedService(): PrincipalEditorService {
 	return {

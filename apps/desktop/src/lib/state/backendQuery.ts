@@ -35,7 +35,14 @@ export const tauriBaseQuery: TauriBaseQueryFn = async (
 			// downstream of `normalizedErrorToException` (in `normalizedError.ts`).
 			const fingerprint = error instanceof IpcError ? error.fingerprint : undefined;
 			return {
-				error: { origin: "ipc", name, message: error.message, code: error.code, fingerprint },
+				error: {
+					origin: "ipc",
+					name,
+					message: error.message,
+					code: error.code,
+					remediation_hint: error.remediation_hint,
+					fingerprint,
+				},
 			};
 		}
 
