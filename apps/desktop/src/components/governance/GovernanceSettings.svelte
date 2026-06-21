@@ -14,17 +14,22 @@
 	import { injectOptional } from "@gitbutler/core/context";
 	import { InfoMessage } from "@gitbutler/ui";
 	import { untrack } from "svelte";
+	import type { GroupListEntry } from "@gitbutler/but-sdk";
 
 	type Props = {
 		projectId?: string;
 		targetRef?: string;
 		service?: GovernanceRendererContract;
+		initialGroups?: GroupListEntry[];
+		initialPendingGroups?: string[];
 	};
 
 	const {
 		projectId = "",
 		targetRef = "refs/remotes/origin/main",
 		service: providedService,
+		initialGroups,
+		initialPendingGroups = [],
 	}: Props = $props();
 
 	const backend = injectOptional(BACKEND, undefined);
@@ -39,21 +44,38 @@
 	const commitDisabled = $derived(
 		isReadOnly || pendingCount === 0 || Boolean(pendingStore?.isCommitting),
 	);
+	let pendingGroupNames = $state<string[]>(untrack(() => [...initialPendingGroups]));
+	let hasLoadedPending = $state(false);
 
 	$effect(() => {
 		if (pendingStore && projectId) {
 			untrack(() => {
-				void pendingStore.refresh();
+				void refreshGovernance();
 			});
 		}
 	});
 
-	function commitChanges() {
-		void pendingStore?.commit();
+	$effect(() => {
+		if (hasLoadedPending && pendingCount === 0) {
+			pendingGroupNames = [];
+		}
+	});
+
+	async function commitChanges() {
+		await pendingStore?.commit();
+		hasLoadedPending = true;
 	}
 
-	function refreshGovernance() {
-		void pendingStore?.refresh();
+	async function refreshGovernance() {
+		await pendingStore?.refresh();
+		hasLoadedPending = true;
+	}
+
+	function markGroupPending(groupName: string) {
+		if (pendingGroupNames.includes(groupName)) return;
+		pendingGroupNames = [...pendingGroupNames, groupName].sort((left, right) =>
+			left.localeCompare(right),
+		);
 	}
 </script>
 
@@ -121,7 +143,15 @@
 				data-testid="governance-groups-panel"
 			>
 				<h3>Groups</h3>
-				<GroupsList {projectId} {targetRef} {isReadOnly} onRefresh={refreshGovernance} />
+				<GroupsList
+					{projectId}
+					{targetRef}
+					{isReadOnly}
+					groups={initialGroups}
+					pendingGroups={pendingGroupNames}
+					onRefresh={refreshGovernance}
+					onGroupPending={markGroupPending}
+				/>
 			</section>
 		</TabContent>
 

@@ -1,4 +1,4 @@
-import { getButlerPort } from "./setup.ts";
+import { getButlerPort, openWorkspace as openWorkspaceFromSetup } from "./setup.ts";
 import { clickByTestId } from "./util.ts";
 import { expect, type Locator, type Page } from "@playwright/test";
 
@@ -27,6 +27,26 @@ type ButlerResponse<T> =
 			type: "error";
 			subject: unknown;
 	  };
+
+type GovernancePendingToken = {
+	authority: string;
+	committed: boolean;
+	working: boolean;
+	pending: boolean;
+	change?: "grant" | "revoke";
+};
+
+type GovernancePendingPrincipal = {
+	id: string;
+	committedEffective: string[];
+	workingEffective: string[];
+	tokens: GovernancePendingToken[];
+};
+
+export type GovernancePendingResponse = {
+	principals: GovernancePendingPrincipal[];
+	pendingCount: number;
+};
 
 const usersByRole: Record<TestUserRole, TestUser> = {
 	admin: {
@@ -88,4 +108,139 @@ export async function openPermissionsGovernanceSettings(page: Page): Promise<voi
 		.getByRole("button", { name: "Permissions & Governance", exact: true })
 		.click();
 	await expect(page.getByTestId("governance-settings")).toBeVisible();
+}
+
+export async function openGovernanceProject(page: Page, userRole: TestUserRole): Promise<void> {
+	await seedSignedInUser(userRole);
+	await openWorkspaceFromSetup(page);
+	await openProjectSettings(page);
+	await openPermissionsGovernanceSettings(page);
+}
+
+export function governanceSlug(value: string): string {
+	return value.replace(/[^a-z0-9]+/gi, "-");
+}
+
+export async function openGovernanceTab(page: Page, name: string): Promise<void> {
+	await page.getByRole("tab", { name, exact: true }).click();
+}
+
+export async function openPrincipalEditor(page: Page, principalId: string): Promise<Locator> {
+	await page.getByTestId(`principals-list-row-${governanceSlug(principalId)}`).click();
+	const editor = page.getByTestId("principal-editor");
+	await expect(editor).toBeVisible();
+	return editor;
+}
+
+export async function openGroup(page: Page, groupName: string): Promise<Locator> {
+	const group = page.getByTestId(`groups-list-row-${governanceSlug(groupName)}`);
+	await expect(group).toBeVisible();
+	await group.click();
+	return group;
+}
+
+export async function stagePrincipalReviewsGrant(page: Page): Promise<void> {
+	const editor = await openPrincipalEditor(page, "test-principal");
+	await expect(editor.getByTestId("principal-editor-toggle-contents-write")).toBeDisabled();
+	await editor.getByTestId("principal-editor-toggle-reviews-write").check();
+	await editor.getByTestId("principal-editor-save").click();
+	await expect(page.getByTestId("principals-list-pending-test-principal")).toBeVisible();
+	await expect(page.getByTestId("governance-pending-banner")).toContainText("1 pending changes");
+}
+
+export async function stageGroupReviewsGrant(page: Page): Promise<void> {
+	await openGovernanceTab(page, "Groups");
+	const group = await openGroup(page, "test-group");
+	const toggle = group.getByTestId("groups-list-toggle-test-group-reviews-write");
+	await toggle.check();
+	await expect(toggle).toBeChecked();
+	await expect(page.getByTestId("groups-list-pending-test-group")).toContainText("Pending");
+	await expect(page.getByTestId("governance-pending-banner")).toContainText("2 pending changes");
+}
+
+export async function expectActionBlocked(action: () => Promise<unknown>): Promise<void> {
+	let blocked = false;
+	try {
+		await action();
+	} catch {
+		blocked = true;
+	}
+	expect(blocked).toBe(true);
+}
+
+export function currentProjectId(page: Page): string {
+	const projectId = page.url().split("/")[3];
+	if (!projectId) {
+		throw new Error(`Could not parse project id from URL ${page.url()}`);
+	}
+	return projectId;
+}
+
+export async function readGovernancePending(page: Page): Promise<GovernancePendingResponse> {
+	const response = await page.request.post(
+		`http://localhost:${getButlerPort()}/governance_pending`,
+		{
+			data: {
+				projectId: currentProjectId(page),
+				targetRef: "refs/remotes/origin/main",
+			},
+		},
+	);
+
+	if (!response.ok()) {
+		throw new Error(`governance_pending returned HTTP ${response.status()}`);
+	}
+
+	const payload = (await response.json()) as ButlerResponse<GovernancePendingResponse>;
+	if (payload.type !== "success") {
+		throw new Error(`governance_pending failed: ${JSON.stringify(payload.subject)}`);
+	}
+	return payload.subject;
+}
+
+export function expectPendingGrant(
+	pending: GovernancePendingResponse,
+	principalId: string,
+	authority: string,
+): void {
+	const principal = pending.principals.find((entry) => entry.id === principalId);
+	expect(principal, `pending principal ${principalId} should exist`).toBeTruthy();
+	expect(principal?.committedEffective).not.toContain(authority);
+	expect(principal?.workingEffective).toContain(authority);
+	expect(principal?.tokens).toContainEqual(
+		expect.objectContaining({
+			authority,
+			committed: false,
+			working: true,
+			pending: true,
+			change: "grant",
+		}),
+	);
+}
+
+const governanceWriteCommands = [
+	"perm_grant",
+	"perm_revoke",
+	"group_grant",
+	"group_revoke",
+	"group_add_member",
+	"group_remove_member",
+	"group_create",
+	"group_delete",
+	"branch_gates_update",
+	"governance_commit",
+];
+
+export function collectGovernanceWriteRequests(page: Page): string[] {
+	const urls: string[] = [];
+	page.on("request", (request) => {
+		const url = request.url();
+		if (
+			request.method() === "POST" &&
+			governanceWriteCommands.some((command) => url.endsWith(`/${command}`))
+		) {
+			urls.push(url);
+		}
+	});
+	return urls;
 }

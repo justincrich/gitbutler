@@ -113,6 +113,7 @@ function webServers() {
 		},
 		reuseExistingServer: true,
 		stdout: "pipe",
+		timeout: 120_000,
 	} as const;
 
 	return [config];

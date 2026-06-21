@@ -159,6 +159,39 @@ test("GroupsListRows renders expandable groups with grants and members", async (
 	await expect(component.getByTestId("groups-list-members-eng")).toContainText("codex-agent");
 });
 
+test("GroupsListPendingMarker renders pending group badge in the summary", async ({ mount }) => {
+	const { mountProps } = props();
+	const component = await mount(GroupsList, {
+		props: {
+			...mountProps,
+			pendingGroups: ["eng"],
+		},
+	});
+
+	await expect(component.getByTestId("groups-list-pending-eng")).toHaveText("Pending");
+	await expect(component.getByTestId("groups-list-pending-platform")).toHaveCount(0);
+});
+
+test("GroupsListPendingMarker notifies parent after a successful group write", async ({
+	mount,
+}) => {
+	const { mountProps } = props();
+	const pendingGroups: string[] = [];
+	const component = await mount(GroupsList, {
+		props: {
+			...mountProps,
+			onGroupPending(groupName: string) {
+				pendingGroups.push(groupName);
+			},
+		},
+	});
+
+	await component.getByTestId("groups-list-row-eng").getByRole("button", { name: /eng/ }).click();
+	await component.getByTestId("groups-list-toggle-eng-merge").click();
+
+	expect(pendingGroups).toContain("eng");
+});
+
 test("GroupsListSDKCalls creates groups and grants permissions immediately", async ({ mount }) => {
 	const { calls, mountProps } = props();
 	const component = await mount(GroupsList, { props: mountProps });

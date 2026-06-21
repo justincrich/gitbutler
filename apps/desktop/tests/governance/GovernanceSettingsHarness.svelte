@@ -1,5 +1,6 @@
 <script lang="ts">
 	import GovernanceSettings from "$components/governance/GovernanceSettings.svelte";
+	import { untrack } from "svelte";
 	import type {
 		GovernanceAccess,
 		GovernancePending,
@@ -8,6 +9,7 @@
 		GovernanceTarget,
 		PrincipalListEntry,
 	} from "$lib/governance";
+	import type { GroupListEntry } from "@gitbutler/but-sdk";
 
 	type UserRole = "admin" | "member";
 
@@ -17,6 +19,7 @@
 		hasAdminWrite?: boolean;
 		role?: UserRole;
 		principals?: PrincipalListEntry[];
+		pendingGroups?: string[];
 	};
 
 	const {
@@ -24,6 +27,7 @@
 		pendingCountAfterCommit = 0,
 		hasAdminWrite = true,
 		role = "member",
+		pendingGroups = [],
 		principals = [
 			{
 				principalId: "settings-agent",
@@ -35,9 +39,10 @@
 		],
 	}: Props = $props();
 
-	let currentPendingCount = $state(pendingCount);
+	let currentPendingCount = $state(untrack(() => pendingCount));
 	let commitCount = $state(0);
 	let lastCommitMessage = $state("");
+	let currentPendingGroups = $state(untrack(() => [...pendingGroups]));
 
 	function pending(): GovernancePending {
 		return {
@@ -64,6 +69,9 @@
 			commitCount += 1;
 			lastCommitMessage = "chore: update governance config";
 			currentPendingCount = pendingCountAfterCommit;
+			if (pendingCountAfterCommit === 0) {
+				currentPendingGroups = [];
+			}
 			return {
 				commitId: "ct-governance-commit",
 				message: "chore: update governance config",
@@ -71,9 +79,23 @@
 			};
 		},
 	};
+
+	const groups: GroupListEntry[] = [
+		{
+			name: "eng",
+			authorities: ["contents:write"],
+			members: ["settings-agent"],
+		},
+	];
 </script>
 
-<GovernanceSettings projectId="ct-project" targetRef="refs/remotes/origin/main" {service} />
+<GovernanceSettings
+	projectId="ct-project"
+	targetRef="refs/remotes/origin/main"
+	{service}
+	initialGroups={groups}
+	initialPendingGroups={currentPendingGroups}
+/>
 
 <output data-testid="governance-user-role">{role}</output>
 <output data-testid="governance-commit-count">{commitCount}</output>
