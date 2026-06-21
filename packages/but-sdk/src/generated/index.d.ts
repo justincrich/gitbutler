@@ -837,12 +837,22 @@ export type BranchGateEntry = {
   name: string;
   /** Whether the branch is protected. */
   protected: boolean;
+  /** Minimum review approvals required by the committed or working-tree gate. */
+  min_approvals: number;
+  /** Whether approvals must be distinct from the commit author. */
+  require_distinct_from_author: boolean;
+  /** Groups from which approval is required. */
+  require_approval_from_group: Array<string>;
+  /** Whether the working-tree gate differs from the committed target-ref gate. */
+  pending: boolean;
 };
 
 /** Result of reading or updating branch gates. */
 export type BranchGatesOutcome = {
-  /** Branch gate entries from the working-tree `gates.toml`. */
+  /** Branch gate entries. */
   branches: Array<BranchGateEntry>;
+  /** Ref-pin caveat for branch gate writes. */
+  caveat: string;
 };
 
 /**
@@ -950,6 +960,12 @@ export type BranchListingFilter = {
 export type BranchProtectionInput = {
   /** Whether the branch requires administration:write to mutate. */
   protected: boolean;
+  /** Minimum review approvals required for this branch. */
+  min_approvals: number | null;
+  /** Whether approvals must come from a user distinct from the author. */
+  require_distinct_from_author: boolean | null;
+  /** Groups from which approval is required. */
+  require_approval_from_group: Array<string> | null;
 };
 
 /** A reference in `refs/heads`. */

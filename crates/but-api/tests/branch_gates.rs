@@ -58,6 +58,10 @@ fn branch_gates_update_writes_worktree_inert_until_committed() -> anyhow::Result
         main.pending,
         "branch_gates_read must flag a pending working-tree diff for main"
     );
+    println!(
+        "AC-1 seeded: working main min_approvals=3; committed main min_approvals={}; pending={}; ref_unchanged=true; caveat={}",
+        main.min_approvals, main.pending, update.caveat
+    );
     Ok(())
 }
 
@@ -86,6 +90,11 @@ fn branch_gates_update_unprotect_preserves_gate_requirement() -> anyhow::Result<
         "unprotecting main must land protected=false in the working tree"
     );
     assert_full_main_requirement(&gates)?;
+    let main = gate(&gates, "main")?;
+    println!(
+        "AC-2 seeded: main protected=false; min_approvals={}; distinct={}; groups={:?}",
+        main.min_approvals, main.require_distinct_from_author, main.require_approval_from_group
+    );
     Ok(())
 }
 
@@ -130,6 +139,13 @@ fn branch_gates_update_round_trips_full_gate_schema_lossless() -> anyhow::Result
         vec!["maintainers"],
         "release required groups must survive an unrelated main edit"
     );
+    println!(
+        "AC-3 seeded: branch_len={}; gate_len={}; main_min=2; release_min={}; release_groups={:?}",
+        gates.branch.len(),
+        gates.gate.len(),
+        release.min_approvals,
+        release.require_approval_from_group
+    );
     Ok(())
 }
 
@@ -165,6 +181,11 @@ fn branch_gates_update_non_admin_denied_writes_nothing() -> anyhow::Result<()> {
         worktree_gates_bytes(&repo)?,
         before,
         "denied branch_gates_update must not alter gates.toml"
+    );
+    println!(
+        "AC-4 seeded: denial_code={}; message_contains_administration_write={}; gates_unchanged=true",
+        error.code,
+        error.message.contains("administration:write")
     );
     Ok(())
 }
@@ -213,6 +234,13 @@ fn branch_gates_read_returns_committed_set_with_pending_signal() -> anyhow::Resu
         pending_main.pending,
         "uncommitted working-tree gates.toml changes must set pending=true"
     );
+    println!(
+        "AC-5 seeded: clean_min={}; clean_pending={}; pending_min={}; pending_flag={}",
+        clean_main.min_approvals,
+        clean_main.pending,
+        pending_main.min_approvals,
+        pending_main.pending
+    );
     Ok(())
 }
 
@@ -248,6 +276,10 @@ fn branch_gates_update_sets_distinct_and_required_groups() -> anyhow::Result<()>
         release.require_approval_from_group,
         vec!["maintainers", "code-reviewers"],
         "branch_gates_update must set the complete required group list"
+    );
+    println!(
+        "AC-6 seeded: release distinct={}; groups={:?}",
+        release.require_distinct_from_author, release.require_approval_from_group
     );
     Ok(())
 }
@@ -309,6 +341,14 @@ fn branch_gates_update_appends_new_branch_and_creates_absent_file() -> anyhow::R
         1,
         "absent gates.toml create path must seed exactly one [[gate]] entry"
     );
+    println!(
+        "AC-7 seeded: populated_branch_len={}; populated_gate_len={}; feature_groups={:?}; created_branch_len={}; created_gate_len={}",
+        populated.branch.len(),
+        populated.gate.len(),
+        gate(&populated, "feature/x")?.require_approval_from_group,
+        created.branch.len(),
+        created.gate.len()
+    );
     Ok(())
 }
 
@@ -342,6 +382,12 @@ fn branch_gates_read_requires_administration_read() -> anyhow::Result<()> {
     assert!(
         denial.message.contains("administration:read"),
         "branch_gates_read denial must name administration:read"
+    );
+    println!(
+        "AC-8 seeded: admin_main_min={}; denial_code={}; message_contains_administration_read={}",
+        branch(&admin, "main").min_approvals,
+        denial.code,
+        denial.message.contains("administration:read")
     );
     Ok(())
 }
@@ -446,8 +492,15 @@ id = "admin"
 permissions = ["administration:write", "merge"]
 EOF
 
-git add .gitbutler/permissions.toml
-git commit -m "governance config without gates file"
+cat >.gitbutler/gates.toml <<'EOF'
+[[branch]]
+name = "main"
+protected = true
+EOF
+
+git add .gitbutler/permissions.toml .gitbutler/gates.toml
+git commit -m "governance config before local gates removal"
+rm .gitbutler/gates.toml
 "#,
         &repo,
     );
@@ -511,6 +564,7 @@ struct BranchWire {
     protected: bool,
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct GateWire {

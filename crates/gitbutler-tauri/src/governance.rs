@@ -241,6 +241,18 @@ pub fn group_delete_for_desktop_session(
         .map_err(json::Error::from)
 }
 
+/// Invoke `branch_gates_read` as the signed-in desktop fleet-owner.
+pub fn branch_gates_read_for_desktop_session(
+    session: &dyn DesktopSession,
+    project_id: ProjectHandleOrLegacyProjectId,
+    target_ref: String,
+) -> Result<BranchGatesOutcome, json::Error> {
+    let (ctx, _owner) = fleet_owner_context(session, project_id, &target_ref)?;
+    let repo = ctx.repo.get().map_err(json::Error::from)?;
+    but_api::legacy::governance::branch_gates_read_with_repo_as_fleet_owner(&repo, &target_ref)
+        .map_err(json::Error::from)
+}
+
 /// Invoke `branch_gates_update` as the signed-in desktop fleet-owner.
 pub fn branch_gates_update_for_desktop_session(
     session: &dyn DesktopSession,
@@ -577,6 +589,25 @@ pub mod tauri_group_delete {
             project_id,
             target_ref,
             group,
+        )
+    }
+}
+
+/// Tauri command wrapper for desktop fleet-owner `branch_gates_read`.
+pub mod tauri_branch_gates_read {
+    use super::{BranchGatesOutcome, DesktopSessionState, ProjectHandleOrLegacyProjectId, json};
+
+    /// Read branch gates as the signed-in desktop fleet-owner.
+    #[tauri::command]
+    pub fn branch_gates_read(
+        desktop_session: tauri::State<'_, DesktopSessionState>,
+        project_id: ProjectHandleOrLegacyProjectId,
+        target_ref: String,
+    ) -> Result<BranchGatesOutcome, json::Error> {
+        super::branch_gates_read_for_desktop_session(
+            desktop_session.session(),
+            project_id,
+            target_ref,
         )
     }
 }
