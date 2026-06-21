@@ -26,6 +26,8 @@ test("admin can see the governance settings entry and all four tabs", async ({ p
 		"four-tabs.fixture-evidence",
 	]);
 	await expect(page.getByTestId("fixture-persona")).toHaveText("Admin");
+	await expect(page.getByRole("button", { name: "Project" })).toBeVisible();
+	await expect(page.getByRole("button", { name: "AI options" })).toBeVisible();
 	await expect(page.getByRole("button", { name: "Permissions & Governance" })).toBeVisible();
 	await expect(page.getByRole("heading", { name: "Permissions & Governance" })).toBeVisible();
 	await expect(page.getByRole("tab", { name: "Principals" })).toBeVisible();
@@ -120,7 +122,9 @@ test("principal and group changes stay pending across tabs and clear after commi
 	);
 
 	await page.getByRole("tab", { name: "Principals" }).click();
-	await expect(page.getByText("reviews:write").first()).toBeVisible();
+	await expect(page.getByTestId("principals-list-row-settings-agent")).toContainText("reviews:write");
+	await page.getByTestId("principals-list-row-settings-agent").click();
+	await expect(page.getByLabel("reviews:write own grant")).toBeChecked();
 	await expect(page.getByTestId("principals-list-pending-settings-agent")).toHaveCount(0);
 	await page.getByRole("tab", { name: "Groups" }).click();
 	await expect(page.getByLabel("reviews:write")).toBeChecked();
