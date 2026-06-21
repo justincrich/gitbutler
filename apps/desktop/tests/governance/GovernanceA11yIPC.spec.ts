@@ -54,6 +54,30 @@ test("GovernanceIPCFailureBanner: structured write denial renders danger InfoMes
 	await expect(component.getByRole("button", { name: "Retry" })).toBeVisible();
 });
 
+test("GovernanceIPCFailureBanner: read transport failure renders danger InfoMessage with Retry", async ({
+	mount,
+}) => {
+	const component = await mount(GovernanceSettingsHarness, {
+		props: {
+			pendingCount: 0,
+			readFailure: true,
+		},
+	});
+
+	const failure = component.getByTestId("governance-read-failure");
+	await expect(failure).toBeVisible();
+	await expect(failure).toHaveClass(/danger/);
+	await expect(failure).toContainText("network.error");
+	await expect(failure).toContainText("Backend unreachable");
+	await expect(failure).toContainText("Check the desktop backend connection and retry.");
+	await expect(component.getByTestId("governance-read-pending-count")).toHaveText("1");
+
+	await component.getByRole("button", { name: "Retry" }).click();
+
+	await expect(component.getByTestId("governance-read-pending-count")).toHaveText("2");
+	await expect(failure).toBeVisible();
+});
+
 test("GovernanceIPCRetry: retry reissues the failing SDK call and persistent failure stays read-only", async ({
 	mount,
 }) => {
@@ -117,6 +141,10 @@ test("GovernanceSelfEscalationNoFlip: denied administration grant shows banner a
 	await expect(component.getByTestId("principal-editor-denial")).toContainText(
 		"You cannot modify your own administration grants",
 	);
+	await expect(component.getByTestId("principal-editor-denial")).toContainText(
+		"Self-escalation is not permitted.",
+	);
+	await expect(component.getByRole("button", { name: "Retry" })).toHaveCount(0);
 	await expect(adminToggle).not.toBeChecked();
 });
 

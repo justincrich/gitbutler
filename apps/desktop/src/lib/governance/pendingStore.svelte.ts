@@ -11,7 +11,71 @@ const DEFAULT_ACCESS: GovernanceAccess = {
 	isReadOnly: true,
 };
 
+export type GovernanceReadFailure = {
+	code: string;
+	message: string;
+	remediationHint?: string;
+};
+
 export type GovernancePendingStore = ReturnType<typeof createGovernancePendingStore>;
+
+function parseStructuredError(value: string): GovernanceReadFailure | undefined {
+	try {
+		const parsed: unknown = JSON.parse(value);
+		if (typeof parsed !== "object" || parsed === null || !("code" in parsed)) return undefined;
+
+		const code = (parsed as { code: unknown }).code;
+		if (typeof code !== "string") return undefined;
+
+		const message = (parsed as { message?: unknown }).message;
+		const remediationHint = (parsed as { remediation_hint?: unknown }).remediation_hint;
+
+		return {
+			code,
+			message: typeof message === "string" ? message : code,
+			remediationHint: typeof remediationHint === "string" ? remediationHint : undefined,
+		};
+	} catch {
+		return undefined;
+	}
+}
+
+function governanceReadFailure(error: unknown): GovernanceReadFailure {
+	if (error instanceof Error && error.message) {
+		const candidate = error as Error & {
+			code?: unknown;
+			remediation_hint?: unknown;
+		};
+		const structured = parseStructuredError(error.message);
+		if (structured) return structured;
+
+		return {
+			code: typeof candidate.code === "string" ? candidate.code : "governance.read_failed",
+			message: error.message,
+			remediationHint:
+				typeof candidate.remediation_hint === "string" ? candidate.remediation_hint : undefined,
+		};
+	}
+
+	if (typeof error === "object" && error !== null && "code" in error) {
+		const code = (error as { code: unknown }).code;
+		if (typeof code === "string") {
+			const message = (error as { message?: unknown }).message;
+			const remediationHint = (error as { remediation_hint?: unknown }).remediation_hint;
+
+			return {
+				code,
+				message: typeof message === "string" ? message : code,
+				remediationHint: typeof remediationHint === "string" ? remediationHint : undefined,
+			};
+		}
+	}
+
+	return {
+		code: "governance.read_failed",
+		message: error instanceof Error ? error.message : String(error),
+	};
+}
 
 export function createGovernancePendingStore(
 	service: GovernanceRendererContract,
@@ -24,7 +88,7 @@ export function createGovernancePendingStore(
 	});
 	let isLoading = $state(false);
 	let isCommitting = $state(false);
-	let error = $state<string | undefined>(undefined);
+	let error = $state<GovernanceReadFailure | undefined>(undefined);
 
 	async function refresh() {
 		isLoading = true;
@@ -37,7 +101,7 @@ export function createGovernancePendingStore(
 			access = nextAccess;
 			pending = nextPending;
 		} catch (err: unknown) {
-			error = err instanceof Error ? err.message : String(err);
+			error = governanceReadFailure(err);
 		} finally {
 			isLoading = false;
 		}
@@ -52,7 +116,7 @@ export function createGovernancePendingStore(
 			await service.commitPending(target);
 			await refresh();
 		} catch (err: unknown) {
-			error = err instanceof Error ? err.message : String(err);
+			error = governanceReadFailure(err);
 		} finally {
 			isCommitting = false;
 		}
