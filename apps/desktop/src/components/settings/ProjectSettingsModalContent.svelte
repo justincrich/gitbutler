@@ -59,7 +59,7 @@
 			{:else if currentPage.id === "experimental"}
 				<PreferencesForm projectId={data.projectId} />
 			{:else if currentPage.id === "governance"}
-				<ErrorBoundary title="Governance settings failed">
+				<ErrorBoundary title="Governance settings failed to load" compact={false}>
 					<GovernanceSettings projectId={data.projectId} service={governanceService} />
 				</ErrorBoundary>
 			{:else}
