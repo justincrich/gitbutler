@@ -4,6 +4,9 @@
 	"devDependencies": {
 		"@playwright/test": "1.58.2",
 		"@types/node": "^22.19.11",
+		"@types/react": "^19.2.14",
+		"@types/react-dom": "^19.2.3",
+		"@vitejs/plugin-react": "^5.2.0",
 		"@wdio/cli": "^9.26.1",
 		"@wdio/globals": "^9.26.1",
 		"@wdio/junit-reporter": "^9.26.1",
@@ -12,15 +15,23 @@
 		"@wdio/spec-reporter": "^9.26.1",
 		"@wdio/types": "^9.26.1",
 		"buildkite-test-collector": "^1.9.5",
+		"react": "^19.2.4",
+		"react-dom": "^19.2.4",
+		"typescript": "catalog:",
+		"vite": "catalog:",
 		"wdio-video-reporter": "^6.0.0"
 	},
 	"scripts": {
 		"install-playwright": "pnpm exec playwright install",
+		"check:governance-fixture": "pnpm exec tsc -p ./playwright/fixtures/governance-app/tsconfig.json --noEmit",
 		"test:e2e": "pnpm test:e2e:not-tauri",
 		"test:e2e:not-tauri": "wdio run ./web/wdio.web.conf.ts",
 		"test:e2e:blackbox": "wdio run ./blackbox/wdio.blackbox.conf.ts",
 		"test:e2e:playwright": "pnpm exec playwright test --config ./playwright/playwright.config.ts --tsconfig ./playwright/tsconfig.json --quiet",
-		"test:e2e:playwright:open": "PLAYWRIGHT_UI=1 pnpm exec playwright test --config ./playwright/playwright.config.ts --tsconfig ./playwright/tsconfig.json --ui"
+		"test:e2e:playwright:open": "PLAYWRIGHT_UI=1 pnpm exec playwright test --config ./playwright/playwright.config.ts --tsconfig ./playwright/tsconfig.json --ui",
+		"test:e2e:governance-fixture": "pnpm exec playwright test --config ./playwright/playwright.governance-fixture.config.ts --tsconfig ./playwright/tsconfig.json",
+		"test:e2e:governance-fixture:headed": "pnpm exec playwright test --config ./playwright/playwright.governance-fixture.config.ts --tsconfig ./playwright/tsconfig.json --headed",
+		"test:e2e:governance-fixture:open": "PLAYWRIGHT_UI=1 pnpm exec playwright test --config ./playwright/playwright.governance-fixture.config.ts --tsconfig ./playwright/tsconfig.json --ui"
 	},
 	"dependencies": {
 		"@gitbutler/ui": "workspace:*",

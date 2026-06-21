@@ -650,6 +650,15 @@ importers:
       '@types/node':
         specifier: ^22.19.11
         version: 22.19.15
+      '@types/react':
+        specifier: ^19.2.14
+        version: 19.2.14
+      '@types/react-dom':
+        specifier: ^19.2.3
+        version: 19.2.3(@types/react@19.2.14)
+      '@vitejs/plugin-react':
+        specifier: ^5.2.0
+        version: 5.2.0(vite@6.4.3(@types/node@22.19.15)(jiti@2.7.0)(sass-embedded@1.98.0)(sass@1.98.0)(tsx@4.21.0)(yaml@2.8.2))
       '@wdio/cli':
         specifier: ^9.26.1
         version: 9.27.0(@types/node@22.19.15)(expect-webdriverio@5.6.5)
@@ -674,6 +683,18 @@ importers:
       buildkite-test-collector:
         specifier: ^1.9.5
         version: 1.9.5
+      react:
+        specifier: ^19.2.4
+        version: 19.2.4
+      react-dom:
+        specifier: ^19.2.4
+        version: 19.2.4(react@19.2.4)
+      typescript:
+        specifier: 'catalog:'
+        version: 5.9.3
+      vite:
+        specifier: 'catalog:'
+        version: 6.4.3(@types/node@22.19.15)(jiti@2.7.0)(sass-embedded@1.98.0)(sass@1.98.0)(tsx@4.21.0)(yaml@2.8.2)
       wdio-video-reporter:
         specifier: ^6.0.0
         version: 6.2.0(expect-webdriverio@5.6.5)(webdriverio@9.27.0)
