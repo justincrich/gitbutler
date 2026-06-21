@@ -19,9 +19,10 @@
 
 	type Props = {
 		projectId: string;
+		principalId?: string;
 	};
 
-	const { projectId }: Props = $props();
+	const { projectId, principalId }: Props = $props();
 
 	const rulesService = inject(RULES_SERVICE);
 
@@ -37,7 +38,11 @@
 	const drawerPersistId = `rules-drawer-${untrack(() => projectId)}`;
 	let drawer = $state<Drawer>();
 
-	const rules = $derived(rulesService.workspaceRules(projectId));
+	const rules = $derived(
+		principalId
+			? rulesService.principalRules(projectId, principalId)
+			: rulesService.workspaceRules(projectId),
+	);
 
 	function openRuleEditor() {
 		if (editingRuleId !== null) {
