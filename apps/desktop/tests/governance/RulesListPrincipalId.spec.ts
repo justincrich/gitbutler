@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/experimental-ct-svelte";
-import GovernanceSettingsHarness from "./GovernanceSettingsHarness.svelte";
-import RulesListPrincipalIdHarness from "./RulesListPrincipalIdHarness.svelte";
+import GovernanceSettingsHarness from "$tests/governance/GovernanceSettingsHarness.svelte";
+import RulesListPrincipalIdHarness from "$tests/governance/RulesListPrincipalIdHarness.svelte";
 
 test.describe("RulesList", () => {
 	test("RulesListPrincipalIdScoped scopes the query and rows to principalId", async ({ mount }) => {
