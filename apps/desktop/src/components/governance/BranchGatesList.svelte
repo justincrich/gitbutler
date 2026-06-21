@@ -107,7 +107,7 @@
 	);
 	const hasBranches = $derived(sortedBranches.length > 0);
 	const pendingBranchSet = $derived(new Set(pendingBranches));
-	const groupOptions = $derived(uniqueSorted(definedGroups.map((group) => group.name)));
+	const groupOptions = $derived(uniqueInOrder(definedGroups.map((group) => group.name)));
 
 	$effect(() => {
 		if (providedBranches !== undefined) {
@@ -168,6 +168,10 @@
 
 	function uniqueSorted(values: string[]): string[] {
 		return [...new Set(values)].sort((left, right) => left.localeCompare(right));
+	}
+
+	function uniqueInOrder(values: string[]): string[] {
+		return [...new Set(values)];
 	}
 
 	function slug(value: string): string {

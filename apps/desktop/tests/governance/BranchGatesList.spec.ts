@@ -247,7 +247,7 @@ test("BranchGatesListGroupSelector offers only defined groups", async ({ mount }
 	const options = component
 		.getByTestId("branch-gates-list-group-options-main")
 		.locator("label span");
-	await expect(options).toHaveText(["eng", "platform", "security"]);
+	await expect(options).toHaveText(["eng", "security", "platform"]);
 	await expect(component.getByTestId("branch-gates-list-group-options-main")).not.toContainText(
 		"undefined-group",
 	);
