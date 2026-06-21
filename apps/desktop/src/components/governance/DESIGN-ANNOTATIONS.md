@@ -48,7 +48,7 @@ commands, authorization logic, or persistence behavior.
 | Rule editor | `RuleEditor` | `apps/desktop/src/components/rules/RuleEditor.svelte` | Existing editor unchanged in the per-principal context. |
 | Rule filters | `RuleFiltersEditor` | `apps/desktop/src/components/rules/RuleFiltersEditor.svelte` | Existing filters editor unchanged. |
 | New rule menu | `NewRuleMenu` | `apps/desktop/src/components/rules/NewRuleMenu.svelte` | Existing menu unchanged. |
-| Error boundary | `GovernanceErrorBoundary` | `apps/desktop/src/components/governance/GovernanceErrorBoundary.svelte` | Planned thin composition from the Net-new table; fallback uses `InfoMessage style="danger"`. |
+| Error boundary | `ErrorBoundary` | `apps/desktop/src/components/shared/ErrorBoundary.svelte` | Existing shared boundary only; `GovernanceSettings.svelte` is wrapped with `title="Governance settings failed to load"` and `compact=false`; no governance-specific boundary component. |
 
 ## Tab IA Contract
 
@@ -308,7 +308,7 @@ therefore persist while switching between `Principals`, `Groups`,
 | Required approval groups | `TagInput` at `packages/ui/src/lib/components/TagInput.svelte` for selected groups `eng` and `security`; `Select` at `packages/ui/src/lib/components/select/Select.svelte` for adding from defined group options. | Group selector changes contribute to pending badge. | `TagInput readonly=true`; `Select` disabled by composition. | Denied edit leaves prior group tags visible and shows danger banner. | Not rendered. |
 | Rules tab principal selector | `CardGroupRoot` and `CardGroupItem` at `packages/ui/src/lib/components/cardGroup/CardGroupRoot.svelte` and `packages/ui/src/lib/components/cardGroup/CardGroupItem.svelte`; committed principal rows have no pending `Badge`. | Pending principals use `Badge style="warning" kind="soft" size="icon"` children `○`; selected row points to the rules panel. | Selector remains readable; rule creation/edit actions disabled. | Denial banner appears above rules panel. | If no principals exist, use Rules tab empty state listed below. |
 | Rules tab rule panel | `RulesList` at `apps/desktop/src/components/rules/RulesList.svelte` with optional `principalId`; existing `Rule`, `RuleEditor`, `RuleFiltersEditor`, and `NewRuleMenu` paths listed in inventory. | Existing rules UI displays pending state via governance wrapper only; rules components remain visually unchanged. | Rule create/edit/delete actions disabled by wrapper or readonly state. | IPC or auth denial uses `InfoMessage style="danger"` with Retry when applicable. | If a selected principal has no rules, use Rules tab empty state listed below. |
-| Governance render error fallback | `GovernanceErrorBoundary` at `apps/desktop/src/components/governance/GovernanceErrorBoundary.svelte`; fallback visual uses `InfoMessage` at `packages/ui/src/lib/components/InfoMessage.svelte` with `style="danger"`, `outlined=true`, and optional `primaryLabel="Retry"`. | Same fallback; pending state is not shown while boundary fallback is active. | Same fallback; retry may be disabled if unavailable. | Same fallback. | Not applicable. |
+| Governance render error fallback | Existing `ErrorBoundary` at `apps/desktop/src/components/shared/ErrorBoundary.svelte` wraps the `GovernanceSettings.svelte` mount point with `title="Governance settings failed to load"` and `compact=false`; the failed snippet renders the title and `error.message` sub-line when the thrown value is an `Error` with a message. | Same informational fallback; pending state is not shown while the governance mount point is replaced. | Same informational fallback. | Not used for IPC or denied-write failures. | Not applicable. |
 
 ## PrincipalEditor Inherited-Vs-Own Row Contract
 
@@ -412,14 +412,42 @@ typography tokens.
 |---|---|---|---|
 | Pending banner | `packages/ui/src/lib/components/InfoMessage.svelte` via `apps/desktop/src/components/governance/GovernancePendingBanner.svelte` | `style="warning"`, `outlined=true`, `primaryLabel="Commit changes"`, `primaryIcon="arrow-right"`, `primaryAction` wired to the commit action, title `{pendingCount} pending governance change(s) - take effect once committed to the governance ref`, content `Changes take effect once committed to the governance ref.`; render only under `{#if pendingCount > 0}`. | Page-level area above the `Tabs` `TabList` whenever pending count is greater than zero. |
 | Read-only banner | `packages/ui/src/lib/components/InfoMessage.svelte` | `style="info"`, `outlined=true`, content `Read-only: administration:write is required to change governance settings`; omit `primaryLabel`, `secondaryLabel`, and `tertiaryLabel` so no action buttons render. | Page-level area above tab content when the viewer can navigate to the page but lacks `administration:write`. |
-| Denial banner | `packages/ui/src/lib/components/InfoMessage.svelte` | `style="danger"`, `outlined=true`, `primaryLabel="Retry"` only for retryable IPC failures, title `perm.denied`, content `You cannot modify your own administration grants.` | Above the affected tab or editor after a refused write. |
+| Denial banner | `packages/ui/src/lib/components/InfoMessage.svelte` | `style="danger"`, `outlined=true`, title renders the structured denial code and message, content renders the remediation copy when provided; retry actions are reserved for retryable IPC/transport failures. | The shared `GovernanceSettings` banner slot, above the affected tab or editor after a refused write. |
 | Pending row badge | `packages/ui/src/lib/components/Badge.svelte` | `style="warning"`, `kind="soft"`, `size="icon"`, children `○`; row label or adjacent row text includes `pending`. | Principal rows, group rows, branch gate rows, editor save summary. |
 | Committed row marker | None | Committed rows render no pending `Badge`; absence of the pending marker is the committed signal. Do not recolor the pending `Badge` to gray. | Principal rows, rule principal selector rows, branch gate summaries. |
 | Inherited or unavailable control | `packages/ui/src/lib/components/Toggle.svelte` | `disabled=true`; `checked` mirrors the effective inherited value. | Inherited permission rows and read-only rows. |
 | Read-only chips | `packages/ui/src/lib/components/TagInput.svelte` | `readonly=true`; tags remain visible and removal affordances are hidden by the component. | Principal groups, group members, branch required groups. |
 | Read-only number field | `packages/ui/src/lib/components/Textbox.svelte` | `type="number"`, `readonly=true` or `disabled=true`. | Branch gate minimum approvals. |
 | Destructive confirmation | `packages/ui/src/lib/components/Modal.svelte` | Confirmation copy from the specific row action; action `Button` uses existing Button styling. | Group delete and branch unprotect. |
-| Error boundary fallback | `apps/desktop/src/components/governance/GovernanceErrorBoundary.svelte` plus `packages/ui/src/lib/components/InfoMessage.svelte` | `InfoMessage style="danger"`, `outlined=true`, title `Governance settings could not load`, optional `primaryLabel="Retry"`. | Whole governance surface if a render/runtime failure occurs. |
+| Error boundary fallback | `apps/desktop/src/components/shared/ErrorBoundary.svelte` | Pass `title="Governance settings failed to load"` and `compact=false`; the existing failed snippet renders `error.message` as the sub-line when the thrown value is an `Error` instance with a message. Do not render a Retry button in this boundary fallback. | Inside the `Permissions & Governance` section mount point only; the settings modal frame and other settings sections remain functional. |
+
+## Error Boundary And IPC Failure Contract
+
+Render/runtime failures and IPC/transport failures use different mechanisms. Do
+not route an SDK rejection through the Svelte boundary, and do not put retry
+behavior in the boundary fallback.
+
+| Error category | Trigger | Component treatment | Recovery behavior | Scope |
+|---|---|---|---|---|
+| render/runtime error (boundary) | A render path or child component under `GovernanceSettings.svelte` throws. | The existing `apps/desktop/src/components/shared/ErrorBoundary.svelte` catches it through the Svelte boundary and renders its `failed` snippet with `title="Governance settings failed to load"` and `compact=false`. The fallback is title plus `error.message` only when the thrown value is an `Error` instance with a message. No Retry button renders in this fallback. | Informational only; recovery is closing and reopening the settings modal or otherwise remounting the settings content. | The fallback replaces only the `Permissions & Governance` section mount point. `SettingsModalLayout`, the modal frame, sidebar, and other settings sections remain functional. |
+| IPC/transport error (in-page) | A Tauri SDK call rejects because of timeout, backend crash, connection loss, or unavailable structured response. | The failing governance surface catches the rejection in-page and shows `packages/ui/src/lib/components/InfoMessage.svelte` with `style="danger"` and `outlined=true`. The title renders the structured denial message when `{code, message}` is available from the SDK response; without a structured response it renders `Connection lost — governance service unavailable`. A Retry `packages/ui/src/lib/components/Button.svelte` is exposed through the `InfoMessage` primary action slot by setting `primaryLabel="Retry"` and `primaryAction` to the retry callback. The Svelte boundary is not triggered. | Activating Retry re-issues the same SDK call that failed; the component that owns that call owns the retry callback. | The danger banner appears in the shared `GovernanceSettings` banner slot, the same slot used by the self-escalation denial banner, and takes highest priority over self-escalation danger, pending warning, and read-only info banners. |
+
+### Persistent IPC Failure
+
+On Retry success, hide the IPC-failure danger banner and resume the normal
+governance surface state. If the successful response changes read-only or pending
+state, reconcile those ordinary states from the response.
+
+On Retry failure, keep the same danger `InfoMessage` visible. Update the title or
+content if the new failure has fresher structured `{code, message}` data;
+otherwise leave the existing message in place.
+
+If the IPC failure persists, keep the governance surface mounted in a safe
+read-only state equivalent to `isReadOnly=true`: all mutating controls are inert,
+disabled, or readonly, and no additional write calls are attempted until Retry or
+another explicit reload succeeds. Users can still inspect visible settings and
+move between governance tabs. Persistent IPC failure must not unmount the surface
+and must not trigger `ErrorBoundary`; it remains an in-page danger banner state.
 
 ## Read-Only State Contract
 
