@@ -38,6 +38,137 @@ pub mod zip;
 
 pub mod env;
 pub mod governance;
+pub mod rules {
+    pub mod tauri_list_workspace_rules {
+        use anyhow::Context as _;
+        use but_api::json;
+        use but_ctx::{Context, ProjectHandleOrLegacyProjectId};
+
+        #[tauri::command(async, rename = "list_workspace_rules")]
+        pub fn list_workspace_rules(
+            project_id: ProjectHandleOrLegacyProjectId,
+            principal_id: Option<String>,
+        ) -> Result<serde_json::Value, json::Error> {
+            let ctx = Context::try_from(project_id)
+                .map(Context::with_memory_app_cache)
+                .map_err(json::Error::from)?;
+            let rules = but_api::legacy::rules::list_workspace_rules_scoped_for_caller(
+                &ctx,
+                principal_id.as_deref(),
+            )
+            .map_err(json::Error::from)?;
+            serde_json::to_value(rules)
+                .context("serializing workspace rules")
+                .map_err(anyhow::Error::from)
+                .map_err(json::Error::from)
+        }
+
+        #[cfg(test)]
+        mod tests {
+            use anyhow::Context as _;
+            use serde_json::Value;
+
+            const TARGET_REF: &str = "refs/remotes/origin/main";
+
+            #[test]
+            #[serial_test::serial]
+            fn scoped_principal_requires_governed_caller_when_agent_handle_unset()
+            -> anyhow::Result<()> {
+                let (repo, _tmp) = rules_governance_repo();
+                context_with_target(&repo)?;
+
+                let project_id = project_id_for(&repo)?;
+                let error = temp_env::with_var("BUT_AGENT_HANDLE", None::<&str>, || {
+                    super::list_workspace_rules(project_id, Some("agent-B".to_owned()))
+                })
+                .expect_err(
+                    "scoped workspace rules command must fail closed without governed caller identity",
+                );
+                let error = serde_json::to_value(error)?;
+
+                assert_eq!(
+                    error.get("code"),
+                    Some(&Value::String("perm.denied".to_owned())),
+                    "unset BUT_AGENT_HANDLE must surface the governed-auth denial code at the Tauri command boundary"
+                );
+                assert!(
+                    error
+                        .get("message")
+                        .and_then(Value::as_str)
+                        .is_some_and(|message| message.contains("BUT_AGENT_HANDLE")),
+                    "scoped workspace rules denial should name the missing governed caller identity"
+                );
+
+                Ok(())
+            }
+
+            fn rules_governance_repo() -> (gix::Repository, tempfile::TempDir) {
+                let tmp = tempfile::TempDir::new()
+                    .unwrap_or_else(|error| panic!("creating temp repository failed: {error}"));
+                but_testsupport::invoke_bash_at_dir(
+                    r#"
+git init --initial-branch=main
+git config user.name "GitButler Test"
+git config user.email "gitbutler@example.com"
+mkdir -p .gitbutler
+cat >.gitbutler/permissions.toml <<'EOF'
+[[principal]]
+id = "agent-A"
+permissions = ["contents:read"]
+
+[[principal]]
+id = "agent-B"
+permissions = ["contents:read"]
+EOF
+
+cat >.gitbutler/gates.toml <<'EOF'
+[[branch]]
+name = "main"
+protected = true
+EOF
+
+git add .gitbutler/permissions.toml .gitbutler/gates.toml
+git commit -m "rules governance config"
+git update-ref refs/remotes/origin/main refs/heads/main
+"#,
+                    tmp.path(),
+                );
+                let repo = gix::open(tmp.path()).unwrap_or_else(|error| {
+                    panic!("opening {} failed: {error}", tmp.path().display())
+                });
+                (repo, tmp)
+            }
+
+            fn context_with_target(repo: &gix::Repository) -> anyhow::Result<but_ctx::Context> {
+                let ctx = but_ctx::Context::from_repo(repo.clone())?.with_memory_app_cache();
+                let mut project_meta = ctx.project_meta()?;
+                project_meta.target_ref = Some(TARGET_REF.try_into()?);
+                project_meta.target_commit_id = Some(ref_id(repo, TARGET_REF)?);
+                ctx.set_project_meta(project_meta)?;
+                Ok(ctx)
+            }
+
+            fn ref_id(repo: &gix::Repository, ref_name: &str) -> anyhow::Result<gix::ObjectId> {
+                let mut reference = repo
+                    .find_reference(ref_name)
+                    .with_context(|| format!("resolving target ref {ref_name}"))?;
+                Ok(reference
+                    .peel_to_commit()
+                    .with_context(|| format!("peeling {ref_name} to a commit"))?
+                    .id)
+            }
+
+            fn project_id_for(
+                repo: &gix::Repository,
+            ) -> anyhow::Result<but_ctx::ProjectHandleOrLegacyProjectId> {
+                let handle = but_ctx::ProjectHandle::from_path(repo.git_dir())?;
+                Ok(but_ctx::ProjectHandleOrLegacyProjectId::ProjectHandle(
+                    handle,
+                ))
+            }
+        }
+    }
+}
 
 pub mod csp;
 
@@ -222,7 +353,7 @@ pub fn invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Sen
         legacy::rules::tauri_create_workspace_rule::create_workspace_rule,
         legacy::rules::tauri_delete_workspace_rule::delete_workspace_rule,
         legacy::rules::tauri_update_workspace_rule::update_workspace_rule,
-        legacy::rules::tauri_list_workspace_rules::list_workspace_rules,
+        rules::tauri_list_workspace_rules::list_workspace_rules,
         legacy::workspace::tauri_head_info::head_info,
         legacy::workspace::tauri_branch_details::branch_details,
         legacy::workspace::tauri_discard_worktree_changes::discard_worktree_changes,
