@@ -15,7 +15,13 @@
 </script>
 
 {#if isActive}
-	<div data-value={value} class="tab-content">
+	<div
+		id={`${value}-panel`}
+		data-value={value}
+		class="tab-content"
+		role="tabpanel"
+		aria-labelledby={value}
+	>
 		{@render children()}
 	</div>
 {/if}
