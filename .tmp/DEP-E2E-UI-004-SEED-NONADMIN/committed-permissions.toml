@@ -1,0 +1,20 @@
+[[principal]]
+id = "admin"
+permissions = ["administration:read", "administration:write", "merge"]
+
+[[principal]]
+id = "admin-readonly"
+permissions = ["administration:read"]
+
+[[principal]]
+id = "dev"
+permissions = ["administration:read", "contents:write"]
+
+[[principal]]
+id = "test-principal"
+permissions = ["contents:read"]
+
+[[group]]
+name = "test-group"
+permissions = ["contents:write"]
+members = ["test-principal", "group-principal"]

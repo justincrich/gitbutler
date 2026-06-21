@@ -1,0 +1,5 @@
+[[principal]]
+id = "dev"
+permissions = ["administration:read", "contents:write"]
+
+

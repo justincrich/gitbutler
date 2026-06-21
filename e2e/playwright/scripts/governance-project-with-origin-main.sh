@@ -21,6 +21,10 @@ id = "admin-readonly"
 permissions = ["administration:read"]
 
 [[principal]]
+id = "dev"
+permissions = ["administration:read", "contents:write"]
+
+[[principal]]
 id = "test-principal"
 permissions = ["contents:read"]
 
@@ -37,6 +41,40 @@ EOF
 git add README.md
 git add .gitbutler/permissions.toml .gitbutler/gates.toml
 git commit -m "Initial governance E2E project"
+
+committed_permissions=$(git show HEAD:.gitbutler/permissions.toml)
+dev_principal_block=$(
+	awk '
+		/^\[\[principal\]\]/ {
+			if (capture) print block
+			capture = 0
+			block = ""
+		}
+		/^\[\[/ && $0 !~ /^\[\[principal\]\]/ {
+			if (capture) print block
+			capture = 0
+			block = ""
+		}
+		{
+			block = block $0 "\n"
+			if ($0 == "id = \"dev\"") capture = 1
+		}
+		END {
+			if (capture) print block
+		}
+	' <<<"$committed_permissions"
+)
+
+if [ -z "$dev_principal_block" ]; then
+	echo "committed governance config is missing the dev principal" >&2
+	exit 1
+fi
+
+if grep -Fq '"administration:write"' <<<"$dev_principal_block"; then
+	echo "dev principal must not be committed with administration:write" >&2
+	exit 1
+fi
+
 popd
 
 git clone remote-project local-clone
