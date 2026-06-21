@@ -1,4 +1,5 @@
 <script lang="ts">
+	import BranchGatesList from "$components/governance/BranchGatesList.svelte";
 	import GroupsList from "$components/governance/GroupsList.svelte";
 	import PrincipalsList from "$components/governance/PrincipalsList.svelte";
 	import RulesList from "$components/rules/RulesList.svelte";
@@ -16,6 +17,7 @@
 	import { EmptyStatePlaceholder, InfoMessage } from "@gitbutler/ui";
 	import { untrack } from "svelte";
 	import type { GroupListEntry } from "@gitbutler/but-sdk";
+	import type { PrincipalListEntry } from "$lib/governance";
 
 	type Props = {
 		projectId?: string;
@@ -48,6 +50,9 @@
 		isReadOnly || pendingCount === 0 || Boolean(pendingStore?.isCommitting),
 	);
 	let pendingGroupNames = $state<string[]>(untrack(() => [...initialPendingGroups]));
+	let pendingBranchNames = $state<string[]>([]);
+	let rulesPrincipals = $state<PrincipalListEntry[]>([]);
+	let selectedRulesPrincipalId = $state<string | undefined>(untrack(() => rulesPrincipalId));
 	let hasLoadedPending = $state(false);
 
 	$effect(() => {
@@ -61,6 +66,15 @@
 	$effect(() => {
 		if (hasLoadedPending && pendingCount === 0) {
 			pendingGroupNames = [];
+			pendingBranchNames = [];
+		}
+	});
+
+	$effect(() => {
+		if (service && projectId) {
+			untrack(() => {
+				void loadRulesPrincipals();
+			});
 		}
 	});
 
@@ -74,9 +88,21 @@
 		hasLoadedPending = true;
 	}
 
+	async function loadRulesPrincipals() {
+		const principalList = await service?.readPrincipals(target);
+		rulesPrincipals = principalList?.principals ?? [];
+	}
+
 	function markGroupPending(groupName: string) {
 		if (pendingGroupNames.includes(groupName)) return;
 		pendingGroupNames = [...pendingGroupNames, groupName].sort((left, right) =>
+			left.localeCompare(right),
+		);
+	}
+
+	function markBranchPending(branchName: string) {
+		if (pendingBranchNames.includes(branchName)) return;
+		pendingBranchNames = [...pendingBranchNames, branchName].sort((left, right) =>
 			left.localeCompare(right),
 		);
 	}
@@ -161,14 +187,14 @@
 		<TabContent value="branch-gates">
 			<section class="governance-panel" data-testid="governance-branch-gates-panel">
 				<h3>Branch Gates</h3>
-				<button
-					type="button"
-					class="governance-button"
-					disabled={isReadOnly}
-					data-testid="governance-branch-gates-control"
-				>
-					Add gate
-				</button>
+				<BranchGatesList
+					{projectId}
+					{targetRef}
+					{isReadOnly}
+					pendingBranches={pendingBranchNames}
+					onRefresh={refreshGovernance}
+					onBranchPending={markBranchPending}
+				/>
 			</section>
 		</TabContent>
 
@@ -178,11 +204,29 @@
 				data-testid="governance-rules-panel"
 			>
 				<h3>Rules</h3>
-				{#if rulesPrincipalId}
+				<fieldset
+					class="governance-rules-selector"
+					data-testid="governance-rules-control"
+					disabled={isReadOnly}
+				>
+					<label for="governance-rules-principal-select">Principal</label>
+					<select
+						id="governance-rules-principal-select"
+						data-testid="governance-rules-principal-select"
+						bind:value={selectedRulesPrincipalId}
+						disabled={isReadOnly}
+					>
+						<option value={undefined}>Select a principal</option>
+						{#each rulesPrincipals as principal (principal.principalId)}
+							<option value={principal.principalId}>{principal.principalId}</option>
+						{/each}
+					</select>
+				</fieldset>
+				{#if selectedRulesPrincipalId && !isReadOnly}
 					<div class="governance-rules-list" data-testid="governance-rules-list">
-						<RulesList {projectId} principalId={rulesPrincipalId} />
+						<RulesList {projectId} principalId={selectedRulesPrincipalId} />
 					</div>
-				{:else}
+				{:else if !selectedRulesPrincipalId}
 					<div data-testid="governance-rules-no-principal">
 						<EmptyStatePlaceholder gap={12} topBottomPadding={24}>
 							{#snippet title()}Select a principal to view their rules{/snippet}
@@ -280,5 +324,24 @@
 
 	.governance-rules-list {
 		width: 100%;
+	}
+
+	.governance-rules-selector {
+		display: flex;
+		flex-direction: column;
+		width: 100%;
+		padding: 0;
+		gap: var(--clr-space-4);
+		border: 0;
+	}
+
+	.governance-rules-selector select {
+		max-width: 360px;
+		padding: var(--clr-space-4) var(--clr-space-6);
+		border: 1px solid var(--clr-border-2);
+		border-radius: var(--radius-s);
+		background: var(--clr-bg-1);
+		color: var(--clr-text-1);
+		font: inherit;
 	}
 </style>

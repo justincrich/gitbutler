@@ -179,10 +179,16 @@ test("GovernanceReadOnlyA11y: missing administration:write explains and disables
 	await expect(component.getByRole("button", { name: "+ Create group" }).first()).toBeDisabled();
 
 	await component.getByRole("tab", { name: "Branch Gates" }).click();
-	await expect(component.getByTestId("governance-branch-gates-control")).toBeDisabled();
+	await expect(component.getByTestId("branch-gates-list")).toBeVisible();
+	await component
+		.getByTestId("branch-gates-list-row-main")
+		.getByRole("button", { name: /main/ })
+		.click();
+	await expect(component.getByTestId("branch-gates-list-distinct-main")).toBeDisabled();
+	await expect(component.getByRole("button", { name: "+ Add" })).toBeDisabled();
 
 	await component.getByRole("tab", { name: "Rules" }).click();
-	await expect(component.getByTestId("governance-rules-control")).toBeDisabled();
+	await expect(component.getByTestId("governance-rules-principal-select")).toBeDisabled();
 });
 
 type ServiceCall = {
