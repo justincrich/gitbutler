@@ -412,7 +412,7 @@ typography tokens.
 |---|---|---|---|
 | Pending banner | `packages/ui/src/lib/components/InfoMessage.svelte` via `apps/desktop/src/components/governance/GovernancePendingBanner.svelte` | `style="warning"`, `outlined=true`, `primaryLabel="Commit changes"`, `primaryIcon="arrow-right"`, `primaryAction` wired to the commit action, title `{pendingCount} pending governance change(s) - take effect once committed to the governance ref`, content `Changes take effect once committed to the governance ref.`; render only under `{#if pendingCount > 0}`. | Page-level area above the `Tabs` `TabList` whenever pending count is greater than zero. |
 | Read-only banner | `packages/ui/src/lib/components/InfoMessage.svelte` | `style="info"`, `outlined=true`, content `Read-only: administration:write is required to change governance settings`; omit `primaryLabel`, `secondaryLabel`, and `tertiaryLabel` so no action buttons render. | Page-level area above tab content when the viewer can navigate to the page but lacks `administration:write`. |
-| Denial banner | `packages/ui/src/lib/components/InfoMessage.svelte` | `style="danger"`, `outlined=true`, title renders the structured denial code and message, content renders the remediation copy when provided; retry actions are reserved for retryable IPC/transport failures. | The shared `GovernanceSettings` banner slot, above the affected tab or editor after a refused write. |
+| Denial banner | `packages/ui/src/lib/components/InfoMessage.svelte` | `style="danger"`, `outlined=true`, title `perm.denied — you cannot modify your own administration grants.`, content renders `{denial.remediation_hint}`; omit `primaryLabel`, `secondaryLabel`, and `tertiaryLabel` for the self-escalation denial path. Retry actions are reserved for retryable IPC/transport failures only. | The shared `GovernanceSettings` banner slot, above the affected tab or editor after a refused write. |
 | Pending row badge | `packages/ui/src/lib/components/Badge.svelte` | `style="warning"`, `kind="soft"`, `size="icon"`, children `○`; row label or adjacent row text includes `pending`. | Principal rows, group rows, branch gate rows, editor save summary. |
 | Committed row marker | None | Committed rows render no pending `Badge`; absence of the pending marker is the committed signal. Do not recolor the pending `Badge` to gray. | Principal rows, rule principal selector rows, branch gate summaries. |
 | Inherited or unavailable control | `packages/ui/src/lib/components/Toggle.svelte` | `disabled=true`; `checked` mirrors the effective inherited value. | Inherited permission rows and read-only rows. |
@@ -420,6 +420,66 @@ typography tokens.
 | Read-only number field | `packages/ui/src/lib/components/Textbox.svelte` | `type="number"`, `readonly=true` or `disabled=true`. | Branch gate minimum approvals. |
 | Destructive confirmation | `packages/ui/src/lib/components/Modal.svelte` | Confirmation copy from the specific row action; action `Button` uses existing Button styling. | Group delete and branch unprotect. |
 | Error boundary fallback | `apps/desktop/src/components/shared/ErrorBoundary.svelte` | Pass `title="Governance settings failed to load"` and `compact=false`; the existing failed snippet renders `error.message` as the sub-line when the thrown value is an `Error` instance with a message. Do not render a Retry button in this boundary fallback. | Inside the `Permissions & Governance` section mount point only; the settings modal frame and other settings sections remain functional. |
+
+## Denial And No-Flip Contract
+
+This section adds the structured self-escalation denial layer on top of the
+pending-state and read-only contracts above. It does not redefine pending
+badges, the pending warning banner, read-only disabled controls, SDK call shape,
+store internals, or Tauri command boundaries.
+
+`GovernanceSettings.svelte` owns one banner slot for this surface. Render at
+most one governance banner at a time. Retryable IPC or transport failure danger
+banners take precedence per the contract below; otherwise the self-escalation
+denial danger banner replaces the pending warning banner while denial is active.
+
+The self-escalation denial banner uses `InfoMessage` at
+`packages/ui/src/lib/components/InfoMessage.svelte` with these props and slots:
+
+```svelte
+<InfoMessage style="danger" outlined={true}>
+	{#snippet title()}
+		perm.denied — you cannot modify your own administration grants.
+	{/snippet}
+	{#snippet content()}
+		{denial.remediation_hint}
+	{/snippet}
+</InfoMessage>
+```
+
+The `denial` payload is the structured refusal
+`{code: "perm.denied", message: string, remediation_hint: string}`. The title
+text is verbatim and includes the code plus message. The content sub-line
+renders `remediation_hint` from the payload. Do not pass `primaryLabel`,
+`secondaryLabel`, or `tertiaryLabel`: this banner is informational feedback, not
+an actionable retry surface. While this denial banner is active, it occupies the
+`GovernanceSettings` banner slot and replaces the pending warning banner rather
+than stacking with it.
+
+### Self-Escalation Toggle Rule
+
+For an admin editing their own principal row, granting themselves
+`administration:write` follows this visible sequence:
+
+1. The admin toggles the `administration:write` `Toggle` ON for themselves; the
+   `Toggle` moves to checked in local state for the attempted interaction.
+2. The governed SDK call returns structured `perm.denied`.
+3. The `Toggle` is synchronously reverted to unchecked, the prior state, as part
+   of handling that denial response.
+4. The danger `InfoMessage` appears in the `GovernanceSettings` banner slot.
+
+The effective permission set is not updated. No `chipToast` is emitted for this
+self-escalation denial path; the banner is the feedback. Transient write errors
+from non-self-escalation operations keep their separate `chipToast` path and do
+not show this denial banner.
+
+### Denial State Machine
+
+| State | Control state | Banner type | Banner text |
+|---|---|---|---|
+| `idle` | `Toggle` reflects the current effective or staged value; normal controls follow the pending and read-only contracts. | No denial banner. | Normal surface copy only. |
+| `attempting-self-grant->denied` | Denied `Toggle` is reverted synchronously to the prior unchecked state; the effective permission set is not updated. | `InfoMessage` danger in the `GovernanceSettings` banner slot; pending banner is replaced. | `perm.denied — you cannot modify your own administration grants.` plus the structured denial `remediation_hint`; the structured payload also carries `code` and `message`. |
+| `transient-error` | Affected control is reverted to the prior state after a non-self-escalation write error. | `chipToast` only; no danger `InfoMessage` banner. | Transient error toast copy for that write failure; no denial banner text. |
 
 ## Error Boundary And IPC Failure Contract
 
