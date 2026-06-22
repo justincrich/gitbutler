@@ -82,6 +82,11 @@
 			case "semanticType":
 				initialValues.semanticType = filter.subject;
 				return true;
+			case "claudeCodeSessionId":
+				// Backend-only filter; not editable in the RuleFiltersEditor, so we
+				// intentionally do not populate initialValues. Return true to keep
+				// iterating sibling filters without crashing.
+				return true;
 		}
 	}
 

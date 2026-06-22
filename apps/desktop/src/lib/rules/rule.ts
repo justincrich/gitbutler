@@ -43,7 +43,11 @@ export type RuleFilter =
 	| { type: "pathMatchesRegex"; subject: string } // regex patterns as strings
 	| { type: "contentMatchesRegex"; subject: string } // regex patterns as strings
 	| { type: "fileChangeType"; subject: FileStatus }
-	| { type: "semanticType"; subject: SemanticTypeFilter };
+	| { type: "semanticType"; subject: SemanticTypeFilter }
+	// Backend-side filter (but-rules::Filter::ClaudeCodeSessionId). Surfaced when a
+	// rule was created with a Claude Code session scoping filter; the UI renders it
+	// as a read-only pill rather than letting users edit it directly.
+	| { type: "claudeCodeSessionId"; subject: string };
 
 export type RuleFilterType = RuleFilter["type"];
 export const RULE_FILTER_TYPES = [
@@ -71,6 +75,7 @@ export function getFilterCountMap(rules: WorkspaceRule[]): FilterCountMap {
 		contentMatchesRegexCount: 0,
 		fileChangeTypeCount: 0,
 		semanticTypeCount: 0,
+		claudeCodeSessionIdCount: 0,
 	};
 
 	for (const rule of rules) {
