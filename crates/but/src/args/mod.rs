@@ -1044,6 +1044,16 @@ pub enum Subcommands {
     #[cfg_attr(feature = "raw-clap-docs", clap(verbatim_doc_comment))]
     Perm(perm::Platform),
 
+    /// Show your effective permissions, own group memberships, and authorized actions.
+    #[cfg(feature = "legacy")]
+    #[cfg_attr(feature = "raw-clap-docs", clap(verbatim_doc_comment))]
+    Whoami(whoami::Platform),
+
+    /// Check whether you hold a functional authority (e.g. `but can-i merge`).
+    #[cfg(feature = "legacy")]
+    #[cfg_attr(feature = "raw-clap-docs", clap(verbatim_doc_comment))]
+    CanI(can_i::Platform),
+
     /// Manage governed groups.
     #[cfg(feature = "legacy")]
     #[cfg_attr(feature = "raw-clap-docs", clap(verbatim_doc_comment))]
@@ -1281,6 +1291,8 @@ pub enum Subcommands {
 
 pub mod alias;
 #[cfg(feature = "legacy")]
+pub mod can_i;
+#[cfg(feature = "legacy")]
 pub mod commit;
 #[cfg(feature = "legacy")]
 pub mod commit2;
@@ -1291,6 +1303,8 @@ pub mod group;
 pub mod perm;
 pub mod skill;
 pub mod update;
+#[cfg(feature = "legacy")]
+pub mod whoami;
 
 pub mod actions {
     #[derive(Debug, clap::Parser)]

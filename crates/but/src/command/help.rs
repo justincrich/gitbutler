@@ -149,6 +149,10 @@ fn print_grouped_with_truncation(
                 #[cfg(feature = "legacy")]
                 SubcommandDiscriminant::Perm => Group::OtherCommands,
                 #[cfg(feature = "legacy")]
+                SubcommandDiscriminant::Whoami => Group::OtherCommands,
+                #[cfg(feature = "legacy")]
+                SubcommandDiscriminant::CanI => Group::OtherCommands,
+                #[cfg(feature = "legacy")]
                 SubcommandDiscriminant::Group => Group::OtherCommands,
                 SubcommandDiscriminant::Skill => Group::OtherCommands,
                 SubcommandDiscriminant::Help => Group::OtherCommands,
