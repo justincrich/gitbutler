@@ -1,5 +1,11 @@
 # LPR-014: Principal `kind` editor UI in the Governance Principals tab
 
+> Status: ✅ Completed (review); merge BLOCKED on sprint-06b dependency
+> Reviewer: sveltekit-reviewer (APPROVED — all 5 ACs + 5 TCs PASS at HEAD a78ae19eba; 6/6 Playwright CT tests green; enforcement-neutrality grep clean — `kind` is NOT read in merge_gate.rs / review_requirement.rs / GovConfig.principals; non-blocking suggest finding: DESIGN-ANNOTATIONS.md formatting rewrite outside declared writeAllowed — cosmetic, no gate/enforcement logic touched)
+> Commit: a78ae19eba2fff7d652b3964bdc37cacfc834f3d on `sprint-consolidated` — NOT landed on integration branch
+> Blocked-on: LPR-014's PrincipalEditor.svelte refactor assumes sprint-06b's `WriteDenial`/`WriteSet`/`createWriteSet`/`applyWriteSet` infrastructure (commits `e32a2284cd` REMEDIATE-RUST-1, `4be16385de` MGMT-UI-011, `799dd12245` governance accessibility retry UI, `e4666bd41f` self-escalation denial path). Cherry-pick of `a78ae19eba` onto `design/lpr-ui-design-contracts` conflicts at PrincipalEditor.svelte:103 + :362. Resolution requires landing sprint-06b's PrincipalEditor refactor first (separate sprint).
+> Updated: 2026-06-22T23:10:00Z
+
 ## What this does
 
 Extend `PrincipalsList.svelte` and `PrincipalEditor.svelte` in the Governance Principals tab to display and
@@ -110,13 +116,13 @@ PrincipalKindEditor passes. pnpm -F @gitbutler/desktop check and pnpm lint pass.
 --------------------------------------------------------------------------------
 DONE WHEN
 --------------------------------------------------------------------------------
-- [ ] AC-1 [PRIMARY]: a principal with kind='agent' shows the agent badge
-- [ ] AC-2: the agent badge is display-only; kind gates nothing
-- [ ] AC-3: a principal without kind shows no badge; defaults to human in editor
-- [ ] AC-4: changing kind in PrincipalEditor calls the LPR-013 SDK write and
+- [x] AC-1 [PRIMARY]: a principal with kind='agent' shows the agent badge
+- [x] AC-2: the agent badge is display-only; kind gates nothing
+- [x] AC-3: a principal without kind shows no badge; defaults to human in editor
+- [x] AC-4: changing kind in PrincipalEditor calls the LPR-013 SDK write and
       shows a pending indicator on the row
-- [ ] AC-5: isReadOnly=true disables the kind selector and fires 0 SDK calls
-- [ ] All verification gates pass; only write_allowed files modified
+- [x] AC-5: isReadOnly=true disables the kind selector and fires 0 SDK calls
+- [x] All verification gates pass; only write_allowed files modified (DESIGN-ANNOTATIONS.md formatting drift noted as non-blocking suggest finding by reviewer)
 
 --------------------------------------------------------------------------------
 ACCEPTANCE CRITERIA (each behavioral AC carries a scenario)

@@ -1,5 +1,10 @@
 # LPR-016: `LocalReviewView` panel — READ-ONLY Svelte view rendering the local PR object (assignments, comment threads, derived lifecycle, agent tag)
 
+> Status: ✅ Completed
+> Reviewer: sveltekit-reviewer (APPROVED at cycle 2 — all 5 ACs + 5 TCs PASS at HEAD 58c3c125c; F1 RED independently re-verified by reviewer: deleting `<SkeletonBone>` → `toHaveCount(4)` receives 0 → FAIL, restored → GREEN; F2 Tooltip confirmed exported at `packages/ui/src/lib/index.ts:59`; 6-pattern mutate-control grep clean; build-gate honesty grep clean — LocalReviewView not wired into any gate path)
+> Commit: a01b6405c0 on `design/lpr-ui-design-contracts` (cherry-picked from `lpr-016` branch as `630514cd34` + `a01b6405c0` — clean apply, LPR-016 has no sprint-06b dependency)
+> Updated: 2026-06-22T23:10:00Z
+
 ## What this does
 
 Build `LocalReviewView.svelte` in the Governance section of the desktop app as a READ-ONLY view that renders the full local PR object surfaced by the LPR-015 SDK binding (`review_status` + `list_comments`). The view presents five data sections per DESIGN-LPR-003: (1) PR header with the derived lifecycle status Badge, the `agent-authored` tag (when `agent_authored==true`), branch name, and PR metadata; (2) reviewer assignments with their state (Pending / Approved / ChangesRequested), one row per assignment; (3) comment threads grouped by file+line and PR-level, with resolved threads muted/collapsed but visible; (4) a lifecycle explanation caption naming the CLI verb that advances it; and (5) an `InfoMessage` merge gate note. The view is one component with four lifecycle states (`Draft` / `AwaitingReview` / `ChangesRequested` / `Approved` / `Mergeable`) — not four separate screens — derived from the `DerivedPrStatus` the SDK returns. It includes empty states: a loading skeleton, `EmptyStatePlaceholder` for the no-review case, and inline text for zero-reviewers and zero-threads sub-sections. **READ-ONLY in every sense: no mutate controls, no Approve button, no Comment form, no Assign button, no Resolve button.** All writes are CLI-driven (`but review approve`, `but review comment`, `but review assign`, `but review resolve`).
@@ -154,12 +159,12 @@ and pnpm lint pass.
 --------------------------------------------------------------------------------
 DONE WHEN
 --------------------------------------------------------------------------------
-- [ ] AC-1 [PRIMARY]: reviewer assignments with their state render from seeded review
-- [ ] AC-2: resolved vs unresolved comment threads render with correct visual treatment
-- [ ] AC-3: derived lifecycle state + agent-authored tag render for all four states
-- [ ] AC-4: empty states (loading, no-review, zero-assignments, zero-threads) render
-- [ ] AC-5: no mutate controls are present anywhere in the view's DOM
-- [ ] All verification gates pass; only write_allowed files modified
+- [x] AC-1 [PRIMARY]: reviewer assignments with their state render from seeded review
+- [x] AC-2: resolved vs unresolved comment threads render with correct visual treatment
+- [x] AC-3: derived lifecycle state + agent-authored tag render for all four states
+- [x] AC-4: empty states (loading, no-review, zero-assignments, zero-threads) render
+- [x] AC-5: no mutate controls are present anywhere in the view's DOM
+- [x] All verification gates pass; only write_allowed files modified (F1+F2 remediation: 2 files touched, both in writeAllowed)
 
 --------------------------------------------------------------------------------
 ACCEPTANCE CRITERIA (each behavioral AC carries a scenario)
