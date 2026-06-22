@@ -1,5 +1,6 @@
 use bstr::ByteSlice as _;
-use but_authz::{Denial, Principal, load_governance_config};
+use but_authz::{Authority, serialize_authority_tokens};
+use but_authz::{AuthorizedAction, Denial, DenialClass, Principal, load_governance_config};
 use but_rebase::graph_rebase::mutate::RelativeTo;
 use gix::refs::FullName;
 use serde::Serialize;
@@ -11,6 +12,20 @@ pub struct CommitGateError {
     pub code: &'static str,
     /// Human-readable denial message.
     pub message: String,
+    /// Steering classification — who can recover. Populated by STEER-004;
+    /// STEER-001 defaults to `DenialClass::ActorCorrectable`.
+    pub class: DenialClass,
+    /// Authority tokens the principal already holds. Serialized as a
+    /// stably-sorted array of `:`-token strings via
+    /// [`but_authz::serialize_authority_tokens`].
+    #[serde(serialize_with = "serialize_authority_tokens")]
+    pub held_permissions: Vec<Authority>,
+    /// Recovery verbs the consumer may offer the actor.
+    pub authorized_actions: Vec<AuthorizedAction>,
+    /// Optional "do not" hint — verbs the actor must NOT attempt. Omitted
+    /// entirely when `None` (no `null` key).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub do_not: Option<&'static str>,
 }
 
 /// Ref-backed authorization target for commit creation.
@@ -83,6 +98,10 @@ pub fn classify_error(err: &anyhow::Error) -> Option<CommitGateError> {
         return Some(CommitGateError {
             code: denial.code,
             message: denial.message.clone(),
+            class: denial.class,
+            held_permissions: denial.held_permissions.clone(),
+            authorized_actions: denial.authorized_actions.clone(),
+            do_not: denial.do_not,
         });
     }
 
@@ -90,6 +109,10 @@ pub fn classify_error(err: &anyhow::Error) -> Option<CommitGateError> {
         .map(|error| CommitGateError {
             code: error.code(),
             message: error.to_string(),
+            class: error.class.unwrap_or_default(),
+            held_permissions: Vec::new(),
+            authorized_actions: Vec::new(),
+            do_not: error.do_not,
         })
 }
 
@@ -157,14 +180,12 @@ fn find_branch_ref_for_commit(
 }
 
 fn branch_protected(principal: &Principal, branch_name: &str) -> Denial {
-    Denial {
-        code: "branch.protected",
-        message: format!(
+    Denial::new(
+        "branch.protected",
+        format!(
             "direct commits to protected branch \"{branch_name}\" are denied for principal \"{}\"; land changes through a reviewed merge",
             principal.id().as_str()
         ),
-        remediation_hint: format!(
-            "open a reviewed merge into {branch_name} instead of committing directly"
-        ),
-    }
+        format!("open a reviewed merge into {branch_name} instead of committing directly"),
+    )
 }

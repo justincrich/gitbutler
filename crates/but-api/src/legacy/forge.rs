@@ -2,8 +2,8 @@
 use anyhow::{Context as _, Result};
 use but_api_macros::but_api;
 use but_authz::{
-    AssignmentState, Authority, Denial, authorize, load_governance_config,
-    resolve_principal_from_env,
+    AssignmentState, Authority, AuthorizedAction, Denial, DenialClass, authorize,
+    load_governance_config, resolve_principal_from_env, serialize_authority_tokens,
 };
 use but_core::{RepositoryExt, ref_metadata::ProjectMeta};
 use but_ctx::{Context, ThreadSafeContext};
@@ -21,14 +21,43 @@ pub struct ForgeGateError {
     pub code: &'static str,
     /// Human-readable denial message.
     pub message: String,
+    /// Steering classification — who can recover. Copied off the underlying
+    /// [`but_authz::Denial`] (or defaulted to `ActorCorrectable` for
+    /// `ConfigError`-sourced carriers) so the review CLI serializer
+    /// (STEER-005) has a real field source.
+    pub class: DenialClass,
+    /// Authority tokens the principal already holds. Serialized as a
+    /// stably-sorted array of `:`-token strings via
+    /// [`but_authz::serialize_authority_tokens`]. Copied off the
+    /// underlying [`but_authz::Denial`].
+    #[serde(serialize_with = "serialize_authority_tokens")]
+    pub held_permissions: Vec<Authority>,
+    /// Recovery verbs the consumer may offer the actor. Copied off the
+    /// underlying [`but_authz::Denial`].
+    pub authorized_actions: Vec<AuthorizedAction>,
+    /// Optional "do not" hint — verbs the actor must NOT attempt. Omitted
+    /// entirely when `None` (no `null` key). Copied off the underlying
+    /// [`but_authz::Denial`] / [`but_authz::ConfigError`].
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub do_not: Option<&'static str>,
 }
 
 /// Extract a structured forge gate payload from an error chain.
+///
+/// Copies the four steering fields (`class`, `held_permissions`,
+/// `authorized_actions`, `do_not`) off the underlying [`but_authz::Denial`]
+/// (all four) or [`but_authz::ConfigError`] (`class` + `do_not` only) so the
+/// review CLI serializer (STEER-005) has a real field source rather than a
+/// two-key `{code,message}` flatten.
 pub fn classify_error(err: &anyhow::Error) -> Option<ForgeGateError> {
     if let Some(denial) = err.downcast_ref::<but_authz::Denial>() {
         return Some(ForgeGateError {
             code: denial.code,
             message: denial.message.clone(),
+            class: denial.class,
+            held_permissions: denial.held_permissions.clone(),
+            authorized_actions: denial.authorized_actions.clone(),
+            do_not: denial.do_not,
         });
     }
 
@@ -36,6 +65,10 @@ pub fn classify_error(err: &anyhow::Error) -> Option<ForgeGateError> {
         .map(|error| ForgeGateError {
             code: error.code(),
             message: error.to_string(),
+            class: error.class.unwrap_or_default(),
+            held_permissions: Vec::new(),
+            authorized_actions: Vec::new(),
+            do_not: error.do_not,
         })
 }
 
@@ -590,16 +623,15 @@ pub async fn assign_reviewer(
         if let Some(opener) = db.local_review_meta().get(&branch, "opener_principal")?
             && reviewer == opener.value
         {
-            return Err(Denial {
-                code: Denial::PERM_DENIED_CODE,
-                message: format!(
+            return Err(Denial::new(
+                Denial::PERM_DENIED_CODE,
+                format!(
                     "reviewer `{reviewer}` must be distinct from the target branch author `{}` (R22)",
                     opener.value
                 ),
-                remediation_hint:
-                    "assign a reviewer principal distinct from the branch's opener/author"
-                        .to_owned(),
-            }
+                "assign a reviewer principal distinct from the branch's opener/author"
+                    .to_owned(),
+            )
             .into());
         }
     }
@@ -829,12 +861,12 @@ pub async fn resolve_thread(
         .iter()
         .any(|assignment| assignment.reviewer_principal == resolver_id.as_str());
     if !(holds_reviews_write || thread_authored || assigned_reviewer) {
-        return Err(anyhow::Error::new(but_authz::Denial {
-            code: but_authz::Denial::PERM_DENIED_CODE,
-            message: "only the thread author, the assigned reviewer, or a reviews:write holder may resolve this thread (R22)".to_owned(),
-            remediation_hint: "ask the thread author, an assigned reviewer, or a reviews:write holder to resolve the thread"
+        return Err(anyhow::Error::new(but_authz::Denial::new(
+            but_authz::Denial::PERM_DENIED_CODE,
+            "only the thread author, the assigned reviewer, or a reviews:write holder may resolve this thread (R22)".to_owned(),
+            "ask the thread author, an assigned reviewer, or a reviews:write holder to resolve the thread"
                 .to_owned(),
-        }));
+        )));
     }
     db.local_review_comments_mut()
         .set_resolved(&branch, &thread_id, resolved)?;

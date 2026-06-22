@@ -423,6 +423,10 @@ mod error {
                 remediation_hint: "collect the required approvals at the current review head"
                     .to_owned(),
                 unmet: vec!["min_approvals".to_owned()],
+                class: but_authz::DenialClass::OperatorRequired,
+                held_permissions: Vec::new(),
+                authorized_actions: Vec::new(),
+                do_not: None,
             };
             let object = json_object(anyhow::Error::from(error));
 
@@ -473,13 +477,12 @@ mod error {
 
         #[test]
         fn error_serializes_remediation_hint_from_config_invalid() {
-            let carrier = Denial {
-                code: "config.invalid",
-                message: "governance config .gitbutler/permissions.toml is malformed".to_owned(),
-                remediation_hint:
-                    "fix the malformed governance config and recommit it to the target branch"
-                        .to_owned(),
-            };
+            let carrier = Denial::new(
+                "config.invalid",
+                "governance config .gitbutler/permissions.toml is malformed".to_owned(),
+                "fix the malformed governance config and recommit it to the target branch"
+                    .to_owned(),
+            );
             let object = json_object(anyhow::Error::from(carrier));
 
             assert_remediation_hint(

@@ -3,7 +3,7 @@ use std::{borrow::Borrow, collections::BTreeMap, path::Path, str};
 use anyhow::{Context, anyhow};
 use serde::{Deserialize, Serialize};
 
-use crate::{AuthoritySet, Group, GroupName, PrincipalId};
+use crate::{AuthoritySet, DenialClass, Group, GroupName, PrincipalId};
 
 const PERMISSIONS_PATH: &str = ".gitbutler/permissions.toml";
 const GATES_PATH: &str = ".gitbutler/gates.toml";
@@ -242,6 +242,14 @@ pub struct ConfigError {
     message: String,
     #[source]
     source: anyhow::Error,
+    /// Steering classification — who can recover. `None` until STEER-004
+    /// populates the value at the config-load denial sites; `to_envelope`
+    /// and the custom [`Serialize`] impl emit `class` only when `Some`.
+    pub class: Option<DenialClass>,
+    /// Optional "do not" hint — verbs the actor must NOT attempt. Emitted
+    /// only when `Some`; `None` omits the key entirely (matches
+    /// `Option::is_none` skip semantics used by the other carriers).
+    pub do_not: Option<&'static str>,
 }
 
 impl ConfigError {
@@ -260,7 +268,36 @@ impl ConfigError {
         Self {
             message: source.to_string(),
             source,
+            class: None,
+            do_not: None,
         }
+    }
+}
+
+impl Serialize for ConfigError {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use serde::ser::SerializeStruct as _;
+
+        let mut field_count = 2; // code + message are always present
+        if self.class.is_some() {
+            field_count += 1;
+        }
+        if self.do_not.is_some() {
+            field_count += 1;
+        }
+        let mut state = serializer.serialize_struct("ConfigError", field_count)?;
+        state.serialize_field("code", &self.code())?;
+        state.serialize_field("message", &self.message)?;
+        if let Some(class) = self.class {
+            state.serialize_field("class", &class)?;
+        }
+        if let Some(do_not) = self.do_not {
+            state.serialize_field("do_not", do_not)?;
+        }
+        state.end()
     }
 }
 

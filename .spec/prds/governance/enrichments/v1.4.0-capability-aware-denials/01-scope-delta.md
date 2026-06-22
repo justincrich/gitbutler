@@ -30,7 +30,7 @@ This enrichment is **purely additive** to the v1.3.0 scope. Nothing in the exist
 | An **LLM-generated** hint/menu | OUT (non-goal) | The menu is a deterministic projection (static mapping), never model-generated — consistent with the deterministic-vs-probabilistic doctrine. |
 | Naming the bypass **mechanics** in `do_not` | OUT (default) — positive-only framing | `do_not` frames the governed path as the only route to a landed change without enumerating bypass techniques (avoids the information hazard). See [03](./03-technical-requirements-delta.md). |
 | Human-TTY rendering of the new fields + i18n of catalog strings | DEFERRED / best-effort | The steering payload is the structured (stderr-JSON) contract for programmatic/agent consumers; human-TTY rendering of `class`/`authorized_actions`/`do_not` is best-effort, and catalog strings are English-only in this slice (named, not denied). |
-| Tauri / N-API steering serialization (if not co-landed) | DEFERRED (explicit decision, not a silent gap) | New fields reach the three CLI serializers in Sprint 07; the Tauri/N-API `json::Error` path co-lands with Sprint 06a `MGMT-IPC-002` or is explicitly deferred. See [03 §7](./03-technical-requirements-delta.md). |
+| Tauri / N-API steering serialization (if not co-landed) | DEFERRED (explicit decision, not a silent gap) | New fields reach the three CLI serializers in Sprint 08; the Tauri/N-API `json::Error` path co-lands with Sprint 06a `MGMT-IPC-002` or is explicitly deferred. See [03 §7](./03-technical-requirements-delta.md). |
 
 ## Preserved from sprints 1–8 (explicit)
 

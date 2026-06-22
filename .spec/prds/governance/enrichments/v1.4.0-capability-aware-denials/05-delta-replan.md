@@ -10,7 +10,7 @@ status: planned (frozen-aware; re-grounded after rust/security/PM red-hat pass)
 
 # v1.3.0 → v1.4.0 — Capability-Aware Denials Delta-Replan
 
-**Freeze contract.** Sprints 01a–06b are FROZEN with in-flight agents. This plan **edits none of them now**; it records (a) code deltas v1.4.0 implies and (b) additive edits to frozen PRD index files — to apply **when the freeze lifts**, per the `v1.3.0-remediation-plan.md` precedent. Behavior ships as a **new Sprint 07 (STEER)** appended after the roadmap (§2).
+**Freeze contract.** Sprints 01a–06b are FROZEN with in-flight agents. This plan **edits none of them now**; it records (a) code deltas v1.4.0 implies and (b) additive edits to frozen PRD index files — to apply **when the freeze lifts**, per the `v1.3.0-remediation-plan.md` precedent. Behavior ships as a **new Sprint 08 (STEER)** appended after the roadmap (§2).
 
 > **Re-grounded (red-hat).** The first draft of this plan repeated several ungrounded claims (a `Denial.unmet` field that doesn't exist; a single `json::Error` CLI serializer; `but perm list` as shipped; `ROUTE_AUTHORITY_TABLE` as "behavior-neutral"). All corrected below against the shipped tree.
 
@@ -22,22 +22,22 @@ status: planned (frozen-aware; re-grounded after rust/security/PM red-hat pass)
 
 | ID | Area | Disposition | Touches (frozen) | Apply when |
 |---|---|---|---|---|
-| **D1** | `Denial` (3 fields: `code,message,remediation_hint`) gains 4 steering fields | code delta | Sprint 01a `AUTHZ-001` (`but-authz/src/denial.rs`) | Sprint 07 |
-| **D2** | Constructors: `missing_permission` populates held+menu; `no_handle`/`unknown_principal` → `operator_required`, empty | code delta | Sprint 01a/02 (`but-authz/src/authorize.rs`) | Sprint 07 |
-| **D3** | `branch_protected(principal,&cfg,branch)` — signature change to thread cfg/held; gate-state-aware menu | code delta | Sprint 01a `GATES-001` (`but-api/src/commit/gate.rs`) | Sprint 07 |
-| **D4** | `MergeGateError` (already has `remediation_hint`+`unmet`) gains 4 steering fields | code delta | Sprint 01b/04 (`but-api/src/legacy/merge_gate.rs`) | Sprint 07 |
-| **D5** | `config.invalid` has **three** carriers — `ConfigError` (thiserror) + `MergeGateError` — both get `class`+`do_not` | code delta | Sprint 01a/02 (`but-authz/src/config.rs`, `merge_gate.rs`) | Sprint 07 |
-| **D6** | **Three** hand-rolled CLI serializers updated (+ Tauri `json::Error` via MGMT-IPC-002) | code delta | Sprint 01b/02/05 (`commit2.rs`, `forge/review.rs` ×2) + **06a `MGMT-IPC-002`** | Sprint 07 (coord 06a) |
-| **D7** | `ROUTE_AUTHORITY_TABLE` + `Route` type — a **real refactor**, behavior-neutral only for the decision | code delta | `04-api-design.md` + all gate call sites (01a–05) + the honesty grep | Sprint 07 |
-| **D8** | Discovery: `but perm list` is a **Sprint 05 dependency**; `but whoami`/`but can-i` is net-new STEER work | dependency + code delta | Sprint 05 `CLI-001` | Sprint 07 |
-| **D9** | Test updates: most are **assertion-based** (not `insta`); additive fields keep key-readers passing; audit whole-object-equality | test delta | Sprints 01a–05 (`commit_gate.rs`, `merge_gate.rs`, `governed_loop.rs`, `but-api/tests/*`) | Sprint 07 |
-| **D10** | Honesty grep — **net-new** closed-catalog + table-coverage patterns (no prior "AUTHZ-007 honesty grep" to extend) | test delta | `but-authz/tests/invariant_build_gates.rs` | Sprint 07 |
+| **D1** | `Denial` (3 fields: `code,message,remediation_hint`) gains 4 steering fields | code delta | Sprint 01a `AUTHZ-001` (`but-authz/src/denial.rs`) | Sprint 08 |
+| **D2** | Constructors: `missing_permission` populates held+menu; `no_handle`/`unknown_principal` → `operator_required`, empty | code delta | Sprint 01a/02 (`but-authz/src/authorize.rs`) | Sprint 08 |
+| **D3** | `branch_protected(principal,&cfg,branch)` — signature change to thread cfg/held; gate-state-aware menu | code delta | Sprint 01a `GATES-001` (`but-api/src/commit/gate.rs`) | Sprint 08 |
+| **D4** | `MergeGateError` (already has `remediation_hint`+`unmet`) gains 4 steering fields | code delta | Sprint 01b/04 (`but-api/src/legacy/merge_gate.rs`) | Sprint 08 |
+| **D5** | `config.invalid` has **three** carriers — `ConfigError` (thiserror) + `MergeGateError` — both get `class`+`do_not` | code delta | Sprint 01a/02 (`but-authz/src/config.rs`, `merge_gate.rs`) | Sprint 08 |
+| **D6** | **Three** hand-rolled CLI serializers updated (+ Tauri `json::Error` via MGMT-IPC-002) | code delta | Sprint 01b/02/05 (`commit2.rs`, `forge/review.rs` ×2) + **06a `MGMT-IPC-002`** | Sprint 08 (coord 06a) |
+| **D7** | `ROUTE_AUTHORITY_TABLE` + `Route` type — a **real refactor**, behavior-neutral only for the decision | code delta | `04-api-design.md` + all gate call sites (01a–05) + the honesty grep | Sprint 08 |
+| **D8** | Discovery: `but perm list` is a **Sprint 05 dependency**; `but whoami`/`but can-i` is net-new STEER work | dependency + code delta | Sprint 05 `CLI-001` | Sprint 08 |
+| **D9** | Test updates: most are **assertion-based** (not `insta`); additive fields keep key-readers passing; audit whole-object-equality | test delta | Sprints 01a–05 (`commit_gate.rs`, `merge_gate.rs`, `governed_loop.rs`, `but-api/tests/*`) | Sprint 08 |
+| **D10** | Honesty grep — **net-new** closed-catalog + table-coverage patterns (no prior "AUTHZ-007 honesty grep" to extend) | test delta | `but-authz/tests/invariant_build_gates.rs` | Sprint 08 |
 | **R15–R17** | Named new risks (injection-amplification, lying-menu, goal-hijack/oracle) | risk delta | `07-technical-risks.md` (fold-in I6) | freeze lifts |
 | **I1–I6** | Additive edits to frozen PRD index + risk files | doc delta | `README.md`, `03-functional-groups.md`, `ROADMAP.md`, `07-technical-risks.md` | freeze lifts |
 
 ---
 
-## 1. Code deltas to shipped sprints (apply at Sprint 07)
+## 1. Code deltas to shipped sprints (apply at Sprint 08)
 
 ### D1 — `Denial` gains 4 additive fields
 `but-authz/src/denial.rs:13`. Shipped `Denial { code, message, remediation_hint }` (derives `Debug,Clone,PartialEq,Eq`; **no `unmet`, no `Serialize`**). Add `class`/`held_permissions`/`authorized_actions`/`do_not` + the `DenialClass`/`AuthorizedAction` types (which must derive `Debug,Clone,PartialEq,Eq` so `Denial`'s derives still hold). Decide `Authority` serialization ([03 §1](./03-technical-requirements-delta.md)).
@@ -61,7 +61,7 @@ No single `json::Error` CLI path. Update each hand-rolled site: `commit2.rs:~679
 No `Route` type or table exists; authority checks are scattered/heterogeneous (commit: authorize+predicate; merge: authorize+review-engine; forge `legacy/forge.rs:47` `authorize_branch_action`: a `match` with an `other => authorize(p, other)` arm; admin `config_mutate.rs:25`). Introduce a `Route` enum + the enumerable table **in `but-authz`** (no `but-authz→but-api` cycle, RULES.md), compose the non-authority predicates around it, reconcile the forge `match`, and **preserve `invariant_build_gates.rs`'s positive-`authorize` grep** (keep literal `authorize`/`Authority::*` calls or update the grep). Behavior-neutral for the decision; a multi-site refactor otherwise — size it as its own task (STEER-002).
 
 ### D8 — Discovery: dependency, not a freebie (C3)
-`but perm list` does **not** ship; it is **Sprint 05 `CLI-001`** (`but perm {list,grant,revoke}`). Sprint 07 **depends on** Sprint 05 landing it. `but whoami`/`but can-i` (bundle perms+groups+actions, self-scoped, no other-member enumeration) is **net-new STEER work** (STEER-006). Discovery is **degradable**: omit it from the menu rather than offer a phantom command (preserves no-lying-menu).
+`but perm list` does **not** ship; it is **Sprint 05 `CLI-001`** (`but perm {list,grant,revoke}`). Sprint 08 **depends on** Sprint 05 landing it. `but whoami`/`but can-i` (bundle perms+groups+actions, self-scoped, no other-member enumeration) is **net-new STEER work** (STEER-006). Discovery is **degradable**: omit it from the menu rather than offer a phantom command (preserves no-lying-menu).
 
 ### D9 — Tests (assertion-based, not snapshots — M6)
 `governed_loop.rs` parses `CliErrorEnvelope { code, message, remediation_hint }` and substring-matches; `but-api/tests/commit_gate.rs`/`merge_gate.rs` assert `denial.code` / `.message.contains(...)`. These are **hand assertions, not `insta`** — `SNAPSHOTS=overwrite` does not apply. Additive JSON fields keep key-readers passing; **audit for any whole-object equality** (`assert_eq!` on a full `Denial`/`MergeGateError` or serialized blob) — those break on new fields and must be updated. Add positive assertions for the new fields. Behavior-neutral for the decision; "only the payload grows" is true only for key-readers.
@@ -71,9 +71,9 @@ There is **no prior "AUTHZ-007 honesty grep"**; `invariant_build_gates.rs` asser
 
 ---
 
-## 2. Proposed Sprint 07 — STEER: Capability-Aware Denials
+## 2. Proposed Sprint 08 — STEER: Capability-Aware Denials
 
-Folder `sprint-07-steer-capability-aware-denials` (**sequence #9, slug 07** — mirroring how `06a`/`06b` already diverge slug from sequence; L4). Appended after Sprint 06b; **UI-independent** (MGMT render of the menu deferred). Depends on Sprint 02 (denial primitive), Sprint 04 (merge strictness), **Sprint 05 (`but perm list` + persisted config + the CLI surface)**, and coordinates with Sprint 06a `MGMT-IPC-002`.
+Folder `sprint-08-steer-capability-aware-denials` (**sequence #9, slug 07** — mirroring how `06a`/`06b` already diverge slug from sequence; L4). Appended after Sprint 06b; **UI-independent** (MGMT render of the menu deferred). Depends on Sprint 02 (denial primitive), Sprint 04 (merge strictness), **Sprint 05 (`but perm list` + persisted config + the CLI surface)**, and coordinates with Sprint 06a `MGMT-IPC-002`.
 
 **Human Testing Gate.** A denied principal receives a `class`, its `held_permissions`, an `authorized_actions` menu of governed `but` commands runnable in their stated context, and a `do_not`; a reviewer denied a commit follows a listed `but review` action (NOT `approve` on its own branch) to a successful review; an unknown-principal/`config.invalid` denial returns `operator_required` + empty menu + "do not retry"; and every menu entry, run in its stated context, is not itself denied.
 
@@ -126,7 +126,7 @@ Baseline cited from the live PRD README: v1.3.0 = 5 groups / 17 UCs / 129 ACs / 
 | ↳ component-test | 38 | 0 | **38** |
 | ↳ e2e-automated | 2 | 0 | **2** |
 | Risk register | 14 | **+3** (R15/R16/R17) | **17** |
-| Sprints (ROADMAP) | 8 | +1 (Sprint 07, seq #9) | **9** |
+| Sprints (ROADMAP) | 8 | +1 (Sprint 08, seq #9) | **9** |
 
 Type-tally check: 85+13+22+38+2 = **160** ✓. STEER per-UC AC tally: 5+7+6+5+4+5 = **32** ✓.
 
@@ -138,7 +138,7 @@ All **append-style**, no rewrites:
 - **I1** — copy `02-uc-steer.md` → top-level `12-uc-steer.md` (no renumbering).
 - **I2** — `03-functional-groups.md`: add STEER row + Use-Case-Summary row (STEER · 6 · 32); totals → 6 groups / 23 UCs / 161 ACs.
 - **I3** — `README.md`: Document Index row, Quick Stats (groups 5→6, UCs 17→23, ACs 129→161, criteria 129→160, risks 14→17), Version History row, `version: 1.4.0`.
-- **I4** — `ROADMAP.md`: Sprint 07 row (seq #9, slug `sprint-07-steer-capability-aware-denials`) + details block + dependency edge; `sprint_count` 8→9. **✅ APPLIED 2026-06-19** — authored by a dispatched rust-planner (NEVER-TIER), appended append-only; no existing sprint section touched. (The rust-planner pass also surfaced a 4th denial carrier, `CommitGateError` — folded into STEER-001.)
+- **I4** — `ROADMAP.md`: Sprint 08 row (seq #9, slug `sprint-08-steer-capability-aware-denials`) + details block + dependency edge; `sprint_count` 8→9. **✅ APPLIED 2026-06-19** — authored by a dispatched rust-planner (NEVER-TIER), appended append-only; no existing sprint section touched. (The rust-planner pass also surfaced a 4th denial carrier, `CommitGateError` — folded into STEER-001.)
 - **I5** — fold T-STEER-001..031 into `11-e2e-testing-criteria.md` (+ count line → 160).
 - **I6** — fold R15/R16/R17 into `10-technical-requirements/07-technical-risks.md` (+ count → 17).
 
