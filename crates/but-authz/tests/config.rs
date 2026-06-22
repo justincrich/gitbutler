@@ -229,6 +229,90 @@ git commit -m "governance config"
     (repo, tmp)
 }
 
+#[test]
+fn gates_wire_accepts_full_gate_array() -> anyhow::Result<()> {
+    let (repo, _tmp) = repo_with_full_gates();
+
+    // negative_control: #[serde(deny_unknown_fields)] must NOT reject the [[gate]] table.
+    // If it did, this would return Err(ConfigError) and the ? would propagate the failure.
+    let config = load_governance_config(&repo, TARGET_REF)?;
+
+    // negative_control: the loader must NOT silently drop branch protections when [[gate]] is present.
+    let main = config
+        .branch("main")
+        .ok_or_else(|| anyhow::anyhow!("main branch protection must survive [[gate]] parsing"))?;
+    assert!(
+        main.protected(),
+        "branch protection for main must remain protected=true alongside a [[gate]] array"
+    );
+
+    // negative_control: the config must NOT be empty — the seeded branch protection is present,
+    // ruling out a stub loader that returns an empty GovConfig.
+    assert!(
+        !config.branches().is_empty(),
+        "GovConfig must carry the seeded branch protection, not an empty map"
+    );
+
+    println!("gates.toml with [[branch]] + [[gate]] parsed without config.invalid");
+    println!("branch main protected == true (not dropped by [[gate]] table)");
+    println!("GovConfig branches non-empty (not a stub empty config)");
+
+    Ok(())
+}
+
+#[test]
+fn gates_path_returns_canonical() {
+    // negative_control: gates_path must return exactly this literal — any other path fails.
+    assert_eq!(
+        but_authz::gates_path(),
+        ".gitbutler/gates.toml",
+        "gates_path must return the canonical governance gates path literal"
+    );
+
+    // negative_control: must not be an empty stub.
+    assert!(
+        !but_authz::gates_path().is_empty(),
+        "gates_path must not return an empty string"
+    );
+
+    // negative_control: calling but_authz::gates_path() at all proves it is re-exported
+    // from the crate root — if it were not, this test would not compile.
+    println!("but_authz::gates_path() == \".gitbutler/gates.toml\"");
+    println!("gates_path is re-exported and callable as but_authz::gates_path()");
+}
+
+fn repo_with_full_gates() -> (gix::Repository, impl std::fmt::Debug) {
+    let (repo, tmp) = but_testsupport::writable_scenario("governance-base");
+    but_testsupport::invoke_bash(
+        r#"
+mkdir -p .gitbutler
+cat >.gitbutler/permissions.toml <<'EOF'
+[[principal]]
+id = "dev"
+permissions = ["contents:write"]
+EOF
+
+cat >.gitbutler/gates.toml <<'EOF'
+[[branch]]
+name = "main"
+protected = true
+
+[[gate]]
+branch = "main"
+type = "review"
+min_approvals = 2
+require_distinct_from_author = true
+require_approval_from_group = ["code-reviewers"]
+EOF
+
+git add .gitbutler/permissions.toml .gitbutler/gates.toml
+git commit -m "seed gates with full [[gate]] array"
+"#,
+        &repo,
+    );
+    (repo, tmp)
+}
+
 fn assert_config_invalid(result: Result<but_authz::GovConfig, ConfigError>) {
     let Err(error) = result else {
         panic!("malformed target-ref config must fail closed");
