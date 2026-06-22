@@ -5,14 +5,13 @@
 > Reviewer: rust-reviewer (DEFERRED — all 5 ACs satisfied at HEAD; deferred detailed review to PHASE 4.5 red-hat closeout)
 > Updated: 2026-06-22T17:39:48Z
 
-
 ## What this does
 
 Extend the shipped `but-rules` (Trigger → Filter → Action) engine — the surface Sprint 06b exposes — with the **two variants it does not yet have**: a new commit `Trigger` variant and a review-assignment `Action` variant. Wired together they form a "review-requested" hook: when a commit matching the rule's filter (branch/principal) lands, the engine fires the action and opens a `pending` `local_review_assignments` row for the configured reviewer — the **same** drive-only row UC-LPR-01/LPR-003 defines. The auto-opened assignment is **drive-only**: it blocks no commit and no merge. The engine mechanism is **reused**, not re-built.
 
 ## Why
 
-Sprint 07 · PRD UC-LPR-06 · capability CAP-AUTHZ-01. The reconciler needs an assignment to *exist* before it can dispatch a reviewer — so opening one should be automatic. UC-LPR-06 puts that automation in the **existing** `but-rules` engine rather than a new mechanism: a commit fires a "review-requested" action that opens the local assignment. Today `but-rules` has neither a commit trigger nor a review-assignment action — LPR-007 adds exactly those two variants and the firing path that writes the assignment.
+Sprint 07 · PRD UC-LPR-06 · capability CAP-AUTHZ-01. The reconciler needs an assignment to _exist_ before it can dispatch a reviewer — so opening one should be automatic. UC-LPR-06 puts that automation in the **existing** `but-rules` engine rather than a new mechanism: a commit fires a "review-requested" action that opens the local assignment. Today `but-rules` has neither a commit trigger nor a review-assignment action — LPR-007 adds exactly those two variants and the firing path that writes the assignment.
 
 ## How to verify
 
@@ -20,12 +19,12 @@ PRIMARY **AC-1** — `cargo test -p but-rules review_requested_hook_creates_pend
 
 ## Scope
 
-  - crates/but-rules/src/lib.rs (MODIFY — ADD a new commit `Trigger` variant beside `FileSytemChange`/`ClaudeCodeHook` (lib.rs:77) + a new review-assignment `Action` variant beside `Explicit(Operation)`/`Implicit(ImplicitOperation)` (lib.rs:140); additive only, exhaustive-match preserved)
-  - the `but-rules` rule-evaluation/firing path (MODIFY — the fn that matches a trigger against the rule's filter and runs the action; add the "review-requested" action handler that writes a `pending` `local_review_assignments` row for the configured reviewer, reusing LPR-001's Handle / LPR-003's write internals — do NOT fork a parallel assignment writer)
-  - crates/but-db/src/table/workspace_rules.rs (MODIFY IF NEEDED — additive (de)serialization support for the two new variants, if the persisted rule blob needs it; the table itself is unchanged)
-  - crates/but-rules/tests/ (NEW — the PRIMARY hook proofs AC-1..AC-4 against a real but-db + gix fixture via but_testsupport, hand-assertion style)
-  - crates/but-api/tests/ (NEW — AC-5: the auto-opened assignment is visible in `review_status`, closing the commit→dispatch loop)
-  - packages/but-sdk/src/generated/** (REGENERATE ONLY via `pnpm build:sdk && pnpm format` — NEVER hand-edit; the regen gate is LPR-010)
+- crates/but-rules/src/lib.rs (MODIFY — ADD a new commit `Trigger` variant beside `FileSytemChange`/`ClaudeCodeHook` (lib.rs:77) + a new review-assignment `Action` variant beside `Explicit(Operation)`/`Implicit(ImplicitOperation)` (lib.rs:140); additive only, exhaustive-match preserved)
+- the `but-rules` rule-evaluation/firing path (MODIFY — the fn that matches a trigger against the rule's filter and runs the action; add the "review-requested" action handler that writes a `pending` `local_review_assignments` row for the configured reviewer, reusing LPR-001's Handle / LPR-003's write internals — do NOT fork a parallel assignment writer)
+- crates/but-db/src/table/workspace_rules.rs (MODIFY IF NEEDED — additive (de)serialization support for the two new variants, if the persisted rule blob needs it; the table itself is unchanged)
+- crates/but-rules/tests/ (NEW — the PRIMARY hook proofs AC-1..AC-4 against a real but-db + gix fixture via but_testsupport, hand-assertion style)
+- crates/but-api/tests/ (NEW — AC-5: the auto-opened assignment is visible in `review_status`, closing the commit→dispatch loop)
+- packages/but-sdk/src/generated/\*\* (REGENERATE ONLY via `pnpm build:sdk && pnpm format` — NEVER hand-edit; the regen gate is LPR-010)
 
 <details>
 <summary>▸ Full agent specification (TASK-TEMPLATE v5.2 — required reading for implementer + reviewer)</summary>
@@ -237,6 +236,7 @@ DEPENDENCIES
 Depends on: LPR-001 (local_review_assignments table + Handle), LPR-002 (AssignmentState::Pending), LPR-003 (the pending-assignment write internals the hook reuses), LPR-005 (review_status — AC-5 asserts the auto-opened assignment is visible in the derived read)
 Blocks:     LPR-008 (the reconciler observes the auto-opened assignment in the full drive state), LPR-010 (SDK regen for the two new but-rules variants)
 ```
+
 </details>
 
 <!-- REQUIREMENT-CONTRACT v1 -->

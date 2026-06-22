@@ -12,11 +12,11 @@
 
 ## Documents in this contract
 
-| ID | Title | Effort | Implementer task | Backend dep |
-|----|-------|--------|------------------|-------------|
-| **DESIGN-LPR-001** | `keep_reviews_local` toggle — Project Settings | 30 min | LPR-012 | LPR-006 |
-| **DESIGN-LPR-002** | Principal `kind` (Human/Agent) — Principals editor | 30 min | LPR-014 | LPR-005, LPR-013 |
-| **DESIGN-LPR-003** | Local-review view panel (read-only) | 50 min | LPR-016 | LPR-005, LPR-015 |
+| ID                 | Title                                              | Effort | Implementer task | Backend dep      |
+| ------------------ | -------------------------------------------------- | ------ | ---------------- | ---------------- |
+| **DESIGN-LPR-001** | `keep_reviews_local` toggle — Project Settings     | 30 min | LPR-012          | LPR-006          |
+| **DESIGN-LPR-002** | Principal `kind` (Human/Agent) — Principals editor | 30 min | LPR-014          | LPR-005, LPR-013 |
+| **DESIGN-LPR-003** | Local-review view panel (read-only)                | 50 min | LPR-016          | LPR-005, LPR-015 |
 
 The per-task execution contracts (`DESIGN-LPR-001-…md`, `DESIGN-LPR-002-…md`,
 `DESIGN-LPR-003-…md` in this directory) carry the formal `AC-N`/`TC-N` Requirement
@@ -33,27 +33,27 @@ R21/R19 parentheticals win** (they are grep-audited).
 Every surface below is built **only** from these already-shipped components. No new
 components, no new tokens.
 
-| Component | Import path | Key props (verified) |
-|-----------|-------------|----------------------|
-| `Toggle` | `@gitbutler/ui` | `id`, `checked` (bindable), `disabled`, `onchange(checked)`, `testId`. Checkbox-based; Space/Enter handled internally. **No `style` prop** — styling is token-driven. |
-| `Badge` | `@gitbutler/ui` | `style` (color type), `kind` (`"solid"`\|`"soft"`), `size` (`"icon"`\|`"tag"`), `tooltip`, `icon`, `testId`, `children` (snippet). |
-| `CardGroup` / `CardGroup.Item` | `@gitbutler/ui` | `labelFor` (renders the item as a `<label for>` — clicking title/caption activates the bound control), `standalone`, `disabled`, snippets: `title`, `caption`, `actions`, `children`. |
-| `Select` / `SelectItem` | `@gitbutler/ui` | `value`, `options: {label,value}[]`, `wide`, `onselect(value)`, `itemSnippet`. Used by `ForgeForm.svelte`. |
-| `SegmentControl` / `SegmentControl.Item` | `@gitbutler/ui` | `selected`, `onselect(id)`, items: `id`, `disabled`. Radio-group equivalent; **already used in `PrincipalEditor.svelte`** for the Preset row. |
-| `InfoMessage` | `@gitbutler/ui` | `style` (`"info"`\|`"warning"`\|`"danger"`\|`"success"`), `outlined`, `filled`, snippets: `title`, `content`, `testId`. |
-| `EmptyStatePlaceholder` | `@gitbutler/ui` | snippets: `title`, `caption`, `actions` (omit `actions` for a no-button empty state). |
+| Component                                | Import path     | Key props (verified)                                                                                                                                                                  |
+| ---------------------------------------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Toggle`                                 | `@gitbutler/ui` | `id`, `checked` (bindable), `disabled`, `onchange(checked)`, `testId`. Checkbox-based; Space/Enter handled internally. **No `style` prop** — styling is token-driven.                 |
+| `Badge`                                  | `@gitbutler/ui` | `style` (color type), `kind` (`"solid"`\|`"soft"`), `size` (`"icon"`\|`"tag"`), `tooltip`, `icon`, `testId`, `children` (snippet).                                                    |
+| `CardGroup` / `CardGroup.Item`           | `@gitbutler/ui` | `labelFor` (renders the item as a `<label for>` — clicking title/caption activates the bound control), `standalone`, `disabled`, snippets: `title`, `caption`, `actions`, `children`. |
+| `Select` / `SelectItem`                  | `@gitbutler/ui` | `value`, `options: {label,value}[]`, `wide`, `onselect(value)`, `itemSnippet`. Used by `ForgeForm.svelte`.                                                                            |
+| `SegmentControl` / `SegmentControl.Item` | `@gitbutler/ui` | `selected`, `onselect(id)`, items: `id`, `disabled`. Radio-group equivalent; **already used in `PrincipalEditor.svelte`** for the Preset row.                                         |
+| `InfoMessage`                            | `@gitbutler/ui` | `style` (`"info"`\|`"warning"`\|`"danger"`\|`"success"`), `outlined`, `filled`, snippets: `title`, `content`, `testId`.                                                               |
+| `EmptyStatePlaceholder`                  | `@gitbutler/ui` | snippets: `title`, `caption`, `actions` (omit `actions` for a no-button empty state).                                                                                                 |
 
 ### Design-system color map (Badge `style` → meaning)
 
 The `Badge` `style` prop accepts: `gray`, `pop`, `safe`, `warning`, `danger`, `purple`.
 
-| Badge `style` | Visual | Semantic use in this contract |
-|---------------|--------|-------------------------------|
-| `gray` | neutral | **Descriptor / peer label** (Human, Agent, group, Draft, Pending). Never implies trust or status. |
-| `pop` | brand accent | **Awaiting attention** — closest available tint to "info". (See note below.) |
-| `safe` | green | **Success / approved** (Approved assignment, Approved/Mergeable lifecycle). |
-| `warning` | yellow | **Action needed / changes requested**. |
-| `danger` | red | Errors / denials (not used by these three surfaces except existing error paths). |
+| Badge `style` | Visual       | Semantic use in this contract                                                                     |
+| ------------- | ------------ | ------------------------------------------------------------------------------------------------- |
+| `gray`        | neutral      | **Descriptor / peer label** (Human, Agent, group, Draft, Pending). Never implies trust or status. |
+| `pop`         | brand accent | **Awaiting attention** — closest available tint to "info". (See note below.)                      |
+| `safe`        | green        | **Success / approved** (Approved assignment, Approved/Mergeable lifecycle).                       |
+| `warning`     | yellow       | **Action needed / changes requested**.                                                            |
+| `danger`      | red          | Errors / denials (not used by these three surfaces except existing error paths).                  |
 
 > **Honest gap — no `info`/`blue` Badge variant exists.** The prior per-task
 > contracts phrase AwaitingReview as "info/blue". The shipped design system has no
@@ -70,7 +70,7 @@ These three residuals are **named, accepted, never presented as closed**. Every 
 string in this contract honors them:
 
 - **R12 / R21** — `keep_reviews_local` is a **trusted-desktop operator preference**
-  stored in the project store, *not* an authorization boundary. An untrusted
+  stored in the project store, _not_ an authorization boundary. An untrusted
   project-store write can flip it. Copy must say so; must **never** call it a security
   control, access gate, or authorization boundary.
 - **R19** — the principal `kind` field is **descriptive metadata only**. It does not
@@ -97,8 +97,8 @@ string in this contract honors them:
 A per-project toggle that controls whether agent-authored review requests stay on the
 local review layer (the default) or are mirrored to the remote forge. This is a
 **desktop operator preference** in the project store — the same class as
-`forge_override` and `preferred_forge_user` — *not* governed, ref-pinned config, and
-*not* `administration:write`-gated.
+`forge_override` and `preferred_forge_user` — _not_ governed, ref-pinned config, and
+_not_ `administration:write`-gated.
 
 ### Placement
 
@@ -132,10 +132,10 @@ the title or caption text activates the toggle — the same a11y win
 
 ### Component states
 
-| State | `checked` | Default? | Visual |
-|-------|-----------|----------|--------|
-| **Enabled (local)** | `true` | ✅ **Default** | Toggle in checked position. Caption = on-state copy. |
-| **Disabled (mirror to forge)** | `false` | — | Toggle in unchecked position. Caption = off-state copy. |
+| State                          | `checked` | Default?       | Visual                                                  |
+| ------------------------------ | --------- | -------------- | ------------------------------------------------------- |
+| **Enabled (local)**            | `true`    | ✅ **Default** | Toggle in checked position. Caption = on-state copy.    |
+| **Disabled (mirror to forge)** | `false`   | —              | Toggle in unchecked position. Caption = off-state copy. |
 
 **Default-on is mandatory.** `Project.keep_reviews_local` is `DefaultTrue`: an older
 project JSON without the field deserializes to `true`. Bind `checked` directly to
@@ -151,16 +151,16 @@ project file missing the key renders the toggle **on**.
 **On-state caption** (local; the default):
 
 > When enabled, review requests from agent principals remain local and are never
-> mirrored to the remote forge. *(This is a desktop preference — it is not an
+> mirrored to the remote forge. _(This is a desktop preference — it is not an
 > authorization boundary. The project store is not independently verified; an
-> untrusted write could flip it.)*
+> untrusted write could flip it.)_
 
 **Off-state caption** (mirror to forge; shown when `checked === false`):
 
 > Review requests from agent principals will be mirrored to your forge when approved.
 > Internal principal identifiers may be disclosed to the forge API — ensure all
-> principals have forge accounts before enabling. *(See: desktop preference, not an
-> authorization boundary.)*
+> principals have forge accounts before enabling. _(See: desktop preference, not an
+> authorization boundary.)_
 
 > The R21 parentheticals are **verbatim and load-bearing** — the per-task contract
 > grep-audits that the words "security control" / "authorization boundary" appear
@@ -192,17 +192,17 @@ project file missing the key renders the toggle **on**.
 
 ### Edge cases
 
-| Case | Treatment |
-|------|-----------|
-| **Project JSON predates the field** (no `keep_reviews_local` key) | `DefaultTrue` deserializes to `true` → toggle renders **on**. This is the common case for existing projects. |
-| **`updateProject` fails** (e.g. backend unavailable) | Revert `checked` to the last committed value; surface an `InfoMessage` `style="danger"` above the card. Do **not** leave the toggle visually flipped while the write failed. |
-| **Settings modal read-only** | `Toggle` `disabled`, `CardGroup.Item` `disabled`. Caption unchanged. |
-| **Forge not configured** | The toggle still renders and is still functional — `keep_reviews_local` governs a seam that is *specified, not built* this sprint. The off-state caption already warns about forge disclosure. Do not disable the toggle for a missing forge. |
+| Case                                                              | Treatment                                                                                                                                                                                                                                     |
+| ----------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Project JSON predates the field** (no `keep_reviews_local` key) | `DefaultTrue` deserializes to `true` → toggle renders **on**. This is the common case for existing projects.                                                                                                                                  |
+| **`updateProject` fails** (e.g. backend unavailable)              | Revert `checked` to the last committed value; surface an `InfoMessage` `style="danger"` above the card. Do **not** leave the toggle visually flipped while the write failed.                                                                  |
+| **Settings modal read-only**                                      | `Toggle` `disabled`, `CardGroup.Item` `disabled`. Caption unchanged.                                                                                                                                                                          |
+| **Forge not configured**                                          | The toggle still renders and is still functional — `keep_reviews_local` governs a seam that is _specified, not built_ this sprint. The off-state caption already warns about forge disclosure. Do not disable the toggle for a missing forge. |
 
 ### Dependencies
 
 - **Backend**: LPR-006 — `Project.keep_reviews_local: DefaultTrue` (the
-  `ok_with_force_push` precedent, *not* the plain-`bool` `force_push_protection`
+  `ok_with_force_push` precedent, _not_ the plain-`bool` `force_push_protection`
   precedent). Project-store class, R12/R21 residual.
 - **SDK**: the regenerated `@gitbutler/but-sdk` `Project` type must carry
   `keep_reviews_local: boolean` (LPR-010 regen).
@@ -248,10 +248,10 @@ tab → `PrincipalsList.svelte`):
 
 ### Component selection
 
-| Surface | Component | Props |
-|---------|-----------|-------|
-| List row (read) | `Badge` | `style="gray"`, `kind="soft"`, `size="tag"`, `tooltip=...`, `testId`, `children` → "Agent" \| "Human" |
-| Editor (edit) | `SegmentControl` + `SegmentControl.Item` | `selected={stagedKind}`, `onselect={setKind}`; items `id="human"` / `id="agent"`, `disabled={isReadOnly}` |
+| Surface         | Component                                | Props                                                                                                     |
+| --------------- | ---------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| List row (read) | `Badge`                                  | `style="gray"`, `kind="soft"`, `size="tag"`, `tooltip=...`, `testId`, `children` → "Agent" \| "Human"     |
+| Editor (edit)   | `SegmentControl` + `SegmentControl.Item` | `selected={stagedKind}`, `onselect={setKind}`; items `id="human"` / `id="agent"`, `disabled={isReadOnly}` |
 
 **Why `SegmentControl` over `Select`?** The choice is binary and the editor already
 uses `SegmentControl` for Presets — a segmented control makes "Human | Agent" scannable
@@ -265,11 +265,11 @@ restriction. They are peers.
 
 ### Component states
 
-| `kind` value | List-row badge | Editor control | Default? |
-|--------------|----------------|----------------|----------|
+| `kind` value                   | List-row badge      | Editor control                      | Default?                         |
+| ------------------------------ | ------------------- | ----------------------------------- | -------------------------------- |
 | `undefined` / `null` / omitted | **"Human"** `Badge` | `SegmentControl` `selected="human"` | ✅ **Default** (omitted ⇒ human) |
-| `"human"` | "Human" `Badge` | `selected="human"` | — |
-| `"agent"` | "Agent" `Badge` | `selected="agent"` | — |
+| `"human"`                      | "Human" `Badge`     | `selected="human"`                  | —                                |
+| `"agent"`                      | "Agent" `Badge`     | `selected="agent"`                  | —                                |
 
 **Omitted-kind ⇒ "Human" is mandatory and explicit.** The badge is **never blank**.
 This mirrors the backend's conservative default-human posture (tech-delta §A.4: absence
@@ -329,20 +329,20 @@ value); labels are capitalized for display.
   `disabled={isReadOnly}` on each item.
 - The Kind section needs a programmatic label: wrap the `SegmentControl` in a
   `<fieldset>`/`<div>` with an associated `<span class="principal-editor__label">Kind
-  </span>` — mirror the existing Preset section's markup
+</span>` — mirror the existing Preset section's markup
   (`.principal-editor__section` + `.principal-editor__label`).
 - `testId`s: list badge → `principals-list-kind-{slug}`; editor control →
   `principal-editor-kind`.
 
 ### Edge cases
 
-| Case | Treatment |
-|------|-----------|
-| **Omitted `kind`** (older `permissions.toml` with no `kind` key) | Renders **"Human"** badge. Conservative default-human. Never blank. |
-| **Unknown `kind` value** (e.g. a future `"bot"` leaks through) | Render the raw value in a `gray` badge (do not crash, do not hide). The SegmentControl shows **neither** item selected, with the caption still visible. Flag in a follow-up; do not invent UI for unknown values this sprint. |
-| **Read-only Governance tab** (`isReadOnly`) | List badge still renders. Editor SegmentControl items are `disabled`; the badge in the row is unchanged. |
-| **Save denied** (`administration:write` not held) | Existing `saveError` `InfoMessage` (`style="danger"`) fires; `stagedKind` reverts. No new affordance. |
-| **`isCurrentUser` principal** | The existing "You" badge (`style="pop"`) coexists with the Kind badge — they are independent descriptors. Do not merge them. |
+| Case                                                             | Treatment                                                                                                                                                                                                                     |
+| ---------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Omitted `kind`** (older `permissions.toml` with no `kind` key) | Renders **"Human"** badge. Conservative default-human. Never blank.                                                                                                                                                           |
+| **Unknown `kind` value** (e.g. a future `"bot"` leaks through)   | Render the raw value in a `gray` badge (do not crash, do not hide). The SegmentControl shows **neither** item selected, with the caption still visible. Flag in a follow-up; do not invent UI for unknown values this sprint. |
+| **Read-only Governance tab** (`isReadOnly`)                      | List badge still renders. Editor SegmentControl items are `disabled`; the badge in the row is unchanged.                                                                                                                      |
+| **Save denied** (`administration:write` not held)                | Existing `saveError` `InfoMessage` (`style="danger"`) fires; `stagedKind` reverts. No new affordance.                                                                                                                         |
+| **`isCurrentUser` principal**                                    | The existing "You" badge (`style="pop"`) coexists with the Kind badge — they are independent descriptors. Do not merge them.                                                                                                  |
 
 ### Dependencies
 
@@ -392,29 +392,29 @@ panel is **branch-scoped**: it reads `review_status` for one target branch.
 
 ### Component selection
 
-| Section | Components |
-|---------|-----------|
-| Lifecycle badge | `Badge` (style varies by state — see states) |
+| Section            | Components                                                                                                   |
+| ------------------ | ------------------------------------------------------------------------------------------------------------ |
+| Lifecycle badge    | `Badge` (style varies by state — see states)                                                                 |
 | Agent-authored tag | `Badge` `style="gray" kind="soft" size="tag"` + `tooltip` (rendered **only** when `agent_authored === true`) |
-| Assignments table | native table / `.principals-list`-style rows + `Badge` per assignment state |
-| Comment threads | list groups + `Badge` for resolved/unresolved count |
-| Verdict at head | inline read-only text + `Badge` |
-| Merge-gate note | `InfoMessage style="info" outlined` |
-| Empty (no review) | `EmptyStatePlaceholder` (title + caption snippets, **no actions**) |
-| Loading | `SkeletonBone` / full-view skeleton |
+| Assignments table  | native table / `.principals-list`-style rows + `Badge` per assignment state                                  |
+| Comment threads    | list groups + `Badge` for resolved/unresolved count                                                          |
+| Verdict at head    | inline read-only text + `Badge`                                                                              |
+| Merge-gate note    | `InfoMessage style="info" outlined`                                                                          |
+| Empty (no review)  | `EmptyStatePlaceholder` (title + caption snippets, **no actions**)                                           |
+| Loading            | `SkeletonBone` / full-view skeleton                                                                          |
 
 ### Component states (single view, four lifecycle states)
 
 The lifecycle badge is the only thing that changes between states; the five data
 sections remain in place. There is **no routing per state**.
 
-| `DerivedPrStatus` | Badge `style` | Badge label | Meaning |
-|-------------------|---------------|-------------|---------|
-| `Draft` / Open | `gray` | "Open" | A review has been opened; no assignments satisfied yet. |
-| `AwaitingReview` | `pop` ⚠️ *(see gap note)* | "Awaiting review" | Reviewers are assigned; no verdict at head. |
-| `ChangesRequested` | `warning` | "Changes requested" | At least one assignment is `changes_requested`. |
-| `Approved` | `safe` | "Approved" | Verdict-at-head is `approved`. |
-| (`Mergeable` presentation alias) | `safe` | "Mergeable" | Approved + no unresolved blocking threads — **presentation label only**, the gate re-derives. |
+| `DerivedPrStatus`                | Badge `style`             | Badge label         | Meaning                                                                                       |
+| -------------------------------- | ------------------------- | ------------------- | --------------------------------------------------------------------------------------------- |
+| `Draft` / Open                   | `gray`                    | "Open"              | A review has been opened; no assignments satisfied yet.                                       |
+| `AwaitingReview`                 | `pop` ⚠️ _(see gap note)_ | "Awaiting review"   | Reviewers are assigned; no verdict at head.                                                   |
+| `ChangesRequested`               | `warning`                 | "Changes requested" | At least one assignment is `changes_requested`.                                               |
+| `Approved`                       | `safe`                    | "Approved"          | Verdict-at-head is `approved`.                                                                |
+| (`Mergeable` presentation alias) | `safe`                    | "Mergeable"         | Approved + no unresolved blocking threads — **presentation label only**, the gate re-derives. |
 
 > ⚠️ The design system has **no blue/info Badge tint**. `AwaitingReview` uses `pop`
 > (brand accent) as the closest "attention without success/warning/danger" tint. If
@@ -426,6 +426,7 @@ sections remain in place. There is **no routing per state**.
 ### Content specification (five sections, top-to-bottom order)
 
 **Section 1 — PR header**
+
 - Lifecycle `Badge` (per states above).
 - Branch display: `{source_branch} → {target_branch}`.
 - **Agent-authored `Badge`** — rendered **only** when `agent_authored === true`.
@@ -433,12 +434,13 @@ sections remain in place. There is **no routing per state**.
   `tooltip="This PR was opened by a principal declared as an agent in .gitbutler/permissions.toml. This is a metadata tag — it does not affect merge decisions."`
   When `agent_authored === false` the badge is **absent** — do **not** render a
   "Human" badge here (the human case is the default and needs no label; contrast
-  DESIGN-LPR-002 where the principal row *does* show "Human" to make the default
+  DESIGN-LPR-002 where the principal row _does_ show "Human" to make the default
   explicit).
 - Derived PR metadata (read-only text): `{sha}`, `{author}`, `{created_at}`,
   `{title}`.
 
 **Section 2 — Assignments table**
+
 - One row per `open_assignments[]`: `{reviewer}` principal id + assignment-state
   `Badge`.
 - Assignment-state badge mapping:
@@ -449,6 +451,7 @@ sections remain in place. There is **no routing per state**.
   (`assigned_at`).
 
 **Section 3 — Comment threads**
+
 - Threads grouped by scope: code-scoped (`file` + `line`) first, then PR-level
   (`file === null`).
 - Each thread shows: `{thread_id}`, comment count, unresolved count (as a small
@@ -460,15 +463,17 @@ sections remain in place. There is **no routing per state**.
 - **No Post-Comment form, no Resolve button.**
 
 **Section 4 — Verdict at head**
+
 - Inline read-only line:
   - `approved` → `Badge style="safe"` "Approved at head"
   - `changes_requested` → `Badge style="warning"` "Changes requested at head"
   - absent → muted text "No verdict at head" (`gray`).
 - One-sentence lifecycle caption beneath the verdict explaining the current state and
-  naming the CLI verb that advances it, e.g. *"Awaiting review from 2 reviewers.
-  Approve via `but review approve <branch>`."*
+  naming the CLI verb that advances it, e.g. _"Awaiting review from 2 reviewers.
+  Approve via `but review approve <branch>`."_
 
 **Section 5 — Merge-gate note**
+
 - `InfoMessage style="info" outlined` at the **bottom** of the view:
   > **Merge decisions are made by the merge gate, not this view.** The actual merge
   > decision is made by the merge gate based on verdict-at-head; a status of "Approved"
@@ -487,10 +492,10 @@ sections remain in place. There is **no routing per state**.
   changes (reactive `$derived` on the branch selector), and exposes a manual refresh
   via the host view's existing refresh affordance — **not** a panel-local button that
   implies a write.
-- **Rationale (must be honored in code review)**: *the Local-Review view is an
+- **Rationale (must be honored in code review)**: _the Local-Review view is an
   observer — it reads and renders, never writes. All writes are driven by the CLI
   (`but review approve`, `but review comment`, `but review assign`, `but review
-  resolve`).*
+resolve`)._
 
 ### Accessibility notes
 
@@ -506,21 +511,21 @@ sections remain in place. There is **no routing per state**.
 - The merge-gate `InfoMessage` is announced politely (it is static, not an alert).
 - `EmptyStatePlaceholder` for the no-review state: `title` snippet "No local review
   open for this branch.", `caption` snippet "Open one with `but review request
-  <branch>` to start the review loop." — **omit the `actions` snippet** (the action is
+<branch>` to start the review loop." — **omit the `actions` snippet** (the action is
   a CLI command, not a UI button; a button would contradict read-only).
 
 ### Edge cases
 
-| Case | Treatment |
-|------|-----------|
-| **Loading** (`review_status` in flight) | Full-view skeleton (`SkeletonBone`) spanning all five sections. `aria-busy="true"` on the container. |
-| **No review open** (branch has no `local_review_meta` opener row) | `EmptyStatePlaceholder` with the title/caption above; **no actions snippet**. The CLI caption is the only "call to action". |
-| **No reviewers assigned** | Within Section 2: inline muted text "No reviewers assigned yet." (not an `EmptyStatePlaceholder` — the review exists; this section is just empty). |
-| **No comment threads** | Within Section 3: inline muted text "No comment threads yet." |
-| **`review_status` read error** (backend unavailable / denied) | `InfoMessage style="danger" outlined` with the error code in the title and "The local review state could not be loaded." in `content`. **Do not** render a partial view with stale data. |
-| **`agent_authored === false`** | The agent-authored badge is **absent** (not rendered as "Human"). The lifecycle badge and all sections render normally. |
-| **Forge review also exists** (mirrored PR) | Out of scope for this sprint (`keep_reviews_local` defaults local). If a forge review coexists, this panel shows the **local** review state only; do not merge the two. |
-| **Approved but merge blocked elsewhere** | Section 5 merge-gate note already covers this — do not add a second warning. The "Approved" badge is a derived label, not a merge promise. |
+| Case                                                              | Treatment                                                                                                                                                                                |
+| ----------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Loading** (`review_status` in flight)                           | Full-view skeleton (`SkeletonBone`) spanning all five sections. `aria-busy="true"` on the container.                                                                                     |
+| **No review open** (branch has no `local_review_meta` opener row) | `EmptyStatePlaceholder` with the title/caption above; **no actions snippet**. The CLI caption is the only "call to action".                                                              |
+| **No reviewers assigned**                                         | Within Section 2: inline muted text "No reviewers assigned yet." (not an `EmptyStatePlaceholder` — the review exists; this section is just empty).                                       |
+| **No comment threads**                                            | Within Section 3: inline muted text "No comment threads yet."                                                                                                                            |
+| **`review_status` read error** (backend unavailable / denied)     | `InfoMessage style="danger" outlined` with the error code in the title and "The local review state could not be loaded." in `content`. **Do not** render a partial view with stale data. |
+| **`agent_authored === false`**                                    | The agent-authored badge is **absent** (not rendered as "Human"). The lifecycle badge and all sections render normally.                                                                  |
+| **Forge review also exists** (mirrored PR)                        | Out of scope for this sprint (`keep_reviews_local` defaults local). If a forge review coexists, this panel shows the **local** review state only; do not merge the two.                  |
+| **Approved but merge blocked elsewhere**                          | Section 5 merge-gate note already covers this — do not add a second warning. The "Approved" badge is a derived label, not a merge promise.                                               |
 
 ### Dependencies
 
@@ -573,15 +578,15 @@ read-only.
 
 ## Verification summary (maps to per-task ACs)
 
-| This contract's requirement | Per-task AC | Audit |
-|-----------------------------|-------------|-------|
-| DESIGN-LPR-001: `Toggle` + `CardGroup.Item labelFor` + default-on + R21 caveat | DESIGN-LPR-001 AC-1..AC-5 | grep `var(--(lpr\|review)-` → 0 matches; design review |
-| DESIGN-LPR-001: copy never calls the toggle a security control | DESIGN-LPR-001 AC-4 | grep `security control` / `authorization` in toggle copy → only the negating caveat |
-| DESIGN-LPR-002: `gray` Badge + omitted⇒"Human" + non-enforcement tooltip | DESIGN-LPR-002 AC-1..AC-5 | grep `var(--(kind\|agent)-` → 0 matches |
-| DESIGN-LPR-003: single view / four states / five sections / read-only | DESIGN-LPR-003 AC-1, AC-2, AC-5 | component test: no mutate buttons rendered |
-| DESIGN-LPR-003: agent-authored badge present iff `agent_authored` | DESIGN-LPR-003 AC-3 | component test: absent when false |
-| DESIGN-LPR-003: `EmptyStatePlaceholder` no-action for no-review | DESIGN-LPR-003 AC-4 | component test: no `actions` snippet rendered |
-| DESIGN-LPR-003: lifecycle colors use only shipped Badge styles | DESIGN-LPR-003 AC-6 | grep `var(--(review\|lpr)-` → 0 matches |
+| This contract's requirement                                                    | Per-task AC                     | Audit                                                                               |
+| ------------------------------------------------------------------------------ | ------------------------------- | ----------------------------------------------------------------------------------- |
+| DESIGN-LPR-001: `Toggle` + `CardGroup.Item labelFor` + default-on + R21 caveat | DESIGN-LPR-001 AC-1..AC-5       | grep `var(--(lpr\|review)-` → 0 matches; design review                              |
+| DESIGN-LPR-001: copy never calls the toggle a security control                 | DESIGN-LPR-001 AC-4             | grep `security control` / `authorization` in toggle copy → only the negating caveat |
+| DESIGN-LPR-002: `gray` Badge + omitted⇒"Human" + non-enforcement tooltip       | DESIGN-LPR-002 AC-1..AC-5       | grep `var(--(kind\|agent)-` → 0 matches                                             |
+| DESIGN-LPR-003: single view / four states / five sections / read-only          | DESIGN-LPR-003 AC-1, AC-2, AC-5 | component test: no mutate buttons rendered                                          |
+| DESIGN-LPR-003: agent-authored badge present iff `agent_authored`              | DESIGN-LPR-003 AC-3             | component test: absent when false                                                   |
+| DESIGN-LPR-003: `EmptyStatePlaceholder` no-action for no-review                | DESIGN-LPR-003 AC-4             | component test: no `actions` snippet rendered                                       |
+| DESIGN-LPR-003: lifecycle colors use only shipped Badge styles                 | DESIGN-LPR-003 AC-6             | grep `var(--(review\|lpr)-` → 0 matches                                             |
 
 > **`pop` for AwaitingReview** is the single mapping that deviates from the per-task
 > "info/blue" wording. It is flagged in-line above and in the Shared Foundations color

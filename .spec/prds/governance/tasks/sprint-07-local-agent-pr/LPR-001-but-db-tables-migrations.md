@@ -5,7 +5,6 @@
 > Commit: f900a29fc4ad67125c6caaadf5a6c1d9d936dcbd
 > Updated: 2026-06-22T16:09:10Z
 
-
 ## What this does
 
 Add the three net-new additive `but-db` tables LPR builds on — `local_review_assignments` (who is assigned to review a target, and that assignment's standing state), `local_review_comments` (threaded, resolvable review comments), and `local_review_meta` (a per-target structured-metadata row that caches the computed agent-PR tag — one `key="opener_principal"` row per target, `PRIMARY KEY(target, key)`) — each as a per-table module mirroring the shipped `local_review_verdicts.rs` precisely: a `pub(crate) const M: &[M<'static>]` migration (`SchemaVersion::Zero`, fresh monotonic id), a `#[derive(Serialize, Deserialize)]` struct, and a `Handle`/`HandleMut` pair with the per-table query/write methods. Registered in `table/mod.rs` and appended to `MIGRATIONS` in `lib.rs`. No FK on `principal_id`/`target`. No change to any existing table.
@@ -20,12 +19,12 @@ PRIMARY **AC-1** — `cargo test -p but-db local_review_assignments_upsert_and_l
 
 ## Scope
 
-  - crates/but-db/src/table/local_review_assignments.rs (NEW — the migration `M`, the `LocalReviewAssignment` struct, the `LocalReviewAssignmentsHandle`/`…HandleMut` pair: `list_by_target`, `upsert`, `set_state`)
-  - crates/but-db/src/table/local_review_comments.rs (NEW — the migration `M`, the `LocalReviewComment` struct, the `LocalReviewCommentsHandle`/`…HandleMut` pair: `list_by_target`, `list_by_thread`, `insert`, `set_resolved`)
-  - crates/but-db/src/table/local_review_meta.rs (NEW — the migration `M`, the `LocalReviewMeta` struct, the `LocalReviewMetaHandle`/`…HandleMut` pair: `get(target, key)`, `upsert_if_absent(row)` = `INSERT … ON CONFLICT(target, key) DO NOTHING`; `PRIMARY KEY(target, key)`)
-  - crates/but-db/src/table/mod.rs (MODIFY — add `pub(crate) mod local_review_assignments;` + `pub(crate) mod local_review_comments;` + `pub(crate) mod local_review_meta;` alongside `local_review_verdicts` at mod.rs:10)
-  - crates/but-db/src/lib.rs (MODIFY — append `table::local_review_assignments::M`, `table::local_review_comments::M`, and `table::local_review_meta::M` to the `MIGRATIONS` slice at lib.rs:130, after `table::local_review_verdicts::M` at lib.rs:142)
-  - crates/but-db/tests/db/table/local_review_assignments.rs + crates/but-db/tests/db/table/local_review_comments.rs + crates/but-db/tests/db/table/local_review_meta.rs (NEW — the PRIMARY proofs AC-1..AC-6 against a real migrated `DbHandle`, mirroring the existing `but-db/tests/db/table/local_review_verdicts.rs` shape)
+- crates/but-db/src/table/local_review_assignments.rs (NEW — the migration `M`, the `LocalReviewAssignment` struct, the `LocalReviewAssignmentsHandle`/`…HandleMut` pair: `list_by_target`, `upsert`, `set_state`)
+- crates/but-db/src/table/local_review_comments.rs (NEW — the migration `M`, the `LocalReviewComment` struct, the `LocalReviewCommentsHandle`/`…HandleMut` pair: `list_by_target`, `list_by_thread`, `insert`, `set_resolved`)
+- crates/but-db/src/table/local_review_meta.rs (NEW — the migration `M`, the `LocalReviewMeta` struct, the `LocalReviewMetaHandle`/`…HandleMut` pair: `get(target, key)`, `upsert_if_absent(row)` = `INSERT … ON CONFLICT(target, key) DO NOTHING`; `PRIMARY KEY(target, key)`)
+- crates/but-db/src/table/mod.rs (MODIFY — add `pub(crate) mod local_review_assignments;` + `pub(crate) mod local_review_comments;` + `pub(crate) mod local_review_meta;` alongside `local_review_verdicts` at mod.rs:10)
+- crates/but-db/src/lib.rs (MODIFY — append `table::local_review_assignments::M`, `table::local_review_comments::M`, and `table::local_review_meta::M` to the `MIGRATIONS` slice at lib.rs:130, after `table::local_review_verdicts::M` at lib.rs:142)
+- crates/but-db/tests/db/table/local_review_assignments.rs + crates/but-db/tests/db/table/local_review_comments.rs + crates/but-db/tests/db/table/local_review_meta.rs (NEW — the PRIMARY proofs AC-1..AC-6 against a real migrated `DbHandle`, mirroring the existing `but-db/tests/db/table/local_review_verdicts.rs` shape)
 
 <details>
 <summary>▸ Full agent specification (TASK-TEMPLATE v5.2 — required reading for implementer + reviewer)</summary>
@@ -286,6 +285,7 @@ DEPENDENCIES
 Depends on: Sprint 01b (the shipped local_review_verdicts.rs table this mirrors)
 Blocks:     LPR-002 (AssignmentState typed over the TEXT state column), LPR-003 (request/assign write to local_review_assignments + the local_review_meta opener row), LPR-004 (comment writes to local_review_comments), LPR-005 (derived PR view reads all three; the agent tag reads the local_review_meta opener row + the opener's declared kind)
 ```
+
 </details>
 
 <!-- REQUIREMENT-CONTRACT v1 -->

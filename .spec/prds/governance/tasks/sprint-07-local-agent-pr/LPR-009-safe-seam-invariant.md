@@ -5,7 +5,6 @@
 > Reviewer: rust-reviewer (DEFERRED — LOAD-BEARING — 3 tests pass at HEAD: gate-path grep (AC-1), forged-vs-empty blocked (AC-5), inverse verdict@head proceeds (AC-3). AC-2/4/6 variations not explicitly tested but the safe-seam guarantee holds.)
 > Updated: 2026-06-22T17:39:48Z
 
-
 ## What this does
 
 Land the **load-bearing invariant** of the whole sprint: the merge gate reads **only** `local_review_verdicts` at head, so `local_review_assignments`, `local_review_comments`, and `local_review_meta` are orchestration drive-metadata that **never gate**. Two enforcement layers prove it: (1) a **net-new build-gate honesty grep** asserting the gate path (`merge_gate.rs` + `review_requirement.rs`) contains **no reference** to any of the three new tables — the static no-read proof, in the same `but-authz/tests/invariant_build_gates.rs` honesty-grep discipline; and (2) **runtime integration tests** — the safe-seam proof (adding drive rows leaves the merge decision unchanged; only a verdict-at-head flips the land), the **forged-vs-empty equivalence** (a fully forged drive layer yields an identical gate decision to an empty one), and the **inverse** (drive metadata alone, with no approved verdict, still cannot land).
@@ -20,8 +19,8 @@ PRIMARY **AC-1** — `cargo test -p but-authz safe_seam_gate_path_reads_no_new_t
 
 ## Scope
 
-  - crates/but-authz/tests/invariant_build_gates.rs (MODIFY — ADD a net-new `SAFE_SEAM_NO_READ` pattern + a `SAFE_SEAM_GATE_PATHS` (`merge_gate.rs`, `review_requirement.rs`) `assert_grep_has_no_matches` assertion, reusing the shipped `assert_grep_has_no_matches` helper; ADDITIVE — do NOT weaken any existing pattern/ENFORCEMENT_PATHS)
-  - crates/but-api/tests/safe_seam.rs (NEW — the runtime safe-seam proofs: T-LPR-035..037 (each new table has no effect on a verdict-satisfied merge), T-LPR-040 (the capstone three-step proof), T-LPR-041 (forged-vs-empty equivalence), T-LPR-042 (inverse: drive-only cannot land); real but-db + but-api + gix via but_testsupport, hand-assertion style like the shipped merge_gate test)
+- crates/but-authz/tests/invariant_build_gates.rs (MODIFY — ADD a net-new `SAFE_SEAM_NO_READ` pattern + a `SAFE_SEAM_GATE_PATHS` (`merge_gate.rs`, `review_requirement.rs`) `assert_grep_has_no_matches` assertion, reusing the shipped `assert_grep_has_no_matches` helper; ADDITIVE — do NOT weaken any existing pattern/ENFORCEMENT_PATHS)
+- crates/but-api/tests/safe_seam.rs (NEW — the runtime safe-seam proofs: T-LPR-035..037 (each new table has no effect on a verdict-satisfied merge), T-LPR-040 (the capstone three-step proof), T-LPR-041 (forged-vs-empty equivalence), T-LPR-042 (inverse: drive-only cannot land); real but-db + but-api + gix via but_testsupport, hand-assertion style like the shipped merge_gate test)
 
 <details>
 <summary>▸ Full agent specification (TASK-TEMPLATE v5.2 — required reading for implementer + reviewer)</summary>
@@ -251,6 +250,7 @@ DEPENDENCIES
 Depends on: LPR-001 (the three tables, for the forged-drive fixture, incl. local_review_meta), LPR-003/004 (the assignment/comment write verbs), LPR-005/008 (the derived/reconciler reads the safe-seam tests run alongside), and the shipped Sprint-01b/04 merge gate (enforce_merge_gate) under proof
 Blocks:     LPR-010 (the closeout audit cites this safe-seam proof as green) — this is the load-bearing gate; the slice is NOT done until LPR-009 is green
 ```
+
 </details>
 
 <!-- REQUIREMENT-CONTRACT v1 -->
