@@ -1,7 +1,10 @@
 //! In place of commands.rs
 use anyhow::{Context as _, Result};
 use but_api_macros::but_api;
-use but_authz::{Authority, authorize, load_governance_config, resolve_principal_from_env};
+use but_authz::{
+    AssignmentState, Authority, Denial, authorize, load_governance_config,
+    resolve_principal_from_env,
+};
 use but_core::{RepositoryExt, ref_metadata::ProjectMeta};
 use but_ctx::{Context, ThreadSafeContext};
 use but_forge::{
@@ -517,6 +520,103 @@ pub async fn publish_review(
     .await
 }
 
+/// Open a local review for a branch after enforcing `pull_requests:write`.
+///
+/// Writes the write-once `local_review_meta(target, "opener_principal", caller)`
+/// row (R23 source-of-truth for the opener principal — NOT a comment-body
+/// sentinel), and — when `reviewer` is `Some` — also seeds the first `pending`
+/// `local_review_assignments` row for that reviewer. Assignments and verdicts
+/// are separate: this verb never touches `local_review_verdicts`.
+#[but_api(napi)]
+#[instrument(err(Debug))]
+pub async fn request_review(
+    ctx: ThreadSafeContext,
+    branch: String,
+    reviewer: Option<String>,
+) -> Result<()> {
+    let ctx = ctx.into_thread_local();
+    let repo = ctx.repo.get()?;
+    let opener = authorize_branch_action(&repo, &branch, Authority::PullRequestsWrite)?
+        .context("governance config is required to open a local review")?;
+
+    let mut db = ctx.db.get_cache_mut()?;
+    if let Some(reviewer) = reviewer {
+        db.local_review_assignments_mut()
+            .upsert(but_db::LocalReviewAssignment {
+                id: uuid::Uuid::new_v4().to_string(),
+                target: branch.clone(),
+                reviewer_principal: reviewer,
+                state: AssignmentState::Pending.name().to_owned(),
+                assigned_at: chrono::Utc::now().naive_utc(),
+            })?;
+    }
+    // Record the opener ONCE in the dedicated `local_review_meta` table. The
+    // composite (target, "opener_principal") key plus ON CONFLICT DO NOTHING
+    // makes this write-once — a later caller cannot overwrite the opener. LPR-005
+    // derives the agent-PR tag from this opener's declared `kind` in committed
+    // config; a comment-body sentinel would be attacker-influenceable (R20/R23).
+    db.local_review_meta_mut()
+        .upsert_if_absent(but_db::LocalReviewMeta {
+            target: branch,
+            key: "opener_principal".to_owned(),
+            value: opener.id().as_str().to_owned(),
+            created_at: chrono::Utc::now().naive_utc(),
+        })?;
+
+    Ok(())
+}
+
+/// Assign a reviewer to a branch review after enforcing `reviews:write`.
+///
+/// Enforces `reviewer != target_branch_author` BEFORE the upsert (R22 — the
+/// drive-layer mirror of the gate's `require_distinct_from_author`). The target
+/// author is the principal recorded as the opener in the write-once
+/// `local_review_meta(target, "opener_principal")` row. Self-assignment is
+/// rejected with a structured `perm.denied` Denial and NO row written.
+#[but_api(napi)]
+#[instrument(err(Debug))]
+pub async fn assign_reviewer(
+    ctx: ThreadSafeContext,
+    branch: String,
+    reviewer: String,
+) -> Result<()> {
+    let ctx = ctx.into_thread_local();
+    let repo = ctx.repo.get()?;
+    authorize_branch_action(&repo, &branch, Authority::ReviewsWrite)?
+        .context("governance config is required to assign a reviewer")?;
+
+    {
+        let db = ctx.db.get_cache()?;
+        if let Some(opener) = db.local_review_meta().get(&branch, "opener_principal")?
+            && reviewer == opener.value
+        {
+            return Err(Denial {
+                code: Denial::PERM_DENIED_CODE,
+                message: format!(
+                    "reviewer `{reviewer}` must be distinct from the target branch author `{}` (R22)",
+                    opener.value
+                ),
+                remediation_hint:
+                    "assign a reviewer principal distinct from the branch's opener/author"
+                        .to_owned(),
+            }
+            .into());
+        }
+    }
+
+    let mut db = ctx.db.get_cache_mut()?;
+    db.local_review_assignments_mut()
+        .upsert(but_db::LocalReviewAssignment {
+            id: uuid::Uuid::new_v4().to_string(),
+            target: branch,
+            reviewer_principal: reviewer,
+            state: AssignmentState::Pending.name().to_owned(),
+            assigned_at: chrono::Utc::now().naive_utc(),
+        })?;
+
+    Ok(())
+}
+
 /// Approve a branch review locally after enforcing `reviews:write`.
 #[but_api(napi)]
 #[instrument(err(Debug))]
@@ -546,23 +646,41 @@ pub async fn approve_review(ctx: ThreadSafeContext, branch: String) -> Result<()
 }
 
 /// Request changes on a branch review after enforcing `reviews:write`.
+///
+/// Sets the caller's `local_review_assignments.state` to `changes_requested`
+/// via the typed `AssignmentState::ChangesRequested.name()` round-trip. The
+/// assignment row is upserted (idempotent per `(target, reviewer_principal)`)
+/// so the flip also works for a caller that has no prior pending assignment.
+/// This is a drive-state write only — it never reaches the merge gate (the
+/// gate reads `local_review_verdicts` at head, never assignment state).
 #[but_api(napi)]
 #[instrument(err(Debug))]
 pub async fn request_changes_review(
     ctx: ThreadSafeContext,
     branch: String,
-    message: Option<String>,
+    _message: Option<String>,
 ) -> Result<()> {
     let ctx = ctx.into_thread_local();
     let repo = ctx.repo.get()?;
-    authorize_branch_action(&repo, &branch, Authority::ReviewsWrite)?;
-    Err(task_contract_invalid(
-        "request_changes_review",
-        format!(
-            "branch `{branch}` with message_present={}",
-            message.is_some()
-        ),
-    ))
+    let principal = authorize_branch_action(&repo, &branch, Authority::ReviewsWrite)?
+        .context("governance config is required to request changes on a review")?;
+    let principal_id = principal.id().as_str().to_owned();
+    let changes_requested = AssignmentState::ChangesRequested.name().to_owned();
+
+    let mut db = ctx.db.get_cache_mut()?;
+    // Idempotent upsert keyed on (target, reviewer_principal): if a pending row
+    // already exists for this caller it is updated in place; otherwise the
+    // changes_requested state is recorded as the first assignment-state entry.
+    db.local_review_assignments_mut()
+        .upsert(but_db::LocalReviewAssignment {
+            id: uuid::Uuid::new_v4().to_string(),
+            target: branch,
+            reviewer_principal: principal_id,
+            state: changes_requested,
+            assigned_at: chrono::Utc::now().naive_utc(),
+        })?;
+
+    Ok(())
 }
 
 /// Comment on a branch review after enforcing `comments:write`.
@@ -579,6 +697,148 @@ pub async fn comment_review(ctx: ThreadSafeContext, branch: String, message: Str
             message.chars().count()
         ),
     ))
+}
+
+/// Reserved thread id backed by [`local_review_meta`] rather than a real
+/// comment row. The opener marker (agent-tag, source) lives in the dedicated
+/// `local_review_meta` table, so a caller-supplied `__pr_meta__` thread_id is
+/// rejected to prevent a comment-body sentinel from forging the opener (R23
+/// negative control).
+///
+/// [`local_review_meta`]: but_db::LocalReviewMeta
+pub const RESERVED_PR_META_THREAD: &str = "__pr_meta__";
+
+/// Post a local review comment on a branch after enforcing `comments:write`.
+///
+/// Inserts a [`LocalReviewComment`] pinned to `resolved = false` and the current
+/// timestamp. A code comment carries `file = Some(..)` and `line = Some(..)`; a
+/// branch-level comment carries `None` for both. The reserved
+/// [`__pr_meta__`](RESERVED_PR_META_THREAD) thread id is refused up front so a
+/// comment-body sentinel cannot forge the opener marker. The comment `body` is
+/// attacker-influenceable free text and is stored raw; bounding or escaping it
+/// for downstream model consumption is an L2 harness concern (R20).
+///
+/// Modeled line-for-line on [`approve_review`]: authorize before any await, then
+/// a single local-cache write. No `DryRun` guard — this touches only the local
+/// cache, not refs / objects / oplog.
+///
+/// [`LocalReviewComment`]: but_db::LocalReviewComment
+#[but_api(napi)]
+#[instrument(err(Debug))]
+pub async fn post_comment(
+    ctx: ThreadSafeContext,
+    branch: String,
+    body: String,
+    file: Option<String>,
+    line: Option<i64>,
+    thread_id: String,
+) -> Result<()> {
+    anyhow::ensure!(
+        thread_id != RESERVED_PR_META_THREAD,
+        "thread_id `{RESERVED_PR_META_THREAD}` is reserved and cannot receive comments"
+    );
+    let ctx = ctx.into_thread_local();
+    let repo = ctx.repo.get()?;
+    let author = authorize_branch_action(&repo, &branch, Authority::CommentsWrite)?
+        .context("governance config is required to post a local review comment")?;
+    let mut db = ctx.db.get_cache_mut()?;
+    db.local_review_comments_mut()
+        .insert(but_db::LocalReviewComment {
+            id: uuid::Uuid::new_v4().to_string(),
+            target: branch,
+            author_principal: author.id().as_str().to_owned(),
+            body,
+            file,
+            line,
+            thread_id,
+            resolved: false,
+            created_at: chrono::Utc::now().naive_utc(),
+        })?;
+    Ok(())
+}
+
+/// List every comment on a branch, grouped by thread id in arrival order.
+///
+/// This is a **branch-scoped read** with no write authority: it discloses every
+/// principal's threads on the named branch (an accepted branch-scoped
+/// disclosure, F-006 — not per-principal self-scoping). The reserved
+/// [`__pr_meta__`](RESERVED_PR_META_THREAD) marker thread is filtered out: the
+/// opener lives in [`local_review_meta`], not a comment row.
+///
+/// [`local_review_meta`]: but_db::LocalReviewMeta
+#[but_api(napi)]
+#[instrument(err(Debug))]
+pub async fn list_comments(
+    ctx: ThreadSafeContext,
+    branch: String,
+) -> Result<Vec<but_db::LocalReviewComment>> {
+    let ctx = ctx.into_thread_local();
+    let db = ctx.db.get_cache()?;
+    let rows = db
+        .local_review_comments()
+        .list_by_target(&branch)?
+        .into_iter()
+        .filter(|comment| comment.thread_id != RESERVED_PR_META_THREAD)
+        .collect();
+    Ok(rows)
+}
+
+/// Flip every comment in a thread to `resolved` after enforcing
+/// `comments:write` AND a resolver-identity constraint (R22).
+///
+/// Beyond `comments:write`, the resolver must be:
+/// - the **thread author** (the `author_principal` of a comment in that thread),
+/// - the **assigned reviewer** (a `reviewer_principal` on the target in
+///   `local_review_assignments`), or
+/// - a holder of the higher `reviews:write` authority (folded from the same
+///   committed config, never a parallel check).
+///
+/// A third unrelated principal is rejected with a structured denial and no row
+/// flipped, so a single principal cannot post a `changes_requested`-style
+/// thread and self-resolve it to forge a clean "all-clear" drive signal for
+/// another party. The reserved [`__pr_meta__`](RESERVED_PR_META_THREAD) thread
+/// is refused. The merge gate never reads this state — the resolved flag is a
+/// drive signal only.
+#[but_api(napi)]
+#[instrument(err(Debug))]
+pub async fn resolve_thread(
+    ctx: ThreadSafeContext,
+    branch: String,
+    thread_id: String,
+    resolved: bool,
+) -> Result<()> {
+    anyhow::ensure!(
+        thread_id != RESERVED_PR_META_THREAD,
+        "thread_id `{RESERVED_PR_META_THREAD}` is reserved and cannot be resolved"
+    );
+    let ctx = ctx.into_thread_local();
+    let repo = ctx.repo.get()?;
+    let resolver = authorize_branch_action(&repo, &branch, Authority::CommentsWrite)?
+        .context("governance config is required to resolve a local review thread")?;
+    let resolver_id = resolver.id();
+    let holds_reviews_write = resolver.authorities().contains(Authority::ReviewsWrite);
+    let mut db = ctx.db.get_cache_mut()?;
+    let thread_authored = db
+        .local_review_comments()
+        .list_by_thread(&branch, &thread_id)?
+        .iter()
+        .any(|comment| comment.author_principal == resolver_id.as_str());
+    let assigned_reviewer = db
+        .local_review_assignments()
+        .list_by_target(&branch)?
+        .iter()
+        .any(|assignment| assignment.reviewer_principal == resolver_id.as_str());
+    if !(holds_reviews_write || thread_authored || assigned_reviewer) {
+        return Err(anyhow::Error::new(but_authz::Denial {
+            code: but_authz::Denial::PERM_DENIED_CODE,
+            message: "only the thread author, the assigned reviewer, or a reviews:write holder may resolve this thread (R22)".to_owned(),
+            remediation_hint: "ask the thread author, an assigned reviewer, or a reviews:write holder to resolve the thread"
+                .to_owned(),
+        }));
+    }
+    db.local_review_comments_mut()
+        .set_resolved(&branch, &thread_id, resolved)?;
+    Ok(())
 }
 
 /// Close a branch review after enforcing `pull_requests:write`.

@@ -63,6 +63,27 @@ pub mod pr {
             #[clap(value_name = "BRANCH")]
             branch: String,
         },
+        /// Open a local review for a branch after authorization.
+        /// Optionally assigns the first reviewer in the same call.
+        Request {
+            /// The branch to open a review for.
+            #[clap(value_name = "BRANCH")]
+            branch: String,
+            /// Reviewer principal to assign as part of opening the review.
+            /// Omit to open the review without seeding an assignment.
+            #[clap(long, value_name = "PRINCIPAL")]
+            reviewer: Option<String>,
+        },
+        /// Assign a reviewer to a branch review after authorization.
+        /// The reviewer must be distinct from the target branch author (R22).
+        Assign {
+            /// The branch whose review the reviewer is assigned to.
+            #[clap(value_name = "BRANCH")]
+            branch: String,
+            /// Reviewer principal to assign.
+            #[clap(long, value_name = "PRINCIPAL")]
+            reviewer: String,
+        },
         /// Request changes on a branch review locally after authorization.
         RequestChanges {
             /// The branch to review.

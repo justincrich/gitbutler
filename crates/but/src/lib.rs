@@ -1340,6 +1340,16 @@ async fn match_subcommand(
                         .await
                         .emit_metrics(metrics_ctx)
                 }
+                Some(forge::pr::Subcommands::Request { branch, reviewer }) => {
+                    command::legacy::forge::review::request(&mut ctx, branch, reviewer, out)
+                        .await
+                        .emit_metrics(metrics_ctx)
+                }
+                Some(forge::pr::Subcommands::Assign { branch, reviewer }) => {
+                    command::legacy::forge::review::assign(&mut ctx, branch, reviewer, out)
+                        .await
+                        .emit_metrics(metrics_ctx)
+                }
                 Some(forge::pr::Subcommands::RequestChanges { branch, message }) => {
                     command::legacy::forge::review::request_changes(&mut ctx, branch, message, out)
                         .await

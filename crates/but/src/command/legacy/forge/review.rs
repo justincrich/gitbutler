@@ -33,6 +33,48 @@ pub async fn approve(
     Ok(())
 }
 
+/// Open a local review for a branch after the forge boundary authorizes the
+/// actor on `pull_requests:write`. Optionally assigns the first reviewer.
+pub async fn request(
+    ctx: &mut Context,
+    branch: String,
+    reviewer: Option<String>,
+    out: &mut OutputChannel,
+) -> anyhow::Result<(), CliError> {
+    but_api::legacy::forge::request_review(ctx.to_sync(), branch.clone(), reviewer.clone())
+        .await
+        .map_err(review_gate_cli_error)?;
+
+    if let Some(out) = out.for_human() {
+        match &reviewer {
+            Some(reviewer) => writeln!(out, "Opened review for {branch} and assigned {reviewer}")?,
+            None => writeln!(out, "Opened review for {branch}")?,
+        }
+    }
+
+    Ok(())
+}
+
+/// Assign a reviewer to a branch review after the forge boundary authorizes
+/// the actor on `reviews:write`. The reviewer must be distinct from the target
+/// branch author (R22).
+pub async fn assign(
+    ctx: &mut Context,
+    branch: String,
+    reviewer: String,
+    out: &mut OutputChannel,
+) -> anyhow::Result<(), CliError> {
+    but_api::legacy::forge::assign_reviewer(ctx.to_sync(), branch.clone(), reviewer.clone())
+        .await
+        .map_err(review_gate_cli_error)?;
+
+    if let Some(out) = out.for_human() {
+        writeln!(out, "Assigned {reviewer} to review {branch}")?;
+    }
+
+    Ok(())
+}
+
 /// Request changes on a branch review after the forge boundary authorizes the actor.
 pub async fn request_changes(
     ctx: &mut Context,
