@@ -7,19 +7,9 @@ use but_hunk_assignment::HunkAssignment;
 use but_rebase::graph_rebase::Editor;
 use itertools::Itertools;
 
-use crate::{Filter, StackTarget, WorkspaceRule};
+use crate::{Action, CommitContext, Filter, RequestReviewAction, StackTarget, Trigger, WorkspaceRule};
 
 /// Apply matching workspace `rules` to the current worktree `assignments`.
-///
-/// `rules` provides the enabled filesystem-change rules to evaluate. `assignments`
-/// is the current hunk-assignment view used for matching filters and deciding
-/// whether an update is necessary. `repo` is used for diff and commit lookups.
-/// `ws` is the mutable workspace graph that may be updated when a rule creates a
-/// new stack or amends a commit. `db` provides mutable access to persisted hunk
-/// assignments. `meta` is updated by workspace graph editing operations. `perm`
-/// proves the caller holds exclusive access because rule processing may create a
-/// stack and update the workspace graph.
-/// `context_lines` controls diff context when assigning or amending hunks.
 #[expect(clippy::too_many_arguments)]
 pub fn process_workspace_rules(
     rules: Vec<WorkspaceRule>,
@@ -33,7 +23,6 @@ pub fn process_workspace_rules(
 ) -> anyhow::Result<usize> {
     let mut updates = 0;
     if assignments.is_empty() {
-        // Don't create stacks if there are no changes to assign anywhere
         return Ok(updates);
     }
     let rules = rules
@@ -100,7 +89,15 @@ pub fn process_workspace_rules(
                 handle_amend(repo, ws, meta, assignments, &change_id, context_lines)
                     .unwrap_or_default();
             }
-            _ => continue,
+            // The remaining `Action` variants have no FileSytemChange handler:
+            //  - `Explicit(NewCommit)` and `Implicit(*)` are pre-filtered above.
+            //  - `RequestReview` is a Commit-trigger action handled by
+            //    `process_commit_rules` below; it MUST NOT fire on a
+            //    FileSytemChange trigger. The explicit arm keeps this match
+            //    exhaustive — no wildcard that could hide a future variant.
+            super::Action::Explicit(super::Operation::NewCommit { .. })
+            | super::Action::Implicit(_) => continue,
+            super::Action::RequestReview(_) => continue,
         };
     }
 
@@ -111,14 +108,6 @@ pub fn process_workspace_rules(
     Ok(updates)
 }
 
-/// Amend the commit identified by `change_id` with the provided `assignments`.
-///
-/// `repo` is used to inspect commits and materialize the resulting rebase. `ws`
-/// is the mutable workspace graph edited by the amend operation. `meta` stores
-/// graph metadata updates produced by the editor. `assignments` are flattened
-/// into diff specs to apply to the matched commit. `change_id` selects the
-/// destination commit by its Gerrit Change-Id header. `context_lines` controls
-/// diff context for the amend operation.
 fn handle_amend(
     repo: &gix::Repository,
     ws: &mut but_graph::Workspace,
@@ -154,14 +143,6 @@ fn handle_amend(
     Ok(())
 }
 
-/// Resolve a rule `target` into a stack ID, creating a stack if necessary.
-///
-/// `repo` is used when a new branch name must be generated. `ws` is inspected
-/// to find existing stacks or used as the base for a newly-created workspace
-/// graph. `meta` receives metadata updates if a new stack is created. `target`
-/// describes the requested stack selection. `perm` proves that stack creation is
-/// allowed if the target requires a new stack. `stack_ids_in_ws` is the
-/// precomputed list of stack IDs currently present in the workspace.
 fn get_or_create_stack_id(
     repo: &gix::Repository,
     ws: &but_graph::Workspace,
@@ -203,12 +184,6 @@ fn get_or_create_stack_id(
     }
 }
 
-/// Create a new stack in `ws` and return its generated ID and updated workspace.
-///
-/// `repo` is used to generate a unique canned branch name. `ws` is the workspace
-/// graph used as the base for the new reference. `meta` receives metadata updates
-/// from reference creation. `_perm` proves the caller holds exclusive access for
-/// the workspace change.
 fn create_stack(
     repo: &gix::Repository,
     ws: &but_graph::Workspace,
@@ -235,12 +210,6 @@ fn create_stack(
         .map(|id| (id, new_ws.into_owned()))
 }
 
-/// Persist assignment updates and return how many were attempted.
-///
-/// `db` is the mutable hunk-assignment table handle to update. `repo` and
-/// `workspace` provide the repository/workspace context required by assignment
-/// validation. `assignments` are converted into assignment requests before
-/// writing. `context_lines` controls diff context during assignment.
 fn handle_assign(
     db: HunkAssignmentsHandleMut,
     repo: &gix::Repository,
@@ -260,10 +229,6 @@ fn handle_assign(
     .or_else(|_| Ok(0))
 }
 
-/// Return worktree assignments matching any of the provided `filters`.
-///
-/// `wt_assignments` is the source list to filter. `filters` contains the rule
-/// filter predicates to evaluate; an empty list matches all assignments.
 fn matching(wt_assignments: &[HunkAssignment], filters: Vec<Filter>) -> Vec<HunkAssignment> {
     if filters.is_empty() {
         return wt_assignments.to_vec();
@@ -296,4 +261,58 @@ fn matching(wt_assignments: &[HunkAssignment], filters: Vec<Filter>) -> Vec<Hunk
         }
     }
     assignments
+}
+
+// ---- LPR-007: commit Trigger + RequestReview Action firing path -------------
+
+/// Reevaluate commit-trigger `rules` against `commit_ctx`. See
+/// [`crate::process_commit_rules`] for the public contract.
+pub(crate) fn process_commit_rules(
+    rules: Vec<WorkspaceRule>,
+    commit_ctx: &CommitContext,
+    db: &mut DbHandle,
+) -> anyhow::Result<usize> {
+    let mut written = 0usize;
+    for rule in rules
+        .into_iter()
+        .filter(|r| r.enabled)
+        .filter(|r| matches!(r.trigger, Trigger::Commit))
+    {
+        let reviewer = match &rule.action {
+            Action::RequestReview(RequestReviewAction { reviewer }) => reviewer.clone(),
+            // Other actions have no commit-trigger firing path — skip them
+            // explicitly so a new action variant can never silently no-op
+            // behind a wildcard.
+            Action::Explicit(_) | Action::Implicit(_) => continue,
+        };
+        if !commit_matches_filters(&rule, commit_ctx) {
+            continue;
+        }
+        db.local_review_assignments_mut().upsert(but_db::LocalReviewAssignment {
+            id: uuid::Uuid::new_v4().to_string(),
+            target: commit_ctx.target.clone(),
+            reviewer_principal: reviewer,
+            state: but_authz::AssignmentState::Pending.name().to_owned(),
+            assigned_at: chrono::Utc::now().naive_utc(),
+        })?;
+        written += 1;
+    }
+    Ok(written)
+}
+
+/// Evaluate `rule`'s filters against `commit_ctx` with AND semantics.
+fn commit_matches_filters(rule: &WorkspaceRule, commit_ctx: &CommitContext) -> bool {
+    if rule.filters.is_empty() {
+        return true;
+    }
+    rule.filters.iter().all(|filter| match filter {
+        Filter::PathMatchesRegex(regex) => commit_ctx
+            .changed_paths
+            .iter()
+            .any(|path| regex.is_match(path)),
+        Filter::ClaudeCodeSessionId(id) => commit_ctx.session_id.as_deref() == Some(id.as_str()),
+        Filter::ContentMatchesRegex(_)
+        | Filter::FileChangeType(_)
+        | Filter::SemanticType(_) => false,
+    })
 }

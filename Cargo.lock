@@ -1546,12 +1546,14 @@ name = "but-rules"
 version = "0.0.0"
 dependencies = [
  "anyhow",
+ "but-authz",
  "but-core",
  "but-ctx",
  "but-db",
  "but-graph",
  "but-hunk-assignment",
  "but-rebase",
+ "but-testsupport",
  "but-workspace",
  "chrono",
  "gix",
@@ -1560,6 +1562,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_regex",
+ "tempfile",
  "tracing",
  "uuid",
 ]

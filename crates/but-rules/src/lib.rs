@@ -9,25 +9,15 @@ pub mod handler;
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct WorkspaceRule {
-    /// A UUID unique identifier for the rule.
     id: String,
-    /// The time when the rule was created, represented as a Unix timestamp in milliseconds.
     created_at: chrono::NaiveDateTime,
-    /// Whether the rule is currently enabled or not.
     enabled: bool,
-    /// The trigger of the rule is what causes it to be evaluated in the app.
     trigger: Trigger,
-    /// These filtes determine what files or changes the rule applies to.
-    /// Within a rule, multiple filters are combined with AND logic (i.e. all conditions must be met).
-    /// This allows for the expressions of rules like "If a file is modified, its path matches
-    /// the regex 'src/.*', and its content matches the regex 'TODO', then do something."
     filters: Vec<Filter>,
-    /// The action determines what happens to the files or changes that matched the filters.
     action: Action,
 }
 
 impl WorkspaceRule {
-    /// If the rule has a session ID filter, this returns the first one found.
     pub fn session_id(&self) -> Option<String> {
         self.filters.iter().find_map(|f| match f {
             Filter::ClaudeCodeSessionId(id) => Some(id.clone()),
@@ -35,7 +25,18 @@ impl WorkspaceRule {
         })
     }
 
-    /// Returns the target stack ID if the action is an explicit assignment operation.
+    pub fn filters(&self) -> &[Filter] {
+        &self.filters
+    }
+
+    pub fn trigger(&self) -> &Trigger {
+        &self.trigger
+    }
+
+    pub fn action(&self) -> &Action {
+        &self.action
+    }
+
     pub fn target_stack_id(&self) -> Option<String> {
         if let Action::Explicit(Operation::Assign { target }) = &self.action {
             match target {
@@ -47,7 +48,6 @@ impl WorkspaceRule {
         }
     }
 
-    /// Return the target change ID if its action is an explicit amend operation.
     pub fn target_change_id(&self) -> Option<ChangeId> {
         if let Action::Explicit(Operation::Amend { change_id }) = &self.action {
             Some(change_id.clone())
@@ -56,7 +56,6 @@ impl WorkspaceRule {
         }
     }
 
-    /// Return the persistent rule ID.
     pub fn id(&self) -> String {
         self.id.clone()
     }
@@ -65,98 +64,104 @@ impl WorkspaceRule {
         self.enabled
     }
 
-    /// Return the creation timestamp.
     pub fn created_at(&self) -> chrono::NaiveDateTime {
         self.created_at
     }
+
+    #[doc(hidden)]
+    pub fn for_test(
+        id: &str,
+        trigger: Trigger,
+        filters: Vec<Filter>,
+        action: Action,
+    ) -> WorkspaceRule {
+        WorkspaceRule {
+            id: id.to_owned(),
+            created_at: chrono::Local::now().naive_local(),
+            enabled: true,
+            trigger,
+            filters,
+            action,
+        }
+    }
 }
 
-/// Represents the kinds of events in the app that can cause a rule to be evaluated.
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub enum Trigger {
-    /// When a file is added, removed or modified in the Git worktree.
     FileSytemChange,
-    /// Whenever a Claude Code hook is invoked.
     ClaudeCodeHook,
+    /// LPR-007: when a commit lands on a watched branch. The commit context
+    /// is supplied at firing time via [`CommitContext`] to
+    /// [`process_commit_rules`]. Opens a pending drive-only
+    /// `local_review_assignments` row — never blocks the commit.
+    Commit,
 }
 
-/// A filter is a condition that determines what files or changes the rule applies to.
-/// Within a filter, multiple conditions are combined with AND logic (i.e. to match all conditions must be met)
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase", tag = "type", content = "subject")]
 pub enum Filter {
-    /// Matches the file path (relative to the repository root).
     #[serde(with = "serde_regex")]
     PathMatchesRegex(regex::Regex),
-    /// Match the file content.
     #[serde(with = "serde_regex")]
     ContentMatchesRegex(regex::Regex),
-    /// Matches the file change operation type (e.g. addition, deletion, modification, rename)
     FileChangeType(TreeStatus),
-    /// Matches the semantic type of the change.
     SemanticType(SemanticType),
-    /// Matches changes that originated from a specific Claude Code session.
     ClaudeCodeSessionId(String),
 }
 
-/// Represents the type of change that occurred in the Git worktree.
-/// Matches the TreeStatus of the TreeChange
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub enum TreeStatus {
-    /// Something was added or scheduled to be added.
     Addition,
-    /// Something was deleted.
     Deletion,
-    /// A tracked entry was modified, which might mean.
     Modification,
-    /// An entry was renamed.
     Rename,
 }
 
-/// Represents a semantic type of change that was inferred for the change.
-/// Typically this means a heuristic or an LLM determined that a change represents a refactor, a new feature, a bug fix, or documentation update.
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase", tag = "type", content = "subject")]
 pub enum SemanticType {
-    /// A change that is a refactor, meaning it does not change the external behavior of the code but improves its structure.
     Refactor,
-    /// A change that introduces a new feature or functionality to the codebase.
     NewFeature,
-    /// A change that fixes a bug or an issue in the code.
     BugFix,
-    /// A change that updates or adds documentation, such as code inline docs, comments or README files.
     Documentation,
-    /// A change that is not recognized or does not fit into the predefined categories.
     UserDefined(String),
 }
 
-/// Represents an action that can be taken based on the rule evaluation.
-/// An action can be either explicit, meaning the user defined something like "Stage to Lane A" or "Amend into Commit X"
-/// or it is implicit, meaning the action was determined by heuristics or AI, such as "Stage to appropriate branch" or "Absorb in dependent commit".
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase", tag = "type", content = "subject")]
 pub enum Action {
-    /// An action that has an explicit operation defined by the user.
     Explicit(Operation),
-    /// An action where the operation is determined by heuristics or AI.
     Implicit(ImplicitOperation),
+    /// LPR-007: open a `pending` `local_review_assignments` row for the
+    /// configured reviewer on the commit's branch. Drive-only — never enters
+    /// the commit gate or merge gate. Reuses the LPR-001 Handle / LPR-003
+    /// pending-assignment write internals.
+    RequestReview(RequestReviewAction),
 }
 
-/// Represents the operation that a user can configure to be performed in an explicit action.
+/// Payload for [`Action::RequestReview`].
+///
+/// ```
+/// use but_rules::RequestReviewAction;
+/// let action = RequestReviewAction { reviewer: "rev2".to_owned() };
+/// assert_eq!(action.reviewer, "rev2");
+/// ```
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct RequestReviewAction {
+    pub reviewer: String,
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase", tag = "type", content = "subject")]
 pub enum Operation {
-    /// Assign the matched changes to a specific stack ID.
     Assign { target: StackTarget },
-    /// Amend the matched changes into a specific commit.
     Amend { change_id: ChangeId },
-    /// Create a new commit with the matched changes on a specific branch.
     NewCommit { branch_name: String },
 }
 
-/// The target stack for a given operation. It's either specifying a specific stack ID, or alternaitvely the leftmost or rightmost stack in the workspace.
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase", tag = "type", content = "subject")]
 pub enum StackTarget {
@@ -165,35 +170,22 @@ pub enum StackTarget {
     Rightmost,
 }
 
-/// Represents the implicit operation that is determined by heuristics or AI.
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase", tag = "type", content = "subject")]
 pub enum ImplicitOperation {
-    /// Assign the matched changes to the appropriate branch based on offline heuristics.
     AssignToAppropriateBranch,
-    /// Absorb the matched changes into a dependent commit based on offline heuristics.
     AbsorbIntoDependentCommit,
-    /// Perform an operation based on LLM-driven analysis and tool calling.
     LLMPrompt(String),
 }
 
-/// A request to create a new workspace rule.
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct CreateRuleRequest {
-    /// The trigger that causes the rule to be evaluated.
     pub trigger: Trigger,
-    /// The filters that determine what files or changes the rule applies to. If left empty, all files will be matched
     pub filters: Vec<Filter>,
-    /// The action that determines what happens to the files or changes that matched the filters.
     pub action: Action,
 }
 
-/// Create a new workspace rule and attempt to reevaluate all workspace rules.
-///
-/// `ctx` provides database access for insertion and repository/workspace state for reevaluation.
-/// `req` contains the trigger, filters, and action to persist. `perm` is the caller-held exclusive
-/// worktree permission used while reevaluating rules after the insert.
 pub fn create_rule(
     ctx: &mut Context,
     req: CreateRuleRequest,
@@ -203,11 +195,10 @@ pub fn create_rule(
         let mut db = ctx.db.get_cache_mut()?;
         insert_rule(&mut db, req)?
     };
-    process_rules_from_context(ctx, perm).ok(); // Reevaluate rules after creating
+    process_rules_from_context(ctx, perm).ok();
     Ok(rule)
 }
 
-/// Insert a new workspace rule record into `db` from `req`.
 fn insert_rule(db: &mut DbHandle, req: CreateRuleRequest) -> anyhow::Result<WorkspaceRule> {
     let rule = WorkspaceRule {
         id: uuid::Uuid::new_v4().to_string(),
@@ -222,25 +213,18 @@ fn insert_rule(db: &mut DbHandle, req: CreateRuleRequest) -> anyhow::Result<Work
     Ok(rule)
 }
 
-/// Delete the workspace rule with `id` from `db`.
 pub fn delete_rule(db: &mut DbHandle, id: &str) -> anyhow::Result<()> {
     db.workspace_rules_mut().delete(id)?;
     Ok(())
 }
 
-/// A request to update an existing workspace rule.
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateRuleRequest {
-    /// The ID of the rule to update.
     id: String,
-    /// The new enabled state of the rule. If not provided, the existing state is retained.
     pub enabled: Option<bool>,
-    /// The new trigger for the rule. If not provided, the existing trigger is retained.
     pub trigger: Option<Trigger>,
-    /// The new filters for the rule. If not provided, the existing filters are retained.
     pub filters: Option<Vec<Filter>>,
-    /// The new action for the rule. If not provided, the existing action is retained.
     pub action: Option<Action>,
 }
 
@@ -256,11 +240,6 @@ impl From<WorkspaceRule> for UpdateRuleRequest {
     }
 }
 
-/// Update an existing workspace rule and attempt to reevaluate all workspace rules.
-///
-/// `ctx` provides database access for the update and repository/workspace state for reevaluation.
-/// `req` contains the rule ID and optional replacement fields. `perm` is the caller-held exclusive
-/// worktree permission used while reevaluating rules after the update.
 pub fn update_rule(
     ctx: &mut Context,
     req: UpdateRuleRequest,
@@ -270,13 +249,10 @@ pub fn update_rule(
         let mut db = ctx.db.get_cache_mut()?;
         update_rule_record(&mut db, req)?
     };
-    process_rules_from_context(ctx, perm).ok(); // Reevaluate rules after updating
+    process_rules_from_context(ctx, perm).ok();
     Ok(rule)
 }
 
-/// Apply `req` to an existing workspace rule record in `db`.
-///
-/// Fields omitted from `req` retain their current values.
 fn update_rule_record(db: &mut DbHandle, req: UpdateRuleRequest) -> anyhow::Result<WorkspaceRule> {
     let mut rule: WorkspaceRule = {
         db.workspace_rules()
@@ -303,7 +279,6 @@ fn update_rule_record(db: &mut DbHandle, req: UpdateRuleRequest) -> anyhow::Resu
     Ok(rule)
 }
 
-/// Retrieve the workspace rule with `id` from `db`.
 pub fn get_rule(db: &DbHandle, id: &str) -> anyhow::Result<WorkspaceRule> {
     let rule = db
         .workspace_rules()
@@ -313,7 +288,6 @@ pub fn get_rule(db: &DbHandle, id: &str) -> anyhow::Result<WorkspaceRule> {
     Ok(rule)
 }
 
-/// List all workspace rules stored in `db`.
 pub fn list_rules(db: &DbHandle) -> anyhow::Result<Vec<WorkspaceRule>> {
     let rules = db
         .workspace_rules()
@@ -324,13 +298,6 @@ pub fn list_rules(db: &DbHandle) -> anyhow::Result<Vec<WorkspaceRule>> {
     Ok(rules)
 }
 
-/// Reevaluate workspace rules using state extracted from `ctx`.
-///
-/// `ctx` provides rules from the database, settings, metadata, repository, workspace, and hunk
-/// assignment storage. `perm` is the caller-held exclusive worktree permission used for workspace
-/// access and any rule action that mutates workspace state.
-///
-/// NOTE: may create an empty branch!
 fn process_rules_from_context(ctx: &mut Context, perm: &mut RepoExclusive) -> anyhow::Result<()> {
     let context_lines = ctx.settings.context_lines;
     let mut meta = ctx.meta()?;
@@ -348,13 +315,6 @@ fn process_rules_from_context(ctx: &mut Context, perm: &mut RepoExclusive) -> an
 }
 
 /// Reevaluate `rules` against current worktree changes and apply matching actions.
-///
-/// `rules` are the workspace rules to evaluate. `repo` is used to read worktree changes and create
-/// or amend commits. `ws` is the mutable workspace view that rule actions inspect and update. `db`
-/// provides hunk assignment storage. `meta` provides mutable ref metadata for stack creation and
-/// rebase operations. `perm` is the caller-held exclusive worktree permission for workspace
-/// mutations. `context_lines` controls the diff context used while deriving hunk assignments and
-/// applying rule actions.
 ///
 /// NOTE: may create an empty branch!
 pub fn process_rules(
@@ -382,4 +342,35 @@ pub fn process_rules(
 
     handler::process_workspace_rules(rules, &assignments, repo, ws, db, meta, perm, context_lines)?;
     Ok(())
+}
+
+/// The commit-landed firing context consumed by [`process_commit_rules`].
+///
+/// `target` is the branch ref the commit landed on. `session_id` is the
+/// originating Claude Code session (the principal axis). `changed_paths` are
+/// the paths the commit touched (the file axis). Drive metadata only — never
+/// reaches the commit gate or merge gate.
+#[derive(Debug, Clone)]
+pub struct CommitContext {
+    pub target: String,
+    pub session_id: Option<String>,
+    pub changed_paths: Vec<String>,
+}
+
+/// Reevaluate commit-trigger `rules` against `commit_ctx` and fire any
+/// `Action::RequestReview` matches by writing a `pending`
+/// `local_review_assignments` row for the configured reviewer.
+///
+/// This is the LPR-007 "review-requested" hook. Only enabled rules whose
+/// trigger is [`Trigger::Commit`] and whose action is [`Action::RequestReview`]
+/// are evaluated; other rules are ignored. Filters are evaluated with AND
+/// semantics. Reuses the LPR-001 Handle + `but_authz::AssignmentState::Pending`
+/// literal — never forks a parallel writer. The hook is post-commit
+/// drive-metadata — it NEVER blocks the commit and the row NEVER gates a merge.
+pub fn process_commit_rules(
+    rules: Vec<WorkspaceRule>,
+    commit_ctx: &CommitContext,
+    db: &mut DbHandle,
+) -> anyhow::Result<usize> {
+    handler::process_commit_rules(rules, commit_ctx, db)
 }

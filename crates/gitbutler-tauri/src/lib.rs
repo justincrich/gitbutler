@@ -59,7 +59,6 @@ pub mod rules {
             .map_err(json::Error::from)?;
             serde_json::to_value(rules)
                 .context("serializing workspace rules")
-                .map_err(anyhow::Error::from)
                 .map_err(json::Error::from)
         }
 
@@ -192,6 +191,8 @@ pub const GOVERNANCE_COMMANDS: &[&str] = &[
     "governance_principals_list",
     "governance_pending",
     "governance_commit",
+    "get_principal_kind",
+    "set_principal_kind",
 ];
 
 /// Expands the production governance/config-management command rows into a caller-supplied macro.
@@ -219,6 +220,8 @@ macro_rules! gitbutler_governance_command_rows {
             $crate::governance::tauri_governance_principals_list::governance_principals_list,
             $crate::governance::tauri_governance_pending::governance_pending,
             $crate::governance::tauri_governance_commit::governance_commit,
+            $crate::governance::tauri_get_principal_kind::get_principal_kind,
+            $crate::governance::tauri_set_principal_kind::set_principal_kind,
             $crate::governance::tauri_agent_perm_grant::agent_perm_grant,
         ]
     };

@@ -6,6 +6,7 @@ use but_api::{
     legacy::governance::{
         BranchGatesOutcome, BranchProtectionInput, GovernanceCommitOutcome, GovernancePending,
         GovernancePrincipalsList, GrantOutcome, GroupWriteOutcome, PermWriteOutcome,
+        REF_PIN_CAVEAT,
     },
 };
 use but_ctx::{Context, ProjectHandleOrLegacyProjectId};
@@ -603,6 +604,200 @@ pub mod tauri_branch_gates_update {
             target_ref,
             branch,
             protection,
+        )
+    }
+}
+
+/// Result of reading a principal's additive `kind` descriptor.
+///
+/// `kind` is the enforcement-neutral descriptor naming the principal's kind
+/// (e.g. `"agent"` / `"human"`); it never enters `GovConfig.principals`. See
+/// `but_authz::PrincipalWire::kind`.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
+pub struct PrincipalKindOutcome {
+    /// Principal whose `kind` descriptor was read.
+    pub principal: String,
+    /// Current additive `kind` value, or `None` when unset (default-human).
+    pub kind: Option<String>,
+}
+
+/// Result of staging a principal `kind` descriptor write to the pending config.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
+pub struct PrincipalKindWriteOutcome {
+    /// Principal whose `kind` descriptor was staged.
+    pub principal: String,
+    /// The `kind` value now staged in the pending working-tree config.
+    pub kind: Option<String>,
+    /// Ref-pin caveat: the staged descriptor takes effect once committed to the target branch.
+    pub caveat: &'static str,
+}
+
+/// Read a principal's additive `kind` descriptor from the effective governance config.
+///
+/// Reads the working-tree `permissions.toml` when present (so the UI observes
+/// its own pending edits), falling back to the committed target-ref blob. The
+/// read is admin-scoped for governance-UI access, matching the read precedence
+/// of the existing pending/commit governance commands.
+pub fn get_principal_kind_for_project(
+    project_id: ProjectHandleOrLegacyProjectId,
+    target_ref: String,
+    principal: String,
+) -> Result<PrincipalKindOutcome, json::Error> {
+    let ctx = context_for_project(project_id, &target_ref).map_err(json::Error::from)?;
+    let repo = ctx.repo.get().map_err(json::Error::from)?;
+    let permissions = effective_permissions(&repo, &target_ref).map_err(json::Error::from)?;
+    let kind = permissions
+        .principal
+        .iter()
+        .find(|entry| entry.id == principal)
+        .and_then(|entry| entry.kind.clone());
+    Ok(PrincipalKindOutcome { principal, kind })
+}
+
+/// Stage a principal `kind` descriptor write as the signed-in desktop fleet-owner.
+///
+/// The write lands in the working-tree `permissions.toml` (pending store) and
+/// takes effect once `governance_commit` commits it to the target ref. The
+/// fleet-owner identity establishes the unconditional administration-write
+/// authority, matching the existing `perm_grant` desktop-session path; no
+/// `BUT_AGENT_HANDLE` is consulted.
+pub fn set_principal_kind_for_desktop_session(
+    session: &dyn DesktopSession,
+    project_id: ProjectHandleOrLegacyProjectId,
+    target_ref: String,
+    principal: String,
+    kind: Option<String>,
+) -> Result<PrincipalKindWriteOutcome, json::Error> {
+    let (ctx, _owner) = fleet_owner_context(session, project_id, &target_ref)?;
+    let repo = ctx.repo.get().map_err(json::Error::from)?;
+    let mut permissions = effective_permissions(&repo, &target_ref).map_err(json::Error::from)?;
+    let entry = principal_entry_mut(&mut permissions, &principal).map_err(json::Error::from)?;
+    entry.kind = kind.clone();
+    write_worktree_permissions(&repo, &permissions).map_err(json::Error::from)?;
+    Ok(PrincipalKindWriteOutcome {
+        principal,
+        kind,
+        caveat: REF_PIN_CAVEAT,
+    })
+}
+
+/// Read the effective `permissions.toml` for a governance write: the working-tree
+/// file when present (so pending edits are preserved), falling back to the
+/// committed target-ref blob. Mirrors the `load_permissions_for_write` precedence
+/// used by `but_api::legacy::governance`.
+fn effective_permissions(
+    repo: &gix::Repository,
+    target_ref: &str,
+) -> anyhow::Result<but_authz::PermissionsWire> {
+    let path = worktree_permissions_path(repo)?;
+    if path.is_file() {
+        let text = std::fs::read_to_string(&path)
+            .with_context(|| format!("reading working-tree {}", but_authz::permissions_path()))?;
+        return parse_permissions_text(&text);
+    }
+    but_authz::load_permissions_wire(repo, target_ref)
+}
+
+fn parse_permissions_text(text: &str) -> anyhow::Result<but_authz::PermissionsWire> {
+    if text.trim().is_empty() {
+        return Ok(but_authz::PermissionsWire::default());
+    }
+    toml::from_str::<but_authz::PermissionsWire>(text)
+        .with_context(|| format!("parsing working-tree {}", but_authz::permissions_path()))
+}
+
+/// Borrow the matching `[[principal]]` entry mutably, seeding a fresh entry
+/// (mirrors `principal_entry_mut` in `but_api::legacy::governance`) when absent.
+fn principal_entry_mut<'a>(
+    permissions: &'a mut but_authz::PermissionsWire,
+    principal: &str,
+) -> anyhow::Result<&'a mut but_authz::PrincipalWire> {
+    if let Some(position) = permissions
+        .principal
+        .iter()
+        .position(|entry| entry.id == principal)
+    {
+        return permissions.principal.get_mut(position).ok_or_else(|| {
+            anyhow!("principal position disappeared while preparing permissions rewrite")
+        });
+    }
+
+    permissions.principal.push(but_authz::PrincipalWire {
+        id: principal.to_owned(),
+        permissions: Vec::new(),
+        role: None,
+        kind: None,
+        groups: Vec::new(),
+    });
+    permissions
+        .principal
+        .last_mut()
+        .ok_or_else(|| anyhow!("principal entry was not available after seeding"))
+}
+
+fn write_worktree_permissions(
+    repo: &gix::Repository,
+    permissions: &but_authz::PermissionsWire,
+) -> anyhow::Result<()> {
+    let path = worktree_permissions_path(repo)?;
+    let parent = path.parent().ok_or_else(|| {
+        anyhow!(
+            "{} must have a parent directory",
+            but_authz::permissions_path()
+        )
+    })?;
+    std::fs::create_dir_all(parent)
+        .with_context(|| format!("creating working-tree {}", parent.display()))?;
+    let encoded = toml::to_string(permissions)
+        .with_context(|| format!("serializing working-tree {}", but_authz::permissions_path()))?;
+    std::fs::write(&path, encoded)
+        .with_context(|| format!("writing working-tree {}", but_authz::permissions_path()))?;
+    Ok(())
+}
+
+fn worktree_permissions_path(repo: &gix::Repository) -> anyhow::Result<std::path::PathBuf> {
+    let workdir = repo
+        .workdir()
+        .ok_or_else(|| anyhow!("governance permission writes require a non-bare repository"))?;
+    Ok(workdir.join(but_authz::permissions_path()))
+}
+
+/// Tauri command wrapper for reading a principal `kind` descriptor.
+pub mod tauri_get_principal_kind {
+    use super::{PrincipalKindOutcome, ProjectHandleOrLegacyProjectId, json};
+
+    /// Read a principal's additive `kind` descriptor from the effective governance config.
+    #[tauri::command]
+    pub fn get_principal_kind(
+        project_id: ProjectHandleOrLegacyProjectId,
+        target_ref: String,
+        principal: String,
+    ) -> Result<PrincipalKindOutcome, json::Error> {
+        super::get_principal_kind_for_project(project_id, target_ref, principal)
+    }
+}
+
+/// Tauri command wrapper for staging a principal `kind` descriptor write.
+pub mod tauri_set_principal_kind {
+    use super::{
+        DesktopSessionState, PrincipalKindWriteOutcome, ProjectHandleOrLegacyProjectId, json,
+    };
+
+    /// Stage a principal `kind` descriptor write as the signed-in desktop fleet-owner.
+    #[tauri::command]
+    pub fn set_principal_kind(
+        desktop_session: tauri::State<'_, DesktopSessionState>,
+        project_id: ProjectHandleOrLegacyProjectId,
+        target_ref: String,
+        principal: String,
+        kind: Option<String>,
+    ) -> Result<PrincipalKindWriteOutcome, json::Error> {
+        super::set_principal_kind_for_desktop_session(
+            desktop_session.session(),
+            project_id,
+            target_ref,
+            principal,
+            kind,
         )
     }
 }
