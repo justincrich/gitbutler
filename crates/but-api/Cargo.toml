@@ -158,6 +158,10 @@ serial_test = "3.2.0"
 temp-env = { version = "0.3", features = ["async_closure"] }
 tempfile.workspace = true
 tokio = { workspace = true, features = ["full"] }
+# STEER-007: in-process capturing subscriber for the denial-steering telemetry
+# integration proofs. `tracing-subscriber` is the same workspace dep the daemon
+# and CLI use (see crates/but/src/trace.rs); the test installs its own layer.
+tracing-subscriber.workspace = true
 
 [lints]
 workspace = true

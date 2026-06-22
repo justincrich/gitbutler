@@ -8,6 +8,11 @@ use but_authz::{
 };
 use serde::{Deserialize, Serialize};
 
+// STEER-007: shared denial-steering telemetry helper (observation-only).
+// `gate` is mounted as `commit::create::gate` via the `#[path = "gate.rs"]`
+// attribute in `commit/create.rs`.
+use crate::commit::create::gate::emit_denial_steering_event;
+
 #[path = "review_requirement.rs"]
 mod review_requirement;
 
@@ -69,11 +74,15 @@ pub fn enforce_merge_gate(ctx: &but_ctx::Context, review_id: usize) -> anyhow::R
     // STEER-004: enrich the authorize denial with a route-scoped menu
     // (ActorCorrectable path). The deny/allow decision is unchanged.
     but_authz::authorize(&principal, required, &config.gov).map_err(|denial| {
-        denial.with_authorized_actions(
+        let denial = denial.with_authorized_actions(
             &principal,
             &DeniedRoute::new(Route::Merge, DenialPredicate::Authority),
             &config.gov,
-        )
+        );
+        // STEER-007: observation-only telemetry on the merge perm.denied
+        // path (one event per denial).
+        emit_denial_steering_event(denial.code, denial.class, &denial.authorized_actions);
+        denial
     })?;
 
     if !config
@@ -90,7 +99,7 @@ pub fn enforce_merge_gate(ctx: &but_ctx::Context, review_id: usize) -> anyhow::R
 
     let undefined_groups = undefined_required_groups(requirement, &config.gov);
     if !undefined_groups.is_empty() {
-        return Err(MergeGateError {
+        let error = MergeGateError {
             code: REVIEW_REQUIRED_CODE,
             message: format!(
                 "review requirement for {} is not satisfied: {}",
@@ -104,8 +113,11 @@ pub fn enforce_merge_gate(ctx: &but_ctx::Context, review_id: usize) -> anyhow::R
             held_permissions: Vec::new(),
             authorized_actions: Vec::new(),
             do_not: None,
-        }
-        .into());
+        };
+        // STEER-007: operator_required telemetry — undefined required groups
+        // yields an empty menu (operator must define the missing groups).
+        emit_denial_steering_event(error.code, error.class, &error.authorized_actions);
+        return Err(error.into());
     }
 
     let current_head_oid = current_head_oid(&repo, &source_ref)?;
@@ -133,7 +145,7 @@ pub fn enforce_merge_gate(ctx: &but_ctx::Context, review_id: usize) -> anyhow::R
             let held = effective_authority(&principal, &config.gov);
             let denied = DeniedRoute::new(Route::Merge, DenialPredicate::ReviewRequired);
             let actions = authorized_actions(&principal, &denied, &config.gov);
-            Err(MergeGateError {
+            let error = MergeGateError {
                 code: REVIEW_REQUIRED_CODE,
                 message: format!(
                     "review requirement for {} is not satisfied: {}",
@@ -147,8 +159,11 @@ pub fn enforce_merge_gate(ctx: &but_ctx::Context, review_id: usize) -> anyhow::R
                 held_permissions: held.iter().collect(),
                 authorized_actions: actions,
                 do_not: None,
-            }
-            .into())
+            };
+            // STEER-007: observation-only telemetry on the
+            // gate.review_required path (one event per denial).
+            emit_denial_steering_event(error.code, error.class, &error.authorized_actions);
+            Err(error.into())
         }
     }
 }
@@ -415,7 +430,7 @@ fn config_error(err: anyhow::Error) -> MergeGateError {
 }
 
 fn config_invalid(message: String) -> MergeGateError {
-    MergeGateError {
+    let error = MergeGateError {
         code: CONFIG_INVALID_CODE,
         message: format!("invalid governance config: {message}"),
         remediation_hint: "fix committed .gitbutler governance config on the target ref".to_owned(),
@@ -424,7 +439,11 @@ fn config_invalid(message: String) -> MergeGateError {
         held_permissions: Vec::new(),
         authorized_actions: Vec::new(),
         do_not: Some("do not retry — an operator must fix the committed .gitbutler config"),
-    }
+    };
+    // STEER-007: operator_required config.invalid telemetry — fires once at
+    // the payload-build boundary. Empty menu (operator must fix config).
+    emit_denial_steering_event(error.code, error.class, &error.authorized_actions);
+    error
 }
 
 #[derive(Debug, Deserialize)]
