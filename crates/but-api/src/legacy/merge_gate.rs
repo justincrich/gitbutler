@@ -59,7 +59,13 @@ pub fn enforce_merge_gate(ctx: &but_ctx::Context, review_id: usize) -> anyhow::R
     let config = load_merge_governance_config(&repo, &target_ref)?;
 
     let principal = but_authz::resolve_principal_from_env(&config.gov)?;
-    but_authz::authorize(&principal, Authority::Merge, &config.gov)?;
+    // STEER-002: Route::Merge row in ROUTE_AUTHORITY_TABLE supplies the
+    // required Authority for this gate; the literal `but_authz::authorize`
+    // call is preserved so the AUTHORITY_POSITIVE_PATTERN honesty grep
+    // keeps matching. The review-requirement predicate below stays composed
+    // AROUND the table — it is NOT folded in.
+    let required = but_authz::Route::Merge.required_authority();
+    but_authz::authorize(&principal, required, &config.gov)?;
 
     if !config
         .gov

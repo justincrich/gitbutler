@@ -117,9 +117,21 @@ pub fn classify_error(err: &anyhow::Error) -> Option<ForgeGateError> {
     }
 
     if let Some(mirror) = err.downcast_ref::<RemoteMirrorNotImplemented>() {
+        // Named-seam error: the actor recovers by flipping
+        // `keep_reviews_local` back to true, so `ActorCorrectable` is the
+        // honest classification. No authority context applies to a named seam.
+        // (Pre-existing STEER-001 incomplete-arm fix — same minimal patch as
+        // the parallel LPR-008 branch; included here to unblock STEER-002
+        // verification of forge_guard. STEER-002 scope is the table-driven
+        // reconcile of `authorize_branch_action`, not this arm, but without
+        // this fix `cargo check -p but-api` does not compile.)
         return Some(ForgeGateError {
             code: mirror.code,
             message: mirror.message.clone(),
+            class: DenialClass::ActorCorrectable,
+            held_permissions: Vec::new(),
+            authorized_actions: Vec::new(),
+            do_not: None,
         });
     }
 
@@ -154,6 +166,18 @@ fn authorize_branch_action(
 
     let cfg = load_forge_governance_config(repo, &ref_name)?;
     let principal = resolve_principal_from_env(&cfg)?;
+    // STEER-002: the forge `authorize_branch_action` match is reconciled
+    // with the ROUTE_AUTHORITY_TABLE rows in `but-authz`. The three
+    // explicit arms below (ReviewsWrite / CommentsWrite / PullRequestsWrite)
+    // correspond 1:1 to the `Route::ForgeReviewsWrite`,
+    // `Route::ForgeCommentsWrite`, and `Route::ForgePullRequestsWrite` rows;
+    // the `other =>` catch-all is preserved as defense-in-depth for any
+    // future Authority variant so the function stays total, but every route
+    // a caller actually drives is enumerated in the table. The literal
+    // `authorize` call at each arm is preserved for the
+    // AUTHORITY_POSITIVE_PATTERN honesty grep (forge.rs is outside the
+    // grep's ENFORCEMENT_PATHS set today — RR-6 — so the safety of this
+    // site rests on the behavior-neutral `forge_guard` test in AC-2).
     match authority {
         Authority::ReviewsWrite => authorize(&principal, Authority::ReviewsWrite, &cfg)?,
         Authority::CommentsWrite => authorize(&principal, Authority::CommentsWrite, &cfg)?,

@@ -6,6 +6,7 @@ mod authorize;
 mod config;
 mod denial;
 mod principal;
+mod route;
 
 pub use assignment_state::{AssignmentState, AssignmentStateParseError};
 pub use authority::{Authority, AuthoritySet, ParseAuthorityError, serialize_authority_tokens};
@@ -19,3 +20,4 @@ pub use config::{
 };
 pub use denial::{AuthorizedAction, Denial, DenialClass, to_envelope};
 pub use principal::{Group, GroupName, Principal, PrincipalId};
+pub use route::{ROUTE_AUTHORITY_TABLE, Route};
