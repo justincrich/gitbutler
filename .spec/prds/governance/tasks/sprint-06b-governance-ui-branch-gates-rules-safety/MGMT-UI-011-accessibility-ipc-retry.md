@@ -101,10 +101,10 @@ AC-3: Retry re-issues SDK call; persistent failure keeps UI read-only
   TEST_TIER: integration   VERIFICATION_SERVICE: desktop-ct-harness
   VERIFY: pnpm test:ct:desktop -- GovernanceIPCRetry
 
-AC-4: Self-escalation denial surfaced without flipping the control
+AC-4: Self-escalation denial surfaced without flipping the control (pre-click aria-checked oracle)
   GIVEN: GovernanceSettings mounted with seeded_self_escalation_denial; administration:write Toggle starts OFF
   WHEN:  user clicks the administration:write Toggle to grant it to themselves
-  THEN:  the governed path returns perm.denied; a danger InfoMessage with 'You cannot modify your own administration grants' is visible; the Toggle remains in the OFF state (not flipped)
+  THEN:  the test MUST capture aria-checked BEFORE the click and assert it remains unchanged after the denial; the governed path returns perm.denied; a danger InfoMessage with 'You cannot modify your own administration grants' is visible; the Toggle remains in the OFF state (pre-click aria-checked == post-denial aria-checked, not flipped)
   TEST_TIER: integration   VERIFICATION_SERVICE: desktop-ct-harness
   VERIFY: pnpm test:ct:desktop -- GovernanceSelfEscalationNoFlip
 
@@ -124,7 +124,7 @@ TEST CRITERIA (boolean; maps to ACs)
     VERIFY: pnpm test:ct:desktop -- GovernanceIPCFailureBanner
 - TC-3 (-> AC-3): Retry re-issues the SDK call (call count increments); persistent failure keeps danger InfoMessage visible and controls disabled
     VERIFY: pnpm test:ct:desktop -- GovernanceIPCRetry
-- TC-4 (-> AC-4): Self-escalation attempt: perm.denied surfaces danger InfoMessage with denial text; Toggle stays OFF (not flipped)
+- TC-4 (-> AC-4): Self-escalation attempt: test captures aria-checked BEFORE the click; perm.denied surfaces danger InfoMessage with denial text; Toggle stays OFF (pre-click aria-checked == post-denial aria-checked, not flipped)
     VERIFY: pnpm test:ct:desktop -- GovernanceSelfEscalationNoFlip
 - TC-5 (-> AC-5): hasAdminWrite=false: info InfoMessage with 'administration:write is required' visible; ALL Toggles/Textboxes/TagInputs/Buttons disabled; 0 interactive write controls
     VERIFY: pnpm test:ct:desktop -- GovernanceReadOnlyA11y
@@ -904,7 +904,7 @@ Blocks:     MGMT-UI-012 (build-gate tests verify no +page.server.ts and no direc
       "id": "AC-4",
       "type": "acceptance_criterion",
       "primary": false,
-      "description": "GIVEN GovernanceSettings mounted with seeded_self_escalation_denial; administration:write Toggle starts OFF WHEN user clicks the administration:write Toggle to grant it to themselves THEN the governed path returns perm.denied; a danger InfoMessage with 'You cannot modify your own administration grants' is visible; the Toggle remains in the OFF state (not flipped)",
+      "description": "GIVEN GovernanceSettings mounted with seeded_self_escalation_denial; administration:write Toggle starts OFF WHEN user clicks the administration:write Toggle to grant it to themselves THEN the test MUST capture aria-checked BEFORE the click and assert it remains unchanged after the denial; the governed path returns perm.denied; a danger InfoMessage with 'You cannot modify your own administration grants' is visible; the Toggle remains in the OFF state (pre-click aria-checked == post-denial aria-checked, not flipped)",
       "verify": "pnpm test:ct:desktop -- GovernanceSelfEscalationNoFlip",
       "scenario": {
         "id": "SC-MGMT-UI-011-4",
@@ -917,7 +917,8 @@ Blocks:     MGMT-UI-012 (build-gate tests verify no +page.server.ts and no direc
             "the Toggle flips to `aria-checked='true'` optimistically before the SDK response (no-bypass promise broken)",
             "the danger InfoMessage is absent after the denied call (`0` InfoMessage elements with `style='danger'`)",
             "the Toggle has `aria-checked='true'` after `perm.denied` (optimistic flip not reverted)",
-            "a Retry button appears on a perm.denied self-escalation denial (unified error banner with generic Retry bypasses the no-Retry-on-denial contract)"
+            "a Retry button appears on a perm.denied self-escalation denial (unified error banner with generic Retry bypasses the no-Retry-on-denial contract)",
+            "stub Toggle always reports `aria-checked='true'` regardless of click \u2014 without a pre-click aria-checked assertion, this stub passes (no-op-handler stub-pass vector closed by REMEDIATE-UI-5)"
           ]
         },
         "evidence": {
@@ -931,21 +932,28 @@ Blocks:     MGMT-UI-012 (build-gate tests verify no +page.server.ts and no direc
               "actor": "user",
               "steps": [
                 "locate the administration:write Toggle (initial state: OFF)",
+                "capture the pre-click aria-checked value BEFORE the click (REMEDIATE-UI-5 strengthening)",
                 "click the Toggle to attempt self-escalation",
+                "capture the post-denial aria-checked value AFTER the perm.denied response",
+                "assert the pre-click and post-denial aria-checked values are EQUAL (no flip)",
                 "observe the Toggle state and InfoMessage"
               ]
             },
             "end_state": {
               "must_observe": [
                 "an `InfoMessage` with `style='danger'` containing text `'cannot modify your own administration grants'`",
-                "the administration:write Toggle has `aria-checked='false'` (remains in OFF state, not flipped)",
+                "a pre-click `aria-checked='false'` capture/assertion is present (Toggle starts OFF, captured BEFORE the click)",
+                "the administration:write Toggle has `aria-checked='false'` (remains in OFF state, not flipped) AFTER the denial",
+                "an equality/comparison assertion between the pre-click and post-denial aria-checked values is present (closes the no-op stub Toggle vector)",
                 "the InfoMessage body contains `'Self-escalation is not permitted'` (the seeded `remediation_hint`)"
               ],
               "must_not_observe": [
                 "the Toggle with `aria-checked='true'` (optimistic flip occurred)",
                 "`0` InfoMessage elements with `style='danger'` after the denied self-escalation attempt",
                 "a `warning` or `info` InfoMessage variant (wrong variant for a `perm.denied` denial)",
-                "a button with accessible name `'Retry'` visible when the denial code is `'perm.denied'` (self-escalation denials MUST NOT offer Retry \u2014 DESIGN-MGMT-004 contract)"
+                "a button with accessible name `'Retry'` visible when the denial code is `'perm.denied'` (self-escalation denials MUST NOT offer Retry \u2014 DESIGN-MGMT-004 contract)",
+                "only a post-click aria-checked assertion with no pre-click capture (a stub Toggle that always reports `aria-checked='true'` would pass such a weak oracle)",
+                "pre-click and post-denial aria-checked values captured without an equality/comparison step"
               ]
             }
           }

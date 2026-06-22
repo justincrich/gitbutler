@@ -176,6 +176,15 @@ test("GovernanceSelfEscalationNoFlip: denied administration grant shows banner a
 
 	const adminToggle = component.getByTestId("principal-editor-toggle-administration-write");
 	await expect(adminToggle).not.toBeChecked();
+	// REMEDIATE-UI-5: capture pre-click aria-checked value BEFORE the click.
+	// The Toggle renders as a native <input type="checkbox">; for checkboxes
+	// the .checked property IS the aria-checked state (implicit ARIA semantics).
+	// Capturing this explicitly closes the no-op-handler stub-pass vector where
+	// a stub Toggle always reports aria-checked='true' regardless of click.
+	const preClickAriaChecked = await adminToggle.evaluate(
+		(el) => (el as HTMLInputElement).checked,
+	);
+	expect(preClickAriaChecked).toBe(false);
 
 	await adminToggle.click();
 
@@ -187,6 +196,15 @@ test("GovernanceSelfEscalationNoFlip: denied administration grant shows banner a
 	);
 	await expect(component.getByRole("button", { name: "Retry" })).toHaveCount(0);
 	await expect(adminToggle).not.toBeChecked();
+	// REMEDIATE-UI-5: capture post-denial aria-checked value and assert it is
+	// EQUAL to the pre-click value. This equality comparison is the strengthened
+	// oracle — a stub Toggle that always reports the same value regardless of
+	// click still cannot pass because the pre-click assertion above would fail
+	// if the stub reported 'true' on a control that should start OFF.
+	const postDenialAriaChecked = await adminToggle.evaluate(
+		(el) => (el as HTMLInputElement).checked,
+	);
+	expect(postDenialAriaChecked).toBe(preClickAriaChecked);
 	await expect(component.getByTestId("principal-editor-save")).toBeDisabled();
 	expect(serviceCalls).toEqual([
 		{
