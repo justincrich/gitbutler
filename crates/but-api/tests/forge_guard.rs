@@ -159,31 +159,10 @@ fn forge_guard_no_stub_success_for_unimplemented_review_actions() -> anyhow::Res
     let ctx = but_ctx::Context::from_repo(repo)?.with_memory_app_cache();
     let runtime = tokio::runtime::Runtime::new()?;
 
-    temp_env::with_var(
-        "BUT_AGENT_HANDLE",
-        Some("reviewer"),
-        || -> anyhow::Result<()> {
-            let err = match runtime.block_on(but_api::legacy::forge::request_changes_review(
-                ctx.to_sync(),
-                "feat".to_owned(),
-                Some("please fix this".to_owned()),
-            )) {
-                Ok(()) => anyhow::bail!("request-changes must not report success without behavior"),
-                Err(err) => err,
-            };
-            let message = err.to_string();
-            assert!(
-                message.contains("request_changes_review"),
-                "request-changes blocker must name the unsupported action, got: {message}"
-            );
-            assert!(
-                message.contains("no downstream"),
-                "request-changes blocker must explain no downstream behavior exists, got: {message}"
-            );
-            println!("request_changes_review blocker: {message}");
-            Ok(())
-        },
-    )?;
+    // NOTE: `request_changes_review` was previously a contract stub here; LPR-003
+    // implemented its real `changes_requested` write, so it is exercised by the
+    // dedicated `local_review_assignments.rs` proofs. The two remaining verbs
+    // (comment, close) are still stubs and must still fail closed.
 
     temp_env::with_var(
         "BUT_AGENT_HANDLE",
