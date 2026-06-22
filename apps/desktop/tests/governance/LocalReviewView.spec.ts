@@ -82,6 +82,15 @@ function createSpyService(
 	};
 }
 
+/**
+ * The component accepts a `loading` prop that forces the skeleton to render.
+ * This is used instead of a never-resolving-promise service because
+ * function-valued props do not survive the Playwright CT mount boundary
+ * (Svelte 5 + @playwright/experimental-ct-svelte 1.58). The `loading` prop
+ * achieves the same non-fakeable assertion: deleting <SkeletonBone> from the
+ * component makes the skeleton testId assertion FAIL (F1 fakeability fix).
+ */
+
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
@@ -89,6 +98,7 @@ function createSpyService(
 test.describe("LocalReviewView", () => {
 	// AC-1 [PRIMARY]
 	test("LocalReviewViewAssignments renders seeded assignments with correct state chips", async ({
+		page,
 		mount,
 	}) => {
 		// Verify the service spy is callable and returns correct data (fixture-only seam)
@@ -131,6 +141,17 @@ test.describe("LocalReviewView", () => {
 					.evaluate((n) => (n as HTMLElement).className)
 			).includes("safe"),
 		).toBe(true);
+
+		// F2: verify the Tooltip from @gitbutler/ui renders the verbatim
+		// DESIGN-LPR-003 tooltip text when the agent-authored badge is hovered.
+		// (Tooltip has delay={0} on this instance → appears instantly.)
+		const agentBadge = component.getByTestId("local-review-agent-authored");
+		await agentBadge.hover();
+		const tooltipText = page
+			.locator(".tooltip-container")
+			.filter({ hasText: AGENT_TOOLTIP })
+			.last();
+		await expect(tooltipText).toBeVisible({ timeout: 5000 });
 	});
 
 	// AC-2
@@ -240,16 +261,29 @@ test.describe("LocalReviewView", () => {
 				`${state.name}: expected class "${state.expectClass}"`,
 			).toBe(true);
 
-			if (state.expectAgent) {
-				const agentEl = component.getByTestId("local-review-agent-authored").last();
-				await expect(agentEl).toBeVisible();
-				const agentCls = await agentEl.evaluate((n) => (n as HTMLElement).className);
-				expect(agentCls.includes("safe"), `${state.name}: agent badge must NOT be safe/green`).toBe(
-					false,
-				);
-				const tooltip = await agentEl.getAttribute("data-tooltip");
-				expect(tooltip).toBe(AGENT_TOOLTIP);
-			} else {
+		if (state.expectAgent) {
+			const agentEl = component.getByTestId("local-review-agent-authored").last();
+			await expect(agentEl).toBeVisible();
+			const agentCls = await agentEl.evaluate((n) => (n as HTMLElement).className);
+			expect(agentCls.includes("safe"), `${state.name}: agent badge must NOT be safe/green`).toBe(
+				false,
+			);
+			// F2: verify the Tooltip component from @gitbutler/ui wraps the badge
+			// (per DESIGN-LPR-003 §AGENT-AUTHORED BADGE RULE). The Tooltip renders
+			// span.tooltip-wrap when its text prop is non-empty.
+			const hasTooltipAncestor = await agentEl.evaluate((n) => {
+				let el = (n as HTMLElement).parentElement;
+				while (el) {
+					if (el.classList.contains("tooltip-wrap")) return true;
+					el = el.parentElement;
+				}
+				return false;
+			});
+			expect(
+				hasTooltipAncestor,
+				`${state.name}: agent-authored Badge must be wrapped by Tooltip from @gitbutler/ui`,
+			).toBe(true);
+		} else {
 				// Scope to the last header to avoid matching elements from prior loop iterations
 				const lastHeader = component.getByTestId("local-review-header").last();
 				const agentInLast = await lastHeader
@@ -274,11 +308,22 @@ test.describe("LocalReviewView", () => {
 	test("LocalReviewViewEmptyStates renders loading, no-review, zero-assignments, zero-threads", async ({
 		mount,
 	}) => {
-		// (a) loading/in-flight — no pre-loaded data; initial isLoading=true, five data
-		// sections must NOT be rendered (the skeleton or empty state appears instead)
+		// (a) loading/in-flight — the `loading` prop forces the skeleton to
+		// render and blocks the load transition. F1 fakeability fix: if
+		// <SkeletonBone> were deleted, the skeleton-bone count assertion
+		// would FAIL (0 instead of 4).
+		// (Function-valued service props don't survive the CT mount boundary,
+		// so the `loading` prop is used instead of a never-resolving service.)
 		const loadingComp = await mount(LocalReviewView, {
-			props: { projectId, branch },
+			props: { projectId, branch, loading: true },
 		});
+		// The skeleton container MUST be present and visible
+		await expect(loadingComp.getByTestId("local-review-loading")).toBeVisible();
+		// The container MUST contain actual <SkeletonBone> elements (not just
+		// an empty div with padding). Deleting SkeletonBone makes this fail.
+		await expect(
+			loadingComp.getByTestId("local-review-loading").locator(".skeleton-bone"),
+		).toHaveCount(4);
 		// Data sections absent — content is not rendered while in-flight
 		await expect(loadingComp.getByTestId("local-review-header")).toHaveCount(0);
 		await expect(loadingComp.getByTestId("local-review-assignments")).toHaveCount(0);

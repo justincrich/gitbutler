@@ -153,7 +153,7 @@
 <script lang="ts">
 	import LocalReviewAssignments from "$components/governance/LocalReviewAssignments.svelte";
 	import LocalReviewThreads from "$components/governance/LocalReviewThreads.svelte";
-	import { Badge, EmptyStatePlaceholder, InfoMessage, SkeletonBone } from "@gitbutler/ui";
+	import { Badge, EmptyStatePlaceholder, InfoMessage, SkeletonBone, Tooltip } from "@gitbutler/ui";
 	import { untrack } from "svelte";
 
 	type Props = {
@@ -165,6 +165,13 @@
 		comments?: LocalReviewCommentEntry[];
 		/** Service for the production load path (not used when review is provided). */
 		service?: LocalReviewService;
+		/**
+		 * Forces the skeleton to render and blocks the load transition. Used by
+		 * CT tests to simulate the in-flight state (function-valued service props
+		 * do not survive the Playwright CT mount boundary, so the skeleton cannot
+		 * be exercised via a never-resolving-promise service in CT).
+		 */
+		loading?: boolean;
 		/** Accepted for mount-site parity; the view is read-only by design. */
 		isReadOnly?: boolean;
 	};
@@ -175,22 +182,29 @@
 		review: providedReview,
 		comments: providedComments,
 		service: providedService,
+		loading: forceLoading = false,
 		isReadOnly: _isReadOnly,
 	}: Props = $props();
 
+	// Resolve the service at init (GroupsList pattern) so it is captured before
+	// the $effect fires. This is important in the CT harness where prop
+	// reactivity across the mount boundary can lag.
+	const resolvedService = untrack(() => providedService);
+
 	let review = $state<LocalReviewStatusPayload | null | undefined>(untrack(() => providedReview));
 	let comments = $state<LocalReviewCommentEntry[]>(untrack(() => providedComments ?? []));
-	let isLoading = $state(untrack(() => providedReview === undefined));
+	let isLoading = $state(untrack(() => forceLoading || providedReview === undefined));
 	let loadError = $state<string | undefined>();
 
 	$effect(() => {
+		if (forceLoading) return;
 		if (providedReview !== undefined) {
 			review = providedReview;
 			comments = providedComments ?? [];
 			isLoading = false;
 			return;
 		}
-		if (!providedService || !projectId || !branch) {
+		if (!resolvedService || !projectId || !branch) {
 			isLoading = false;
 			review = null;
 			return;
@@ -205,8 +219,8 @@
 		loadError = undefined;
 		try {
 			const [statusResult, allComments] = await Promise.all([
-				providedService!.reviewStatus(projectId, branch),
-				providedService!.listComments(projectId, branch),
+				resolvedService!.reviewStatus(projectId, branch),
+				resolvedService!.listComments(projectId, branch),
 			]);
 			review = statusResult;
 			comments = allComments;
@@ -252,15 +266,16 @@
 					{lifecycleText}
 				</Badge>
 				{#if review.agent_authored}
-					<span
-						class="local-review-agent-authored"
-						data-testid="local-review-agent-authored"
-						data-tooltip={AGENT_AUTHORED_TOOLTIP}
-					>
-						<Badge style="gray" kind="soft" size="tag" tooltip={AGENT_AUTHORED_TOOLTIP}>
+					<Tooltip text={AGENT_AUTHORED_TOOLTIP} delay={0}>
+						<Badge
+							testId="local-review-agent-authored"
+							style="gray"
+							kind="soft"
+							size="tag"
+						>
 							agent-authored
 						</Badge>
-					</span>
+					</Tooltip>
 				{/if}
 			</div>
 			<div class="local-review-header__branch">
