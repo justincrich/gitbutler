@@ -307,8 +307,8 @@ impl ConfigError {
         Self {
             message: source.to_string(),
             source,
-            class: None,
-            do_not: None,
+            class: Some(DenialClass::OperatorRequired),
+            do_not: Some("do not retry — an operator must fix the committed .gitbutler config"),
         }
     }
 }

@@ -3,7 +3,8 @@ use std::{collections::BTreeMap, path::Path, str};
 use anyhow::{Context as _, anyhow};
 use but_authz::{
     Authority, AuthoritySet, AuthorizedAction, BranchName, BranchProtection, Denial, DenialClass,
-    GovConfig, Group, GroupName, PrincipalId, serialize_authority_tokens,
+    DenialPredicate, DeniedRoute, GovConfig, Group, GroupName, PrincipalId, Route,
+    authorized_actions, effective_authority, serialize_authority_tokens,
 };
 use serde::{Deserialize, Serialize};
 
@@ -65,7 +66,15 @@ pub fn enforce_merge_gate(ctx: &but_ctx::Context, review_id: usize) -> anyhow::R
     // keeps matching. The review-requirement predicate below stays composed
     // AROUND the table — it is NOT folded in.
     let required = but_authz::Route::Merge.required_authority();
-    but_authz::authorize(&principal, required, &config.gov)?;
+    // STEER-004: enrich the authorize denial with a route-scoped menu
+    // (ActorCorrectable path). The deny/allow decision is unchanged.
+    but_authz::authorize(&principal, required, &config.gov).map_err(|denial| {
+        denial.with_authorized_actions(
+            &principal,
+            &DeniedRoute::new(Route::Merge, DenialPredicate::Authority),
+            &config.gov,
+        )
+    })?;
 
     if !config
         .gov
@@ -117,6 +126,13 @@ pub fn enforce_merge_gate(ctx: &but_ctx::Context, review_id: usize) -> anyhow::R
         Ok(()) => Ok(()),
         Err(unmet) => {
             let unmet = unmet.into_entries();
+            // STEER-004: gate.review_required → ActorCorrectable. The caller
+            // HOLDS the merge authority (otherwise `authorize` above would
+            // have denied first). Derive the gate-state-aware menu via the
+            // STEER-003 ReviewRequired predicate.
+            let held = effective_authority(&principal, &config.gov);
+            let denied = DeniedRoute::new(Route::Merge, DenialPredicate::ReviewRequired);
+            let actions = authorized_actions(&principal, &denied, &config.gov);
             Err(MergeGateError {
                 code: REVIEW_REQUIRED_CODE,
                 message: format!(
@@ -127,9 +143,9 @@ pub fn enforce_merge_gate(ctx: &but_ctx::Context, review_id: usize) -> anyhow::R
                 remediation_hint: "collect the required approvals at the current review head"
                     .to_owned(),
                 unmet,
-                class: DenialClass::OperatorRequired,
-                held_permissions: Vec::new(),
-                authorized_actions: Vec::new(),
+                class: DenialClass::ActorCorrectable,
+                held_permissions: held.iter().collect(),
+                authorized_actions: actions,
                 do_not: None,
             }
             .into())
@@ -404,10 +420,10 @@ fn config_invalid(message: String) -> MergeGateError {
         message: format!("invalid governance config: {message}"),
         remediation_hint: "fix committed .gitbutler governance config on the target ref".to_owned(),
         unmet: Vec::new(),
-        class: DenialClass::ActorCorrectable,
+        class: DenialClass::OperatorRequired,
         held_permissions: Vec::new(),
         authorized_actions: Vec::new(),
-        do_not: None,
+        do_not: Some("do not retry — an operator must fix the committed .gitbutler config"),
     }
 }
 

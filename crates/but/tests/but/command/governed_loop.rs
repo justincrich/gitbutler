@@ -5,6 +5,7 @@ use but_authz::{
 use but_core::RefMetadata as _;
 use but_db::ForgeReview;
 use gix::refs::FullName;
+use std::ffi::OsString;
 
 use crate::utils::{CommandExt as _, Sandbox};
 
@@ -261,6 +262,171 @@ fn governed_loop_unset_handle_failclosed() -> anyhow::Result<()> {
         );
     }
 
+    // STEER-004 TC-2: verify via the authz API that the no_handle and
+    // unknown_principal denials carry class=OperatorRequired (not
+    // actor_correctable). STEER-005 serializes the class field at the CLI
+    // sites; here we verify the underlying type carries the correct class.
+    let cfg = load_governance_config(&repo, "refs/heads/feat")?;
+    let no_handle_denial = but_authz::resolve_principal(|_| None, &cfg).unwrap_err();
+    assert_eq!(
+        no_handle_denial.class,
+        but_authz::DenialClass::OperatorRequired,
+        "no_handle() denial MUST be operator_required — security HIGH #2"
+    );
+
+    Ok(())
+}
+
+// ---------------------------------------------------------------------------
+// STEER-004 — class-matrix + config.invalid-operator tests
+// ---------------------------------------------------------------------------
+
+/// AC-1 / TC-2 — the class is correct per (code, principal-resolution)
+/// across the governed CLI loop.
+///
+/// Verifies both through the authz API (where STEER-004 wires the class
+/// field on each Denial) AND through the CLI (which produces the denial).
+/// STEER-005 serializes the class field at CLI sites; here we verify the
+/// underlying type carries the correct class.
+#[test]
+#[serial_test::serial]
+fn governed_loop_steer_class_matrix() -> anyhow::Result<()> {
+    let env = governed_loop_env("feat", REVIEW_ID)?;
+    let repo = env.open_repo()?;
+    let main_before = ref_id(&repo, "refs/heads/main")?;
+
+    // Load the SAME cfg the gates load at refs/heads/feat.
+    let cfg = load_governance_config(&repo, "refs/heads/feat")?;
+
+    // actor_correctable: implementer merge denied (missing merge authority).
+    // The implementer IS resolved (registered in config) but lacks merge.
+    let imp_id = PrincipalId::new("implementer");
+    let imp_auth = cfg
+        .principal_authorities(&imp_id)
+        .cloned()
+        .ok_or_else(|| anyhow::anyhow!("implementer must be in config"))?;
+    let imp_principal = AuthzPrincipal::new(imp_id, imp_auth, []);
+    let imp_denial =
+        but_authz::authorize(&imp_principal, but_authz::Authority::Merge, &cfg).unwrap_err();
+    assert_eq!(
+        imp_denial.class,
+        but_authz::DenialClass::ActorCorrectable,
+        "resolved-principal perm.denied (implementer, missing merge) MUST be actor_correctable"
+    );
+
+    // Also verify the CLI produces the perm.denied for implementer.
+    let imp_merge = env
+        .but("--format json pr merge 77 --method squash")
+        .allow_json()
+        .env("BUT_AGENT_HANDLE", "implementer")
+        .output()?;
+    assert_denial(
+        &imp_merge,
+        "perm.denied",
+        "merge",
+        Some(&["reviewed merge"]),
+        "implementer lacks merge authority — perm.denied is expected",
+    );
+
+    // operator_required: unset handle → no_handle() → OperatorRequired.
+    let unset_denial = but_authz::resolve_principal(|_| None, &cfg).unwrap_err();
+    assert_eq!(
+        unset_denial.class,
+        but_authz::DenialClass::OperatorRequired,
+        "unset-handle perm.denied MUST be operator_required (security HIGH #2)"
+    );
+    assert!(
+        unset_denial.do_not.is_some(),
+        "unset-handle denial MUST carry a do_not"
+    );
+
+    // Also verify the CLI produces the perm.denied for unset handle.
+    let unset_merge = env
+        .but("--format json pr merge 77 --dry-run")
+        .allow_json()
+        .env_remove("BUT_AGENT_HANDLE")
+        .output()?;
+    assert_denial(
+        &unset_merge,
+        "perm.denied",
+        "BUT_AGENT_HANDLE",
+        Some(&["BUT_AGENT_HANDLE"]),
+        "unset handle must fail closed with perm.denied",
+    );
+
+    // operator_required: unknown principal → OperatorRequired.
+    let ghost_denial = but_authz::resolve_principal(
+        |key| (key == "BUT_AGENT_HANDLE").then(|| OsString::from("ghost")),
+        &cfg,
+    )
+    .unwrap_err();
+    assert_eq!(
+        ghost_denial.class,
+        but_authz::DenialClass::OperatorRequired,
+        "unknown-principal perm.denied MUST be operator_required"
+    );
+
+    assert_eq!(
+        ref_id(&repo, "refs/heads/main")?,
+        main_before,
+        "all denial paths must leave main unchanged"
+    );
+
+    println!("AC-1 class matrix (via authz API):");
+    println!("  implementer perm.denied  → actor_correctable");
+    println!("  unset handle perm.denied → operator_required");
+    println!("  ghost handle perm.denied → operator_required");
+    Ok(())
+}
+
+/// AC-2 — a `config.invalid` denial is `operator_required` with an empty
+/// menu and a do-not-retry `do_not`. Verified through the ConfigError type
+/// directly (STEER-004 wires class+do_not at the config-load site).
+#[test]
+#[serial_test::serial]
+fn governed_loop_steer_config_invalid_operator() -> anyhow::Result<()> {
+    let env = governed_loop_env("feat", REVIEW_ID)?;
+    let repo = env.open_repo()?;
+
+    // Corrupt the committed gates.toml at refs/heads/feat so loading the
+    // governance config hits config.invalid.
+    env.invoke_bash(
+        r#"
+index=$(mktemp)
+export GIT_INDEX_FILE="$index"
+base=$(git rev-parse refs/heads/feat)
+git read-tree "$base"
+bad_gates=$(printf '[[branch]\nname = "feat"\nprotected = nope\n' | git hash-object -w --stdin)
+git update-index --add --cacheinfo 100644 "$bad_gates" .gitbutler/gates.toml
+tree=$(git write-tree)
+commit=$(printf 'corrupt gates\n' | git commit-tree "$tree" -p "$base")
+git update-ref refs/heads/feat "$commit"
+unset GIT_INDEX_FILE
+"#,
+    );
+
+    // Load the governance config from the corrupted ref → ConfigError.
+    let cfg_result = load_governance_config(&repo, "refs/heads/feat");
+    let err = cfg_result.unwrap_err();
+
+    // AC-2: ConfigError carries class=OperatorRequired + do_not.
+    assert_eq!(
+        err.code(),
+        "config.invalid",
+        "corrupt gates.toml must produce config.invalid"
+    );
+    assert_eq!(
+        err.class,
+        Some(but_authz::DenialClass::OperatorRequired),
+        "config.invalid MUST carry class=OperatorRequired"
+    );
+    let do_not = err.do_not.expect("config.invalid MUST carry a do_not");
+    assert!(
+        do_not.contains("do not retry"),
+        "config.invalid do_not MUST contain 'do not retry': {do_not}"
+    );
+
+    println!("AC-2: config.invalid → operator_required + do-not-retry do_not");
     Ok(())
 }
 
@@ -600,6 +766,11 @@ struct CliErrorEnvelope {
     code: String,
     message: String,
     remediation_hint: String,
+    /// STEER-004: steering classification — "actor_correctable" or
+    /// "operator_required". Parsed from the CLI envelope; STEER-005
+    /// serializes it at CLI sites. Retained for forward-compat assertions.
+    #[allow(dead_code)]
+    class: String,
 }
 
 fn assert_denial(
@@ -720,6 +891,11 @@ fn parse_cli_error_envelope_opt(output: &std::process::Output) -> Option<CliErro
         code,
         message,
         remediation_hint,
+        class: error
+            .get("class")
+            .and_then(serde_json::Value::as_str)
+            .unwrap_or("actor_correctable")
+            .to_owned(),
     })
 }
 

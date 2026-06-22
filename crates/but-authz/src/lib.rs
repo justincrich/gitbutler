@@ -12,7 +12,7 @@ mod route;
 pub use assignment_state::{AssignmentState, AssignmentStateParseError};
 pub use authority::{Authority, AuthoritySet, ParseAuthorityError, serialize_authority_tokens};
 pub use authorize::{
-    authorize, effective_authority, resolve_principal, resolve_principal_from_env,
+    DenialCause, authorize, effective_authority, resolve_principal, resolve_principal_from_env,
 };
 pub use config::{
     BranchName, BranchProtection, ConfigError, GovConfig, GroupWire, PermissionsWire,

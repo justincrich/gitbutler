@@ -44,6 +44,24 @@ fn commit_gate_feature_ok_protected_rejected() -> anyhow::Result<()> {
             denial.message.contains("main"),
             "branch.protected message should name the rejected main branch"
         );
+        // STEER-004: branch.protected carries ActorCorrectable + re-derived
+        // held_permissions (contents:write for dev).
+        assert_eq!(
+            denial.class,
+            but_authz::DenialClass::ActorCorrectable,
+            "branch.protected MUST be actor_correctable"
+        );
+        assert!(
+            denial
+                .held_permissions
+                .contains(&but_authz::Authority::ContentsWrite),
+            "branch.protected held_permissions MUST include contents:write (re-derived via &cfg): {:?}",
+            denial.held_permissions
+        );
+        assert!(
+            !denial.authorized_actions.is_empty(),
+            "branch.protected MUST carry a non-empty gate-state-aware menu"
+        );
         assert_eq!(
             ref_id(&repo, MAIN_REF)?,
             main_before,
@@ -84,6 +102,34 @@ fn commit_gate_readonly_and_bad_handle_denied() -> anyhow::Result<()> {
                     || err.message.contains("ghost"),
                 "perm.denied message should explain the rejected handle or missing contents:write"
             );
+            // STEER-004: class is correct per (code, principal-resolution).
+            // read-only (ro) is a resolved principal → actor_correctable;
+            // unset/empty/ghost are unresolved → operator_required.
+            match handle {
+                Some("ro") => {
+                    assert_eq!(
+                        err.class,
+                        but_authz::DenialClass::ActorCorrectable,
+                        "read-only (resolved) perm.denied MUST be actor_correctable"
+                    );
+                }
+                None | Some("") | Some("ghost") => {
+                    assert_eq!(
+                        err.class,
+                        but_authz::DenialClass::OperatorRequired,
+                        "{label} (unresolved principal) perm.denied MUST be operator_required"
+                    );
+                    assert!(
+                        err.do_not.is_some(),
+                        "{label} (unresolved) denial MUST carry a do_not"
+                    );
+                    assert!(
+                        err.authorized_actions.is_empty(),
+                        "{label} (unresolved) denial MUST have an empty menu"
+                    );
+                }
+                _ => {}
+            }
             assert_eq!(
                 ref_id(&repo, FEAT_REF)?,
                 feat_before,
@@ -211,9 +257,25 @@ git commit -m "malformed feat gates"
         write_file(&repo, "denied-dryrun.txt", "denied dry run\n")?;
         let main_before = ref_id(&repo, MAIN_REF)?;
         let mut ctx = but_ctx::Context::from_repo(repo.clone())?.with_memory_app_cache();
-        assert_commit_denied(
+        let dryrun_err = assert_commit_denied(
             commit_to_ref(&mut ctx, MAIN_REF, "denied dry run", DryRun::Yes),
             "branch.protected",
+        );
+        // STEER-004: DryRun carries the full steering payload.
+        assert_eq!(
+            dryrun_err.class,
+            but_authz::DenialClass::ActorCorrectable,
+            "DryRun branch.protected MUST carry class=ActorCorrectable"
+        );
+        assert!(
+            dryrun_err
+                .held_permissions
+                .contains(&but_authz::Authority::ContentsWrite),
+            "DryRun branch.protected MUST carry held_permissions (contents:write)"
+        );
+        assert!(
+            !dryrun_err.authorized_actions.is_empty(),
+            "DryRun branch.protected MUST carry authorized_actions"
         );
         assert_eq!(
             ref_id(&repo, MAIN_REF)?,

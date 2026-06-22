@@ -1,6 +1,9 @@
 use bstr::ByteSlice as _;
-use but_authz::{Authority, serialize_authority_tokens};
-use but_authz::{AuthorizedAction, Denial, DenialClass, Principal, load_governance_config};
+use but_authz::{
+    Authority, AuthorizedAction, Denial, DenialCause, DenialClass, DenialPredicate, DeniedRoute,
+    Principal, Route, authorized_actions, effective_authority, load_governance_config,
+    serialize_authority_tokens,
+};
 use but_rebase::graph_rebase::mutate::RelativeTo;
 use gix::refs::FullName;
 use serde::Serialize;
@@ -85,14 +88,23 @@ pub fn enforce_commit_gate_for_target(
     // keeps matching. The branch-protection predicate below stays composed
     // AROUND the table — it is NOT folded in.
     let required = but_authz::Route::Commit.required_authority();
-    but_authz::authorize(&principal, required, &cfg)?;
+    // STEER-004: enrich the authorize denial with a route-scoped menu
+    // (ActorCorrectable path). The deny/allow decision is unchanged —
+    // only the authorized_actions payload is additive.
+    but_authz::authorize(&principal, required, &cfg).map_err(|denial| {
+        denial.with_authorized_actions(
+            &principal,
+            &DeniedRoute::new(Route::Commit, DenialPredicate::Authority),
+            &cfg,
+        )
+    })?;
 
     if let Some(branch_name) = &target.protected_branch
         && cfg
             .branch(branch_name)
             .is_some_and(|branch| branch.protected())
     {
-        return Err(branch_protected(&principal, branch_name).into());
+        return Err(branch_protected(&principal, &cfg, branch_name).into());
     }
 
     Ok(())
@@ -185,13 +197,35 @@ fn find_branch_ref_for_commit(
         })
 }
 
-fn branch_protected(principal: &Principal, branch_name: &str) -> Denial {
-    Denial::new(
-        "branch.protected",
-        format!(
+fn branch_protected(
+    principal: &Principal,
+    cfg: &but_authz::GovConfig,
+    branch_name: &str,
+) -> Denial {
+    // STEER-004: re-derive the effective authority set from the same cfg
+    // the gate loaded (never re-loaded — same-cfg/ref by construction, M2).
+    // The held set is dropped on authorize's Ok path today; re-deriving here
+    // populates held_permissions on the branch.protected denial.
+    let held = effective_authority(principal, cfg);
+
+    // STEER-004/STEER-003: derive a gate-state-aware menu via
+    // authorized_actions with the BranchProtected predicate (C5 subtraction:
+    // the menu offers a feature-branch commit, NOT the protected-ref commit).
+    let denied = DeniedRoute::new(Route::Commit, DenialPredicate::BranchProtected);
+    let actions = authorized_actions(principal, &denied, cfg);
+
+    Denial {
+        code: "branch.protected",
+        message: format!(
             "direct commits to protected branch \"{branch_name}\" are denied for principal \"{}\"; land changes through a reviewed merge",
             principal.id().as_str()
         ),
-        format!("open a reviewed merge into {branch_name} instead of committing directly"),
-    )
+        remediation_hint: format!(
+            "open a reviewed merge into {branch_name} instead of committing directly"
+        ),
+        class: DenialCause::BranchProtected.class(),
+        held_permissions: held.iter().collect(),
+        authorized_actions: actions,
+        do_not: None,
+    }
 }
