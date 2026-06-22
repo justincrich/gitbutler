@@ -104,6 +104,22 @@ pub struct Project {
         schemars(schema_with = "but_schemars::default_true")
     )]
     pub ok_with_force_push: DefaultTrue,
+    /// LPR-006 — per-project operator preference for whether agent reviews stay
+    /// local-only (the default) or are mirrored to a remote forge. Defaults to
+    /// `true` via `DefaultTrue` so older project files (and a default-constructed
+    /// `Project`) deserialize to local-only — see `R21` in
+    /// `.spec/prds/governance/enrichments/v1.5.0-local-agent-pr/03-technical-requirements-delta.md §G`.
+    /// NOT admin-gated, NOT ref-pinned committed config: this is a trusted-desktop
+    /// operator preference (the R12 fleet-owner trust model), the same class as
+    /// `forge_override` / `preferred_forge_user`. The remote-mirror path is a
+    /// NAMED SEAM ONLY while `false` — `request_review` returns a structured
+    /// `remote_mirror.not_implemented` error rather than performing any forge work.
+    #[serde(default)]
+    #[cfg_attr(
+        feature = "export-schema",
+        schemars(schema_with = "but_schemars::default_true")
+    )]
+    pub keep_reviews_local: DefaultTrue,
     /// Force push protection uses safer force push flags instead of doing straight force pushes
     #[serde(default)]
     pub force_push_protection: bool,
@@ -144,6 +160,7 @@ impl Project {
             worktree_dir: Default::default(),
             git_dir: Default::default(),
             ok_with_force_push: Default::default(),
+            keep_reviews_local: Default::default(),
             force_push_protection: false,
             husky_hooks_enabled: false,
             api: None,
@@ -403,7 +420,8 @@ mod tests {
 
     use serde_json::json;
 
-    use super::CodePushState;
+    use super::{CodePushState, Project};
+    use crate::ProjectHandleOrLegacyProjectId;
 
     #[test]
     fn code_push_state_json_roundtrip() {
@@ -439,6 +457,39 @@ mod tests {
                 .duration_since(UNIX_EPOCH)
                 .expect("after epoch"),
             Duration::from_secs(123)
+        );
+    }
+
+    #[test]
+    fn keep_reviews_local_defaults_true() {
+        // LPR-006 AC-1: DefaultTrue precedent — a default-constructed Project
+        // (the LPR-006 operator-preference default) must keep agent PRs local.
+        // Mirrors ok_with_force_push (project.rs:106) — the DefaultTrue precedent.
+        let project = Project::default_with_id(ProjectHandleOrLegacyProjectId::LegacyProjectId(
+            but_project_handle::LegacyProjectId::from_number_for_testing(0),
+        ));
+        assert!(
+            *project.keep_reviews_local,
+            "keep_reviews_local must default to true (local-only) via DefaultTrue"
+        );
+    }
+
+    #[test]
+    fn keep_reviews_local_deserializes_default_true() {
+        // LPR-006 AC-4: Older project files saved WITHOUT the keep_reviews_local
+        // field must deserialize to `true` (DefaultTrue serde default — backward
+        // compat for project stores written before LPR-006 landed).
+        let legacy_json = json!({
+            "id": "00000000-0000-0000-0000-000000000000",
+            "title": "legacy-project".to_string(),
+            "path": "/tmp/legacy",
+        });
+
+        let project: Project =
+            serde_json::from_value(legacy_json).expect("legacy file deserializes");
+        assert!(
+            *project.keep_reviews_local,
+            "older project file without keep_reviews_local must deserialize to true (DefaultTrue)"
         );
     }
 }

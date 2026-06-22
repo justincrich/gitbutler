@@ -23,12 +23,74 @@ pub struct ForgeGateError {
     pub message: String,
 }
 
+/// Stable consumer-facing error code returned when an action requires the
+/// remote-mirror path but `keep_reviews_local == false` and the mirror is a
+/// NAMED SEAM ONLY (no mirroring code runs in LPR scope).
+///
+/// See `R21` in
+/// `.spec/prds/governance/enrichments/v1.5.0-local-agent-pr/03-technical-requirements-delta.md §G`:
+/// the mirror is deferred to a future sprint; while `keep_reviews_local == true`
+/// (the default) the loop is fully local, and while `false` the API must surface
+/// this stable code so callers can distinguish "preference says mirror" from
+/// other failure modes.
+pub const REMOTE_MIRROR_NOT_IMPLEMENTED_CODE: &str = "remote_mirror.not_implemented";
+
+/// Structured payload for the LPR-006 named-seam error: a project preference
+/// (`keep_reviews_local == false`) asks for the remote-mirror path, but the
+/// mirror is not yet built.
+///
+/// Surfaces through [`classify_error`] as a [`ForgeGateError`] with code
+/// [`REMOTE_MIRROR_NOT_IMPLEMENTED_CODE`]. The `Display` impl names the missing
+/// mirror verbatim — that string is the named seam.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct RemoteMirrorNotImplemented {
+    /// Stable consumer-facing code (always
+    /// [`REMOTE_MIRROR_NOT_IMPLEMENTED_CODE`]).
+    pub code: &'static str,
+    /// Human-readable explanation naming the missing mirror.
+    pub message: String,
+}
+
+impl RemoteMirrorNotImplemented {
+    /// Construct the canonical named-seam payload for `keep_reviews_local ==
+    /// false` on a forge-mirror path.
+    pub fn new() -> Self {
+        Self {
+            code: REMOTE_MIRROR_NOT_IMPLEMENTED_CODE,
+            message: "remote review mirror not yet implemented (keep_reviews_local=false) \
+                — set keep_reviews_local=true (the default) to keep agent reviews local"
+                .to_owned(),
+        }
+    }
+}
+
+impl Default for RemoteMirrorNotImplemented {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl std::fmt::Display for RemoteMirrorNotImplemented {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}: {}", self.code, self.message)
+    }
+}
+
+impl std::error::Error for RemoteMirrorNotImplemented {}
+
 /// Extract a structured forge gate payload from an error chain.
 pub fn classify_error(err: &anyhow::Error) -> Option<ForgeGateError> {
     if let Some(denial) = err.downcast_ref::<but_authz::Denial>() {
         return Some(ForgeGateError {
             code: denial.code,
             message: denial.message.clone(),
+        });
+    }
+
+    if let Some(mirror) = err.downcast_ref::<RemoteMirrorNotImplemented>() {
+        return Some(ForgeGateError {
+            code: mirror.code,
+            message: mirror.message.clone(),
         });
     }
 
@@ -102,6 +164,20 @@ pub fn remote_url(project_meta: &ProjectMeta, repo: &gix::Repository) -> Result<
 
 pub fn push_remote_url(project_meta: &ProjectMeta, repo: &gix::Repository) -> Result<String> {
     project_meta.push_remote_url(repo)
+}
+
+/// Read the per-project `keep_reviews_local` operator preference (LPR-006).
+///
+/// Returns `true` when agent reviews must stay local-only (the default via
+/// `DefaultTrue`). Returns `false` only when the operator has explicitly opted
+/// into the (deferred) remote-mirror path — see `R21` in
+/// `.spec/prds/governance/enrichments/v1.5.0-local-agent-pr/03-technical-requirements-delta.md §G`.
+/// This is a read-only convenience for the project-settings UI; the gate itself
+/// lives in [`request_review`].
+#[but_api(napi)]
+#[instrument(err(Debug))]
+pub fn get_keep_reviews_local(ctx: &Context) -> Result<bool> {
+    Ok(*ctx.legacy_project.keep_reviews_local)
 }
 
 fn review_template_content(file: FileInfo) -> Result<String> {
@@ -527,6 +603,17 @@ pub async fn publish_review(
 /// sentinel), and — when `reviewer` is `Some` — also seeds the first `pending`
 /// `local_review_assignments` row for that reviewer. Assignments and verdicts
 /// are separate: this verb never touches `local_review_verdicts`.
+///
+/// **LPR-006 gate:** the operator preference
+/// [`Project::keep_reviews_local`](gitbutler_project::Project::keep_reviews_local)
+/// controls where agent reviews land. When `true` (the default via `DefaultTrue`,
+/// see `R21` in
+/// `.spec/prds/governance/enrichments/v1.5.0-local-agent-pr/03-technical-requirements-delta.md §G`)
+/// the loop is fully local — this verb writes only local-cache rows and never
+/// reaches a forge. When `false`, the remote-mirror path is a NAMED SEAM ONLY:
+/// this verb returns a structured [`RemoteMirrorNotImplemented`] error BEFORE
+/// any authorization or write, so callers can distinguish "preference says
+/// mirror" from a real forge call. Mirroring code is NOT built in LPR scope.
 #[but_api(napi)]
 #[instrument(err(Debug))]
 pub async fn request_review(
@@ -534,6 +621,15 @@ pub async fn request_review(
     branch: String,
     reviewer: Option<String>,
 ) -> Result<()> {
+    // LPR-006 R21 named seam: when the operator preference asks for the
+    // remote-mirror path, surface the stable `remote_mirror.not_implemented`
+    // error BEFORE authorization or any local-cache write. This is a gate, not
+    // a path — no mirroring code runs in LPR scope. Access the public field on
+    // `ThreadSafeContext` directly so we don't consume the only handle to it.
+    if !*ctx.legacy_project.keep_reviews_local {
+        return Err(anyhow::Error::new(RemoteMirrorNotImplemented::new()));
+    }
+
     let ctx = ctx.into_thread_local();
     let repo = ctx.repo.get()?;
     let opener = authorize_branch_action(&repo, &branch, Authority::PullRequestsWrite)?
