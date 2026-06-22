@@ -3,6 +3,7 @@
 	import DetailsForm from "$components/projectSettings/DetailsForm.svelte";
 	import ForgeForm from "$components/projectSettings/ForgeForm.svelte";
 	import GerritForm from "$components/projectSettings/GerritForm.svelte";
+	import KeepReviewsLocalToggle from "$components/projectSettings/KeepReviewsLocalToggle.svelte";
 	import RemoveProjectForm from "$components/projectSettings/RemoveProjectForm.svelte";
 	import { Spacer } from "@gitbutler/ui";
 
@@ -13,5 +14,6 @@
 <BaseBranchSwitch {projectId} />
 <GerritForm {projectId} />
 <ForgeForm {projectId} />
+<KeepReviewsLocalToggle {projectId} />
 <Spacer />
 <RemoveProjectForm {projectId} />
