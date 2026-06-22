@@ -68,6 +68,20 @@
 		resetEditor();
 	}
 
+	// Reset the drawer + editor to a clean state when the principal changes so
+	// each principal's rules view starts fresh. The drawer's persistId is
+	// project-scoped (not principal-scoped), so without this reset the
+	// open/collapsed state from a prior principal carries over and causes the
+	// expand toggle to behave inconsistently across principal switches.
+	let prevPrincipalId = $state<string | undefined>(untrack(() => principalId));
+	$effect(() => {
+		if (principalId !== prevPrincipalId) {
+			prevPrincipalId = principalId;
+			drawer?.close();
+			closeEditor();
+		}
+	});
+
 	function updateInitialValues(filter: RuleFilter, initialValues: Partial<RuleFilterMap>): true {
 		switch (filter.type) {
 			case "pathMatchesRegex":

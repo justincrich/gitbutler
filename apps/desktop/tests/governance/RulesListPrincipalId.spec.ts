@@ -20,6 +20,9 @@ test.describe("RulesList", () => {
 		await component.getByTestId("show-cursor-bot").click();
 
 		await expect(component.getByTestId("last-principal-id")).toHaveText("agent:cursor-bot");
+		// Drawer resets to collapsed on principal switch (clean-slate behavior);
+		// re-expand to verify principal B's rule rows are fetched and rendered.
+		await component.getByTestId("rules-list-harness").getByRole("button").first().click();
 		await expect(component.getByText("src/b1.ts")).toBeVisible();
 		await expect(component.getByText("src/a1.ts")).toHaveCount(0);
 		await expect(component.getByText("src/a2.ts")).toHaveCount(0);
