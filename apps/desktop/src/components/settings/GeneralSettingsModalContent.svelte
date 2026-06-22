@@ -41,7 +41,8 @@
 	title="Global settings"
 	pages={generalSettingsPages.filter((p) => p.id !== "irc" || ircEnabled)}
 	selectedId={currentSelectedId}
-	isAdmin={userService.user?.role === "admin"}
+	isAdmin={userService.user?.role === "admin" ||
+		(import.meta.env.DEV && import.meta.env.VITE_FORCE_ADMIN === "true")}
 	onSelectPage={selectPage}
 >
 	{#snippet content({ currentPage })}

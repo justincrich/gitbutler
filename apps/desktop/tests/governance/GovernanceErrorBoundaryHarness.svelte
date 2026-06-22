@@ -1,5 +1,5 @@
 <script lang="ts">
-	import ProjectSettingsModalContent from "$components/settings/ProjectSettingsModalContent.svelte";
+	import ProjectSettingsModalContent from "$components/views/ProjectSettingsModalContent.svelte";
 	import type {
 		GovernanceAccess,
 		GovernancePending,

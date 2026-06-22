@@ -1,12 +1,29 @@
 <script lang="ts">
 	import GovernanceSettings from "$components/governance/GovernanceSettings.svelte";
-	import ProjectSettingsModalContent from "$components/settings/ProjectSettingsModalContent.svelte";
+	import ProjectSettingsModalContent from "$components/views/ProjectSettingsModalContent.svelte";
 	import { BACKEND, type IBackend } from "$lib/backend";
 	import { UI_STATE, type UiState } from "$lib/state/uiState.svelte";
 	import { USER_SERVICE, UserService } from "$lib/user/userService.svelte";
 	import { provide } from "@gitbutler/core/context";
+	import type { User } from "$lib/user/user";
 
-	const userService = Object.create(UserService.prototype) as UserService;
+	// A real `get user()` (not Object.create(prototype), whose getter dereferences an
+	// uninitialized userQuery and throws). Admin so the governance settings page renders.
+	const userService = {
+		get user(): User {
+			return {
+				id: 1,
+				name: "CT Tester",
+				email: "ct@example.com",
+				locale: "en-US",
+				created_at: "2026-06-20T00:00:00.000Z",
+				updated_at: "2026-06-20T00:00:00.000Z",
+				access_token: "desktop-ct-token",
+				role: "admin",
+				supporter: false,
+			};
+		},
+	} as unknown as UserService;
 	const uiState = {
 		global: {
 			scrollbarVisibilityState: {
@@ -17,7 +34,11 @@
 	const backend = {
 		invoke: async <T,>(command: string): Promise<T> => {
 			if (command === "governance_status_read") {
-				return { authorities: ["administration:write"] } as T;
+				return {
+					authorities: ["administration:write"],
+					not_configured: false,
+					target_ref: "refs/remotes/origin/main",
+				} as T;
 			}
 
 			if (command === "governance_pending") {

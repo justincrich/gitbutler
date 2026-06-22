@@ -3,7 +3,7 @@
 	import LoginConfirmationModalContent from "$components/onboarding/LoginConfirmationModalContent.svelte";
 	import AuthorMissingModalContent from "$components/settings/AuthorMissingModalContent.svelte";
 	import GeneralSettingsModalContent from "$components/settings/GeneralSettingsModalContent.svelte";
-	import ProjectSettingsModalContent from "$components/settings/ProjectSettingsModalContent.svelte";
+	import ProjectSettingsModalContent from "$components/views/ProjectSettingsModalContent.svelte";
 	import { type GlobalModalState, UI_STATE } from "$lib/state/uiState.svelte";
 	import { USER_SERVICE } from "$lib/user/userService.svelte";
 	import { inject } from "@gitbutler/core/context";

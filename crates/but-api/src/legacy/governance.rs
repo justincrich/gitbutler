@@ -61,6 +61,12 @@ impl From<PermWriteOutcome> for GrantOutcome {
 pub struct GovernanceStatus {
     /// Effective functional authority tokens for the caller.
     pub authorities: Vec<String>,
+    /// True when the target ref has no committed governance config. This is a normal
+    /// "not set up yet" state the UI renders as guidance, NOT an error.
+    pub not_configured: bool,
+    /// The resolved governance target ref (e.g. `refs/remotes/origin/master`), so the
+    /// UI reuses the workspace-resolved ref for follow-up reads instead of guessing one.
+    pub target_ref: String,
 }
 
 impl From<AuthoritySet> for GovernanceStatus {
@@ -70,6 +76,8 @@ impl From<AuthoritySet> for GovernanceStatus {
                 .iter()
                 .map(|authority| authority.name().to_owned())
                 .collect(),
+            not_configured: false,
+            target_ref: String::new(),
         }
     }
 }
@@ -461,13 +469,36 @@ pub fn perm_revoke(
 }
 
 /// Return the caller's own effective governance authorities (`governance_status_read`).
+///
+/// Reports a graceful `not_configured` status (instead of an error) when the target ref
+/// has no committed governance config, and returns the resolved `target_ref` so the UI
+/// reuses it for follow-up reads. A caller that can't be resolved (e.g. `BUT_AGENT_HANDLE`
+/// unset) yields empty authorities (read-only), not an error.
 #[but_api(napi, GovernanceStatus)]
-pub fn governance_status_read(ctx: &Context) -> anyhow::Result<AuthoritySet> {
+pub fn governance_status_read(ctx: &Context) -> anyhow::Result<GovernanceStatus> {
     let repo = ctx.repo.get()?;
     let target_ref = target_ref_from_ctx(ctx, None)?;
+    if !but_authz::governance_present(&repo, &target_ref)? {
+        return Ok(GovernanceStatus {
+            authorities: Vec::new(),
+            not_configured: true,
+            target_ref,
+        });
+    }
     let config = load_governance_config(&repo, &target_ref)?;
-    let caller = but_authz::resolve_principal_from_env(&config)?;
-    Ok(but_authz::effective_authority(&caller, &config))
+    let authorities = match but_authz::resolve_principal_from_env(&config) {
+        Ok(caller) => but_authz::effective_authority(&caller, &config)
+            .iter()
+            .map(|authority| authority.name().to_owned())
+            .collect(),
+        // No resolvable caller (e.g. BUT_AGENT_HANDLE unset) → read-only, not an error.
+        Err(_) => Vec::new(),
+    };
+    Ok(GovernanceStatus {
+        authorities,
+        not_configured: false,
+        target_ref,
+    })
 }
 
 /// Read branch gates (`branch_gates_read`) for the target ref through the but-api boundary.

@@ -1,5 +1,7 @@
 <script lang="ts">
 	import GovernanceSettings from "$components/governance/GovernanceSettings.svelte";
+	import URLService, { URL_SERVICE } from "$lib/backend/url";
+	import { provide } from "@gitbutler/core/context";
 	import { untrack } from "svelte";
 	import type {
 		GovernanceAccess,
@@ -17,6 +19,7 @@
 		pendingCount: number;
 		pendingCountAfterCommit?: number;
 		hasAdminWrite?: boolean;
+		notConfigured?: boolean;
 		role?: UserRole;
 		principals?: PrincipalListEntry[];
 		pendingGroups?: string[];
@@ -26,6 +29,7 @@
 		pendingCount,
 		pendingCountAfterCommit = 0,
 		hasAdminWrite = true,
+		notConfigured = false,
 		role = "member",
 		pendingGroups = [],
 		principals = [
@@ -43,6 +47,16 @@
 	let commitCount = $state(0);
 	let lastCommitMessage = $state("");
 	let currentPendingGroups = $state(untrack(() => [...pendingGroups]));
+	let openedUrl = $state("");
+
+	// Inject a recording URL service so the not-configured "Open setup guide" button is
+	// live and clickable (the real app always provides one).
+	const urlService = {
+		async openExternalUrl(href: string) {
+			openedUrl = href;
+		},
+	} as unknown as URLService;
+	provide(URL_SERVICE, urlService);
 
 	function pending(): GovernancePending {
 		return {
@@ -59,10 +73,21 @@
 			return { principals };
 		},
 		async readAccess(_projectId: string): Promise<GovernanceAccess> {
+			if (notConfigured) {
+				return {
+					authorities: [],
+					hasAdminWrite: false,
+					isReadOnly: true,
+					isNotConfigured: true,
+					targetRef: "refs/remotes/origin/main",
+				};
+			}
 			return {
 				authorities: hasAdminWrite ? ["administration:write"] : ["administration:read"],
 				hasAdminWrite,
 				isReadOnly: !hasAdminWrite,
+				isNotConfigured: false,
+				targetRef: "refs/remotes/origin/main",
 			};
 		},
 		async commitPending(_target: GovernanceTarget) {
@@ -100,3 +125,4 @@
 <output data-testid="governance-user-role">{role}</output>
 <output data-testid="governance-commit-count">{commitCount}</output>
 <output data-testid="governance-commit-message">{lastCommitMessage}</output>
+<output data-testid="governance-opened-url">{openedUrl}</output>

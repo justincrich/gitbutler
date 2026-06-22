@@ -330,7 +330,14 @@ export declare function governancePending(projectId: string, targetRef: string):
 /** List all principals needed by the governance renderer (`governance_principals_list`). */
 export declare function governancePrincipalsList(projectId: string, targetRef: string): Promise<GovernancePrincipalsList>
 
-/** Return the caller's own effective governance authorities (`governance_status_read`). */
+/**
+ * Return the caller's own effective governance authorities (`governance_status_read`).
+ *
+ * Reports a graceful `not_configured` status (instead of an error) when the target ref
+ * has no committed governance config, and returns the resolved `target_ref` so the UI
+ * reuses it for follow-up reads. A caller that can't be resolved (e.g. `BUT_AGENT_HANDLE`
+ * unset) yields empty authorities (read-only), not an error.
+ */
 export declare function governanceStatusRead(projectId: string): Promise<GovernanceStatus>
 
 /** Add a principal to a governed group through the but-api boundary (`group_add_member`). */
@@ -1702,6 +1709,16 @@ export type GovernancePrincipalsList = {
 export type GovernanceStatus = {
   /** Effective functional authority tokens for the caller. */
   authorities: Array<string>;
+  /**
+   * True when the target ref has no committed governance config. This is a normal
+   * "not set up yet" state the UI renders as guidance, NOT an error.
+   */
+  not_configured: boolean;
+  /**
+   * The resolved governance target ref (e.g. `refs/remotes/origin/master`), so the
+   * UI reuses the workspace-resolved ref for follow-up reads instead of guessing one.
+   */
+  target_ref: string;
 };
 
 /** Result of a governance permission grant exposed through the API boundary. */
