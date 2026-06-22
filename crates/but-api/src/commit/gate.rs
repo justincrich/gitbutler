@@ -8,6 +8,48 @@ use but_rebase::graph_rebase::mutate::RelativeTo;
 use gix::refs::FullName;
 use serde::Serialize;
 
+// ---------------------------------------------------------------------------
+// STEER-007 — denial-steering telemetry (observation-only)
+// ---------------------------------------------------------------------------
+
+/// Emit a structured denial-steering telemetry event on the existing
+/// `tracing` path, carrying the four aggregate metrics operators use to
+/// measure whether steering reduces hard-quits and loops:
+///
+/// - `code` — the stable denial code string (e.g. `branch.protected`).
+/// - `class` — the [`DenialClass`] rendered as its stable snake_case token
+///   (`actor_correctable` / `operator_required`).
+/// - `had_lateral_action` — `true` iff `authorized_actions` carries at least
+///   one entry that is NOT the always-appended discovery affordance
+///   (`but perm list`). This is deliberately NOT `menu_length > 0`: a menu
+///   consisting of only the discovery entry offers no lateral move.
+/// - `menu_length` — `authorized_actions.len()`.
+///
+/// Observation-only: never alters the deny/allow decision, the exit code, or
+/// any existing denial field. Fired exactly once per denial at the
+/// payload-build boundary shared by the carriers (commit/merge/forge gates).
+///
+/// No principal-supplied or config-derived free text is logged — only the
+/// stable code/class tokens and the two numeric/bool metrics (R15
+/// injection-surface avoidance).
+pub(crate) fn emit_denial_steering_event(
+    code: &str,
+    class: DenialClass,
+    authorized_actions: &[AuthorizedAction],
+) {
+    let menu_length = authorized_actions.len();
+    let had_lateral_action = authorized_actions
+        .iter()
+        .any(|action| action.command != but_authz::DISCOVERY_COMMAND);
+    tracing::info!(
+        code,
+        class = class.name(),
+        had_lateral_action,
+        menu_length,
+        "denial steering telemetry"
+    );
+}
+
 /// Structured commit-gate error payload for CLI and API callers.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct CommitGateError {
@@ -79,7 +121,17 @@ pub fn enforce_commit_gate_for_target(
         return Ok(());
     }
 
-    let cfg = load_governance_config(repo, full_name)?;
+    let cfg = load_governance_config(repo, full_name).map_err(|config_error| {
+        // STEER-007: operator_required config.invalid denial — fire the
+        // observation-only telemetry event before propagating. The
+        // authorized_actions menu is empty on this path.
+        emit_denial_steering_event(
+            config_error.code(),
+            config_error.class.unwrap_or(DenialClass::OperatorRequired),
+            &[],
+        );
+        anyhow::Error::from(config_error)
+    })?;
     let principal = but_authz::resolve_principal_from_env(&cfg)?;
 
     // STEER-002: Route::Commit row in ROUTE_AUTHORITY_TABLE supplies the
@@ -92,11 +144,16 @@ pub fn enforce_commit_gate_for_target(
     // (ActorCorrectable path). The deny/allow decision is unchanged —
     // only the authorized_actions payload is additive.
     but_authz::authorize(&principal, required, &cfg).map_err(|denial| {
-        denial.with_authorized_actions(
+        let denial = denial.with_authorized_actions(
             &principal,
             &DeniedRoute::new(Route::Commit, DenialPredicate::Authority),
             &cfg,
-        )
+        );
+        // STEER-007: observation-only telemetry on the perm.denied path
+        // (one event per denial). The event reads the enriched menu so
+        // `had_lateral_action`/`menu_length` reflect the real payload.
+        emit_denial_steering_event(denial.code, denial.class, &denial.authorized_actions);
+        denial
     })?;
 
     if let Some(branch_name) = &target.protected_branch
@@ -214,7 +271,7 @@ fn branch_protected(
     let denied = DeniedRoute::new(Route::Commit, DenialPredicate::BranchProtected);
     let actions = authorized_actions(principal, &denied, cfg);
 
-    Denial {
+    let denial = Denial {
         code: "branch.protected",
         message: format!(
             "direct commits to protected branch \"{branch_name}\" are denied for principal \"{}\"; land changes through a reviewed merge",
@@ -227,5 +284,9 @@ fn branch_protected(
         held_permissions: held.iter().collect(),
         authorized_actions: actions,
         do_not: None,
-    }
+    };
+    // STEER-007: observation-only telemetry on the branch.protected path
+    // (one event per denial). Fired once at the payload-build boundary.
+    emit_denial_steering_event(denial.code, denial.class, &denial.authorized_actions);
+    denial
 }
