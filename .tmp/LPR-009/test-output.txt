@@ -1,0 +1,15 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.23s
+     Running tests/safe_seam_invariant.rs (target/debug/deps/safe_seam_invariant-4ec36c0fbb119721)
+
+running 3 tests
+Gate gates (verdict-at-head, untouched); new tables drive (orchestration).
+  gate path: crates/but-api/src/legacy/merge_gate.rs + crates/but-api/src/legacy/review_requirement.rs
+  drive tables checked: ["local_review_assignments", "local_review_comments", "local_review_meta"]
+  violations: []
+  verdict store reference: present
+test merge_gate_path_has_zero_references_to_drive_tables ... ok
+test forged_drive_metadata_with_no_verdict_is_blocked ... ok
+test only_verdict_at_head_flips_gate ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.27s
+

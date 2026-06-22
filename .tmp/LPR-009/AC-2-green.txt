@@ -1,0 +1,15 @@
+=== AC-2 GREEN: forged drive metadata with no verdict is BLOCKED ===
+
+Test: forged_drive_metadata_with_no_verdict_is_blocked
+Command: cargo test -p but-api --test safe_seam_invariant forged_drive_metadata_with_no_verdict_is_blocked
+
+Result: PASS — forged drive metadata alone does NOT satisfy the gate.
+
+Output:
+---
+test forged_drive_metadata_with_no_verdict_is_blocked ... ok
+---
+
+The gate returned Err(MergeGateError { code: "gate.review_required", unmet: ["no_approval"] })
+despite all three drive tables containing forged "satisfied" rows. The gate
+reads ONLY local_review_verdicts at head — drive metadata is irrelevant.
