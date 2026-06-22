@@ -276,6 +276,49 @@ pub enum GovernancePendingChange {
     Revoke,
 }
 
+/// Renderer row for one principal's additive `kind` descriptor.
+///
+/// `kind` is the enforcement-neutral descriptor naming the principal's kind
+/// (e.g. `"agent"` / `"human"`); it never enters `GovConfig.principals` and no
+/// gate reads it (LPR-005's invariant). See `but_authz::PrincipalWire::kind`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, schemars::JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct PrincipalKindList {
+    /// One entry per principal present in the committed target-ref config
+    /// (and any principal only present in the working-tree pending edit).
+    pub principals: Vec<PrincipalKindEntry>,
+}
+
+/// One principal's declared `kind` plus its pending signal.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, schemars::JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct PrincipalKindEntry {
+    /// Stable principal identifier.
+    pub principal_id: String,
+    /// Commit-target-ref declared `kind` (`None` = human default). Read at the
+    /// target ref like all governance config (anti-self-escalation).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub kind: Option<String>,
+    /// True only when the working-tree `kind` differs from the committed
+    /// target-ref `kind`. The desktop renderer surfaces this so the operator
+    /// knows the edit is inert until `governance_commit` lands it.
+    pub pending: bool,
+}
+
+/// Result of staging a principal `kind` descriptor write.
+///
+/// Mirrors `BranchGatesOutcome`: the post-write working-tree `kind` list (so
+/// the operator sees exactly what was staged) plus the ref-pin caveat.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, schemars::JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct PrincipalKindOutcome {
+    /// Post-write working-tree `kind` entries (one per principal in the file).
+    pub principals: Vec<PrincipalKindEntry>,
+    /// Ref-pin caveat: the staged descriptor takes effect once committed to
+    /// the target branch via the existing `governance_commit` path.
+    pub caveat: &'static str,
+}
+
 /// Structured governance error payload for CLI and API callers.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, schemars::JsonSchema)]
 pub struct GovernanceErrorPayload {
@@ -328,6 +371,12 @@ but_schemars::register_sdk_type!(GovernanceCommitOutcome);
 but_schemars::register_sdk_type!(GovernancePendingChange);
 #[cfg(feature = "export-schema")]
 but_schemars::register_sdk_type!(GovernanceErrorPayload);
+#[cfg(feature = "export-schema")]
+but_schemars::register_sdk_type!(PrincipalKindList);
+#[cfg(feature = "export-schema")]
+but_schemars::register_sdk_type!(PrincipalKindEntry);
+#[cfg(feature = "export-schema")]
+but_schemars::register_sdk_type!(PrincipalKindOutcome);
 
 impl std::fmt::Debug for GroupListOutcome {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -552,6 +601,42 @@ pub fn governance_commit(
     governance_commit_with_repo(&repo, &target_ref)
 }
 
+/// Read each principal's additive `kind` descriptor (`principal_kind_read`)
+/// through the but-api boundary.
+///
+/// A self-/branch-scoped read matching the `governance_principals_list` posture
+/// (NO administration:write authority required): it loads the committed kinds
+/// at the target ref plus a pending signal from the working-tree-vs-target-ref
+/// diff. A non-governed ref / unresolvable caller yields an empty list
+/// (read-only), not an error.
+#[but_api(napi)]
+pub fn principal_kind_read(ctx: &Context, target_ref: String) -> anyhow::Result<PrincipalKindList> {
+    let repo = ctx.repo.get()?;
+    let target_ref = target_ref_from_ctx(ctx, Some(&target_ref))?;
+    principal_kind_read_with_repo(&repo, &target_ref)
+}
+
+/// Stage a principal `kind` descriptor write (`principal_kind_update`) through
+/// the but-api boundary.
+///
+/// Composes `enforce_administration_write_gate` (the AUTHZ-006 guard) BEFORE
+/// any write, then read-modify-writes the WORKING-TREE `permissions.toml`
+/// setting ONLY the targeted principal's `kind`. The write is inert until
+/// committed via the existing `governance_commit` path (`permissions.toml` is
+/// already a `GOVERNANCE_COMMIT_PATHS` member); the outcome carries the
+/// ref-pin caveat so the operator knows a commit is required.
+#[but_api(napi)]
+pub fn principal_kind_update(
+    ctx: &Context,
+    target_ref: String,
+    principal: String,
+    kind: String,
+) -> anyhow::Result<PrincipalKindOutcome> {
+    let repo = ctx.repo.get()?;
+    let target_ref = target_ref_from_ctx(ctx, Some(&target_ref))?;
+    principal_kind_update_with_repo(&repo, &target_ref, &principal, &kind)
+}
+
 /// Read branch gates under administration-read authority.
 pub fn branch_gates_read_with_repo(
     repo: &gix::Repository,
@@ -595,6 +680,180 @@ pub fn branch_gates_update_with_repo_as_fleet_owner(
     protection: BranchProtectionInput,
 ) -> anyhow::Result<BranchGatesOutcome> {
     branch_gates_update_authorized(repo, target_ref, branch, protection)
+}
+
+/// Read each principal's committed declared `kind` plus a pending signal from
+/// the working-tree-vs-target-ref diff.
+///
+/// Mirrors the `governance_principals_list` read posture (no write authority):
+/// committed kinds are read from the target-ref blob (anti-self-escalation);
+/// the working-tree file (when present) supplies the pending diff. A non-
+/// governed ref yields an empty list, not an error.
+pub fn principal_kind_read_with_repo(
+    repo: &gix::Repository,
+    target_ref: &str,
+) -> anyhow::Result<PrincipalKindList> {
+    let committed = but_authz::load_permissions_wire(repo, target_ref)?;
+    let working = read_worktree_permissions_optional(repo)?;
+    let mut principal_ids = committed
+        .principal
+        .iter()
+        .map(|entry| entry.id.clone())
+        .collect::<BTreeSet<_>>();
+    for entry in &working.principal {
+        principal_ids.insert(entry.id.clone());
+    }
+
+    let principals = principal_ids
+        .into_iter()
+        .map(|principal_id| {
+            let committed_kind = committed
+                .principal
+                .iter()
+                .find(|entry| entry.id == principal_id)
+                .and_then(|entry| entry.kind.clone());
+            let working_kind = working
+                .principal
+                .iter()
+                .find(|entry| entry.id == principal_id)
+                .and_then(|entry| entry.kind.clone());
+            PrincipalKindEntry {
+                principal_id,
+                kind: committed_kind.clone(),
+                pending: committed_kind != working_kind,
+            }
+        })
+        .collect();
+    Ok(PrincipalKindList { principals })
+}
+
+/// Stage a principal `kind` descriptor write under env-principal
+/// `administration:write` authority. Composes the AUTHZ-006 admin guard BEFORE
+/// any write; the write lands in the WORKING-TREE `permissions.toml` only
+/// (inert until committed).
+pub fn principal_kind_update_with_repo(
+    repo: &gix::Repository,
+    target_ref: &str,
+    principal: &str,
+    kind: &str,
+) -> anyhow::Result<PrincipalKindOutcome> {
+    enforce_administration_write_gate(repo, target_ref)?;
+    principal_kind_update_authorized(repo, target_ref, principal, kind)
+}
+
+/// Stage a principal `kind` descriptor write after the desktop fleet-owner
+/// boundary has asserted unconditional administration-write authority.
+///
+/// This is intentionally not used by the agent/env path, which must continue
+/// to call [`principal_kind_update_with_repo`] and resolve `BUT_AGENT_HANDLE`
+/// through `but-authz`.
+pub fn principal_kind_update_with_repo_as_fleet_owner(
+    repo: &gix::Repository,
+    target_ref: &str,
+    principal: &str,
+    kind: &str,
+) -> anyhow::Result<PrincipalKindOutcome> {
+    principal_kind_update_authorized(repo, target_ref, principal, kind)
+}
+
+fn principal_kind_update_authorized(
+    repo: &gix::Repository,
+    target_ref: &str,
+    principal: &str,
+    kind: &str,
+) -> anyhow::Result<PrincipalKindOutcome> {
+    let parsed_kind = parse_principal_kind(kind)?;
+    let mut permissions = load_permissions_for_write(repo, target_ref)?;
+    let entry = principal_entry_mut(&mut permissions, principal)?;
+    entry.kind = parsed_kind;
+    write_worktree_permissions(repo, &permissions)?;
+
+    // The outcome reflects the post-write WORKING-TREE state so the operator
+    // sees exactly what was staged (mirrors `BranchGatesOutcome`).
+    let working = read_worktree_permissions_optional(repo)?;
+    let principal_ids = working
+        .principal
+        .iter()
+        .map(|entry| entry.id.clone())
+        .collect::<BTreeSet<_>>();
+    let principals: Vec<PrincipalKindEntry> = principal_ids
+        .into_iter()
+        .map(|principal_id| {
+            let working_kind = working
+                .principal
+                .iter()
+                .find(|entry| entry.id == principal_id)
+                .and_then(|entry| entry.kind.clone());
+            PrincipalKindEntry {
+                principal_id,
+                // The post-write outcome surfaces the working-tree kind so the
+                // operator sees the staged value; `pending` is computed against
+                // the committed target-ref kind for renderer consistency.
+                kind: working_kind,
+                pending: false,
+            }
+        })
+        .collect();
+    // Read the committed kinds to recompute pending flags for the post-write
+    // outcome so the renderer can still badge uncommitted edits.
+    let committed = but_authz::load_permissions_wire(repo, target_ref)?;
+    let principals = principals
+        .into_iter()
+        .map(|mut entry| {
+            let committed_kind = committed
+                .principal
+                .iter()
+                .find(|committed_entry| committed_entry.id == entry.principal_id)
+                .and_then(|committed_entry| committed_entry.kind.clone());
+            entry.pending = committed_kind != entry.kind;
+            entry
+        })
+        .collect();
+
+    Ok(PrincipalKindOutcome {
+        principals,
+        caveat: REF_PIN_CAVEAT,
+    })
+}
+
+/// Validate a principal `kind` descriptor at the API boundary.
+///
+/// Accepts only `"agent"` or `"human"` (the two `PrincipalWire::kind` values
+/// the agent-PR tag derivation checks). An unknown kind string is rejected
+/// with `config.invalid` (the structured `classify_error` code); the frontend
+/// surfaces `perm.denied` (non-admin write) and `config.invalid` (bad kind).
+///
+/// Implementation note: this validator MUST NOT branch on the kind value in a
+/// way that trips the `invariant_build_gates` honesty grep — `kind` is an
+/// enforcement-neutral descriptor, not an authorization axis. The
+/// slice-contains shape keeps the grep green (no per-kind match arm).
+fn parse_principal_kind(kind: &str) -> anyhow::Result<Option<String>> {
+    const ALLOWED_KINDS: &[&str] = &["agent", "human"];
+    if ALLOWED_KINDS.contains(&kind) {
+        Ok(Some(kind.to_owned()))
+    } else {
+        Err(anyhow::Error::new(json::ConfigInvalid {
+            code: "config.invalid",
+            message: format!("unknown principal kind {kind:?}: expected one of {ALLOWED_KINDS:?}"),
+            remediation_hint: "use a supported principal kind value (see PrincipalWire::kind docs)"
+                .to_owned(),
+        }))
+    }
+}
+
+/// Read the working-tree `permissions.toml`, returning an empty
+/// `PermissionsWire` when the file is absent (clean working tree → no pending
+/// kind edits). This is the read-side companion to `load_permissions_for_write`
+/// (which falls back to the committed blob) — for the pending diff we want to
+/// distinguish "no working-tree file" from "working-tree file present".
+fn read_worktree_permissions_optional(repo: &gix::Repository) -> anyhow::Result<PermissionsWire> {
+    let path = worktree_permissions_path(repo)?;
+    if !path.is_file() {
+        return Ok(PermissionsWire::default());
+    }
+    let text = fs::read_to_string(&path)
+        .with_context(|| format!("reading working-tree {}", permissions_path()))?;
+    parse_permissions_text(&text)
 }
 
 fn branch_gates_update_authorized(

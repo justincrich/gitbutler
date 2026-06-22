@@ -1,0 +1,19 @@
+=== GATE: cargo check -p but-api -p gitbutler-tauri --all-targets ===
+    Checking but-api v0.0.0 (/Users/justinrich/Projects/gitbutler/crates/but-api)
+    Checking gitbutler-tauri v0.0.0 (/Users/justinrich/Projects/gitbutler/crates/gitbutler-tauri)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 8.33s
+
+=== GATE: cargo test -p but-authz invariant_build_gates ===
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 4 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 7 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 5 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 5 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 2 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 4 filtered out; finished in 0.00s
+test invariant_build_gates ... FAILED
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+=== GATE: SEC-honesty grep — .gitbutler/permissions.toml in governance.rs ===
+FAIL: literal found
+155:const GOVERNANCE_COMMIT_PATHS: [&str; 2] = [GATES_PATH, ".gitbutler/permissions.toml"];

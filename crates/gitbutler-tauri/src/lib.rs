@@ -191,8 +191,8 @@ pub const GOVERNANCE_COMMANDS: &[&str] = &[
     "governance_principals_list",
     "governance_pending",
     "governance_commit",
-    "get_principal_kind",
-    "set_principal_kind",
+    "principal_kind_read",
+    "principal_kind_update",
 ];
 
 /// Expands the production governance/config-management command rows into a caller-supplied macro.
@@ -220,8 +220,8 @@ macro_rules! gitbutler_governance_command_rows {
             $crate::governance::tauri_governance_principals_list::governance_principals_list,
             $crate::governance::tauri_governance_pending::governance_pending,
             $crate::governance::tauri_governance_commit::governance_commit,
-            $crate::governance::tauri_get_principal_kind::get_principal_kind,
-            $crate::governance::tauri_set_principal_kind::set_principal_kind,
+            but_api::legacy::governance::tauri_principal_kind_read::principal_kind_read,
+            $crate::governance::tauri_principal_kind_update::principal_kind_update,
             $crate::governance::tauri_agent_perm_grant::agent_perm_grant,
         ]
     };
