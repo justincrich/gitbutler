@@ -1,3 +1,7 @@
+use but_authz::{
+    DenialPredicate, DeniedRoute, Principal as AuthzPrincipal, PrincipalId, Route,
+    authorized_actions, load_governance_config,
+};
 use but_core::RefMetadata as _;
 use but_db::ForgeReview;
 use gix::refs::FullName;
@@ -260,6 +264,235 @@ fn governed_loop_unset_handle_failclosed() -> anyhow::Result<()> {
     Ok(())
 }
 
+// ---------------------------------------------------------------------------
+// STEER-003 — capability-aware denial menu derivation tests
+// ---------------------------------------------------------------------------
+
+/// Load the governance config the gate uses at the target ref and resolve
+/// the principal from the committed permissions. Used by the STEER-003 tests
+/// to call `but_authz::authorized_actions` with the SAME inputs the gate
+/// already loaded (same-cfg/ref by construction, M2).
+fn steer_load_principal(
+    env: &Sandbox,
+    target_ref: &str,
+    handle: &str,
+) -> anyhow::Result<(AuthzPrincipal, but_authz::GovConfig)> {
+    let repo = env.open_repo()?;
+    let cfg = load_governance_config(&repo, target_ref)?;
+    let id = PrincipalId::new(handle);
+    let authorities = cfg
+        .principal_authorities(&id)
+        .cloned()
+        .ok_or_else(|| anyhow::anyhow!("principal {handle} must be in the governed config"))?;
+    let principal = AuthzPrincipal::new(id, authorities, []);
+    Ok((principal, cfg))
+}
+
+/// Collect the menu command strings for a denied-route context.
+fn steer_menu_commands(
+    principal: &AuthzPrincipal,
+    denied: &DeniedRoute,
+    cfg: &but_authz::GovConfig,
+) -> Vec<&'static str> {
+    authorized_actions(principal, denied, cfg)
+        .iter()
+        .map(|action| action.command)
+        .collect()
+}
+
+/// AC-3 / TC-4, TC-5, TC-10 — a reviewer denied a commit on its OWN branch
+/// sees runnable review actions (`but review request-changes`, `comment`),
+/// `but review approve` is ABSENT (L1 self-approve exclusion), and following
+/// `but review request-changes` returns exit 0.
+#[test]
+#[serial_test::serial]
+fn governed_loop_steer_reviewer_menu_runnable_no_self_approve() -> anyhow::Result<()> {
+    let env = governed_loop_env("feat", REVIEW_ID)?;
+    let repo = env.open_repo()?;
+    let feat_before = ref_id(&repo, "refs/heads/feat")?;
+
+    // Step 1: reviewer commits to feat (their OWN branch) → denied perm.denied.
+    env.file("reviewer-change.txt", "reviewer change\n");
+    let reviewer_commit = env
+        .but("--format json commit feat -m reviewer-change")
+        .allow_json()
+        .env("BUT_AGENT_HANDLE", "reviewer")
+        .output()?;
+    assert_denial(
+        &reviewer_commit,
+        "perm.denied",
+        "contents:write",
+        None,
+        "reviewer commit on own branch must be denied (perm.denied, missing contents:write)",
+    );
+    assert_eq!(
+        ref_id(&repo, "refs/heads/feat")?,
+        feat_before,
+        "denied reviewer commit must leave feat unchanged"
+    );
+
+    // Step 2: derive the menu from the SAME cfg the gate loaded.
+    let (principal, cfg) = steer_load_principal(&env, "refs/heads/feat", "reviewer")?;
+
+    assert!(
+        principal
+            .authorities()
+            .contains(but_authz::Authority::ReviewsWrite),
+        "fixture: reviewer must hold reviews:write"
+    );
+    assert!(
+        !principal
+            .authorities()
+            .contains(but_authz::Authority::ContentsWrite),
+        "fixture: reviewer must NOT hold contents:write"
+    );
+
+    // RR-5: reviewer commits to protected main hits perm.denied (authority
+    // checked BEFORE branch-protection predicate), NOT branch.protected.
+    let denied = DeniedRoute::new(Route::Commit, DenialPredicate::Authority).with_own_branch(true);
+    let commands = steer_menu_commands(&principal, &denied, &cfg);
+
+    assert!(
+        commands.contains(&"but review request-changes"),
+        "reviewer-denied-commit menu MUST include `but review request-changes`: {commands:?}"
+    );
+    assert!(
+        commands.contains(&"but review comment"),
+        "reviewer-denied-commit menu MUST include `but review comment`: {commands:?}"
+    );
+    assert!(
+        !commands.contains(&"but review approve"),
+        "reviewer-denied-commit menu on OWN branch must NOT include `but review approve` \
+         (L1 self-approve exclusion): {commands:?}"
+    );
+    assert!(
+        !commands.contains(&"but commit"),
+        "reviewer-denied-commit menu must NOT include `but commit` (contents:write unheld): {commands:?}"
+    );
+
+    // Step 3: follow `but review request-changes` → exit 0 (runnable).
+    let request_changes = env
+        .but("--format json review request-changes feat -m 'please fix the tests'")
+        .allow_json()
+        .env("BUT_AGENT_HANDLE", "reviewer")
+        .output()?;
+    assert!(
+        request_changes.status.success(),
+        "`but review request-changes feat` must succeed (exit 0) for the reviewer — \
+         it is the runnable verb the menu recommended. stderr: {}",
+        String::from_utf8_lossy(&request_changes.stderr)
+    );
+
+    println!("AC-3: reviewer-denied-commit menu on own branch:");
+    for command in &commands {
+        println!("  - {command}");
+    }
+    println!("  -> followed `but review request-changes feat` -> exit 0 (runnable)");
+
+    Ok(())
+}
+
+/// AC-6 / TC-9 — an actor-correctable denial's menu includes the
+/// `but perm list` self-scoped discovery affordance.
+#[test]
+#[serial_test::serial]
+fn governed_loop_steer_menu_includes_discovery() -> anyhow::Result<()> {
+    let env = governed_loop_env("feat", REVIEW_ID)?;
+
+    let (principal, cfg) = steer_load_principal(&env, "refs/heads/feat", "implementer")?;
+    let denied = DeniedRoute::new(Route::Merge, DenialPredicate::Authority);
+    let commands = steer_menu_commands(&principal, &denied, &cfg);
+
+    assert!(
+        commands.contains(&"but perm list"),
+        "actor-correctable denial menu MUST include `but perm list` discovery: {commands:?}"
+    );
+
+    // The discovery verb is a REAL shipped CLI verb — prove it runs without
+    // a governance denial.
+    let discovery = env
+        .but("--format json perm list")
+        .allow_json()
+        .env("BUT_AGENT_HANDLE", "implementer")
+        .output()?;
+    let stderr = String::from_utf8_lossy(&discovery.stderr);
+    assert!(
+        !stderr.contains(r#""code":"perm.denied""#),
+        "`but perm list` must be a real verb — it must NOT return perm.denied: {stderr}"
+    );
+
+    println!("AC-6: menu includes `but perm list` discovery affordance");
+    for command in &commands {
+        println!("  - {command}");
+    }
+
+    Ok(())
+}
+
+/// AC-2 CLI proof — a `branch.protected` denial menu derived from the real
+/// CLI fixture offers a feature-branch commit affordance, NOT the
+/// protected-ref commit just denied (C5 gate-state-aware subtraction).
+#[test]
+#[serial_test::serial]
+fn governed_loop_steer_protected_menu() -> anyhow::Result<()> {
+    let env = governed_loop_env("feat", REVIEW_ID)?;
+
+    // Load the cfg from feat (which carries the branch protection record for
+    // main). The feat ref's gates.toml marks main as protected and feat as
+    // unprotected — the C5 succeeding context.
+    let (principal, cfg) = steer_load_principal(&env, "refs/heads/feat", "implementer")?;
+
+    assert!(
+        principal
+            .authorities()
+            .contains(but_authz::Authority::ContentsWrite),
+        "fixture: implementer must hold contents:write"
+    );
+    assert!(
+        cfg.branch("main").is_some_and(|b| b.protected()),
+        "fixture: main must be protected"
+    );
+
+    let denied = DeniedRoute::new(Route::Commit, DenialPredicate::BranchProtected);
+    let actions = authorized_actions(&principal, &denied, &cfg);
+    let commands: Vec<&str> = actions.iter().map(|a| a.command).collect();
+
+    assert!(
+        commands.contains(&"but commit"),
+        "branch.protected menu MUST include `but commit` (feature-branch affordance): {commands:?}"
+    );
+
+    let commit_action = actions
+        .iter()
+        .find(|a| a.command == "but commit")
+        .expect("`but commit` must be in the menu");
+    assert!(
+        commit_action.effect.to_lowercase().contains("unprotected"),
+        "`but commit` effect must name an UNPROTECTED feature branch (C5): {:?}",
+        commit_action.effect
+    );
+    assert!(
+        !commit_action
+            .effect
+            .to_lowercase()
+            .contains("protected ref"),
+        "`but commit` effect must NOT name the protected ref (C5 lying-menu guard): {:?}",
+        commit_action.effect
+    );
+
+    assert!(
+        commands.contains(&"but perm list"),
+        "branch.protected menu must include discovery: {commands:?}"
+    );
+
+    println!("AC-2 CLI: branch.protected menu for implementer on main:");
+    for action in &actions {
+        println!("  - {} -> {}", action.command, action.effect);
+    }
+
+    Ok(())
+}
+
 fn governed_loop_env(branch_name: &str, review_id: usize) -> anyhow::Result<Sandbox> {
     let env = Sandbox::init_scenario_with_target_and_default_settings("one-stack")?;
     env.invoke_bash(format!(
@@ -288,7 +521,7 @@ groups = ["maintainers"]
 
 [[group]]
 name = "code-reviewers"
-permissions = ["reviews:write"]
+permissions = ["reviews:write", "comments:write"]
 members = ["reviewer"]
 
 [[group]]
