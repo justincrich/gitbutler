@@ -651,6 +651,121 @@ async fn merge_gate_dryrun_unknown_failclosed_persists_nothing() -> anyhow::Resu
     Ok(())
 }
 
+/// STEER-009 AC-7 — positive field assertions for the new steering fields
+/// (`class`/`held_permissions`/`authorized_actions`/`do_not`) on the two
+/// menu-bearing merge-gate denial types. The existing tests assert on
+/// `code`/`message`/`unmet` via `GateErrorPayload`; this test downcasts to the
+/// RAW `MergeGateError` / `Denial` types to assert the steering fields are
+/// present and carry the expected values on actor-correctable denials.
+///
+/// This test is the merge_gate.rs side of the AC-7 whole-object-equality audit:
+/// it confirms NO whole-object-equality assertion exists (the existing tests use
+/// field-level asserts only) AND adds positive assertions for the new fields.
+#[tokio::test]
+#[serial_test::serial]
+async fn merge_gate_steering_fields_positive_assertions() -> anyhow::Result<()> {
+    // ---- gate.review_required: maintainer with zero approvals ----
+    let (repo, _tmp) = merge_gated_repo(GateConfig::Single)?;
+    let main_before = ref_id(&repo, MAIN_REF)?;
+    let ctx = context_with_review(&repo, ref_id(&repo, FEAT_REF)?)?;
+
+    let review_required_err =
+        temp_env::async_with_vars([("BUT_AGENT_HANDLE", Some("maint"))], async {
+            but_api::legacy::forge::merge_review(ctx.to_sync(), REVIEW_ID, None)
+                .await
+                .err()
+        })
+        .await
+        .expect("maintainer with zero approvals must be denied");
+
+    let gate_error = review_required_err
+        .downcast_ref::<but_api::legacy::merge_gate::MergeGateError>()
+        .expect("gate.review_required must be a MergeGateError");
+
+    assert_eq!(
+        gate_error.code, "gate.review_required",
+        "gate.review_required code must be stable"
+    );
+    // STEER-004: gate.review_required is ActorCorrectable (the caller HOLDS
+    // merge — they need to collect approvals, not get more authority).
+    assert_eq!(
+        gate_error.class,
+        but_authz::DenialClass::ActorCorrectable,
+        "gate.review_required MUST be actor_correctable (caller holds merge)"
+    );
+    // The caller (maint) holds merge — held_permissions must be non-empty.
+    assert!(
+        !gate_error.held_permissions.is_empty(),
+        "gate.review_required held_permissions MUST be non-empty (maint holds merge): {:?}",
+        gate_error.held_permissions
+    );
+    // The gate-state-aware menu must offer recovery verbs.
+    assert!(
+        !gate_error.authorized_actions.is_empty(),
+        "gate.review_required authorized_actions MUST be non-empty (recovery menu)"
+    );
+
+    assert_eq!(
+        ref_id(&repo, MAIN_REF)?,
+        main_before,
+        "gate.review_required denial must leave main unchanged"
+    );
+
+    // ---- perm.denied: impl (lacks merge) attempts merge ----
+    let (repo, _tmp) = merge_gated_repo(GateConfig::Single)?;
+    let ctx = context_with_review(&repo, ref_id(&repo, FEAT_REF)?)?;
+    approve_branch(&ctx, "reviewer").await?;
+
+    let perm_denied_err = temp_env::async_with_vars([("BUT_AGENT_HANDLE", Some("impl"))], async {
+        but_api::legacy::forge::merge_review(ctx.to_sync(), REVIEW_ID, None)
+            .await
+            .err()
+    })
+    .await
+    .expect("impl lacks merge authority — must be denied");
+
+    // perm.denied from the merge gate can be either a raw Denial or a
+    // MergeGateError (depending on the classify_error path). Check both.
+    if let Some(denial) = perm_denied_err.downcast_ref::<but_authz::Denial>() {
+        assert_eq!(
+            denial.code, "perm.denied",
+            "perm.denied code must be stable"
+        );
+        assert_eq!(
+            denial.class,
+            but_authz::DenialClass::ActorCorrectable,
+            "resolved-principal perm.denied (impl) MUST be actor_correctable"
+        );
+        assert!(
+            !denial.authorized_actions.is_empty(),
+            "perm.denied authorized_actions MUST be non-empty for a resolved principal"
+        );
+    } else if let Some(mge) =
+        perm_denied_err.downcast_ref::<but_api::legacy::merge_gate::MergeGateError>()
+    {
+        assert_eq!(mge.code, "perm.denied");
+        assert_eq!(
+            mge.class,
+            but_authz::DenialClass::ActorCorrectable,
+            "perm.denied via MergeGateError MUST be actor_correctable"
+        );
+        assert!(
+            !mge.authorized_actions.is_empty(),
+            "perm.denied authorized_actions MUST be non-empty"
+        );
+    } else {
+        panic!("perm.denied must downcast to Denial or MergeGateError");
+    }
+
+    println!("AC-7: merge_gate.rs steering fields positive assertions:");
+    println!(
+        "  gate.review_required: class=actor_correctable, held_permissions non-empty, authorized_actions non-empty"
+    );
+    println!("  perm.denied: class=actor_correctable, authorized_actions non-empty");
+
+    Ok(())
+}
+
 #[derive(Debug, Clone, Copy)]
 enum GateConfig {
     Single,

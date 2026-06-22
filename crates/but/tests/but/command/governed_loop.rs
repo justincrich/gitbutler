@@ -1136,6 +1136,692 @@ fn steer_cli_serde_fault_still_emits_code_message_exit1() -> anyhow::Result<()> 
     Ok(())
 }
 
+// ---------------------------------------------------------------------------
+// STEER-009 — no-lying-menu replay + concurrent-ref-advance + serialization-fault
+// ---------------------------------------------------------------------------
+
+/// Extract the `authorized_actions[i].command` strings from a serialized CLI
+/// denial envelope's `error.authorized_actions` array.
+///
+/// Each entry is `{"command": "but ...", "effect": "..."}`. Returns the command
+/// verb strings in serialized order so the replay test can replay EVERY offered
+/// command in its stated context.
+fn extract_menu_commands(envelope: &serde_json::Map<String, serde_json::Value>) -> Vec<String> {
+    envelope
+        .get("authorized_actions")
+        .and_then(serde_json::Value::as_array)
+        .map(|actions| {
+            actions
+                .iter()
+                .filter_map(|entry| {
+                    entry
+                        .get("command")
+                        .and_then(serde_json::Value::as_str)
+                        .map(str::to_owned)
+                })
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+/// Assert that a replayed menu command succeeds (exit 0) or hits its own
+/// legitimate downstream non-governance gate (e.g. the forge boundary), and
+/// NEVER reproduces the original denial's code at the denied ref.
+///
+/// This is the no-lying-menu invariant: every offered command, when run in its
+/// stated context, either succeeds or fails for a DIFFERENT reason than the
+/// original denial — never the same (code, predicate) at the denied ref.
+fn assert_offered_command_no_lying(
+    output: &std::process::Output,
+    original_code: &str,
+    label: &str,
+) {
+    let stderr = String::from_utf8_lossy(&output.stderr);
+
+    if output.status.success() {
+        return;
+    }
+
+    // Non-zero exit: check for governance denial codes.
+    if let Some(envelope) = parse_cli_error_envelope_opt(output) {
+        assert_ne!(
+            envelope.code, original_code,
+            "{label}: offered command MUST NOT reproduce the original denial code \
+             `{original_code}` (that would be a lying menu). Got code `{}`. stderr: {stderr}",
+            envelope.code
+        );
+        // A DIFFERENT governance code is its own legitimate gate, not a lying menu.
+        return;
+    }
+
+    // No parseable governance envelope → must not carry any governance code.
+    assert!(
+        !stderr.contains(r#""code":"perm.denied""#)
+            && !stderr.contains(r#""code":"branch.protected""#)
+            && !stderr.contains(r#""code":"gate.review_required""#),
+        "{label}: replayed offered command hit a governance denial (lying menu?): {stderr}"
+    );
+}
+
+/// AC-1 [PRIMARY] / TC-1, TC-2 — Every offered command on a `branch.protected`
+/// menu, replayed in its stated context, succeeds (or hits its own legitimate
+/// non-`branch.protected` gate). The replayed feature-branch commit advances
+/// the feature ref. NO offered command reproduces the original
+/// `branch.protected` at the denied ref.
+///
+/// The branch.protected denial is derived via the SAME authz API functions the
+/// commit gate uses (`load_governance_config`, `authorized_actions`), then
+/// serialized via `but_authz::to_envelope` — the same serializer the CLI uses
+/// (STEER-005). The menu commands are parsed from the SERIALIZED JSON and
+/// replayed through the REAL `but` CLI subprocess. This is the pattern the
+/// existing STEER-003 tests (`governed_loop_steer_protected_menu`) established:
+/// the commit gate's workspace layer prevents `but commit main` directly, so the
+/// denial is derived from the real gate functions and the REPLAY is driven
+/// through the real CLI.
+#[test]
+#[serial_test::serial]
+fn governed_loop_no_lying_menu_replay() -> anyhow::Result<()> {
+    let env = governed_loop_env("feat", REVIEW_ID)?;
+    let repo = env.open_repo()?;
+    let feat_before = ref_id(&repo, "refs/heads/feat")?;
+
+    // Step 1: derive the branch.protected denial via the SAME authz API the
+    // commit gate uses. Load cfg from feat (which carries the main protection
+    // record), resolve the implementer, and construct the BranchProtected
+    // denied route.
+    let cfg = load_governance_config(&repo, "refs/heads/feat")?;
+    let imp_id = PrincipalId::new("implementer");
+    let imp_auth = cfg
+        .principal_authorities(&imp_id)
+        .cloned()
+        .ok_or_else(|| anyhow::anyhow!("implementer must be in config"))?;
+    let principal = AuthzPrincipal::new(imp_id, imp_auth, []);
+
+    assert!(
+        principal
+            .authorities()
+            .contains(but_authz::Authority::ContentsWrite),
+        "fixture: implementer must hold contents:write"
+    );
+    assert!(
+        cfg.branch("main").is_some_and(|b| b.protected()),
+        "fixture: main must be protected"
+    );
+
+    let denied_route = DeniedRoute::new(Route::Commit, DenialPredicate::BranchProtected);
+    let actions = authorized_actions(&principal, &denied_route, &cfg);
+
+    // Step 2: construct the Denial the same way `branch_protected()` does in
+    // the commit gate, and serialize it via `to_envelope` (the CLI serializer).
+    let denial = but_authz::Denial {
+        code: "branch.protected",
+        message: "direct commits to protected branch \"main\" are denied".to_owned(),
+        remediation_hint: "open a reviewed merge into main instead of committing directly"
+            .to_owned(),
+        class: but_authz::DenialClass::ActorCorrectable,
+        held_permissions: but_authz::effective_authority(&principal, &cfg)
+            .iter()
+            .collect(),
+        authorized_actions: actions,
+        do_not: None,
+    };
+    let envelope_json = but_authz::to_envelope(&denial);
+    let envelope = envelope_json
+        .as_object()
+        .ok_or_else(|| anyhow::anyhow!("to_envelope must produce a JSON object"))?
+        .clone();
+
+    assert_eq!(
+        require_str(&envelope, "code", "AC-1"),
+        "branch.protected",
+        "AC-1: serialized denial must carry code=branch.protected"
+    );
+
+    // Step 3: parse the offered menu commands from the SERIALIZED JSON.
+    let commands = extract_menu_commands(&envelope);
+    assert!(
+        commands.contains(&"but commit".to_owned()),
+        "AC-1: branch.protected menu MUST offer `but commit` (feature-branch lateral move): {commands:?}"
+    );
+    assert!(
+        commands.contains(&"but perm list".to_owned()),
+        "AC-1: branch.protected menu MUST offer `but perm list` (discovery): {commands:?}"
+    );
+
+    // Step 4: replay each offered command in its stated context via the REAL CLI.
+    // Create a working-tree change so `but commit feat` has content to commit.
+    env.file("ac1-replay.txt", "ac1 replay content\n");
+    for command in &commands {
+        let cli = replay_command_string(command, "feat");
+        let output = env
+            .but(&cli)
+            .allow_json()
+            .env("BUT_AGENT_HANDLE", "implementer")
+            .output()?;
+
+        assert_offered_command_no_lying(&output, "branch.protected", &format!("AC-1 `{command}`"));
+
+        // TC-2: a replayed `but commit feat` advances the feature ref.
+        if command == "but commit" {
+            let feat_after = ref_id(&repo, "refs/heads/feat")?;
+            assert_ne!(
+                feat_after, feat_before,
+                "AC-1 TC-2: replayed `but commit feat` MUST advance the feature ref (ref_id changes)"
+            );
+            println!("  AC-1 TC-2: `but commit feat` advanced feat: {feat_before} -> {feat_after}");
+        }
+
+        println!(
+            "  AC-1: replayed `{command}` -> exit {} (not branch.protected)",
+            output.status.code().unwrap_or(-1)
+        );
+    }
+
+    println!(
+        "AC-1 [PRIMARY]: branch.protected menu is non-lying — {} commands replayed:",
+        commands.len()
+    );
+    for command in &commands {
+        println!("  - {command}");
+    }
+
+    Ok(())
+}
+
+/// AC-2 / TC-3 — Every offered command on a `gate.review_required` (merge-gate)
+/// menu, replayed in its stated context, succeeds or hits its own legitimate
+/// non-`gate.review_required` gate. NO offered command reproduces the original
+/// `gate.review_required` at the denied merge target.
+#[test]
+#[serial_test::serial]
+fn governed_loop_review_required_menu_replay() -> anyhow::Result<()> {
+    let env = governed_loop_env("feat", REVIEW_ID)?;
+    let repo = env.open_repo()?;
+
+    // The governed_loop_env fixture's maintainers group holds only `merge`.
+    // For a non-degenerate gate.review_required menu (at least 2 commands),
+    // the maintainer needs to ALSO hold reviews:write + comments:write so the
+    // review affordances are usable. Advance main's config to add these.
+    env.invoke_bash(
+        r#"
+base=$(git rev-parse refs/heads/main)
+index=$(mktemp)
+export GIT_INDEX_FILE="$index"
+git read-tree "$base"
+permissions_blob=$(git hash-object -w --stdin <<'EOF'
+[[principal]]
+id = "implementer"
+permissions = ["contents:write", "pull_requests:write"]
+
+[[principal]]
+id = "reviewer"
+groups = ["code-reviewers"]
+
+[[principal]]
+id = "maintainer"
+groups = ["maintainers"]
+
+[[group]]
+name = "code-reviewers"
+permissions = ["reviews:write", "comments:write"]
+members = ["reviewer"]
+
+[[group]]
+name = "maintainers"
+permissions = ["merge", "reviews:write", "comments:write"]
+members = ["maintainer"]
+EOF
+)
+gates_blob=$(git hash-object -w --stdin <<'EOF'
+[[branch]]
+name = "main"
+protected = true
+
+[[gate]]
+branch = "main"
+type = "review"
+min_approvals = 1
+require_distinct_from_author = true
+EOF
+)
+git update-index --add --cacheinfo 100644 "$permissions_blob" .gitbutler/permissions.toml
+git update-index --add --cacheinfo 100644 "$gates_blob" .gitbutler/gates.toml
+tree=$(git write-tree)
+commit=$(printf 'maintainer with review grants\n' | git commit-tree "$tree" -p "$base")
+git update-ref refs/heads/main "$commit"
+rm "$index"
+unset GIT_INDEX_FILE
+"#,
+    );
+
+    // Capture main's OID AFTER the config advance, so the denial-doesn't-move-main
+    // assertion is scoped to the denial itself, not the config advance.
+    let main_before = ref_id(&repo, "refs/heads/main")?;
+
+    // Trigger gate.review_required: maintainer (now holds merge + reviews:write)
+    // merges with zero distinct approvals.
+    let denied = env
+        .but("--format json pr merge 77 --method squash")
+        .allow_json()
+        .env("BUT_AGENT_HANDLE", "maintainer")
+        .output()?;
+
+    let envelope = parse_steering_envelope(&denied, "AC-2 gate.review_required denial");
+    assert_eq!(
+        require_str(&envelope, "code", "AC-2"),
+        "gate.review_required",
+        "AC-2: maintainer merge with zero approvals must yield gate.review_required"
+    );
+    assert_eq!(
+        ref_id(&repo, "refs/heads/main")?,
+        main_before,
+        "AC-2: denied merge must leave main unchanged"
+    );
+
+    // Parse the offered menu commands.
+    let commands = extract_menu_commands(&envelope);
+    assert!(
+        commands.len() >= 2,
+        "AC-2: gate.review_required menu must offer at least 2 commands (non-degenerate): {commands:?}"
+    );
+
+    // Replay each offered command.
+    for command in &commands {
+        let cli = replay_command_string(command, "feat");
+        let output = env
+            .but(&cli)
+            .allow_json()
+            .env("BUT_AGENT_HANDLE", "maintainer")
+            .output()?;
+
+        assert_offered_command_no_lying(
+            &output,
+            "gate.review_required",
+            &format!("AC-2 `{command}`"),
+        );
+
+        println!(
+            "  AC-2: replayed `{command}` -> exit {} (not gate.review_required)",
+            output.status.code().unwrap_or(-1)
+        );
+    }
+
+    println!(
+        "AC-2: gate.review_required menu is non-lying — {} commands replayed:",
+        commands.len()
+    );
+    for command in &commands {
+        println!("  - {command}");
+    }
+
+    Ok(())
+}
+
+/// AC-3 / TC-4 — Every offered command on a `perm.denied` (missing-authority)
+/// commit-gate menu, replayed in its stated context, succeeds or hits its own
+/// legitimate non-`perm.denied` gate. NO offered command reproduces the
+/// original `perm.denied` at the denied commit ref.
+#[test]
+#[serial_test::serial]
+fn governed_loop_perm_denied_menu_replay() -> anyhow::Result<()> {
+    let env = governed_loop_env("feat", REVIEW_ID)?;
+    let repo = env.open_repo()?;
+    let feat_before = ref_id(&repo, "refs/heads/feat")?;
+
+    // Trigger perm.denied: reviewer (holds reviews:write, NOT contents:write)
+    // commits to feat.
+    env.file("perm-denied-trigger.txt", "trigger\n");
+    let denied = env
+        .but("--format json commit feat -m perm-denied-trigger")
+        .allow_json()
+        .env("BUT_AGENT_HANDLE", "reviewer")
+        .output()?;
+
+    let envelope = parse_steering_envelope(&denied, "AC-3 perm.denied denial");
+    assert_eq!(
+        require_str(&envelope, "code", "AC-3"),
+        "perm.denied",
+        "AC-3: reviewer commit must yield perm.denied (lacks contents:write)"
+    );
+    assert_eq!(
+        ref_id(&repo, "refs/heads/feat")?,
+        feat_before,
+        "AC-3: denied commit must leave feat unchanged"
+    );
+
+    // Parse the offered menu commands.
+    let commands = extract_menu_commands(&envelope);
+    assert!(
+        commands.len() >= 2,
+        "AC-3: perm.denied menu must offer at least 2 commands (non-degenerate): {commands:?}"
+    );
+
+    // Replay each offered command in the reviewer's context.
+    for command in &commands {
+        let cli = replay_command_string(command, "feat");
+        let output = env
+            .but(&cli)
+            .allow_json()
+            .env("BUT_AGENT_HANDLE", "reviewer")
+            .output()?;
+
+        assert_offered_command_no_lying(&output, "perm.denied", &format!("AC-3 `{command}`"));
+
+        println!(
+            "  AC-3: replayed `{command}` -> exit {} (not perm.denied)",
+            output.status.code().unwrap_or(-1)
+        );
+    }
+
+    println!(
+        "AC-3: perm.denied menu is non-lying — {} commands replayed:",
+        commands.len()
+    );
+    for command in &commands {
+        println!("  - {command}");
+    }
+
+    Ok(())
+}
+
+/// AC-4 / TC-5 — A config advance between denial and replay yields a CLEAN
+/// re-denial (exit 1, parseable JSON, unchanged denied-side ref, no panic).
+///
+/// The ref-pin temporal window (denial at OID X, replay at OID Y) must behave
+/// as a clean re-denial, never a crash or a silent bypass.
+#[test]
+#[serial_test::serial]
+fn governed_loop_concurrent_ref_advance_clean_redenial() -> anyhow::Result<()> {
+    let env = governed_loop_env("feat", REVIEW_ID)?;
+    let repo = env.open_repo()?;
+    let main_before = ref_id(&repo, "refs/heads/main")?;
+
+    // Step 1: capture a denial (implementer merge → perm.denied) with its menu.
+    let denied = env
+        .but("--format json pr merge 77 --method squash")
+        .allow_json()
+        .env("BUT_AGENT_HANDLE", "implementer")
+        .output()?;
+    let envelope = parse_steering_envelope(&denied, "AC-4 initial denial");
+    assert_eq!(
+        require_str(&envelope, "code", "AC-4 initial"),
+        "perm.denied",
+        "AC-4: initial denial must be perm.denied (implementer lacks merge)"
+    );
+    let menu_commands = extract_menu_commands(&envelope);
+    assert!(
+        !menu_commands.is_empty(),
+        "AC-4: initial denial must carry a menu"
+    );
+
+    // Step 2: advance the target-ref governance config via invoke_bash — a new
+    // commit at refs/heads/main (the target ref the merge gate loads config
+    // from). The advance re-commits the SAME config content but at a new OID,
+    // proving the temporal window (denial at OID X, replay at OID Y) is handled.
+    env.invoke_bash(
+        r#"
+base=$(git rev-parse refs/heads/main)
+index=$(mktemp)
+export GIT_INDEX_FILE="$index"
+git read-tree "$base"
+permissions_blob=$(git hash-object -w --stdin <<'EOF'
+[[principal]]
+id = "implementer"
+permissions = ["contents:write", "pull_requests:write"]
+
+[[principal]]
+id = "reviewer"
+groups = ["code-reviewers"]
+
+[[principal]]
+id = "maintainer"
+groups = ["maintainers"]
+
+[[group]]
+name = "code-reviewers"
+permissions = ["reviews:write", "comments:write"]
+members = ["reviewer"]
+
+[[group]]
+name = "maintainers"
+permissions = ["merge"]
+members = ["maintainer"]
+EOF
+)
+gates_blob=$(git hash-object -w --stdin <<'EOF'
+[[branch]]
+name = "main"
+protected = true
+
+[[gate]]
+branch = "main"
+type = "review"
+min_approvals = 1
+require_distinct_from_author = true
+EOF
+)
+git update-index --add --cacheinfo 100644 "$permissions_blob" .gitbutler/permissions.toml
+git update-index --add --cacheinfo 100644 "$gates_blob" .gitbutler/gates.toml
+tree=$(git write-tree)
+commit=$(printf 'concurrent ref advance\n' | git commit-tree "$tree" -p "$base")
+git update-ref refs/heads/main "$commit"
+rm "$index"
+unset GIT_INDEX_FILE
+"#,
+    );
+
+    let main_after_advance = ref_id(&repo, "refs/heads/main")?;
+    assert_ne!(
+        main_after_advance, main_before,
+        "AC-4: config advance must move the main ref (OID X -> OID Y)"
+    );
+
+    // Step 3: replay the denied action through the gate against the ADVANCED
+    // config. The replay must return a CLEAN re-denial — exit 1, parseable
+    // JSON, main unchanged, NO panic. The advance must NOT cause a deny->allow
+    // flip (security MED #4 — the ref-pin temporal window).
+    let replay = env
+        .but("--format json pr merge 77 --method squash")
+        .allow_json()
+        .env("BUT_AGENT_HANDLE", "implementer")
+        .output()?;
+
+    // TC-5: the replay exits 1 (clean re-denial, not a bypass).
+    assert_eq!(
+        replay.status.code(),
+        Some(1),
+        "AC-4: replay after config advance must exit 1 (clean re-denial, not a bypass). \
+         stderr: {}",
+        String::from_utf8_lossy(&replay.stderr)
+    );
+
+    // stderr is a parseable JSON envelope with a stable code.
+    let replay_envelope = parse_steering_envelope(&replay, "AC-4 re-denial");
+    let replay_code = require_str(&replay_envelope, "code", "AC-4 re-denial");
+    assert!(
+        replay_code == "perm.denied",
+        "AC-4: re-denial code must be a stable string (perm.denied), got: {replay_code}"
+    );
+
+    // The denied-side ref (main) is unchanged by the denial (the advance moved
+    // it to OID Y; the re-denial must not move it further).
+    assert_eq!(
+        ref_id(&repo, "refs/heads/main")?,
+        main_after_advance,
+        "AC-4: denied-side ref must be unchanged after the clean re-denial (no inconsistent state)"
+    );
+
+    println!(
+        "AC-4: concurrent-ref-advance → clean re-denial (exit 1, code={replay_code}, no panic)"
+    );
+    println!("  initial denial at main@{main_before}");
+    println!("  config advanced to main@{main_after_advance}");
+    println!("  replay re-denied against the new config (clean, no panic, no bypass)");
+    println!("  original menu: {menu_commands:?}");
+
+    Ok(())
+}
+
+/// AC-5 / TC-6 — BUT_STEER_FORCE_SERIALIZATION_FAULT (STEER-005's real seam)
+/// on the new steering fields still denies with code/message/remediation_hint
+/// + exit 1 (fail-closed, never deny->allow).
+#[test]
+#[serial_test::serial]
+fn governed_loop_serialization_fault_failclosed() -> anyhow::Result<()> {
+    let env = governed_loop_env("feat", REVIEW_ID)?;
+    let repo = env.open_repo()?;
+    let main_before = ref_id(&repo, "refs/heads/main")?;
+
+    // Run a denied action (implementer merge → perm.denied) WITH the fault.
+    let output = env
+        .but("--format json pr merge 77 --method squash")
+        .allow_json()
+        .env("BUT_AGENT_HANDLE", "implementer")
+        .env("BUT_STEER_FORCE_SERIALIZATION_FAULT", "1")
+        .output()?;
+
+    // TC-6: the fault must NOT flip deny→allow — exit is still 1.
+    assert_eq!(
+        output.status.code(),
+        Some(1),
+        "AC-5: serialization fault must still deny (exit 1), never allow (exit 0). \
+         stderr: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    // The fault fallback still emits code/message/remediation_hint.
+    let envelope = parse_steering_envelope(&output, "AC-5 fault denial");
+    assert!(
+        envelope.contains_key("code"),
+        "AC-5: fault must still emit `code`: {envelope:?}"
+    );
+    assert!(
+        envelope.contains_key("message"),
+        "AC-5: fault must still emit `message`: {envelope:?}"
+    );
+    assert!(
+        envelope.contains_key("remediation_hint"),
+        "AC-5: fault must still emit `remediation_hint`: {envelope:?}"
+    );
+
+    let code = require_str(&envelope, "code", "AC-5");
+    assert!(
+        code == "perm.denied" || code == "branch.protected",
+        "AC-5: fault code must be a stable denial code, got: {code}"
+    );
+    let message = require_str(&envelope, "message", "AC-5");
+    assert!(!message.is_empty(), "AC-5: fault message must be non-empty");
+    let hint = require_str(&envelope, "remediation_hint", "AC-5");
+    assert!(
+        !hint.is_empty(),
+        "AC-5: fault remediation_hint must be non-empty"
+    );
+
+    // The steering fields are absent in the fault fallback (minimal envelope).
+    assert!(
+        !envelope.contains_key("class"),
+        "AC-5: fault fallback must emit the minimal envelope (no class): {envelope:?}"
+    );
+
+    assert_eq!(
+        ref_id(&repo, "refs/heads/main")?,
+        main_before,
+        "AC-5: faulted denial must leave main unchanged"
+    );
+
+    println!(
+        "AC-5: BUT_STEER_FORCE_SERIALIZATION_FAULT → exit 1, code={code}, message+remediation_hint present"
+    );
+    Ok(())
+}
+
+/// AC-6 / TC-7 — A denied action under `--dry-run` WITH
+/// `BUT_STEER_FORCE_SERIALIZATION_FAULT` still exits 1 with existing fields AND
+/// mutates 0 objects/refs (DryRun fail-closed under the fault).
+#[test]
+#[serial_test::serial]
+fn governed_loop_dryrun_serialization_fault_failclosed() -> anyhow::Result<()> {
+    let env = governed_loop_env("feat", REVIEW_ID)?;
+    let repo = env.open_repo()?;
+    let main_before = ref_id(&repo, "refs/heads/main")?;
+    let object_count_before = object_count(&env);
+
+    // Run a denied DryRun merge WITH the serialization fault.
+    let output = env
+        .but("--format json pr merge 77 --dry-run")
+        .allow_json()
+        .env("BUT_AGENT_HANDLE", "implementer")
+        .env("BUT_STEER_FORCE_SERIALIZATION_FAULT", "1")
+        .output()?;
+
+    // TC-7: DryRun + fault still exits 1.
+    assert_eq!(
+        output.status.code(),
+        Some(1),
+        "AC-6: DryRun under serialization fault must exit 1 (fail-closed). stderr: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    // Existing fields are present.
+    let envelope = parse_steering_envelope(&output, "AC-6 DryRun fault");
+    let code = require_str(&envelope, "code", "AC-6 DryRun");
+    assert!(
+        code == "perm.denied" || code == "branch.protected",
+        "AC-6: DryRun fault code must be a stable denial code, got: {code}"
+    );
+    let message = require_str(&envelope, "message", "AC-6 DryRun");
+    assert!(
+        !message.is_empty(),
+        "AC-6: DryRun fault message must be non-empty"
+    );
+    let hint = require_str(&envelope, "remediation_hint", "AC-6 DryRun");
+    assert!(
+        !hint.is_empty(),
+        "AC-6: DryRun fault remediation_hint must be non-empty"
+    );
+
+    // Zero mutations: DryRun persists nothing even under the fault.
+    assert_eq!(
+        object_count(&env),
+        object_count_before,
+        "AC-6: DryRun under serialization fault must not persist new git objects (0 mutations)"
+    );
+    assert_eq!(
+        ref_id(&repo, "refs/heads/main")?,
+        main_before,
+        "AC-6: DryRun under serialization fault must not mutate refs/heads/main (0 refs mutated)"
+    );
+
+    println!("AC-6: DryRun + serialization fault → exit 1, code={code}, 0 objects/refs mutated");
+    Ok(())
+}
+
+/// Map a menu command verb to the full CLI argument string for replay.
+///
+/// Unlike [`replay_args`] (which returns a Vec), this returns a single string
+/// compatible with `env.but("...")`.
+fn replay_command_string(command: &str, branch: &str) -> String {
+    match command {
+        "but commit" => {
+            format!("--format json commit {branch} -m steer-009-replay-commit")
+        }
+        "but review request-changes" => {
+            format!("--format json review request-changes {branch} -m steer-009-replay")
+        }
+        "but review comment" => {
+            format!("--format json review comment {branch} -m steer-009-replay")
+        }
+        "but review approve" => {
+            format!("--format json review approve {branch}")
+        }
+        "but review new" => {
+            format!("--format json review new {branch} -m steer-009-replay")
+        }
+        "but perm list" => "--format json perm list".to_owned(),
+        _ => panic!("unknown menu command for replay: {command}"),
+    }
+}
+
 fn governed_loop_env(branch_name: &str, review_id: usize) -> anyhow::Result<Sandbox> {
     let env = Sandbox::init_scenario_with_target_and_default_settings("one-stack")?;
     env.invoke_bash(format!(
