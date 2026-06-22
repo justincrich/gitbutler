@@ -1658,7 +1658,7 @@ export type GovernanceInheritedGrant = {
 export type GovernancePending = {
   /** Per-principal effective authority comparison. */
   principals: Array<GovernancePendingPrincipal>;
-  /** Number of authority tokens that differ between committed and working-tree config. */
+  /** Number of governance changes between committed and working-tree config. */
   pendingCount: number;
 };
 
