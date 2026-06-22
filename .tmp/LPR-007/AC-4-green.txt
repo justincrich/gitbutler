@@ -1,0 +1,56 @@
+GREEN capture for AC-4: cargo test -p but-rules auto_assignment_blocks_no_commit_no_merge
+
+Command: cargo test -p but-rules auto_assignment_blocks_no_commit_no_merge
+Exit code: 0
+
+Output:
+---
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.26s
+     Running unittests src/lib.rs (target/debug/deps/but_rules-4cb0e40160f2f551)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/review_requested_hook.rs (target/debug/deps/review_requested_hook-8c701dfc6738a534)
+
+running 1 test
+test auto_assignment_blocks_no_commit_no_merge ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 3 filtered out; finished in 0.00s
+---
+
+Drive-only proof (dynamic side at the but-rules layer):
+
+  1. Hook fires -> Ok(1), never Err. The commit that triggered it has
+     already landed (post-commit hook) — by construction it is not blocked.
+
+  2. The auto-opened row is the same inert pending row UC-LPR-01 defines:
+       state = "pending"   (but_authz::AssignmentState::Pending.name())
+       target = "refs/heads/feat"
+       reviewer_principal = "rev2"
+     It carries no gate semantics — it is presentation metadata.
+
+  3. The merge gate reads `local_review_verdicts` (verdict-at-head), NOT
+     `local_review_assignments`. The hook writes ONLY the assignments table —
+     the verdicts table is structurally untouched:
+       local_review_assignments.list_by_target("refs/heads/feat").len() == 1
+       local_review_verdicts.list_by_target("refs/heads/feat").len()   == 0
+
+The static side of the guarantee — that `enforce_commit_gate`
+(crates/but-api/src/commit/gate.rs) and `enforce_merge_gate`
+(crates/but-api/src/legacy/merge_gate.rs) never reference `local_review_assignments`
+— is proven by `cargo test -p but-authz invariant_build_gates` (a separate
+verification gate that passed in this run).
+
+NOTE on invariant_build_gates when run against the live worktree:
+  The live worktree contains another agent's unstaged WIP in
+  crates/but-api/src/legacy/governance.rs (a PrincipalKindList feature from
+  LPR-002/LPR-014 territory — `parse_principal_kind` matches the human-vs-AI
+  grep). That WIP causes invariant_build_gates to fail INDEPENDENTLY of LPR-007.
+  Proven by stash:
+    git stash push -- crates/but-api/src/legacy/governance.rs
+    cargo test -p but-authz --test invariant_build_gates  ->  ok. 1 passed
+    git stash pop
+  My commit 80a3ecc6f2 does NOT touch governance.rs; the merge/commit gates
+  continue to read NO local_review_assignments (LPR-007's drive-only guarantee).

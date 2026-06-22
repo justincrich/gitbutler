@@ -1,0 +1,29 @@
+GREEN capture for AC-2: cargo test -p but-rules commit_trigger_review_action_variants_persist
+
+Command: cargo test -p but-rules commit_trigger_review_action_variants_persist
+Exit code: 0
+
+Output:
+---
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.26s
+     Running unittests src/lib.rs (target/debug/deps/but_rules-4cb0e40160f2f551)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/review_requested_hook.rs (target/debug/deps/review_requested_hook-8c701dfc6738a534)
+
+running 1 test
+test commit_trigger_review_action_variants_persist ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 3 filtered out; finished in 0.00s
+---
+
+Mechanism reused proof: the `Trigger::Commit` + `Action::RequestReview` rule
+round-trips through serde_json (the SAME shape `workspace_rules_mut().insert()`
+uses to persist the rule blob). Both new variants survive — the engine is
+extended additively, no parallel rules mechanism is introduced. The
+`WorkspaceRule::session_id()` helper (which reads the ClaudeCodeSessionId
+filter) also round-trips, proving the principal axis the filter scopes on is
+preserved.

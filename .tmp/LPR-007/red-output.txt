@@ -1,0 +1,54 @@
+LPR-007 RED-against-start capture
+==================================
+
+Base SHA: f177f0481a (wip: preserve changes before /kb-run-sprint sprint-07-local-agent-pr)
+
+The wip commit f177f0481a ships partial LPR-007 work:
+  - crates/but-rules/src/lib.rs (Trigger::Commit + Action::RequestReview variants)
+  - crates/but-rules/src/handler.rs (process_commit_rules firing path)
+  - crates/but-rules/tests/review_requested_hook.rs (3 tests, BUT not the spec-mandated names)
+
+RED state — the spec-mandated verify commands vs wip:
+
+--- AC-1 PRIMARY (cargo test -p but-rules review_requested_hook_creates_pending_assignment) ---
+PASSING in wip (test name matches spec).
+
+--- AC-2 (cargo test -p but-rules commit_trigger_review_action_variants_persist) ---
+RED: test function does not exist. cargo test output:
+```
+running 0 tests
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 3 filtered out
+```
+The serde round-trip is folded into AC-1's test, not broken out under the spec name.
+
+--- AC-3 (cargo test -p but-rules review_requested_hook_scoped_by_filter) ---
+RED: test function does not exist. cargo test output:
+```
+running 0 tests
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 3 filtered out
+```
+The wip has two tests with different names (`non_matching_commit_creates_no_assignment`,
+`file_filter_scopes_commit_trigger`) that prove the same behavior, but the spec verify
+command names a single `review_requested_hook_scoped_by_filter` test.
+
+--- AC-4 (cargo test -p but-rules auto_assignment_blocks_no_commit_no_merge) ---
+RED: test function does not exist. cargo test output:
+```
+running 0 tests
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 3 filtered out
+```
+No drive-only proof exists yet.
+
+--- AC-5 (cargo test -p but-api auto_assignment_visible_in_review_status) ---
+RED: test function does not exist. cargo test output:
+```
+running 0 tests
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 4 filtered out
+```
+No but-api test for the auto-opened assignment surfacing in review_status.
+
+GAPS TO FILL:
+  1. Rename tests / restructure to spec-mandated names (AC-2, AC-3)
+  2. Add AC-4 drive-only proof
+  3. Add AC-5 but-api review_status test
+  4. Capture per-AC GREEN evidence + seeded artifacts

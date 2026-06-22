@@ -7,7 +7,9 @@ use but_hunk_assignment::HunkAssignment;
 use but_rebase::graph_rebase::Editor;
 use itertools::Itertools;
 
-use crate::{Action, CommitContext, Filter, RequestReviewAction, StackTarget, Trigger, WorkspaceRule};
+use crate::{
+    Action, CommitContext, Filter, RequestReviewAction, StackTarget, Trigger, WorkspaceRule,
+};
 
 /// Apply matching workspace `rules` to the current worktree `assignments`.
 #[expect(clippy::too_many_arguments)]
@@ -288,13 +290,14 @@ pub(crate) fn process_commit_rules(
         if !commit_matches_filters(&rule, commit_ctx) {
             continue;
         }
-        db.local_review_assignments_mut().upsert(but_db::LocalReviewAssignment {
-            id: uuid::Uuid::new_v4().to_string(),
-            target: commit_ctx.target.clone(),
-            reviewer_principal: reviewer,
-            state: but_authz::AssignmentState::Pending.name().to_owned(),
-            assigned_at: chrono::Utc::now().naive_utc(),
-        })?;
+        db.local_review_assignments_mut()
+            .upsert(but_db::LocalReviewAssignment {
+                id: uuid::Uuid::new_v4().to_string(),
+                target: commit_ctx.target.clone(),
+                reviewer_principal: reviewer,
+                state: but_authz::AssignmentState::Pending.name().to_owned(),
+                assigned_at: chrono::Utc::now().naive_utc(),
+            })?;
         written += 1;
     }
     Ok(written)
@@ -311,8 +314,8 @@ fn commit_matches_filters(rule: &WorkspaceRule, commit_ctx: &CommitContext) -> b
             .iter()
             .any(|path| regex.is_match(path)),
         Filter::ClaudeCodeSessionId(id) => commit_ctx.session_id.as_deref() == Some(id.as_str()),
-        Filter::ContentMatchesRegex(_)
-        | Filter::FileChangeType(_)
-        | Filter::SemanticType(_) => false,
+        Filter::ContentMatchesRegex(_) | Filter::FileChangeType(_) | Filter::SemanticType(_) => {
+            false
+        }
     })
 }
