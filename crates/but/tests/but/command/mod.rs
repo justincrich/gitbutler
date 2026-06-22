@@ -61,6 +61,8 @@ mod squash;
 #[cfg(feature = "legacy")]
 mod status;
 #[cfg(feature = "legacy")]
+mod steer_discovery;
+#[cfg(feature = "legacy")]
 mod teardown;
 #[cfg(feature = "legacy")]
 mod undo;
