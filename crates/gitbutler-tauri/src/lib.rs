@@ -341,6 +341,14 @@ pub fn invoke_handler() -> impl Fn(tauri::ipc::Invoke<tauri::Wry>) -> bool + Sen
         legacy::forge::tauri_forge_compare_branch_url::forge_compare_branch_url,
         legacy::forge::tauri_list_reviews::list_reviews,
         legacy::forge::tauri_get_review::get_review,
+        // LPR-015: local-review READ producers — register the
+        // #[but_api(napi)]-generated tauri modules on the desktop bus beside
+        // the shipped forge reads. Branch-scoped (F-006), read-only, ride
+        // core:default like the other forge reads (no hand-written
+        // allow-review_status/allow-list_comments capability file, no
+        // DesktopSessionState wrapper — reads need no fleet-owner identity).
+        legacy::forge::tauri_review_status::review_status,
+        legacy::forge::tauri_list_comments::list_comments,
         legacy::forge::tauri_get_review_merge_status::get_review_merge_status,
         legacy::forge::tauri_get_review_base_repo_url::get_review_base_repo_url,
         legacy::forge::tauri_get_repo_info::get_repo_info,
