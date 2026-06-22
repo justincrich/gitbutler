@@ -119,6 +119,31 @@ fn write_list(out: &mut OutputChannel, list: &PermListOutcome) -> anyhow::Result
 }
 
 fn governance_cli_error(err: anyhow::Error) -> CliError {
+    // STEER-005: admin-write actor_correctable denials carry the full
+    // steering payload (class/held_permissions/authorized_actions/do_not)
+    // plus remediation_hint, rendered through steer_envelope_from_parts().
+    // The AdminWriteGateError carrier (from config_mutate::classify_error)
+    // supplies the four steering fields; remediation_hint is sourced from
+    // the underlying Denial. Best-effort: a serialization fault still emits
+    // code/message/remediation_hint + exit 1 (invariant §9.5).
+    if let Some(gate_error) = but_api::legacy::config_mutate::classify_error(&err) {
+        let remediation_hint = err
+            .downcast_ref::<but_authz::Denial>()
+            .map(|denial| denial.remediation_hint.as_str());
+        let envelope = but_authz::steer_envelope_from_parts(
+            gate_error.code,
+            &gate_error.message,
+            remediation_hint,
+            gate_error.class,
+            &gate_error.held_permissions,
+            &gate_error.authorized_actions,
+            gate_error.do_not,
+        );
+        return anyhow::anyhow!("{}", serde_json::json!({ "error": envelope })).into();
+    }
+
+    // ConfigInvalid-sourced (operator_required config.invalid): keep the
+    // legacy code/message/remediation_hint shape via classify_governance_error.
     if let Some(gate_error) = but_api::legacy::governance::classify_governance_error(&err) {
         let mut error = serde_json::json!({
             "code": gate_error.code,

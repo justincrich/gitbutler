@@ -809,6 +809,7 @@ dependencies = [
  "but-agentlog",
  "but-api",
  "but-askpass",
+ "but-authz",
  "but-cherry-apply",
  "but-core",
  "but-ctx",

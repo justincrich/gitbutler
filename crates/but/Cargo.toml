@@ -160,6 +160,10 @@ tracing-appender = "0.2.5"
 uuid.workspace = true
 fuzzy-matcher = "0.3.7"
 indexmap.workspace = true
+# STEER-005: but-authz is needed directly in src/ for the CLI denial
+# serializers (steer_envelope_from_parts + Denial downcast). It is already
+# compiled transitively via but-api; listing it here avoids a dev-only gate.
+but-authz.workspace = true
 
 [dev-dependencies]
 but-graph.workspace = true

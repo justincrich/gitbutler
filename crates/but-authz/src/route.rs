@@ -1,109 +1,241 @@
-//! STEER-002 single-source route/authority table.
+//! Route enum + `ROUTE_AUTHORITY_TABLE` — the single source of truth for
+//! governed routes.
 //!
-//! [`ROUTE_AUTHORITY_TABLE`] is the single source of truth that maps every
-//! gated [`Route`] to (a) the [`Authority`] its gate site requires, (b) the
-//! consumer-facing command string, and (c) the effect string. Gate sites keep
-//! their literal `but_authz::authorize(principal, Authority::X, &cfg)` calls —
-//! the table does not replace them — but the table is the only place where the
-//! route→authority mapping lives, so menu derivation (STEER-009) and CLI
-//! serializers (STEER-005) can trust it without re-deriving from gate sites.
+//! Every gated route is a row in [`ROUTE_AUTHORITY_TABLE`], mapping a
+//! [`Route`] to its required [`Authority`], the literal `but` command that
+//! drives it, and a one-line effect description. The table is the single
+//! symbol consulted by:
 //!
-//! Adding a new gated route without adding a row here fails
-//! `steer_route_table_covers_every_gated_route`; assigning a row an authority
-//! that disagrees with its route family fails the same test.
+//! - every gate's required-authority lookup (`but_api::commit::gate`,
+//!   `but_api::legacy::merge_gate`, `but_api::legacy::config_mutate`, and
+//!   `but_api::legacy::forge::authorize_branch_action`), and
+//! - the menu module (STEER-003) for the
+//!   `usable = {r | r.required_authority ⊆ held}` derivation.
+//!
+//! ## What the table is NOT
+//!
+//! The table SUPPLIES the (route → required [`Authority`], `but` command,
+//! effect) data. It does NOT replace the [`crate::authorize`] call that
+//! makes the deny/allow decision — the literal
+//! `but_authz::authorize(&principal, Authority::X, &cfg)` call stays at
+//! each enforcement site so the `AUTHORITY_POSITIVE_PATTERN` honesty grep
+//! (`but_authz::authorize|Authority::contains|but_authz::Authority`) keeps
+//! matching.
+//!
+//! The non-authority predicates (branch-protection, review-requirement)
+//! stay composed AROUND the table; they are NOT folded into it. Folding
+//! them would make `required_authority ⊆ held` a lying menu (the C5
+//! unsoundness STEER-003 must avoid).
 
 use crate::Authority;
 
-/// A forge review sub-action governed by a distinct functional authority.
+/// A governed route — one row per gate that calls [`crate::authorize`].
 ///
-/// Each variant maps to a distinct [`Authority`] in [`ROUTE_AUTHORITY_TABLE`]:
-/// `RequestChanges` → `ReviewsWrite`, `Comment` → `CommentsWrite`,
-/// `Approve` → `PullRequestsWrite`. Splitting them lets the table distinguish
-/// the three forge-dispatched review verbs without losing the shared
-/// `Review(_)` family label.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub enum ReviewAction {
-    /// Request changes on a review — requires `reviews:write`.
-    RequestChanges,
-    /// Post a comment on a review — requires `comments:write`.
-    Comment,
-    /// Approve a review — requires `pull_requests:write`.
-    Approve,
-}
-
-/// A gated route surface.
+/// Each variant maps 1:1 to a row in [`ROUTE_AUTHORITY_TABLE`] carrying its
+/// required [`Authority`], the literal `but` command that drives the route,
+/// and a one-line effect description. Non-authority predicates
+/// (branch-protection, review-requirement) stay composed AROUND the table;
+/// they are NOT folded into it.
 ///
-/// Variants correspond to the four gate-site families: the commit gate, the
-/// merge gate, the forge review gates (split by [`ReviewAction`]), and the
-/// administration-write gate. The variant carries no authority by itself —
-/// the canonical route→authority mapping lives in
-/// [`ROUTE_AUTHORITY_TABLE`].
+/// ```
+/// use but_authz::{Authority, Route};
+///
+/// assert_eq!(Route::Commit.required_authority(), Authority::ContentsWrite);
+/// assert_eq!(Route::Merge.required_authority(), Authority::Merge);
+/// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Route {
-    /// Land a commit directly — `crates/but-api/src/commit/gate.rs`.
+    /// Direct commit creation — gated by
+    /// `but_api::commit::gate::enforce_commit_gate`. The
+    /// branch-protection predicate is composed AROUND this row, not folded
+    /// into it.
     Commit,
-    /// Land a reviewed merge — `crates/but-api/src/legacy/merge_gate.rs`.
+    /// Forge review merge — gated by
+    /// `but_api::legacy::merge_gate::enforce_merge_gate`. The
+    /// review-requirement predicate is composed AROUND this row, not folded
+    /// into it.
     Merge,
-    /// Forge review sub-action — `crates/but-api/src/legacy/forge.rs`.
-    Review(ReviewAction),
-    /// Mutate governed configuration —
-    /// `crates/but-api/src/legacy/config_mutate.rs`.
+    /// Forge review assignment / verdict (`reviews:write`) — gated by
+    /// `but_api::legacy::forge::authorize_branch_action`. Reconciles the
+    /// `Authority::ReviewsWrite` arm of the forge match into an explicit
+    /// table row.
+    ForgeReviewsWrite,
+    /// Forge review comment (`comments:write`) — gated by
+    /// `but_api::legacy::forge::authorize_branch_action`. Reconciles the
+    /// `Authority::CommentsWrite` arm of the forge match into an explicit
+    /// table row.
+    ForgeCommentsWrite,
+    /// Forge review open / close / publish (`pull_requests:write`) — gated
+    /// by `but_api::legacy::forge::authorize_branch_action`. Reconciles the
+    /// `Authority::PullRequestsWrite` arm of the forge match into an
+    /// explicit table row.
+    ForgePullRequestsWrite,
+    /// Administration-write — gated by
+    /// `but_api::legacy::config_mutate::enforce_administration_write_gate`.
     Admin,
 }
 
-/// The single-source route → (required authority, command, effect) table.
+impl Route {
+    /// Every governed route in deterministic catalog order.
+    ///
+    /// ```
+    /// use but_authz::Route;
+    ///
+    /// assert!(Route::ALL.contains(&Route::Commit));
+    /// assert!(Route::ALL.contains(&Route::Merge));
+    /// assert!(Route::ALL.contains(&Route::Admin));
+    /// ```
+    pub const ALL: &'static [Self] = &[
+        Self::Commit,
+        Self::Merge,
+        Self::ForgeReviewsWrite,
+        Self::ForgeCommentsWrite,
+        Self::ForgePullRequestsWrite,
+        Self::Admin,
+    ];
+
+    /// Return the stable token name for this route.
+    ///
+    /// The token is unique across variants and stable across refactorings —
+    /// the menu module (STEER-003) indexes routes by this string.
+    ///
+    /// ```
+    /// use but_authz::Route;
+    ///
+    /// assert_eq!(Route::Commit.name(), "commit");
+    /// assert_eq!(Route::Merge.name(), "merge");
+    /// assert_eq!(Route::Admin.name(), "admin");
+    /// ```
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::Commit => "commit",
+            Self::Merge => "merge",
+            Self::ForgeReviewsWrite => "forge.reviews:write",
+            Self::ForgeCommentsWrite => "forge.comments:write",
+            Self::ForgePullRequestsWrite => "forge.pull_requests:write",
+            Self::Admin => "admin",
+        }
+    }
+
+    /// Look up the required [`Authority`] for this route through
+    /// [`ROUTE_AUTHORITY_TABLE`].
+    ///
+    /// This is the single source of truth consulted by every gate's
+    /// required-authority lookup AND by the menu module (STEER-003). The
+    /// lookup is total — every [`Route`] variant resolves to a row in the
+    /// table; if a future variant is added without a row, this method will
+    /// panic at the gate site, surfacing the omission loudly.
+    ///
+    /// The gate sites still call [`crate::authorize`] with the looked-up
+    /// [`Authority`]; the table does NOT replace the decision call.
+    ///
+    /// ```
+    /// use but_authz::{Authority, Route};
+    ///
+    /// assert_eq!(
+    ///     Route::ForgeReviewsWrite.required_authority(),
+    ///     Authority::ReviewsWrite
+    /// );
+    /// ```
+    pub fn required_authority(self) -> Authority {
+        // Mirrors `Authority::ALL` static-slice-of-enum pattern from
+        // `authority.rs`; the linear scan over a 6-row table is the
+        // idiomatic lookup shape for a `const` slice.
+        for (route, authority, _, _) in ROUTE_AUTHORITY_TABLE {
+            if *route == self {
+                return *authority;
+            }
+        }
+        // Every Route variant must have a row — this is the totality
+        // invariant STEER-003's menu derivation depends on.
+        unreachable!(
+            "ROUTE_AUTHORITY_TABLE must cover every Route variant; missing row for {:?}",
+            self
+        )
+    }
+}
+
+/// The single source of truth mapping every governed [`Route`] to its
+/// required [`Authority`], the literal `but` command that drives it, and a
+/// one-line effect description.
 ///
-/// Every row MUST agree with the literal `authorize(principal, Authority::X,
-/// &cfg)` call at its gate site. The table is read-only and lives in
-/// `but-authz` so gate sites, menu derivation, and the CLI denial serializers
-/// share one definition without `but-authz` depending on `but-api`.
+/// Each row is `(Route, Authority, command, effect)`. Every row corresponds
+/// to a gate that calls [`crate::authorize`]:
 ///
-/// Row order is the canonical catalog order of [`Route`]: Commit, Merge,
-/// Review(RequestChanges), Review(Comment), Review(Approve), Admin.
+/// - `Route::Commit` → `Authority::ContentsWrite` — `but_api::commit::gate`
+/// - `Route::Merge` → `Authority::Merge` — `but_api::legacy::merge_gate`
+/// - `Route::ForgeReviewsWrite` → `Authority::ReviewsWrite` —
+///   `but_api::legacy::forge::authorize_branch_action`
+/// - `Route::ForgeCommentsWrite` → `Authority::CommentsWrite` —
+///   `but_api::legacy::forge::authorize_branch_action`
+/// - `Route::ForgePullRequestsWrite` → `Authority::PullRequestsWrite` —
+///   `but_api::legacy::forge::authorize_branch_action`
+/// - `Route::Admin` → `Authority::AdministrationWrite` —
+///   `but_api::legacy::config_mutate`
+///
+/// The non-authority predicates (branch-protection, review-requirement)
+/// stay composed AROUND the table — they are NOT folded into it.
+///
+/// ```
+/// use but_authz::{Authority, Route, ROUTE_AUTHORITY_TABLE};
+///
+/// assert!(ROUTE_AUTHORITY_TABLE.len() >= 6);
+/// assert!(ROUTE_AUTHORITY_TABLE
+///     .iter()
+///     .any(|(route, authority, _, _)| *route == Route::Merge
+///         && *authority == Authority::Merge));
+/// ```
 pub const ROUTE_AUTHORITY_TABLE: &[(Route, Authority, &str, &str)] = &[
-    // Commit gate — crates/but-api/src/commit/gate.rs:82.
     (
         Route::Commit,
         Authority::ContentsWrite,
-        "commit",
-        "create or amend a commit on a governed ref",
+        "but commit",
+        "create a commit on a branch ref",
     ),
-    // Merge gate — crates/but-api/src/legacy/merge_gate.rs:62.
     (
         Route::Merge,
         Authority::Merge,
-        "merge",
-        "land a reviewed merge into the target branch",
+        "but review merge",
+        "merge a forge review into the target branch",
     ),
-    // Forge review gate (request changes) —
-    // crates/but-api/src/legacy/forge.rs::request_changes_review.
     (
-        Route::Review(ReviewAction::RequestChanges),
+        Route::ForgeReviewsWrite,
         Authority::ReviewsWrite,
-        "request-changes",
-        "request changes on a local review",
+        "but review approve / request-changes / assign",
+        "post or update a review verdict on a branch",
     ),
-    // Forge review gate (comment) —
-    // crates/but-api/src/legacy/forge.rs::comment_review / post_comment.
     (
-        Route::Review(ReviewAction::Comment),
+        Route::ForgeCommentsWrite,
         Authority::CommentsWrite,
-        "comment",
-        "post or resolve a local review comment",
+        "but review comment / resolve",
+        "post or resolve a review comment on a branch",
     ),
-    // Forge review gate (approve) —
-    // crates/but-api/src/legacy/forge.rs::approve_review.
     (
-        Route::Review(ReviewAction::Approve),
+        Route::ForgePullRequestsWrite,
         Authority::PullRequestsWrite,
-        "approve",
-        "record an approval verdict on a local review",
+        "but review request / close / publish",
+        "open, close, or publish a local forge review",
     ),
-    // Admin-write gate — crates/but-api/src/legacy/config_mutate.rs:47.
     (
         Route::Admin,
         Authority::AdministrationWrite,
-        "admin",
-        "mutate governed configuration on the target ref",
+        "but governance config write",
+        "mutate committed governance config",
     ),
 ];
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn route_all_matches_table_rows() {
+        assert_eq!(Route::ALL.len(), ROUTE_AUTHORITY_TABLE.len());
+        for route in Route::ALL {
+            assert!(
+                ROUTE_AUTHORITY_TABLE.iter().any(|(r, _, _, _)| r == route),
+                "Route::{route:?} must have a row in ROUTE_AUTHORITY_TABLE"
+            );
+        }
+    }
+}

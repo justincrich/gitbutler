@@ -205,6 +205,31 @@ impl Denial {
 /// assert!(!envelope.as_object().unwrap().contains_key("do_not"));
 /// ```
 pub fn to_envelope(denial: &Denial) -> serde_json::Value {
+    build_envelope(
+        denial.code,
+        &denial.message,
+        Some(&denial.remediation_hint),
+        denial.class,
+        &denial.held_permissions,
+        &denial.authorized_actions,
+        denial.do_not,
+    )
+}
+
+/// Build the canonical steering envelope from individual field parts.
+///
+/// This is the inner builder shared by [`to_envelope`] (pure, from a
+/// [`Denial`]) and [`steer_envelope_from_parts`] (best-effort, from CLI
+/// carrier parts). It does NOT apply the fault seam — callers control that.
+fn build_envelope(
+    code: &str,
+    message: &str,
+    remediation_hint: Option<&str>,
+    class: DenialClass,
+    held_permissions: &[Authority],
+    authorized_actions: &[AuthorizedAction],
+    do_not: Option<&str>,
+) -> serde_json::Value {
     fn sorted_authority_tokens(authorities: &[Authority]) -> serde_json::Value {
         let mut sorted: Vec<Authority> = authorities.to_vec();
         sorted.sort_by_key(|authority| authority.name());
@@ -233,33 +258,136 @@ pub fn to_envelope(denial: &Denial) -> serde_json::Value {
     let mut object = serde_json::Map::new();
     object.insert(
         "code".to_owned(),
-        serde_json::Value::String(denial.code.to_owned()),
+        serde_json::Value::String(code.to_owned()),
     );
     object.insert(
         "message".to_owned(),
-        serde_json::Value::String(denial.message.clone()),
+        serde_json::Value::String(message.to_owned()),
     );
-    object.insert(
-        "remediation_hint".to_owned(),
-        serde_json::Value::String(denial.remediation_hint.clone()),
-    );
+    if let Some(hint) = remediation_hint {
+        object.insert(
+            "remediation_hint".to_owned(),
+            serde_json::Value::String(hint.to_owned()),
+        );
+    }
     object.insert(
         "class".to_owned(),
-        serde_json::Value::String(denial.class.name().to_owned()),
+        serde_json::Value::String(class.name().to_owned()),
     );
     object.insert(
         "held_permissions".to_owned(),
-        sorted_authority_tokens(&denial.held_permissions),
+        sorted_authority_tokens(held_permissions),
     );
     object.insert(
         "authorized_actions".to_owned(),
-        authorized_actions_value(&denial.authorized_actions),
+        authorized_actions_value(authorized_actions),
     );
-    if let Some(do_not) = denial.do_not {
+    if let Some(do_not) = do_not {
         object.insert(
             "do_not".to_owned(),
             serde_json::Value::String(do_not.to_owned()),
         );
     }
     serde_json::Value::Object(object)
+}
+
+/// Build a minimal legacy-only envelope (`code`/`message`/
+/// `remediation_hint`) used by the best-effort fault fallback so a
+/// serialization fault still denies with the legacy fields + exit 1.
+fn minimal_envelope(
+    code: &str,
+    message: &str,
+    remediation_hint: Option<&str>,
+) -> serde_json::Value {
+    let mut object = serde_json::Map::new();
+    object.insert(
+        "code".to_owned(),
+        serde_json::Value::String(code.to_owned()),
+    );
+    object.insert(
+        "message".to_owned(),
+        serde_json::Value::String(message.to_owned()),
+    );
+    if let Some(hint) = remediation_hint {
+        object.insert(
+            "remediation_hint".to_owned(),
+            serde_json::Value::String(hint.to_owned()),
+        );
+    }
+    serde_json::Value::Object(object)
+}
+
+/// TEST-ONLY fault-injection seam for best-effort serialization.
+///
+/// When `BUT_STEER_FORCE_SERIALIZATION_FAULT=1` is set in the environment
+/// AND the build is a debug/test build, this returns `true` to simulate a
+/// steering-payload serialization fault. Compiled out of release builds
+/// via `cfg(not(debug_assertions))` — never a production bypass (SA-1/RR-4).
+///
+/// The seam is consumed by [`steer_envelope_from_parts`] so CLI serializers
+/// can prove a forced fault still denies with the legacy fields + exit 1
+/// (invariant §9.5, best-effort fail-closed).
+#[cfg(debug_assertions)]
+fn serialization_fault_forced() -> bool {
+    // SAFETY note: read-only env var check; no panics, no mutation.
+    std::env::var("BUT_STEER_FORCE_SERIALIZATION_FAULT").as_deref() == Ok("1")
+}
+
+#[cfg(not(debug_assertions))]
+fn serialization_fault_forced() -> bool {
+    false
+}
+
+/// Best-effort steering envelope for CLI denial serializers (STEER-005).
+///
+/// Renders the full steering envelope (`code`/`message`/`remediation_hint`
+/// when `Some`/`class`/`held_permissions`/`authorized_actions`/`do_not` when
+/// `Some`) from the parts supplied by a CLI serializer's carrier
+/// classification. If the TEST-ONLY [`BUT_STEER_FORCE_SERIALIZATION_FAULT`]
+/// seam forces a fault (debug-only), degrades to a minimal
+/// `{code, message, remediation_hint}` envelope so the denial still emits
+/// the legacy fields + exit 1 (best-effort fail-closed, invariant §9.5).
+/// The seam is compiled out of release builds.
+///
+/// [`BUT_STEER_FORCE_SERIALIZATION_FAULT`]:
+///   serialization_fault_forced
+///
+/// ```
+/// use but_authz::{Authority, DenialClass, steer_envelope_from_parts};
+///
+/// let envelope = steer_envelope_from_parts(
+///     "perm.denied",
+///     "action requires contents:write",
+///     Some("ask an administrator to grant contents:write"),
+///     DenialClass::ActorCorrectable,
+///     &[Authority::ReviewsWrite],
+///     &[],
+///     None,
+/// );
+/// assert_eq!(envelope["code"], "perm.denied");
+/// assert_eq!(envelope["class"], "actor_correctable");
+/// assert_eq!(envelope["held_permissions"][0], "reviews:write");
+/// assert!(envelope.as_object().unwrap().contains_key("remediation_hint"));
+/// ```
+pub fn steer_envelope_from_parts(
+    code: &str,
+    message: &str,
+    remediation_hint: Option<&str>,
+    class: DenialClass,
+    held_permissions: &[Authority],
+    authorized_actions: &[AuthorizedAction],
+    do_not: Option<&str>,
+) -> serde_json::Value {
+    if serialization_fault_forced() {
+        return minimal_envelope(code, message, remediation_hint);
+    }
+    build_envelope(
+        code,
+        message,
+        remediation_hint,
+        class,
+        held_permissions,
+        authorized_actions,
+        do_not,
+    )
 }
