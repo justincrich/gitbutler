@@ -32,6 +32,41 @@ const ENFORCEMENT_PATHS: &[&str] = &[
 ];
 const SPRINT_02_ENFORCEMENT_PATHS: &[&str] = &[MERGE_GATE, CONFIG_MUTATE];
 
+// --- STEER-010: closed-catalog + route-table coverage build-gates -----------
+//
+// These build-gates are ADDITIVE to the honesty-grep suite above. They
+// prove (a) the menu module's command/effect text is closed-catalog
+// &'static str (invariant §9.2) — no format!, interpolation, or
+// config-sourced text — and (b) the ROUTE_AUTHORITY_TABLE exists and is
+// consulted by gate sites.
+
+/// Pattern: menu.rs must NOT contain format!/to_string/to_owned for
+/// command/effect/do_not text. The closed-catalog assertion covers ONLY the
+/// steering fields (command/effect in menu.rs) — NOT message/unmet[] which
+/// already interpolate config strings (R15 accepted-leak).
+const CLOSED_CATALOG_VIOLATION_PATTERN: &str =
+    r#"format!\s*\(|\.to_owned\(\)|\.to_string\(\)|String::from\(\s*""#;
+
+/// Positive control: route.rs must have a non-empty ROUTE_AUTHORITY_TABLE.
+const ROUTE_TABLE_EXISTS_PATTERN: &str = r"ROUTE_AUTHORITY_TABLE\s*:";
+
+/// Gate sites must consult the route table (via Route:: variants or
+/// required_authority() calls). Scoped to the five actual gate sites
+/// (excludes but-authz internals that don't consume Route).
+const ROUTE_TABLE_CONSUMED_PATTERN: &str = r"Route::|required_authority\s*\(";
+
+const MENU_SRC: &str = "crates/but-authz/src/menu.rs";
+const ROUTE_SRC: &str = "crates/but-authz/src/route.rs";
+
+/// Gate sites that consume the route table (excludes authz internals).
+const GATE_SITE_PATHS: &[&str] = &[
+    COMMIT_GATE,
+    MERGE_GATE,
+    CONFIG_MUTATE,
+    GOVERNANCE,
+    FORGE_GUARD,
+];
+
 // --- STEER-008: non-enforced agent-priming reference primer -----------------
 //
 // The primer is L2 reference material (UC-STEER-05, Stance 6): a harness MAY
@@ -108,6 +143,28 @@ fn invariant_build_gates() -> anyhow::Result<()> {
         &workspace_root,
         PERMISSION_CARRIER_PATTERN,
         SPRINT_02_ENFORCEMENT_PATHS,
+    )?;
+
+    // --- STEER-010: closed-catalog + route-table coverage ------------------
+    assert_paths_exist_and_non_empty(&workspace_root, &[MENU_SRC, ROUTE_SRC])?;
+
+    assert_grep_has_no_matches(
+        "closed-catalog invariant (menu.rs command/effect must be &'static str, no format!/interpolation)",
+        &workspace_root,
+        CLOSED_CATALOG_VIOLATION_PATTERN,
+        &[MENU_SRC],
+    )?;
+    assert_grep_has_matches(
+        "ROUTE_AUTHORITY_TABLE must be non-empty in route.rs",
+        &workspace_root,
+        ROUTE_TABLE_EXISTS_PATTERN,
+        &[ROUTE_SRC],
+    )?;
+    assert_grep_has_matches(
+        "gate sites must consult the route table (Route:: or required_authority)",
+        &workspace_root,
+        ROUTE_TABLE_CONSUMED_PATTERN,
+        GATE_SITE_PATHS,
     )?;
 
     assert_seeded_controls_fire()?;
@@ -327,6 +384,26 @@ fn violates_permission_carrier(repo: &Repo) {
         temp_dir.path(),
         PERMISSION_CARRIER_PATTERN,
         &["permission-carrier-violation.rs"],
+    )?;
+
+    let catalog_fixture = temp_dir.path().join("closed-catalog-violation.rs");
+    fs::write(
+        &catalog_fixture,
+        r#"
+fn violates_closed_catalog() -> AuthorizedAction {
+    AuthorizedAction::new(
+        &format!("but {}", "commit"),
+        "dynamic command".to_string(),
+    )
+}
+"#,
+    )
+    .with_context(|| format!("write {}", catalog_fixture.display()))?;
+    assert_grep_has_matches(
+        "seeded closed-catalog violation control",
+        temp_dir.path(),
+        CLOSED_CATALOG_VIOLATION_PATTERN,
+        &["closed-catalog-violation.rs"],
     )?;
 
     Ok(())

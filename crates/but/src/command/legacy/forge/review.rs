@@ -161,12 +161,21 @@ pub async fn status(
             ""
         };
         let verdict_at_head = status.verdict_at_head.as_deref().unwrap_or("none");
-        let approved_label = if status.verdict_at_head.as_deref() == Some("approved") { "yes" } else { "no" };
-        let pending: Vec<_> = status.assignments.iter().filter(|a| a.state == "pending").collect();
+        let approved_label = if status.verdict_at_head.as_deref() == Some("approved") {
+            "yes"
+        } else {
+            "no"
+        };
+        let pending: Vec<_> = status
+            .assignments
+            .iter()
+            .filter(|a| a.state == "pending")
+            .collect();
         writeln!(
             out,
             "Review for {branch}: {} (verdict-at-head: {verdict_at_head}, pending: {}, approved: {approved_label}){agent_marker}",
-            status.lifecycle, pending.len(),
+            status.lifecycle,
+            pending.len(),
         )?;
         if status.assignments.is_empty() {
             writeln!(out, "  no assignments")?;

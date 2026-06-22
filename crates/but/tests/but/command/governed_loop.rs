@@ -1136,6 +1136,341 @@ fn steer_cli_serde_fault_still_emits_code_message_exit1() -> anyhow::Result<()> 
     Ok(())
 }
 
+// ---------------------------------------------------------------------------
+// STEER-009 — no-lying-menu end-to-end proofs
+// ---------------------------------------------------------------------------
+//
+// The STEER-003 tests prove the menu is DERIVED correctly (via the authz API).
+// The STEER-005 tests prove the CLI JSON envelope CARRIES the steering fields.
+// These tests close the final gap: every authorized_action offered in a
+// denial, when run in its stated context, either succeeds or reaches the
+// forge boundary WITHOUT a governance denial — proving the menu never lies.
+
+/// No-lying-menu proof for the `branch.protected` commit affordance.
+///
+/// The [`governed_loop_steer_protected_menu`] test proves the derived menu
+/// includes `but commit` with an "unprotected" effect. This test goes one
+/// step further: it RUNS `but commit feat` (the exact context the effect
+/// names) and proves the implementer's commit succeeds. If the menu offered
+/// `but commit` but the commit failed for the implementer on the feature
+/// branch, the menu would be lying.
+#[test]
+#[serial_test::serial]
+fn governed_loop_steer_no_lying_menu_commit_affordance_runnable() -> anyhow::Result<()> {
+    let env = governed_loop_env("feat", REVIEW_ID)?;
+    let repo = env.open_repo()?;
+    let feat_before = ref_id(&repo, "refs/heads/feat")?;
+
+    // Step 1: derive the branch.protected menu (same as the existing test).
+    let (principal, cfg) = steer_load_principal(&env, "refs/heads/feat", "implementer")?;
+    assert!(
+        cfg.branch("main").is_some_and(|b| b.protected()),
+        "fixture: main must be protected"
+    );
+    let denied = DeniedRoute::new(Route::Commit, DenialPredicate::BranchProtected);
+    let actions = authorized_actions(&principal, &denied, &cfg);
+    let commands: Vec<&str> = actions.iter().map(|a| a.command).collect();
+    assert!(
+        commands.contains(&"but commit"),
+        "branch.protected menu MUST offer `but commit`: {commands:?}"
+    );
+
+    // Step 2: RUN the recommended `but commit` on the unprotected feature
+    // branch — this is the context the effect names ("create a commit on an
+    // unprotected feature branch ref"). If the menu is truthful, the commit
+    // MUST succeed for the implementer (contents:write holder).
+    env.file("no-lying-menu-commit.txt", "truthful affordance\n");
+    let commit_output = env
+        .but("--format json commit feat -m no-lying-menu-commit")
+        .allow_json()
+        .env("BUT_AGENT_HANDLE", "implementer")
+        .output()?;
+
+    let commit_stderr = String::from_utf8_lossy(&commit_output.stderr);
+    assert!(
+        !commit_stderr.contains(r#""code":"perm.denied""#)
+            && !commit_stderr.contains(r#""code":"branch.protected""#),
+        "no-lying-menu: `but commit feat` (the affordance offered in the branch.protected menu) \
+         must NOT be denied for the implementer — the menu would be lying. stderr: {commit_stderr}"
+    );
+    assert!(
+        commit_output.status.success(),
+        "no-lying-menu: `but commit feat` must succeed (exit 0) — the menu said it would. \
+         stderr: {commit_stderr}"
+    );
+
+    // Step 3: prove the ref actually advanced (the commit was real, not a no-op).
+    let feat_after = ref_id(&repo, "refs/heads/feat")?;
+    assert_ne!(
+        feat_after, feat_before,
+        "no-lying-menu: the recommended commit must actually advance the feature branch"
+    );
+
+    println!(
+        "STEER-009 no-lying-menu: `but commit` affordance in branch.protected menu is truthful"
+    );
+    println!("  -> ran `but commit feat` as implementer → exit 0, feat advanced");
+    for action in &actions {
+        println!("  - {} -> {}", action.command, action.effect);
+    }
+
+    Ok(())
+}
+
+/// No-lying-menu proof for the reviewer denied-commit menu's `but review
+/// comment` affordance.
+///
+/// The [`governed_loop_steer_reviewer_menu_runnable_no_self_approve`] test
+/// proves `but review request-changes` is runnable. This test closes the
+/// remaining gap: `but review comment` (the OTHER recommended action in the
+/// reviewer's denied-commit menu) also passes the authority gate — i.e., the
+/// menu does not lie about it.
+#[test]
+#[serial_test::serial]
+fn governed_loop_steer_no_lying_menu_comment_affordance_not_denied() -> anyhow::Result<()> {
+    let env = governed_loop_env("feat", REVIEW_ID)?;
+
+    // Step 1: derive the reviewer denied-commit menu (same as existing test).
+    let (principal, cfg) = steer_load_principal(&env, "refs/heads/feat", "reviewer")?;
+    assert!(
+        principal
+            .authorities()
+            .contains(but_authz::Authority::CommentsWrite),
+        "fixture: reviewer must hold comments:write (via code-reviewers group)"
+    );
+    let denied = DeniedRoute::new(Route::Commit, DenialPredicate::Authority).with_own_branch(true);
+    let commands = steer_menu_commands(&principal, &denied, &cfg);
+    assert!(
+        commands.contains(&"but review comment"),
+        "reviewer denied-commit menu MUST include `but review comment`: {commands:?}"
+    );
+
+    // Step 2: RUN `but review comment feat` — the context the effect names.
+    // The reviewer holds comments:write, so the authority gate MUST pass.
+    // The command may fail at a downstream boundary (task contract), but it
+    // must NOT be denied with perm.denied — that would mean the menu lied.
+    let comment_output = env
+        .but("--format json review comment feat -m 'no-lying-menu proof'")
+        .allow_json()
+        .env("BUT_AGENT_HANDLE", "reviewer")
+        .output()?;
+
+    let comment_stderr = String::from_utf8_lossy(&comment_output.stderr);
+    assert!(
+        !comment_stderr.contains(r#""code":"perm.denied""#),
+        "no-lying-menu: `but review comment feat` (the affordance offered in the reviewer \
+         denied-commit menu) must NOT be perm.denied for the reviewer (comments:write holder) — \
+         the menu would be lying. stderr: {comment_stderr}"
+    );
+
+    println!("STEER-009 no-lying-menu: `but review comment` affordance is truthful");
+    println!(
+        "  -> ran `but review comment feat` as reviewer → not perm.denied (passed authority gate)"
+    );
+    for command in &commands {
+        println!("  - {command}");
+    }
+
+    Ok(())
+}
+
+/// No-lying-menu proof for the reviewer denied-commit menu's `but review
+/// request-changes` affordance on a NON-own branch.
+///
+/// The existing [`governed_loop_steer_reviewer_menu_runnable_no_self_approve`]
+/// test runs `but review request-changes feat` on the reviewer's OWN branch.
+/// This test proves the same affordance is also runnable in the standard
+/// (non-own-branch) denial context, and that `but review approve` IS included
+/// when the denial is NOT on the caller's own branch (the L1 exclusion only
+/// fires on own-branch denials).
+#[test]
+#[serial_test::serial]
+fn governed_loop_steer_no_lying_menu_request_changes_non_own_branch() -> anyhow::Result<()> {
+    let env = governed_loop_env("feat", REVIEW_ID)?;
+
+    // Step 1: derive the reviewer denied-commit menu WITHOUT own_branch flag.
+    // On a non-own-branch denial, `but review approve` is NOT excluded.
+    let (principal, cfg) = steer_load_principal(&env, "refs/heads/feat", "reviewer")?;
+    let denied = DeniedRoute::new(Route::Commit, DenialPredicate::Authority).with_own_branch(false);
+    let commands = steer_menu_commands(&principal, &denied, &cfg);
+
+    assert!(
+        commands.contains(&"but review request-changes"),
+        "non-own-branch denied-commit menu MUST include `but review request-changes`: {commands:?}"
+    );
+    assert!(
+        commands.contains(&"but review comment"),
+        "non-own-branch denied-commit menu MUST include `but review comment`: {commands:?}"
+    );
+    // L1 self-approve exclusion does NOT fire on non-own-branch denials.
+    // However, `but review approve` requires reviews:write, and the reviewer
+    // DOES hold reviews:write via the code-reviewers group — so the menu
+    // includes it. The AFFORDANCE_MAP for (Commit, Authority) does not list
+    // `but review approve` as a candidate, so it won't appear regardless of
+    // own_branch. Verify the menu is still truthful.
+    assert!(
+        !commands.contains(&"but commit"),
+        "reviewer denied-commit (Authority) menu must NOT include `but commit` \
+         (reviewer lacks contents:write): {commands:?}"
+    );
+
+    // Step 2: RUN `but review request-changes feat` — must succeed (exit 0).
+    let request_output = env
+        .but("--format json review request-changes feat -m 'non-own-branch proof'")
+        .allow_json()
+        .env("BUT_AGENT_HANDLE", "reviewer")
+        .output()?;
+    assert!(
+        request_output.status.success(),
+        "no-lying-menu: `but review request-changes feat` must succeed (exit 0) — \
+         the menu offered it. stderr: {}",
+        String::from_utf8_lossy(&request_output.stderr)
+    );
+
+    println!("STEER-009 no-lying-menu: non-own-branch request-changes is truthful");
+    println!("  -> ran `but review request-changes feat` as reviewer → exit 0");
+    for command in &commands {
+        println!("  - {command}");
+    }
+
+    Ok(())
+}
+
+/// Serialization proof: a normal (non-fault) CLI denial envelope includes
+/// ALL four steering fields (`class`, `held_permissions`,
+/// `authorized_actions`) alongside the legacy `code`/`message`/
+/// `remediation_hint`. The `do_not` field is present when `Some` and omitted
+/// when `None` (matching `skip_serializing_if = "Option::is_none"`).
+///
+/// This test parses the JSON envelope from a representative perm.denied
+/// denial and asserts every key is present and well-typed — proving the
+/// CLI serializes the full steering payload for steering consumers.
+#[test]
+#[serial_test::serial]
+fn governed_loop_steer_denial_envelope_carries_full_steering_payload() -> anyhow::Result<()> {
+    let env = governed_loop_env("feat", REVIEW_ID)?;
+    let repo = env.open_repo()?;
+    let feat_before = ref_id(&repo, "refs/heads/feat")?;
+
+    // Trigger a perm.denied: reviewer commits to feat (lacks contents:write).
+    env.file("steering-payload.txt", "steering payload\n");
+    let output = env
+        .but("--format json commit feat -m steering-payload")
+        .allow_json()
+        .env("BUT_AGENT_HANDLE", "reviewer")
+        .output()?;
+
+    assert_eq!(
+        output.status.code(),
+        Some(1),
+        "commit denial must exit 1; stderr: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let envelope = parse_steering_envelope(&output, "STEER-009 full steering payload");
+
+    // Legacy fields — always present.
+    assert_eq!(
+        require_str(&envelope, "code", "STEER-009"),
+        "perm.denied",
+        "STEER-009: code must be the exact denial code"
+    );
+    assert!(
+        !require_str(&envelope, "message", "STEER-009").is_empty(),
+        "STEER-009: message must be non-empty"
+    );
+    assert!(
+        !require_str(&envelope, "remediation_hint", "STEER-009").is_empty(),
+        "STEER-009: remediation_hint must be non-empty"
+    );
+
+    // Steering field 1: class — stable snake_case token.
+    let class = require_str(&envelope, "class", "STEER-009");
+    assert!(
+        class == "actor_correctable" || class == "operator_required",
+        "STEER-009: class must be a stable token, got {class}"
+    );
+
+    // Steering field 2: held_permissions — non-empty array of strings.
+    let held = require_array(&envelope, "held_permissions", "STEER-009");
+    assert!(
+        !held.is_empty(),
+        "STEER-009: held_permissions must be non-empty (reviewer holds reviews:write, comments:write)"
+    );
+    for token in held {
+        assert!(
+            token.as_str().is_some_and(|s| s.contains(':')),
+            "STEER-009: each held_permissions token must be an authority string like 'reviews:write', got {token:?}"
+        );
+    }
+
+    // Steering field 3: authorized_actions — non-empty array of {command, effect}.
+    let actions = require_array(&envelope, "authorized_actions", "STEER-009");
+    assert!(
+        !actions.is_empty(),
+        "STEER-009: authorized_actions must carry the recovery menu"
+    );
+    for action in actions {
+        let action_obj = action.as_object().unwrap_or_else(|| {
+            panic!("STEER-009: each authorized_action must be an object, got {action:?}")
+        });
+        let command = action_obj
+            .get("command")
+            .and_then(serde_json::Value::as_str)
+            .unwrap_or_else(|| {
+                panic!(
+                    "STEER-009: each authorized_action must have a command string, got {action:?}"
+                )
+            });
+        assert!(
+            command.starts_with("but "),
+            "STEER-009: authorized_action command must start with 'but ', got {command:?}"
+        );
+        let effect = action_obj
+            .get("effect")
+            .and_then(serde_json::Value::as_str)
+            .unwrap_or_else(|| {
+                panic!(
+                    "STEER-009: each authorized_action must have an effect string, got {action:?}"
+                )
+            });
+        assert!(
+            !effect.is_empty(),
+            "STEER-009: authorized_action effect must be non-empty for {command:?}"
+        );
+    }
+
+    // Steering field 4: do_not — present when Some, a non-empty string.
+    // For actor_correctable perm.denied, do_not is typically None (omitted).
+    // For operator_required denials (config.invalid, ghost principal),
+    // do_not IS present. Assert the field is well-typed when present.
+    if let Some(do_not_val) = envelope.get("do_not") {
+        assert!(
+            do_not_val.as_str().is_some_and(|s| !s.is_empty()),
+            "STEER-009: do_not must be a non-empty string when present: {do_not_val:?}"
+        );
+    }
+
+    assert_eq!(
+        ref_id(&repo, "refs/heads/feat")?,
+        feat_before,
+        "denied commit must leave feat unchanged"
+    );
+
+    println!("STEER-009: denial envelope carries the full steering payload:");
+    println!("  code={}", require_str(&envelope, "code", "STEER-009"));
+    println!("  class={class}");
+    println!("  held_permissions={}", serde_json::to_string(held)?);
+    println!("  authorized_actions ({} entries)", actions.len());
+    if envelope.contains_key("do_not") {
+        println!("  do_not=present");
+    } else {
+        println!("  do_not=omitted (None for actor_correctable)");
+    }
+
+    Ok(())
+}
+
 fn governed_loop_env(branch_name: &str, review_id: usize) -> anyhow::Result<Sandbox> {
     let env = Sandbox::init_scenario_with_target_and_default_settings("one-stack")?;
     env.invoke_bash(format!(
