@@ -8,7 +8,7 @@ The Principals tab component: renders each registered principal as a row with it
 
 ## Why
 
-Sprint 06a · PRD UC-MGMT-02 · criteria T-MGMT-006/008/010 · capability CAP-AUTHZ-01. The heart of the governance surface — where an admin sees *which* permissions a principal effectively holds and *why* (source-of-grant).
+Sprint 06a · PRD UC-MGMT-02 · criteria T-MGMT-006/008/010 · capability CAP-AUTHZ-01. The heart of the governance surface — where an admin sees _which_ permissions a principal effectively holds and _why_ (source-of-grant).
 
 ## How to verify
 

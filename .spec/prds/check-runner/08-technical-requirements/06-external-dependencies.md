@@ -17,24 +17,24 @@ primitive unnecessary in v1.
 
 ## Capability → satisfied-by (all reused)
 
-| Capability needed | Satisfied by (existing) | Notes |
-|-------------------|-------------------------|-------|
-| Resolve the current head OID; read a tree/blob at an OID | `gix` | Exact pattern in `merge_gate.rs:78,172-179` (head OID) and `:211-242` (blob read); `governance_present` tree read (`config.rs:53-71`). |
-| Materialize the head OID into an isolated working tree | `gix` worktree APIs; `git worktree` executable at the shell boundary | 07 §3 Option A/C. Shelling at the executable boundary is sanctioned (RULES.md); prefer `gix` for in-process logic. |
-| Spawn the check command, capture exit + output | `std::process` (and/or the existing `tokio` async-process facility) | Prior art: `gitbutler-repo/src/hooks.rs` spawns hook processes; `but-forge/src/ci.rs:61-67` runs a `tokio` runtime on a thread. |
-| Enforce `timeout_seconds` | `tokio::time` (already in-tree) or a wait-with-timeout on the child | Hard kill → `timed_out` conclusion (fail-closed). |
-| Parse `.gitbutler/checks/*.toml` + `[[required_check]]` | `toml` + `serde` (`deny_unknown_fields`) | Same crates `merge_gate.rs` already uses for `gates.toml`/`permissions.toml`. |
-| Persist `check_results` | `but-db` (`rusqlite`) | Plain table; mirrors `local_review_verdicts` / `ci_checks`. |
-| Managed temp dir for the throwaway worktree | `tempfile` (commonly already in-tree) **or** a checks-owned cache root | Tests must never use `std::env::temp_dir().join(format!(…))` (crates/AGENTS.md). Confirm `tempfile` presence; if absent, the checks-owned cache-root approach needs no new dep. |
+| Capability needed                                        | Satisfied by (existing)                                                | Notes                                                                                                                                                                           |
+| -------------------------------------------------------- | ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Resolve the current head OID; read a tree/blob at an OID | `gix`                                                                  | Exact pattern in `merge_gate.rs:78,172-179` (head OID) and `:211-242` (blob read); `governance_present` tree read (`config.rs:53-71`).                                          |
+| Materialize the head OID into an isolated working tree   | `gix` worktree APIs; `git worktree` executable at the shell boundary   | 07 §3 Option A/C. Shelling at the executable boundary is sanctioned (RULES.md); prefer `gix` for in-process logic.                                                              |
+| Spawn the check command, capture exit + output           | `std::process` (and/or the existing `tokio` async-process facility)    | Prior art: `gitbutler-repo/src/hooks.rs` spawns hook processes; `but-forge/src/ci.rs:61-67` runs a `tokio` runtime on a thread.                                                 |
+| Enforce `timeout_seconds`                                | `tokio::time` (already in-tree) or a wait-with-timeout on the child    | Hard kill → `timed_out` conclusion (fail-closed).                                                                                                                               |
+| Parse `.gitbutler/checks/*.toml` + `[[required_check]]`  | `toml` + `serde` (`deny_unknown_fields`)                               | Same crates `merge_gate.rs` already uses for `gates.toml`/`permissions.toml`.                                                                                                   |
+| Persist `check_results`                                  | `but-db` (`rusqlite`)                                                  | Plain table; mirrors `local_review_verdicts` / `ci_checks`.                                                                                                                     |
+| Managed temp dir for the throwaway worktree              | `tempfile` (commonly already in-tree) **or** a checks-owned cache root | Tests must never use `std::env::temp_dir().join(format!(…))` (crates/AGENTS.md). Confirm `tempfile` presence; if absent, the checks-owned cache-root approach needs no new dep. |
 
 ## Explicitly NOT added
 
-| Rejected dependency | Why not (v1) |
-|---------------------|--------------|
-| `hmac` / `sha2` (HMAC-SHA256) | No signing in v1. Reproducibility is the integrity basis (01 §3); a forged green is caught by re-running **(post-merge, per 01 §3)**. The actions PRD's reach for `hmac` is dropped. |
-| `ed25519-dalek` (signatures) | Same — no producer signing key, no signature verification. |
-| `but-secret` keyring (as a producer-key store) | No producer key to store. |
-| Any OS-sandbox / container crate (as a *security* boundary) | No runtime isolation in v1; the runner is butler-controlled and trusted-as-reproducible. Isolation is for *not contending on the shared worktree* (07), achieved with a detached worktree — not a security sandbox. |
+| Rejected dependency                                         | Why not (v1)                                                                                                                                                                                                        |
+| ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `hmac` / `sha2` (HMAC-SHA256)                               | No signing in v1. Reproducibility is the integrity basis (01 §3); a forged green is caught by re-running **(post-merge, per 01 §3)**. The actions PRD's reach for `hmac` is dropped.                                |
+| `ed25519-dalek` (signatures)                                | Same — no producer signing key, no signature verification.                                                                                                                                                          |
+| `but-secret` keyring (as a producer-key store)              | No producer key to store.                                                                                                                                                                                           |
+| Any OS-sandbox / container crate (as a _security_ boundary) | No runtime isolation in v1; the runner is butler-controlled and trusted-as-reproducible. Isolation is for _not contending on the shared worktree_ (07), achieved with a detached worktree — not a security sandbox. |
 
 ## Conditional-add discipline (RULES.md)
 

@@ -14,9 +14,9 @@ PRIMARY **AC-1** — `pnpm test:ct:desktop -- RulesListPrincipalIdScoped`: princ
 
 ## Scope
 
-  - apps/desktop/src/components/rules/RulesList.svelte (MODIFY — add optional principalId prop + conditional query branch ONLY)
-  - apps/desktop/tests/governance/RulesListPrincipalId.spec.ts (NEW — CT specs)
-  - apps/desktop/src/components/settings/GovernanceSettings.svelte (MODIFY — add no-principal empty state for Rules tab: when principalId is undefined in the Rules tab context, render EmptyStatePlaceholder instead of RulesList; this is the SOLE additional change beyond MGMT-UI-004's ErrorBoundary wrap)
+- apps/desktop/src/components/rules/RulesList.svelte (MODIFY — add optional principalId prop + conditional query branch ONLY)
+- apps/desktop/tests/governance/RulesListPrincipalId.spec.ts (NEW — CT specs)
+- apps/desktop/src/components/settings/GovernanceSettings.svelte (MODIFY — add no-principal empty state for Rules tab: when principalId is undefined in the Rules tab context, render EmptyStatePlaceholder instead of RulesList; this is the SOLE additional change beyond MGMT-UI-004's ErrorBoundary wrap)
 
 <details>
 <summary>▸ Full agent specification (TASK-TEMPLATE v5.2 — required reading for implementer + reviewer)</summary>
@@ -178,15 +178,15 @@ provides:
   - l
   - t
   - e
-  -  
+  -
   - w
   - i
   - t
   - h
-  -  
+  -
   - a
   - n
-  -  
+  -
   - o
   - p
   - t
@@ -195,7 +195,7 @@ provides:
   - n
   - a
   - l
-  -  
+  -
   - p
   - r
   - i
@@ -209,34 +209,34 @@ provides:
   - d
   - ?
   - :
-  -  
+  -
   - s
   - t
   - r
   - i
   - n
   - g
-  -  
+  -
   - p
   - r
   - o
   - p
   - :
-  -  
+  -
   - w
   - h
   - e
   - n
-  -  
+  -
   - s
   - e
   - t
   - ,
-  -  
+  -
   - t
   - h
   - e
-  -  
+  -
   - r
   - u
   - l
@@ -249,31 +249,31 @@ provides:
   - i
   - c
   - e
-  -  
+  -
   - q
   - u
   - e
   - r
   - y
-  -  
+  -
   - i
   - s
-  -  
+  -
   - s
   - c
   - o
   - p
   - e
   - d
-  -  
+  -
   - t
   - o
-  -  
+  -
   - t
   - h
   - a
   - t
-  -  
+  -
   - p
   - r
   - i
@@ -283,16 +283,16 @@ provides:
   - p
   - a
   - l
-  -  
+  -
   - (
   - v
   - i
   - a
-  -  
+  -
   - t
   - h
   - e
-  -  
+  -
   - M
   - G
   - M
@@ -304,7 +304,7 @@ provides:
   - 0
   - 0
   - 3
-  -  
+  -
   - p
   - r
   - i
@@ -323,7 +323,7 @@ provides:
   - p
   - e
   - d
-  -  
+  -
   - b
   - a
   - c
@@ -331,7 +331,7 @@ provides:
   - e
   - n
   - d
-  -  
+  -
   - q
   - u
   - e
@@ -339,19 +339,19 @@ provides:
   - y
   - )
   - ;
-  -  
+  -
   - w
   - h
   - e
   - n
-  -  
+  -
   - u
   - n
   - s
   - e
   - t
   - ,
-  -  
+  -
   - b
   - e
   - h
@@ -360,10 +360,10 @@ provides:
   - i
   - o
   - r
-  -  
+  -
   - i
   - s
-  -  
+  -
   - b
   - y
   - t
@@ -378,16 +378,16 @@ provides:
   - c
   - a
   - l
-  -  
+  -
   - t
   - o
-  -  
+  -
   - t
   - o
   - d
   - a
   - y
-  -  
+  -
   - (
   - b
   - a
@@ -397,7 +397,7 @@ provides:
   - a
   - r
   - d
-  -  
+  -
   - c
   - o
   - m
@@ -410,45 +410,45 @@ provides:
   - e
   - )
   - .
-  -  
+  -
   - T
   - h
   - i
   - s
-  -  
+  -
   - i
   - s
-  -  
+  -
   - t
   - h
   - e
-  -  
+  -
   - S
   - O
   - L
   - E
-  -  
+  -
   - c
   - h
   - a
   - n
   - g
   - e
-  -  
+  -
   - t
   - o
-  -  
+  -
   - t
   - h
   - e
-  -  
+  -
   - r
   - u
   - l
   - e
   - s
   - /
-  -  
+  -
   - d
   - i
   - r
@@ -537,6 +537,7 @@ DEPENDENCIES
 Depends on: MGMT-BE-003 (principalId-scoped rules query — the backend method RulesList will call when principalId is set); MGMT-UI-001 (desktop CT harness; from Sprint 06a)
 Blocks:     MGMT-UI-012 (build-gate tests verify the rules/ sole-change invariant)
 ```
+
 </details>
 
 <!-- REQUIREMENT-CONTRACT v1 -->

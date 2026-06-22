@@ -2,7 +2,7 @@
 
 ## What this does
 
-Produces a single state-and-layout annotation that maps every ASCII wireframe region in `10-technical-requirements/10-ui-infrastructure.md` to the exact reused component (at its source path) + props/variant, covering all four tab states (Principals · Groups · Branch Gates · Rules) and the cross-cutting overlay states (pending, read-only, denial, empty). It is the single design source of truth for every MGMT-UI-* implementer in Sprint 06a. **No new design-system work** — every token, control, and feedback component already exists in `packages/ui` or `apps/desktop/src/components/shared`.
+Produces a single state-and-layout annotation that maps every ASCII wireframe region in `10-technical-requirements/10-ui-infrastructure.md` to the exact reused component (at its source path) + props/variant, covering all four tab states (Principals · Groups · Branch Gates · Rules) and the cross-cutting overlay states (pending, read-only, denial, empty). It is the single design source of truth for every MGMT-UI-\* implementer in Sprint 06a. **No new design-system work** — every token, control, and feedback component already exists in `packages/ui` or `apps/desktop/src/components/shared`.
 
 ## Why
 

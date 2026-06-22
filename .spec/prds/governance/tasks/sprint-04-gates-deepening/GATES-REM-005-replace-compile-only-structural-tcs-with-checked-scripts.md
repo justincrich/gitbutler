@@ -3,6 +3,7 @@
 ## What this does
 
 The red-hat review found that several structural test criteria in GATES-006, GATES-007, and GATES-008 are verified only by `cargo check`, which cannot prove the structural invariants they claim:
+
 - GATES-006 TC-4 (no human-vs-AI / no role-name literal in `review_requirement.rs`) claims grep coverage but verifies only `cargo check`.
 - GATES-007 TC-7 (all three entry points call the same commit-gate decision helper) claims per-file parity but verifies only `cargo check`.
 - GATES-008 TC-3 (no production merge-path classification change) claims direct-diff ownership but verifies only `cargo check`.

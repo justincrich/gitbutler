@@ -18,7 +18,7 @@ PRIMARY **AC-1** — `cargo test -p but-authz config_loads_from_target_ref` (int
 - crates/but-authz/src/lib.rs (MODIFY) — re-export the loader + GovConfig + ConfigError
 - crates/but-authz/Cargo.toml (MODIFY) — add `gix`, `toml`, `serde`, `anyhow` workspace deps
 - crates/but-authz/tests/config.rs (NEW)
-- crates/but-authz/tests/fixtures/** (NEW) — committed scenario seed scripts if needed
+- crates/but-authz/tests/fixtures/\*\* (NEW) — committed scenario seed scripts if needed
 
 <details>
 <summary>▸ Full agent specification (TASK-TEMPLATE v5.2 — required reading for implementer + reviewer)</summary>

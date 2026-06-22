@@ -14,7 +14,7 @@ PRIMARY **AC-1** — `design review — reviewer confirms EmptyStatePlaceholder 
 
 ## Scope
 
-  - apps/desktop/src/components/governance/DESIGN-ANNOTATIONS.md (MODIFY — extend with Sprint 06b empty-state section for Branch Gates + Rules)
+- apps/desktop/src/components/governance/DESIGN-ANNOTATIONS.md (MODIFY — extend with Sprint 06b empty-state section for Branch Gates + Rules)
 
 <details>
 <summary>▸ Full agent specification (TASK-TEMPLATE v5.2 — required reading for implementer + reviewer)</summary>
@@ -170,6 +170,7 @@ DEPENDENCIES
 Depends on: DESIGN-MGMT-001 (four-tab annotations Sprint 06a — AC-3 specifies Principals/Groups empty states; this task extends with Branch Gates/Rules); DESIGN-MGMT-003 (read-only state contract — empty-state action Button disabled treatment comes from the isReadOnly prop defined there)
 Blocks:     MGMT-UI-009 (BranchGatesList — consumes the Branch Gates empty-state design contract); MGMT-UI-010 (RulesList principalId prop — consumes the Rules tab no-principal empty-state design contract)
 ```
+
 </details>
 
 <!-- REQUIREMENT-CONTRACT v1 -->

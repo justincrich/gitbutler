@@ -2,11 +2,11 @@
 
 ## What this does
 
-Closes the TDD-contract-honesty gap (red-hat finding **A**) by replacing the unmet `requires_red_evidence: true` flag on GRPS-001 and GRPS-002 with the *real* teeth proof — genuine mutation runs that flip the contract tests RED — and a recorded waiver explaining why a behavioral RED was legitimately impossible. GRPS-001 was a behavior-neutral refactor (removing a provably-redundant authorize-time re-union; `effective_authority(p) == principal_authorities(p)` by construction, authorize.rs:51-58); GRPS-002 was a capstone of integration tests over the pre-existing target-ref loader. Neither could exhibit a failing-then-passing behavioral RED, and that impossibility was honestly disclosed at completion — but the flag was never amended and no waiver was recorded. This task (1) produces `.tmp/GRPS-001/mutation-evidence.md` and `.tmp/GRPS-002/mutation-evidence.md` capturing ≥2 genuine mutations each that flip a NAMED contract test RED (with restored-clean confirmation), and (2) amends both REQUIREMENT-CONTRACT `verification_policy` blocks: `requires_red_evidence: false` + a `red_evidence_waiver` reason + a `falsifiability_substitute` pointer to the evidence file. It does NOT fabricate a behavioral RED — fabricating one would be the cardinal sin this task exists to avoid.
+Closes the TDD-contract-honesty gap (red-hat finding **A**) by replacing the unmet `requires_red_evidence: true` flag on GRPS-001 and GRPS-002 with the _real_ teeth proof — genuine mutation runs that flip the contract tests RED — and a recorded waiver explaining why a behavioral RED was legitimately impossible. GRPS-001 was a behavior-neutral refactor (removing a provably-redundant authorize-time re-union; `effective_authority(p) == principal_authorities(p)` by construction, authorize.rs:51-58); GRPS-002 was a capstone of integration tests over the pre-existing target-ref loader. Neither could exhibit a failing-then-passing behavioral RED, and that impossibility was honestly disclosed at completion — but the flag was never amended and no waiver was recorded. This task (1) produces `.tmp/GRPS-001/mutation-evidence.md` and `.tmp/GRPS-002/mutation-evidence.md` capturing ≥2 genuine mutations each that flip a NAMED contract test RED (with restored-clean confirmation), and (2) amends both REQUIREMENT-CONTRACT `verification_policy` blocks: `requires_red_evidence: false` + a `red_evidence_waiver` reason + a `falsifiability_substitute` pointer to the evidence file. It does NOT fabricate a behavioral RED — fabricating one would be the cardinal sin this task exists to avoid.
 
 ## Why
 
-Sprint 03 remediation · red-hat finding **A** (MEDIUM, contract honesty) from `.spec/reviews/red-hat-sprint-03-2026-06-19.md:23-24,36,53-59`. The security-auditor panel raised the unmet/unwaived `requires_red_evidence` as a process-honesty issue; the rust-reviewer's mutation testing supplied the *substitute* evidence (pointing the loader at HEAD/source_ref or widening the effective set flips the tests RED). The honest resolution is to formalize that: record the mutation evidence as the documented falsifiability substitute and amend the contract to a recorded waiver, rather than leaving a true flag permanently unmet (which makes every future `/kb-run-sprint` over these tasks fail the RED-evidence gate) or — far worse — fabricating a behavioral RED. **Human acknowledgment required:** this records a waiver of `requires_red_evidence`; per policy it must be surfaced for human sign-off (see AC-4).
+Sprint 03 remediation · red-hat finding **A** (MEDIUM, contract honesty) from `.spec/reviews/red-hat-sprint-03-2026-06-19.md:23-24,36,53-59`. The security-auditor panel raised the unmet/unwaived `requires_red_evidence` as a process-honesty issue; the rust-reviewer's mutation testing supplied the _substitute_ evidence (pointing the loader at HEAD/source_ref or widening the effective set flips the tests RED). The honest resolution is to formalize that: record the mutation evidence as the documented falsifiability substitute and amend the contract to a recorded waiver, rather than leaving a true flag permanently unmet (which makes every future `/kb-run-sprint` over these tasks fail the RED-evidence gate) or — far worse — fabricating a behavioral RED. **Human acknowledgment required:** this records a waiver of `requires_red_evidence`; per policy it must be surfaced for human sign-off (see AC-4).
 
 ## How to verify
 
@@ -313,6 +313,7 @@ Parallel with: FIX-GRPS-002-AC3-TEETH, FIX-GRPS-001-EMPTY-START-CONTROL
                 "edit GRPS-001 verification_policy: requires_red_evidence -> false; add red_evidence_waiver; add falsifiability_substitute=\".tmp/GRPS-001/mutation-evidence.md\"",
                 "edit GRPS-002 verification_policy: same; falsifiability_substitute=\".tmp/GRPS-002/mutation-evidence.md\"",
                 "extract each contract between the marker's <!-- ... --> and json.loads it"
+
               ]
             },
             "end_state": {
@@ -474,7 +475,9 @@ Parallel with: FIX-GRPS-002-AC3-TEETH, FIX-GRPS-001-EMPTY-START-CONTROL
       "verify": "report inspection",
       "maps_to_ac": "AC-4"
     }
-  ]
+
+]
 }
 -->
+
 </details>

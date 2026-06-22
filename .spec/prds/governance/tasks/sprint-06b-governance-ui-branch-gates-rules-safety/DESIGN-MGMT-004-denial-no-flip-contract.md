@@ -14,7 +14,7 @@ PRIMARY **AC-1** — `design review — reviewer confirms InfoMessage path + sty
 
 ## Scope
 
-  - apps/desktop/src/components/governance/DESIGN-ANNOTATIONS.md (MODIFY — extend with denial-and-no-flip section)
+- apps/desktop/src/components/governance/DESIGN-ANNOTATIONS.md (MODIFY — extend with denial-and-no-flip section)
 
 <details>
 <summary>▸ Full agent specification (TASK-TEMPLATE v5.2 — required reading for implementer + reviewer)</summary>
@@ -173,6 +173,7 @@ DEPENDENCIES
 Depends on: DESIGN-MGMT-002 (pending-state contract — denial banner replaces the pending banner in the slot; must understand slot priority); DESIGN-MGMT-003 (read-only disabled-control contract — denial state applies on top of the same disabled controls)
 Blocks:     MGMT-UI-011 (a11y + IPC-failure danger banner + Retry — this design contract is the primary design source for the denial/no-flip implementation)
 ```
+
 </details>
 
 <!-- REQUIREMENT-CONTRACT v1 -->

@@ -2,7 +2,7 @@
 
 ## What this does
 
-Encode the four structural invariants of the governed SvelteKit front-end as executable build-gate commands that CI and the implementer can run to prove: (1) no governance component issues a direct .gitbutler/*.toml write bypassing the SDK; (2) no +page.server.ts exists anywhere in apps/desktop/src (adapter-static compliance); (3) the regenerated but-sdk types type-check cleanly against all governance components; (4) the desktop config-management write path resolves the human fleet-owner (never falls through to resolve_principal_from_env, no agent superuser branch). These are boolean structural assertions — source-level grep/find/typecheck invariants — not behavioral scenarios. They run in CI on every commit that touches the governance surface.
+Encode the four structural invariants of the governed SvelteKit front-end as executable build-gate commands that CI and the implementer can run to prove: (1) no governance component issues a direct .gitbutler/\*.toml write bypassing the SDK; (2) no +page.server.ts exists anywhere in apps/desktop/src (adapter-static compliance); (3) the regenerated but-sdk types type-check cleanly against all governance components; (4) the desktop config-management write path resolves the human fleet-owner (never falls through to resolve_principal_from_env, no agent superuser branch). These are boolean structural assertions — source-level grep/find/typecheck invariants — not behavioral scenarios. They run in CI on every commit that touches the governance surface.
 
 ## Why
 
@@ -10,11 +10,11 @@ Sprint 06b · PRD UC-MGMT-06 · capability CAP-AUTHZ-01. All four gates exit 0 o
 
 ## How to verify
 
-PRIMARY **AC-1** — `grep -rn 'gitbutler.*\.toml\|writeFile\|fs\.write\|writeTextFile\|writeBinaryFile\|plugin-fs' apps/desktop/src/components/governance/ apps/desktop/src/components/settings/GovernanceSettings.svelte apps/desktop/src/components/rules/RulesList.svelte | grep -v 'but-sdk\|import\|//\|warn\|error\|log' | wc -l | grep '^0$'`: No direct .gitbutler/*.toml write in governance components (T-MGMT-027). Full gate set in the spec below.
+PRIMARY **AC-1** — `grep -rn 'gitbutler.*\.toml\|writeFile\|fs\.write\|writeTextFile\|writeBinaryFile\|plugin-fs' apps/desktop/src/components/governance/ apps/desktop/src/components/settings/GovernanceSettings.svelte apps/desktop/src/components/rules/RulesList.svelte | grep -v 'but-sdk\|import\|//\|warn\|error\|log' | wc -l | grep '^0$'`: No direct .gitbutler/\*.toml write in governance components (T-MGMT-027). Full gate set in the spec below.
 
 ## Scope
 
-  - apps/desktop/tests/governance/BuildGates.spec.ts (optional: CI-runnable test file that wraps the gate commands as test cases, if the project CI convention requires a test file rather than raw shell commands)
+- apps/desktop/tests/governance/BuildGates.spec.ts (optional: CI-runnable test file that wraps the gate commands as test cases, if the project CI convention requires a test file rather than raw shell commands)
 
 <details>
 <summary>▸ Full agent specification (TASK-TEMPLATE v5.2 — required reading for implementer + reviewer)</summary>
@@ -227,22 +227,22 @@ notes:
   - h
   - i
   - s
-  -  
+  -
   - t
   - a
   - s
   - k
-  -  
+  -
   - h
   - a
   - s
-  -  
+  -
   - n
   - o
-  -  
+  -
   - U
   - I
-  -  
+  -
   - c
   - o
   - m
@@ -254,37 +254,37 @@ notes:
   - t
   - s
   - .
-  -  
+  -
   - I
   - t
-  -  
+  -
   - i
   - s
-  -  
+  -
   - a
-  -  
+  -
   - p
   - u
   - r
   - e
-  -  
+  -
   - I
   - N
   - F
   - R
   - A
-  -  
+  -
   - t
   - a
   - s
   - k
   - :
-  -  
+  -
   - g
   - a
   - t
   - e
-  -  
+  -
   - c
   - o
   - m
@@ -293,19 +293,19 @@ notes:
   - n
   - d
   - s
-  -  
+  -
   - t
   - h
   - a
   - t
-  -  
+  -
   - v
   - e
   - r
   - i
   - f
   - y
-  -  
+  -
   - s
   - t
   - r
@@ -316,7 +316,7 @@ notes:
   - r
   - a
   - l
-  -  
+  -
   - i
   - n
   - v
@@ -327,14 +327,14 @@ notes:
   - n
   - t
   - s
-  -  
+  -
   - o
   - f
-  -  
+  -
   - t
   - h
   - e
-  -  
+  -
   - s
   - p
   - r
@@ -345,7 +345,7 @@ notes:
   - 0
   - 6
   - b
-  -  
+  -
   - d
   - e
   - l
@@ -359,37 +359,37 @@ notes:
   - e
   - s
   - .
-  -  
+  -
   - T
   - h
   - e
-  -  
+  -
   - g
   - a
   - t
   - e
   - s
-  -  
+  -
   - r
   - u
   - n
-  -  
+  -
   - a
   - f
   - t
   - e
   - r
-  -  
+  -
   - a
   - l
   - l
-  -  
+  -
   - o
   - t
   - h
   - e
   - r
-  -  
+  -
   - s
   - p
   - r
@@ -400,13 +400,13 @@ notes:
   - 0
   - 6
   - b
-  -  
+  -
   - t
   - a
   - s
   - k
   - s
-  -  
+  -
   - c
   - o
   - m
@@ -415,12 +415,12 @@ notes:
   - e
   - t
   - e
-  -  
+  -
   - (
   - t
   - h
   - e
-  -  
+  -
   - d
   - e
   - p
@@ -431,48 +431,48 @@ notes:
   - n
   - c
   - y
-  -  
+  -
   - c
   - h
   - a
   - i
   - n
-  -  
+  -
   - e
   - n
   - d
   - s
-  -  
+  -
   - h
   - e
   - r
   - e
   - )
   - .
-  -  
+  -
   - I
   - f
-  -  
+  -
   - a
   - n
   - y
-  -  
+  -
   - g
   - a
   - t
   - e
-  -  
+  -
   - f
   - a
   - i
   - l
   - s
   - ,
-  -  
+  -
   - t
   - h
   - e
-  -  
+  -
   - f
   - a
   - i
@@ -480,12 +480,12 @@ notes:
   - u
   - r
   - e
-  -  
+  -
   - i
   - s
-  -  
+  -
   - a
-  -  
+  -
   - r
   - e
   - g
@@ -496,14 +496,14 @@ notes:
   - i
   - o
   - n
-  -  
+  -
   - i
   - n
-  -  
+  -
   - t
   - h
   - e
-  -  
+  -
   - d
   - e
   - p
@@ -513,12 +513,12 @@ notes:
   - e
   - n
   - t
-  -  
+  -
   - t
   - a
   - s
   - k
-  -  
+  -
   - (
   - M
   - G
@@ -539,17 +539,17 @@ notes:
   - 0
   - 1
   - 1
-  -  
+  -
   - f
   - o
   - r
-  -  
+  -
   - A
   - C
   - -
   - 1
   - ;
-  -  
+  -
   - M
   - G
   - M
@@ -562,37 +562,37 @@ notes:
   - 0
   - 0
   - 3
-  -  
+  -
   - f
   - o
   - r
-  -  
+  -
   - A
   - C
   - -
   - 4
   - )
   - ,
-  -  
+  -
   - n
   - o
   - t
-  -  
+  -
   - i
   - n
-  -  
+  -
   - t
   - h
   - i
   - s
-  -  
+  -
   - t
   - a
   - s
   - k
-  -  
+  -
   - —
-  -  
+  -
   - s
   - u
   - r
@@ -600,11 +600,11 @@ notes:
   - a
   - c
   - e
-  -  
+  -
   - t
   - h
   - e
-  -  
+  -
   - b
   - l
   - o
@@ -612,7 +612,7 @@ notes:
   - k
   - e
   - r
-  -  
+  -
   - a
   - g
   - a
@@ -620,18 +620,18 @@ notes:
   - n
   - s
   - t
-  -  
+  -
   - t
   - h
   - e
-  -  
+  -
   - o
   - w
   - n
   - i
   - n
   - g
-  -  
+  -
   - t
   - a
   - s
@@ -654,6 +654,7 @@ DEPENDENCIES
 Depends on: MGMT-UI-009; MGMT-UI-010; MGMT-UI-011; MGMT-UI-004; MGMT-BE-003; MGMT-BE-004; MGMT-IPC-003; MGMT-IPC-004
 Blocks:     none
 ```
+
 </details>
 
 <!-- REQUIREMENT-CONTRACT v1 -->

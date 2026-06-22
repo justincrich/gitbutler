@@ -20,7 +20,7 @@ generated_by: kb-sprint-tasks-plan
 
 ## Overview
 
-The first hardening sprint after the walking skeleton. Sprint 01a/01b proved the *positive* governed
+The first hardening sprint after the walking skeleton. Sprint 01a/01b proved the _positive_ governed
 loop (a `contents:write` commit lands, a reviewed `merge`-holder's merge is permitted) and the basic
 denial paths. Sprint 02 makes the **negative space** sound: the engine must **fail closed** on every
 absence-or-corruption-of-an-answer, and a principal must not be able to exceed its authority by
@@ -32,8 +32,8 @@ Concretely this sprint hardens four properties over the merge/forge gate built i
 - **Fail-closed determinism (AUTHZ-004):** an unknown principal → `perm.denied`; malformed target-ref
   config → `config.invalid`; a `require_approval_from_group` naming an **undefined** group → a hard
   deny (never vacuously satisfied). The `config.invalid` vs `perm.denied` discrimination is
-  deterministic — malformed/unparseable config is *always* `config.invalid`, an unknown/missing
-  principal is *always* `perm.denied`, and the two never blur.
+  deterministic — malformed/unparseable config is _always_ `config.invalid`, an unknown/missing
+  principal is _always_ `perm.denied`, and the two never blur.
 - **Identity confinement (AUTHZ-005):** a dispatched agent's authority comes **only** from its
   injected `BUT_AGENT_HANDLE` resolved against committed config — a governed action under the
   dispatched handle is denied when its committed authority is insufficient, no in-band identity
@@ -53,7 +53,7 @@ structured denial `{code, message, remediation_hint}` + exit code.
 > **Accepted-leak honesty (carried from UC-AUTHZ-03).** Identity confinement is scoped honestly: no
 > in-band `--as <other>` identity override is honored (the unsupported flag is rejected before a
 > governed action runs) and authority is never taken from an agent claim, but a process that
-> *re-exports* `BUT_AGENT_HANDLE` before invoking `but` is **not** prevented
+> _re-exports_ `BUT_AGENT_HANDLE` before invoking `but` is **not** prevented
 > (personal-tenant trusts the orchestrator). AUTHZ-005 tests the in-band denial + claim-ignored
 > property only — it never asserts the env-var re-export is blocked, which would encode a false
 > guarantee.
@@ -78,15 +78,15 @@ instead of running.
 
 ## Tasks
 
-| ID | Title | Agent | Estimate |
-|----|-------|-------|----------|
-| AUTHZ-004 | Merge/forge-gate fail-closed + `config.invalid` vs `perm.denied` determinism + undefined-group hard-deny | rust-implementer | 150 min |
-| AUTHZ-005 | Identity confinement — no honored in-band identity override + handle-only resolution (honest accepted-leak) | rust-implementer | 150 min |
-| AUTHZ-006 | `administration:write` authority primitive on the config-mutating path | rust-implementer | 120 min |
-| AUTHZ-008 | Re-assert the honesty invariant grep-gates after AUTHZ hardening | rust-reviewer | 45 min |
-| FIX-AUTHZ-FORGE-FAILCLOSED | Forge governance opt-in fail-OPEN on absence — swap bespoke `has_governance_config` for canonical `but_authz::governance_present` (permissions-OR-gates, fail-closed-on-error) | rust-implementer | 120 min |
-| FIX-AUTHZ-FORGE-COVERAGE | AUTHZ-008 honesty gate false coverage over `forge.rs` — fully-qualify `authorize` + assert AUTHORITY_POSITIVE & PERMISSION_CARRIER over `FORGE_GUARD` | rust-implementer | 75 min |
-| FIX-AUTHZ-006-RED-EVIDENCE | Produce + commit missing `.tmp/AUTHZ-006/` RED-against-start + seeded evidence per the AUTHZ-006 REQUIREMENT-CONTRACT | rust-implementer | 60 min |
+| ID                         | Title                                                                                                                                                                          | Agent            | Estimate |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------- | -------- |
+| AUTHZ-004                  | Merge/forge-gate fail-closed + `config.invalid` vs `perm.denied` determinism + undefined-group hard-deny                                                                       | rust-implementer | 150 min  |
+| AUTHZ-005                  | Identity confinement — no honored in-band identity override + handle-only resolution (honest accepted-leak)                                                                    | rust-implementer | 150 min  |
+| AUTHZ-006                  | `administration:write` authority primitive on the config-mutating path                                                                                                         | rust-implementer | 120 min  |
+| AUTHZ-008                  | Re-assert the honesty invariant grep-gates after AUTHZ hardening                                                                                                               | rust-reviewer    | 45 min   |
+| FIX-AUTHZ-FORGE-FAILCLOSED | Forge governance opt-in fail-OPEN on absence — swap bespoke `has_governance_config` for canonical `but_authz::governance_present` (permissions-OR-gates, fail-closed-on-error) | rust-implementer | 120 min  |
+| FIX-AUTHZ-FORGE-COVERAGE   | AUTHZ-008 honesty gate false coverage over `forge.rs` — fully-qualify `authorize` + assert AUTHORITY_POSITIVE & PERMISSION_CARRIER over `FORGE_GUARD`                          | rust-implementer | 75 min   |
+| FIX-AUTHZ-006-RED-EVIDENCE | Produce + commit missing `.tmp/AUTHZ-006/` RED-against-start + seeded evidence per the AUTHZ-006 REQUIREMENT-CONTRACT                                                          | rust-implementer | 60 min   |
 
 ## Dependencies
 
@@ -145,7 +145,7 @@ instead of running.
 
 Expanded by `/kb-sprint-tasks-plan` on 2026-06-19 — **1 full red-hat cycle + retained-writer remediation +
 a fresh confirmation pass**. A fresh panel (`rust-reviewer` + `security-auditor`, no authoring context)
-BLOCKed the first draft with **4 CRITICAL + 7 MEDIUM + 3 LOW** findings — all *specification-correctness*
+BLOCKed the first draft with **4 CRITICAL + 7 MEDIUM + 3 LOW** findings — all _specification-correctness_
 gaps the structural + fakeability gates cannot catch:
 
 - **C1** — AUTHZ-004's undefined-`require_approval_from_group` hard-deny rested on a gate schema that does

@@ -8,7 +8,7 @@ Defines the visual contract for the two-column FUNCTIONAL PERMISSIONS table insi
 
 ## Why
 
-Sprint 06a · PRD UC-MGMT-02 (inherited rows read-only, union semantics, batch-save B16) · `10-ui-infrastructure.md` Per-principal permission editor wireframe. Union semantics must be communicated visually so an admin sees *why* a principal holds a permission and cannot accidentally try to revoke an inherited grant from the wrong surface.
+Sprint 06a · PRD UC-MGMT-02 (inherited rows read-only, union semantics, batch-save B16) · `10-ui-infrastructure.md` Per-principal permission editor wireframe. Union semantics must be communicated visually so an admin sees _why_ a principal holds a permission and cannot accidentally try to revoke an inherited grant from the wrong surface.
 
 ## How to verify
 
