@@ -1,4 +1,7 @@
-use but_authz::{Denial, load_governance_config};
+use but_authz::{
+    Authority, AuthorizedAction, Denial, DenialClass, load_governance_config,
+    serialize_authority_tokens,
+};
 use serde::Serialize;
 
 /// Structured administration-write gate error payload for API callers.
@@ -8,6 +11,25 @@ pub struct AdminWriteGateError {
     pub code: &'static str,
     /// Human-readable denial message.
     pub message: String,
+    /// Steering classification — who can recover. Copied off the underlying
+    /// [`but_authz::Denial`] (or defaulted to `ActorCorrectable` for
+    /// `ConfigError`-sourced carriers) so the governance CLI serializer
+    /// (STEER-005) has a real field source.
+    pub class: DenialClass,
+    /// Authority tokens the principal already holds. Serialized as a
+    /// stably-sorted array of `:`-token strings via
+    /// [`but_authz::serialize_authority_tokens`]. Copied off the
+    /// underlying [`but_authz::Denial`].
+    #[serde(serialize_with = "serialize_authority_tokens")]
+    pub held_permissions: Vec<Authority>,
+    /// Recovery verbs the consumer may offer the actor. Copied off the
+    /// underlying [`but_authz::Denial`].
+    pub authorized_actions: Vec<AuthorizedAction>,
+    /// Optional "do not" hint — verbs the actor must NOT attempt. Omitted
+    /// entirely when `None` (no `null` key). Copied off the underlying
+    /// [`but_authz::Denial`] / [`but_authz::ConfigError`].
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub do_not: Option<&'static str>,
 }
 
 /// Enforce authorization before mutating governed configuration.
@@ -28,11 +50,21 @@ pub fn enforce_administration_write_gate(
 }
 
 /// Extract a structured administration-write gate payload from an error chain.
+///
+/// Copies the four steering fields (`class`, `held_permissions`,
+/// `authorized_actions`, `do_not`) off the underlying [`Denial`] (all four)
+/// or [`but_authz::ConfigError`] (`class` + `do_not` only) so the governance
+/// CLI serializer (STEER-005) has a real field source rather than a two-key
+/// `{code,message}` flatten.
 pub fn classify_error(err: &anyhow::Error) -> Option<AdminWriteGateError> {
     if let Some(denial) = err.downcast_ref::<Denial>() {
         return Some(AdminWriteGateError {
             code: denial.code,
             message: denial.message.clone(),
+            class: denial.class,
+            held_permissions: denial.held_permissions.clone(),
+            authorized_actions: denial.authorized_actions.clone(),
+            do_not: denial.do_not,
         });
     }
 
@@ -40,5 +72,9 @@ pub fn classify_error(err: &anyhow::Error) -> Option<AdminWriteGateError> {
         .map(|error| AdminWriteGateError {
             code: error.code(),
             message: error.to_string(),
+            class: error.class.unwrap_or_default(),
+            held_permissions: Vec::new(),
+            authorized_actions: Vec::new(),
+            do_not: error.do_not,
         })
 }

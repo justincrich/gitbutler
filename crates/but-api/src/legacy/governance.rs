@@ -1209,11 +1209,11 @@ fn group_create_authorized(
     let mut permissions = load_permissions_for_write(repo, target_ref)?;
     let exists = permissions.group.iter().any(|entry| entry.name == group);
     if exists {
-        return Err(Denial {
-            code: "config.invalid",
-            message: format!("group {group} already exists"),
-            remediation_hint: "choose a unique group name or grant the existing group".to_owned(),
-        }
+        return Err(Denial::new(
+            "config.invalid",
+            format!("group {group} already exists"),
+            "choose a unique group name or grant the existing group".to_owned(),
+        )
         .into());
     }
 
