@@ -14,6 +14,20 @@
 
 	export type PrincipalEditorWriteResult<T> = T | PrincipalEditorWriteFailure;
 
+	/**
+	 * LPR-014: principal `kind` value. `'agent'` enables the agent-authored tag
+	 * derivation; `'human'` is the conservative default. Descriptor only — it is
+	 * not consulted by any authorization decision and is not part of the
+	 * enforcement configuration map.
+	 */
+	export type PrincipalKindValue = "agent" | "human";
+
+	/**
+	 * Outcome shape for the LPR-013 `principalKindUpdate` SDK binding at the
+	 * component-test seam. The real backend persistence proof is LPR-013 AC-5.
+	 */
+	export type PrincipalKindOutcome = { ok: true };
+
 	export type PrincipalEditorService = {
 		deniedCode?: string;
 		permGrant: (
@@ -40,6 +54,18 @@
 			group: string,
 			member: string,
 		) => Promise<PrincipalEditorWriteResult<GroupWriteOutcome>>;
+		/**
+		 * LPR-014: writes the principal's additive `kind` descriptor via the LPR-013
+		 * SDK binding. Routes through the governance IPC path
+		 * (administration:write-gated — same route as permGrant/permRevoke), NOT the
+		 * project-settings path.
+		 */
+		principalKindUpdate: (
+			projectId: string,
+			targetRef: string,
+			principal: string,
+			kind: PrincipalKindValue,
+		) => Promise<PrincipalEditorWriteResult<PrincipalKindOutcome>>;
 	};
 </script>
 
@@ -60,6 +86,11 @@
 		availableGroups?: string[];
 		isCurrentUser?: boolean;
 		isReadOnly?: boolean;
+		/**
+		 * LPR-014: principal's declared kind from the governance read path (LPR-005).
+		 * Absent (`undefined`) defaults to `'human'` (conservative posture).
+		 */
+		kind?: PrincipalKindValue | undefined;
 		service?: PrincipalEditorService;
 		onCancel?: () => void;
 		onSaved?: () => void;
@@ -84,6 +115,11 @@
 		grantsToRemove: string[];
 		groupsToAdd: string[];
 		groupsToRemove: string[];
+		/**
+		 * LPR-014: when defined, applyWriteSet calls principalKindUpdate with this
+		 * value. `undefined` means kind is unchanged from the committed value.
+		 */
+		kindWrite: PrincipalKindValue | undefined;
 	};
 
 	const permissionRows: PermissionRow[] = [
@@ -111,6 +147,7 @@
 		availableGroups = [],
 		isCurrentUser = false,
 		isReadOnly = false,
+		kind = "human",
 		service: providedService,
 		onCancel,
 		onSaved,
@@ -120,6 +157,8 @@
 	const service = untrack(() => providedService ?? createBackendService());
 	const initialOwnGrants = untrack(() => uniqueSorted(ownGrants));
 	const initialGroups = untrack(() => uniqueSorted(groupMemberships));
+	// LPR-014: absent kind defaults to 'human' (conservative posture per LPR-005 AC-4).
+	const initialKind = untrack(() => (kind === "agent" || kind === "human" ? kind : "human"));
 	const inheritedAuthorityMap = $derived(
 		new Map(inheritedGrants.map((grant) => [grant.authority, grant.sourceLabel])),
 	);
@@ -128,6 +167,8 @@
 	let stagedOwnGrants = $state([...initialOwnGrants]);
 	let committedGroups = $state([...initialGroups]);
 	let stagedGroups = $state([...initialGroups]);
+	let committedKind = $state<PrincipalKindValue>(initialKind);
+	let stagedKind = $state<PrincipalKindValue>(initialKind);
 	let selectedPreset = $state(untrack(() => resolvePreset(initialOwnGrants)));
 	let saveError = $state<WriteDenial | undefined>();
 	let retryFailedWrite = $state<(() => Promise<void>) | undefined>();
@@ -136,7 +177,8 @@
 	const controlsDisabled = $derived(isReadOnly || isSaving || isWriteLocked);
 	const hasStagedChanges = $derived(
 		!sameMembers(committedOwnGrants, stagedOwnGrants) ||
-			!sameMembers(committedGroups, stagedGroups),
+			!sameMembers(committedGroups, stagedGroups) ||
+			committedKind !== stagedKind,
 	);
 	const groupTags = $derived(stagedGroups.map((group) => ({ id: group, label: group })));
 
@@ -197,6 +239,15 @@
 					targetRef,
 					group,
 					member,
+				});
+			},
+			principalKindUpdate(projectId, targetRef, principal, kind) {
+				if (!backend) throw new Error("governance.backend_unavailable");
+				return backend.invoke<PrincipalKindOutcome>("principal_kind_update", {
+					projectId,
+					targetRef,
+					principal,
+					kind,
 				});
 			},
 		};
@@ -283,9 +334,22 @@
 		);
 	}
 
+	/**
+	 * LPR-014: stage a kind descriptor change. The write goes through the governance
+	 * IPC path on Save (administration:write-gated, same route as permGrant/permRevoke),
+	 * NOT the project-settings path. Commits on Save click alongside other staged
+	 * changes (per DESIGN-LPR-002 — same write path that saves other principal fields).
+	 */
+	function setKind(nextKind: PrincipalKindValue) {
+		saveError = undefined;
+		retryFailedWrite = undefined;
+		stagedKind = nextKind;
+	}
+
 	function resetStaged() {
 		stagedOwnGrants = [...committedOwnGrants];
 		stagedGroups = [...committedGroups];
+		stagedKind = committedKind;
 		selectedPreset = resolvePreset(stagedOwnGrants);
 	}
 
@@ -380,6 +444,7 @@
 			grantsToRemove: difference(committedOwnGrants, stagedOwnGrants),
 			groupsToAdd: difference(stagedGroups, committedGroups),
 			groupsToRemove: difference(committedGroups, stagedGroups),
+			kindWrite: stagedKind !== committedKind ? stagedKind : undefined,
 		};
 	}
 
@@ -410,10 +475,23 @@
 			assertServiceAllowed();
 		}
 
+		// LPR-014: kind write through the LPR-013 SDK binding (governance IPC path).
+		// Verified at component-test scope via spy; backend persistence is LPR-013 AC-5.
+		if (writeSet.kindWrite !== undefined) {
+			assertWriteSucceeded(
+				await service.principalKindUpdate(projectId, targetRef, principalId, writeSet.kindWrite),
+			);
+			assertServiceAllowed();
+		}
+
 		committedOwnGrants = [...writeSet.ownGrants];
 		stagedOwnGrants = [...writeSet.ownGrants];
 		committedGroups = [...writeSet.groups];
 		stagedGroups = [...writeSet.groups];
+		if (writeSet.kindWrite !== undefined) {
+			committedKind = writeSet.kindWrite;
+			stagedKind = writeSet.kindWrite;
+		}
 		selectedPreset = resolvePreset(stagedOwnGrants);
 		onSaved?.();
 	}
@@ -481,6 +559,33 @@
 			<SegmentControl.Item id="maintain" disabled={controlsDisabled}>Maintain</SegmentControl.Item>
 			<SegmentControl.Item id="admin" disabled={controlsDisabled}>Admin</SegmentControl.Item>
 		</SegmentControl>
+	</div>
+
+	<div class="principal-editor__section">
+		<span class="principal-editor__label">Kind</span>
+		<SegmentControl
+			selected={stagedKind}
+			onselect={(id) => setKind(id === "agent" ? "agent" : "human")}
+		>
+			<SegmentControl.Item
+				id="human"
+				testId="principal-editor-kind-human"
+				disabled={controlsDisabled}
+			>
+				Human
+			</SegmentControl.Item>
+			<SegmentControl.Item
+				id="agent"
+				testId="principal-editor-kind-agent"
+				disabled={controlsDisabled}
+			>
+				Agent
+			</SegmentControl.Item>
+		</SegmentControl>
+		<p class="principal-editor__kind-caption" data-testid="principal-editor-kind-caption">
+			This label identifies the principal as an agent or human for tagging purposes. It does not
+			change any permission grant or gate decision.
+		</p>
 	</div>
 
 	<div class="principal-editor__section">
@@ -589,6 +694,13 @@
 
 	.principal-editor__label {
 		font-weight: 600;
+	}
+
+	.principal-editor__kind-caption {
+		margin: 0;
+		color: var(--clr-text-2);
+		font-size: var(--font-size-sm, 0.85rem);
+		line-height: 1.4;
 	}
 
 	.permission-table {

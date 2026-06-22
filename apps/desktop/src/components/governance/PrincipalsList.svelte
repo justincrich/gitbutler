@@ -5,6 +5,12 @@
 	} from "$components/governance/PrincipalEditor.svelte";
 	import type { GovernancePrincipalsList, GovernanceTarget } from "$lib/governance";
 
+	/**
+	 * Additive `kind` descriptor (LPR-005 / LPR-014). When `'agent'`, the row renders
+	 * a decorative agent Badge. Absent or `'human'` renders no badge (the conservative
+	 * default-human posture). `kind` is enforcement-neutral: it gates nothing and is
+	 * never read by any gate predicate.
+	 */
 	export type PrincipalsListEntry = {
 		principalId: string;
 		ownGrants: string[];
@@ -12,6 +18,7 @@
 		groupMemberships?: string[];
 		pending?: boolean;
 		isCurrentUser?: boolean;
+		kind?: "agent" | "human" | undefined;
 	};
 
 	export type PrincipalsListService = {
@@ -38,6 +45,12 @@
 		availableGroups?: string[];
 		onRefresh?: () => void;
 		onAddFirst?: () => void;
+		/**
+		 * LPR-014: invoked after a successful governance write (e.g. kind write) for a
+		 * principal, so the parent (GovernanceSettings) can increment the pending-banner
+		 * count. Mirrors the `onGroupPending` callback on GroupsList.
+		 */
+		onPrincipalPending?: (principalId: string) => void;
 	};
 
 	const {
@@ -50,6 +63,7 @@
 		availableGroups = [],
 		onRefresh,
 		onAddFirst,
+		onPrincipalPending,
 	}: Props = $props();
 
 	const backend = injectOptional(BACKEND, undefined);
@@ -136,8 +150,22 @@
 	}
 
 	function refreshAfterSave() {
+		// LPR-014: mark the just-saved principal as pending in local state so the
+		// existing ○ Badge (lines 178-187) renders; notify the parent so the governance
+		// pending-banner count can increment via the existing pendingStore pattern.
+		if (selectedPrincipalId) {
+			principals = principals.map((principal) =>
+				principal.principalId === selectedPrincipalId ? { ...principal, pending: true } : principal,
+			);
+			onPrincipalPending?.(selectedPrincipalId);
+		}
 		onRefresh?.();
-		void loadPrincipals();
+		// Only auto-reload when PrincipalsList owns the data (no providedPrincipals).
+		// When the parent provides principals (test scope or explicit data), it owns
+		// the lifecycle and we must not overwrite local state with a fetch.
+		if (providedPrincipals === undefined) {
+			void loadPrincipals();
+		}
 	}
 </script>
 
@@ -186,6 +214,17 @@
 								</Badge>
 							{/if}
 							<strong>{principal.principalId}</strong>
+							{#if principal.kind === "agent"}
+								<Badge
+									testId={`principals-list-agent-${slug(principal.principalId)}`}
+									style="gray"
+									kind="soft"
+									size="tag"
+									tooltip="This label identifies the principal as an agent or human for tagging purposes. It does not change any permission grant or gate decision."
+								>
+									agent
+								</Badge>
+							{/if}
 						</span>
 
 						<span class="principals-list__grants">
@@ -221,6 +260,7 @@
 								{groupMemberships}
 								{availableGroups}
 								isCurrentUser={principal.isCurrentUser}
+								kind={principal.kind}
 								{isReadOnly}
 								service={editorService}
 								onCancel={() => (selectedPrincipalId = undefined)}
