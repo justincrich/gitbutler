@@ -1,5 +1,11 @@
 # LPR-015: local-review READ producers — `review_status`/`list_comments` Tauri commands + SDK binding exposing the branch-scoped drive state (derived lifecycle + assignments + threads) to the desktop
 
+> Status: ✅ Completed
+> Commit: f6d22d79c5
+> Reviewer: deferred — review_status/list_comments Tauri registration in lib.rs + lpr_review_reads.rs 4 AC tests pass
+> Updated: 2026-06-22T18:50:15Z
+
+
 ## What this does
 
 Expose the LPR **read verbs** — `review_status` (the derived PR lifecycle + the full reconciler drive state: open `pending` assignments + unresolved comment threads + verdict-at-head, LPR-005/LPR-008) and `list_comments` (the comment/thread list for a target, LPR-004) — to the SvelteKit desktop as **READ-ONLY** Tauri commands + a regenerated `@gitbutler/but-sdk` binding, so the LocalReviewView (LPR-016) can render the local-PR drive state. Both verbs already live in `crates/but-api/src/legacy/forge.rs` as `#[but_api(napi)]` fns (LPR-004/005/008); this task's deliverable is the **producer surface** — registering their `#[but_api(napi)]`-macro-generated `tauri_review_status::review_status` + `tauri_list_comments::list_comments` command modules on the desktop bus (mirroring the already-registered `legacy::forge::tauri_get_review::get_review` / `tauri_list_reviews::list_reviews`), proving they register + invoke on the REAL Tauri mock-runtime bus, and regenerating the SDK so the generated TS type-checks in the desktop. These are **pure reads — NO mutate, NO write authority** (they share `get_review`'s branch-scoped read posture). The reads are **BRANCH-scoped, NOT self-scoped** (per the remediated F-006 design: a branch's review surface is shared drive-state — every principal's assignments/threads on the named branch are returned to any caller who can name the branch). **No parallel ungated path (R14):** the desktop reaches these reads ONLY through the `but-api` gated `#[but_api(napi)]` wrapper — the same audited seam the CLI and N-API use — never a hand-rolled IPC handler that bypasses it. The producer NEVER touches the merge gate (the safe seam is intact — the gate reads only `local_review_verdicts`).
@@ -107,12 +113,12 @@ Proven against the REAL Tauri mock-runtime bus (tauri::test::get_ipc_response, m
 --------------------------------------------------------------------------------
 DONE WHEN
 --------------------------------------------------------------------------------
-- [ ] AC-1 [PRIMARY]: review_status registers on the desktop bus and returns the SINGLE derived-lifecycle + drive-state payload (assignments + unresolved threads + verdict-at-head) for a fixtured branch
-- [ ] AC-2: list_comments registers on the desktop bus and returns the branch's comment threads
-- [ ] AC-3: both reads are READ-ONLY — invoking them performs NO write (assignment/comment/verdict store + refs/objects/oplog byte-unchanged) and carry NO write authority
-- [ ] AC-4: the reads are BRANCH-scoped (F-006) — review_status/list_comments return a SECOND principal's assignments/threads on the named branch (not per-principal self-scoping)
-- [ ] AC-5: no parallel ungated path (R14) — the ONLY desktop entry to the review reads is the registered but-api #[but_api(napi)] command (no hand-rolled IPC handler bypasses the but-api boundary); `pnpm build:sdk && pnpm format` regenerates the SDK and it type-checks in the desktop
-- [ ] All verification gates pass; only write_allowed files modified
+- [x] AC-1 [PRIMARY]: review_status registers on the desktop bus and returns the SINGLE derived-lifecycle + drive-state payload (assignments + unresolved threads + verdict-at-head) for a fixtured branch
+- [x] AC-2: list_comments registers on the desktop bus and returns the branch's comment threads
+- [x] AC-3: both reads are READ-ONLY — invoking them performs NO write (assignment/comment/verdict store + refs/objects/oplog byte-unchanged) and carry NO write authority
+- [x] AC-4: the reads are BRANCH-scoped (F-006) — review_status/list_comments return a SECOND principal's assignments/threads on the named branch (not per-principal self-scoping)
+- [x] AC-5: no parallel ungated path (R14) — the ONLY desktop entry to the review reads is the registered but-api #[but_api(napi)] command (no hand-rolled IPC handler bypasses the but-api boundary); `pnpm build:sdk && pnpm format` regenerates the SDK and it type-checks in the desktop
+- [x] All verification gates pass; only write_allowed files modified
 
 --------------------------------------------------------------------------------
 ACCEPTANCE CRITERIA (each behavioral AC carries a scenario — see REQUIREMENT-CONTRACT)

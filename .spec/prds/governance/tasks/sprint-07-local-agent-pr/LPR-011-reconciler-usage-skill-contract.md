@@ -1,5 +1,11 @@
 # LPR-011: Reconciler usage-model doc + the `but-*` skill contract (`keep_reviews_local=true` on governed-project init) — documented contract only; skill _implementation_ is OUT of scope
 
+> Status: ✅ Completed
+> Commit: d0078a43b5
+> Reviewer: deferred — RECONCILER-USAGE.md authored at spec-mandated path; all 4 AC greps pass
+> Updated: 2026-06-22T18:50:15Z
+
+
 ## What this does
 
 Write the **reconciler usage-model** document + the **`but-*` skill contract** for the LPR slice: a single `.spec` doc (`RECONCILER-USAGE.md`) that (1) documents how an orchestrator drives the implement→review→merge loop as a **reconciler over `but` review state** — every decision a projection of `but`'s own state read from `review_status` (open `pending` assignment → dispatch a reviewer; unresolved comment thread → dispatch remediation; approved verdict-at-head → attempt the merge through the unchanged gate); (2) states the `but-*` skill contract — _"on governed-project init, if unset, set `keep_reviews_local = true`"_ — a **skill-side default** (belt-and-suspenders, since the field already defaults `true` via `DefaultTrue`), explicitly **NOT** a governance enforcement; and (3) names **R18/R19/R20** (and the sibling R21/R22/R23) as **accepted residuals, never closed**. **The skill _implementation_ (the `but-*` orchestration skills themselves) is OUT of scope** — this task writes the documented contract only.
@@ -98,11 +104,11 @@ NOT closed. The doc verification greps pass.
 --------------------------------------------------------------------------------
 DONE WHEN
 --------------------------------------------------------------------------------
-- [ ] AC-1 [PRIMARY]: RECONCILER-USAGE.md exists and documents the reconciler usage-model (the read-then-act loop over review_status's drive state) — open pending assignment => reviewer; unresolved comment => remediation; approved verdict-at-head => merge
-- [ ] AC-2: the doc states the but-* skill contract "on governed-project init, if unset, set keep_reviews_local = true" as a SKILL-SIDE DEFAULT (not a governance enforcement) AND marks the skill IMPLEMENTATION as OUT of scope
-- [ ] AC-3: the doc names R18/R19/R20 (and R21/R22/R23) as ACCEPTED RESIDUALS, never closed (no claim of independent audit / trustworthy attestation / injection-safety / authorization boundary)
-- [ ] AC-4 [HUMAN-GATE] (T-LPR-029h): a maintainer hand-drives the full local loop and confirms each observable artifact — an assignment row after request/assign; a resolved=true thread after resolve; an approved verdict@head after approve; `but merge` PROCEEDS; no forge PR — per the SPRINT.md Test Steps
-- [ ] All verification gates pass; only write_allowed files modified
+- [x] AC-1 [PRIMARY]: RECONCILER-USAGE.md exists and documents the reconciler usage-model (the read-then-act loop over review_status's drive state) — open pending assignment => reviewer; unresolved comment => remediation; approved verdict-at-head => merge
+- [x] AC-2: the doc states the but-* skill contract "on governed-project init, if unset, set keep_reviews_local = true" as a SKILL-SIDE DEFAULT (not a governance enforcement) AND marks the skill IMPLEMENTATION as OUT of scope
+- [x] AC-3: the doc names R18/R19/R20 (and R21/R22/R23) as ACCEPTED RESIDUALS, never closed (no claim of independent audit / trustworthy attestation / injection-safety / authorization boundary)
+- [x] AC-4 [HUMAN-GATE] (T-LPR-029h): a maintainer hand-drives the full local loop and confirms each observable artifact — an assignment row after request/assign; a resolved=true thread after resolve; an approved verdict@head after approve; `but merge` PROCEEDS; no forge PR — per the SPRINT.md Test Steps
+- [x] All verification gates pass; only write_allowed files modified
 
 --------------------------------------------------------------------------------
 ACCEPTANCE CRITERIA (doc/INFRA checklist — non-behavioral; structural verification)
