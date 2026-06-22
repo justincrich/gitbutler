@@ -149,19 +149,13 @@ impl LocalReviewCommentsHandleMut<'_> {
         Ok(())
     }
 
-    /// Set the `resolved` flag on every comment in a thread scoped to a target.
+    /// Set the `resolved` flag on every comment in a thread.
     ///
-    /// Other threads on the same target are left untouched.
-    pub fn set_resolved(
-        &mut self,
-        target: &str,
-        thread_id: &str,
-        resolved: bool,
-    ) -> rusqlite::Result<()> {
+    /// Other threads are left untouched — the UPDATE scopes to `thread_id`.
+    pub fn set_resolved(&mut self, thread_id: &str, resolved: bool) -> rusqlite::Result<()> {
         self.conn.execute(
-            "UPDATE local_review_comments SET resolved = ?1 \
-             WHERE target = ?2 AND thread_id = ?3",
-            rusqlite::params![resolved, target, thread_id],
+            "UPDATE local_review_comments SET resolved = ?1 WHERE thread_id = ?2",
+            rusqlite::params![resolved, thread_id],
         )?;
         Ok(())
     }

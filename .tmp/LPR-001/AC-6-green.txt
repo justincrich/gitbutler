@@ -1,0 +1,28 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.38s
+     Running unittests src/lib.rs (target/debug/deps/but_db-4b213fdbe1ae64d1)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 5 filtered out; finished in 0.00s
+
+     Running tests/cross_process_migrations.rs (target/debug/deps/cross_process_migrations-77b69fe0b05550b0)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 1 filtered out; finished in 0.00s
+
+     Running tests/db/main.rs (target/debug/deps/db-a0a03bc0f51dc84a)
+
+running 1 test
+fresh_db queryable assignments=0 comments=0 meta_is_some=false
+highest_migration_ids=[20260621120200, 20260621120100, 20260621120000, 20260619120000, 20260618093000]
+test table::local_review_assignments::local_review_tables_migrations_registered_zero ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 131 filtered out; finished in 0.01s
+
+     Running tests/open_rela_path.rs (target/debug/deps/open_rela_path-0047a0940bb8c597)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 1 filtered out; finished in 0.00s
+

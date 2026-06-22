@@ -8,29 +8,33 @@ use crate::table::in_memory_db;
 fn local_review_meta_opener_is_write_once_per_target_key() -> anyhow::Result<()> {
     let mut db = in_memory_db();
 
-    let opener = meta("refs/heads/feat", "opener", "justin", 1_000_000);
+    let opener = meta("refs/heads/feat", "opener_principal", "agent-A", 1_000_000);
     db.local_review_meta_mut()
         .upsert_if_absent(opener.clone())?;
 
-    let fetched = db.local_review_meta().get("refs/heads/feat", "opener")?;
+    let fetched = db
+        .local_review_meta()
+        .get("refs/heads/feat", "opener_principal")?;
     println!("opener_after_first_insert={fetched:?}");
     assert_eq!(
         fetched.as_ref(),
         Some(&opener),
-        "first write should be persisted"
+        "first write should be persisted — a stub would return None"
     );
 
     // Same (target, key) but a different value — must be a NO-OP.
-    let different_value = meta("refs/heads/feat", "opener", "reviewer", 1_000_001);
-    db.local_review_meta_mut()
-        .upsert_if_absent(different_value)?;
+    let impostor = meta("refs/heads/feat", "opener_principal", "impostor", 1_000_001);
+    db.local_review_meta_mut().upsert_if_absent(impostor)?;
 
-    let after_second = db.local_review_meta().get("refs/heads/feat", "opener")?;
+    let after_second = db
+        .local_review_meta()
+        .get("refs/heads/feat", "opener_principal")?;
     println!("opener_after_second_insert={after_second:?}");
     assert_eq!(
         after_second.as_ref(),
         Some(&opener),
-        "second upsert_if_absent with same (target, key) must be a no-op"
+        "second upsert_if_absent with same (target, key) must be a no-op — \
+         value must still be agent-A, NOT impostor (a DO UPDATE impl would overwrite and break the R23 narrowing)"
     );
 
     let missing = db
@@ -39,7 +43,7 @@ fn local_review_meta_opener_is_write_once_per_target_key() -> anyhow::Result<()>
     println!("missing_key={missing:?}");
     assert!(
         missing.is_none(),
-        "a missing (target, key) should return None, not an error"
+        "a missing (target, key) should return None, not an error or a fabricated row"
     );
 
     Ok(())

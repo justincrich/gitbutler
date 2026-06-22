@@ -112,13 +112,20 @@ impl LocalReviewAssignmentsHandleMut<'_> {
         Ok(())
     }
 
-    /// Flip the `state` of a single assignment identified by `id`.
+    /// Flip the `state` of the assignment identified by `(target, reviewer_principal)`.
     ///
-    /// Other assignments on the same target are left untouched.
-    pub fn set_state(&mut self, id: &str, state: &str) -> rusqlite::Result<()> {
+    /// Other assignments on the same target are left untouched — the UPDATE scopes to
+    /// the `(target, reviewer_principal)` pair, not the whole target.
+    pub fn set_state(
+        &mut self,
+        target: &str,
+        reviewer_principal: &str,
+        state: &str,
+    ) -> rusqlite::Result<()> {
         self.conn.execute(
-            "UPDATE local_review_assignments SET state = ?1 WHERE id = ?2",
-            rusqlite::params![state, id],
+            "UPDATE local_review_assignments SET state = ?1 \
+             WHERE target = ?2 AND reviewer_principal = ?3",
+            rusqlite::params![state, target, reviewer_principal],
         )?;
         Ok(())
     }

@@ -8,132 +8,140 @@ use crate::table::in_memory_db;
 fn local_review_comments_insert_and_list() -> anyhow::Result<()> {
     let mut db = in_memory_db();
 
-    let with_anchor = comment(
+    let code_comment = comment(
         "c1",
         "refs/heads/feat",
-        "rust-reviewer",
-        "nits to fix",
-        Some("src/lib.rs".to_string()),
-        Some(42),
-        "thread-1",
+        "rev",
+        "fix this",
+        Some("f.rs".to_string()),
+        Some(12),
+        "t1",
         1_000_000,
     );
-    let without_anchor = comment(
+    let pr_level = comment(
         "c2",
         "refs/heads/feat",
-        "justin",
+        "rev",
         "general remark",
         None,
         None,
-        "thread-2",
+        "t2",
         1_000_001,
     );
 
-    db.local_review_comments_mut().insert(with_anchor.clone())?;
     db.local_review_comments_mut()
-        .insert(without_anchor.clone())?;
+        .insert(code_comment.clone())?;
+    db.local_review_comments_mut().insert(pr_level.clone())?;
+
+    let by_thread = db
+        .local_review_comments()
+        .list_by_thread("refs/heads/feat", "t1")?;
+    println!("insert_and_list by_thread(t1)={by_thread:?}");
+    assert_eq!(
+        by_thread,
+        vec![code_comment.clone()],
+        "list_by_thread(t1) should return only C1 with resolved=false, file=Some(f.rs), line=Some(12) — \
+         a missing thread_id filter would leak C2"
+    );
+    assert!(
+        !by_thread[0].resolved,
+        "resolved must be false on insert, not defaulted to true"
+    );
 
     let by_target = db
         .local_review_comments()
         .list_by_target("refs/heads/feat")?;
     println!("insert_and_list by_target={by_target:?}");
-
     assert_eq!(
         by_target.len(),
         2,
         "both comments should be listed under the target"
     );
     assert_eq!(
-        by_target[0], with_anchor,
-        "first comment should round-trip with file+line anchor"
+        by_target[0], code_comment,
+        "first comment should round-trip with file=Some(f.rs), line=Some(12)"
     );
     assert_eq!(
-        by_target[1], without_anchor,
-        "second comment should round-trip without anchor"
-    );
-
-    let thread1 = db
-        .local_review_comments()
-        .list_by_thread("refs/heads/feat", "thread-1")?;
-    println!("insert_and_list thread-1={thread1:?}");
-    assert_eq!(
-        thread1,
-        vec![with_anchor.clone()],
-        "thread-1 should return only its own comment"
-    );
-
-    let thread2 = db
-        .local_review_comments()
-        .list_by_thread("refs/heads/feat", "thread-2")?;
-    println!("insert_and_list thread-2={thread2:?}");
-    assert_eq!(
-        thread2,
-        vec![without_anchor],
-        "thread-2 should return only its own comment"
+        by_target[1], pr_level,
+        "PR-level comment should round-trip file=None && line=None"
     );
 
     Ok(())
 }
 
-/// AC-4: set_resolved flips every comment in a thread, leaves other thread untouched.
+/// AC-4: set_resolved(thread_id, resolved) flips every comment in a thread,
+/// leaves another thread's comments untouched.
 #[test]
 fn local_review_comments_set_resolved_scopes_to_thread() -> anyhow::Result<()> {
     let mut db = in_memory_db();
 
-    let t1_first = comment(
-        "c1",
+    let t1a = comment(
+        "c1a",
         "refs/heads/feat",
-        "rust-reviewer",
-        "first in thread 1",
+        "rev",
+        "first in t1",
         None,
         None,
-        "thread-1",
+        "t1",
         1_000_000,
     );
-    let t1_second = comment(
-        "c2",
+    let t1b = comment(
+        "c1b",
         "refs/heads/feat",
-        "justin",
-        "second in thread 1",
+        "rev",
+        "second in t1",
         None,
         None,
-        "thread-1",
+        "t1",
         1_000_001,
     );
-    let t2_first = comment(
-        "c3",
+    let t2 = comment(
+        "c2",
         "refs/heads/feat",
-        "rust-reviewer",
-        "first in thread 2",
+        "rev",
+        "first in t2",
         None,
         None,
-        "thread-2",
+        "t2",
         1_000_002,
     );
 
-    db.local_review_comments_mut().insert(t1_first)?;
-    db.local_review_comments_mut().insert(t1_second)?;
-    db.local_review_comments_mut().insert(t2_first)?;
+    db.local_review_comments_mut().insert(t1a)?;
+    db.local_review_comments_mut().insert(t1b)?;
+    db.local_review_comments_mut().insert(t2)?;
 
-    db.local_review_comments_mut()
-        .set_resolved("refs/heads/feat", "thread-1", true)?;
+    db.local_review_comments_mut().set_resolved("t1", true)?;
 
-    let thread1 = db
+    let rows = db
         .local_review_comments()
-        .list_by_thread("refs/heads/feat", "thread-1")?;
-    println!("set_resolved thread-1={thread1:?}");
+        .list_by_target("refs/heads/feat")?;
+    println!("set_resolved_scopes_to_thread rows={rows:?}");
+
+    let by_thread: std::collections::HashMap<&str, Vec<bool>> = {
+        let mut map: std::collections::HashMap<&str, Vec<bool>> = std::collections::HashMap::new();
+        for r in &rows {
+            map.entry(r.thread_id.as_str())
+                .or_default()
+                .push(r.resolved);
+        }
+        map
+    };
+
+    let t1_resolved = by_thread.get("t1").expect("t1 comments must exist");
     assert!(
-        thread1.iter().all(|c| c.resolved),
-        "every comment in thread-1 should be resolved"
+        t1_resolved.iter().all(|&r| r),
+        "every comment in t1 (C1a, C1b) should be resolved — got {t1_resolved:?}"
+    );
+    assert_eq!(
+        t1_resolved.len(),
+        2,
+        "both t1 comments should be present — a LIMIT 1 bug would only flip one"
     );
 
-    let thread2 = db
-        .local_review_comments()
-        .list_by_thread("refs/heads/feat", "thread-2")?;
-    println!("set_resolved thread-2={thread2:?}");
+    let t2_resolved = by_thread.get("t2").expect("t2 comment must exist");
     assert!(
-        thread2.iter().all(|c| !c.resolved),
-        "thread-2 should remain unresolved after thread-1 was toggled"
+        t2_resolved.iter().all(|&r| !r),
+        "C2 (thread t2) should remain unresolved after set_resolved(t1, true) — got {t2_resolved:?}"
     );
 
     Ok(())

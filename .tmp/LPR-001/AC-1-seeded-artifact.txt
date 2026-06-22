@@ -1,0 +1,2 @@
+upsert_and_list rows=[LocalReviewAssignment { id: "a1", target: "refs/heads/feat", reviewer_principal: "rev", state: "approved", assigned_at: 1970-01-12T13:48:20 }]
+test table::local_review_assignments::local_review_assignments_upsert_and_list_by_target ... ok

@@ -1,0 +1,28 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.43s
+     Running unittests src/lib.rs (target/debug/deps/but_db-4b213fdbe1ae64d1)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 5 filtered out; finished in 0.00s
+
+     Running tests/cross_process_migrations.rs (target/debug/deps/cross_process_migrations-77b69fe0b05550b0)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 1 filtered out; finished in 0.00s
+
+     Running tests/db/main.rs (target/debug/deps/db-a0a03bc0f51dc84a)
+
+running 1 test
+insert_and_list by_thread(t1)=[LocalReviewComment { id: "c1", target: "refs/heads/feat", author_principal: "rev", body: "fix this", file: Some("f.rs"), line: Some(12), thread_id: "t1", resolved: false, created_at: 1970-01-12T13:46:40 }]
+insert_and_list by_target=[LocalReviewComment { id: "c1", target: "refs/heads/feat", author_principal: "rev", body: "fix this", file: Some("f.rs"), line: Some(12), thread_id: "t1", resolved: false, created_at: 1970-01-12T13:46:40 }, LocalReviewComment { id: "c2", target: "refs/heads/feat", author_principal: "rev", body: "general remark", file: None, line: None, thread_id: "t2", resolved: false, created_at: 1970-01-12T13:46:41 }]
+test table::local_review_comments::local_review_comments_insert_and_list ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 131 filtered out; finished in 0.01s
+
+     Running tests/open_rela_path.rs (target/debug/deps/open_rela_path-0047a0940bb8c597)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 1 filtered out; finished in 0.00s
+

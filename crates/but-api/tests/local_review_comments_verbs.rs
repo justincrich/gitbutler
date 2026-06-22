@@ -739,13 +739,13 @@ fn seed_assignment(ctx: &but_ctx::Context, target: &str, reviewer: &str) -> anyh
 
 fn set_thread_resolved(
     ctx: &but_ctx::Context,
-    target: &str,
+    _target: &str,
     thread_id: &str,
     resolved: bool,
 ) -> anyhow::Result<()> {
     let mut db = ctx.db.get_cache_mut()?;
     db.local_review_comments_mut()
-        .set_resolved(target, thread_id, resolved)?;
+        .set_resolved(thread_id, resolved)?;
     Ok(())
 }
 

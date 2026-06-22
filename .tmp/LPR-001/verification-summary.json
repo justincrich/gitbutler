@@ -1,0 +1,111 @@
+{
+  "task_id": "LPR-001",
+  "timestamp": "2026-06-22T15:40:26Z",
+  "commit_sha": "8c5458479b4d801c30715b7a89972a82a8125d17",
+  "typecheck": {
+    "exit_code": 0
+  },
+  "lint": {
+    "exit_code": 0,
+    "warnings": 0
+  },
+  "pre_existing_issues": false,
+  "requirement_results": [
+    {
+      "id": "AC-1",
+      "verify": "cargo test -p but-db local_review_assignments_upsert_and_list_by_target",
+      "exit_code": 0,
+      "output_file": ".tmp/LPR-001/ac-1-output.txt",
+      "red_against_start_file": ".tmp/LPR-001/AC-1-red-against-start.txt",
+      "green_file": ".tmp/LPR-001/AC-1-green.txt",
+      "seeded_value": "rows.len()==1, rows[0].state==\"approved\", rows[0].reviewer_principal==\"rev\""
+    },
+    {
+      "id": "AC-2",
+      "verify": "cargo test -p but-db local_review_assignments_set_state_targets_one_reviewer",
+      "exit_code": 0,
+      "output_file": ".tmp/LPR-001/ac-2-output.txt",
+      "red_against_start_file": ".tmp/LPR-001/AC-2-red-against-start.txt",
+      "green_file": ".tmp/LPR-001/AC-2-green.txt",
+      "seeded_value": "rev state==\"changes_requested\", rev2 state==\"pending\" (untouched)"
+    },
+    {
+      "id": "AC-3",
+      "verify": "cargo test -p but-db local_review_comments_insert_and_list",
+      "exit_code": 0,
+      "output_file": ".tmp/LPR-001/ac-3-output.txt",
+      "red_against_start_file": ".tmp/LPR-001/AC-3-red-against-start.txt",
+      "green_file": ".tmp/LPR-001/AC-3-green.txt",
+      "seeded_value": "by_thread(t1)=[C1{file=Some(f.rs),line=Some(12),resolved=false}]; by_target has 2 comments; PR-level C2 file=None,line=None"
+    },
+    {
+      "id": "AC-4",
+      "verify": "cargo test -p but-db local_review_comments_set_resolved_scopes_to_thread",
+      "exit_code": 0,
+      "output_file": ".tmp/LPR-001/ac-4-output.txt",
+      "red_against_start_file": ".tmp/LPR-001/AC-4-red-against-start.txt",
+      "green_file": ".tmp/LPR-001/AC-4-green.txt",
+      "seeded_value": "t1 comments (C1a,C1b) resolved==true; t2 comment (C2) resolved==false"
+    },
+    {
+      "id": "AC-5",
+      "verify": "cargo test -p but-db local_review_meta_opener_is_write_once_per_target_key",
+      "exit_code": 0,
+      "output_file": ".tmp/LPR-001/ac-5-output.txt",
+      "red_against_start_file": ".tmp/LPR-001/AC-5-red-against-start.txt",
+      "green_file": ".tmp/LPR-001/AC-5-green.txt",
+      "seeded_value": "get(target, opener_principal).value==\"agent-A\" (not \"impostor\"); get(target, missing-key)==None"
+    },
+    {
+      "id": "AC-6",
+      "verify": "cargo test -p but-db local_review_tables_migrations_registered_zero",
+      "exit_code": 0,
+      "output_file": ".tmp/LPR-001/ac-6-output.txt",
+      "red_against_start_file": ".tmp/LPR-001/AC-6-red-against-start.txt",
+      "green_file": ".tmp/LPR-001/AC-6-green.txt",
+      "seeded_value": "fresh DbHandle: assignments=0, comments=0, meta=None; all three M are SchemaVersion::Zero with ids 20260621120000/1100/1200 (three highest)"
+    },
+    {
+      "id": "TC-1",
+      "verify": "cargo test -p but-db local_review_assignments_upsert_and_list_by_target",
+      "exit_code": 0,
+      "output_file": ".tmp/LPR-001/tc-1-output.txt"
+    },
+    {
+      "id": "TC-2",
+      "verify": "cargo test -p but-db local_review_assignments_set_state_targets_one_reviewer",
+      "exit_code": 0,
+      "output_file": ".tmp/LPR-001/tc-2-output.txt"
+    },
+    {
+      "id": "TC-3",
+      "verify": "cargo test -p but-db local_review_comments_insert_and_list",
+      "exit_code": 0,
+      "output_file": ".tmp/LPR-001/tc-3-output.txt"
+    },
+    {
+      "id": "TC-4",
+      "verify": "cargo test -p but-db local_review_comments_set_resolved_scopes_to_thread",
+      "exit_code": 0,
+      "output_file": ".tmp/LPR-001/tc-4-output.txt"
+    },
+    {
+      "id": "TC-5",
+      "verify": "cargo test -p but-db local_review_meta_opener_is_write_once_per_target_key",
+      "exit_code": 0,
+      "output_file": ".tmp/LPR-001/tc-5-output.txt"
+    },
+    {
+      "id": "TC-6",
+      "verify": "cargo test -p but-db local_review_tables_migrations_registered_zero",
+      "exit_code": 0,
+      "output_file": ".tmp/LPR-001/tc-6-output.txt"
+    }
+  ],
+  "red_evidence": {
+    "required": true,
+    "red_output_file": ".tmp/LPR-001/red-output.txt",
+    "red_classification": "compilation_error_signature_mismatch",
+    "red_description": "Tests aligned to REQUIREMENT-CONTRACT signatures (set_state with 3 args, set_resolved with 2 args) failed to compile against prior impl signatures (set_state with 2 args, set_resolved with 3 args) — proving the impl did not match the contract"
+  }
+}
