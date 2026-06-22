@@ -24,7 +24,7 @@ The first **governance-management** sprint. Sprints 01a–04 built the enforceme
 primitive, the commit + merge gates, fail-closed identity confinement, and ref-pinned grouping — and proved
 every property against the **read** side of governed config (`.gitbutler/permissions.toml` /
 `.gitbutler/gates.toml` loaded at the target ref). Sprint 05 builds the **write** side an admin uses to
-*manage* that config: the `but perm` and `but group` CLI nouns. This is the first sprint that **persists**
+_manage_ that config: the `but perm` and `but group` CLI nouns. This is the first sprint that **persists**
 governed config — Sprints 02 and 03 deliberately deferred the persisted `but perm`/`but group` write path
 here (the admin-write guard and the group definition/membership reads were proven at the authz layer with
 `BLOCKED-UNTIL` notes naming CLI-001/CLI-002 as the consumer), and the `perm list` reconnaissance-scoping
@@ -35,7 +35,7 @@ Two nouns, one per task:
 - **`but perm {list, grant, revoke}` (CLI-001):** the per-principal governance verbs.
   `grant`/`revoke` write functional permission(s) into a principal's `.gitbutler/permissions.toml` entry
   (registering the entry on first grant), each authorizing `administration:write` at the **target ref**
-  before the write and printing the ref-pin caveat — *"takes effect once committed to the target branch."*
+  before the write and printing the ref-pin caveat — _"takes effect once committed to the target branch."_
   `list` shows a principal's committed effective set **plus** any working-tree (uncommitted) grant marked
   **PENDING**, and is itself reconnaissance-scoped: `--principal <other>` is denied `perm.denied` unless the
   caller is that principal or holds `administration:read` (T-AUTHZ-025). The write is **inert until
@@ -45,7 +45,7 @@ Two nouns, one per task:
   `create`/`grant`/`add-member`/`remove-member` mutate the `[[group]]` definitions, grants, and membership
   in `.gitbutler/permissions.toml`, each gated by `administration:write` at the target ref and printing the
   same ref-pin caveat; `list` shows groups, grants, and membership under `administration:read`. These are
-  the persisted-write consumers Sprint 03's GRPS tasks named — the inert-until-committed *behavior* they
+  the persisted-write consumers Sprint 03's GRPS tasks named — the inert-until-committed _behavior_ they
   proved at the read layer is now produced by a real verb that warns the operator.
 
 Both nouns route their `but-api` functions through the **same** `administration:write` guard the enforcement
@@ -92,13 +92,13 @@ grant or cross-principal list is denied `perm.denied`.
 
 ## Tasks
 
-| ID | Title | Agent | Estimate |
-|----|-------|-------|----------|
-| CLI-001 | `but perm {list,grant,revoke}` + admin-write gating + ref-pin caveat + perm-list scoping | rust-implementer | 240 min |
-| CLI-002 | `but group {create,grant,add-member,remove-member,list}` + admin-write gating | rust-implementer | 210 min |
-| CLI-REM-001 | Close group verb contract gaps: denial matrix, remove-member, delegated admin, duplicate create, no delete | rust-implementer | 120 min |
-| CLI-REM-002 | Close perm fail-closed variants and structured denial remediation hints | rust-implementer | 90 min |
-| CLI-REM-003 | Prove CLI perm/group resolve workspace target ref when HEAD differs | rust-implementer | 75 min |
+| ID          | Title                                                                                                      | Agent            | Estimate |
+| ----------- | ---------------------------------------------------------------------------------------------------------- | ---------------- | -------- |
+| CLI-001     | `but perm {list,grant,revoke}` + admin-write gating + ref-pin caveat + perm-list scoping                   | rust-implementer | 240 min  |
+| CLI-002     | `but group {create,grant,add-member,remove-member,list}` + admin-write gating                              | rust-implementer | 210 min  |
+| CLI-REM-001 | Close group verb contract gaps: denial matrix, remove-member, delegated admin, duplicate create, no delete | rust-implementer | 120 min  |
+| CLI-REM-002 | Close perm fail-closed variants and structured denial remediation hints                                    | rust-implementer | 90 min   |
+| CLI-REM-003 | Prove CLI perm/group resolve workspace target ref when HEAD differs                                        | rust-implementer | 75 min   |
 
 ## Dependencies
 
@@ -165,16 +165,16 @@ all coverage-side (no locked-PRD escalation), all remediated by the retained `ru
 fresh cycle-2 `rust-reviewer` as **genuinely closed with real teeth** (not cosmetic patches):
 
 - **S1 (CRITICAL)** — the AUTHZ-007/008 honesty grep (`invariant_build_gates.rs` `ENFORCEMENT_PATHS`) did not
-  cover the **net-new** `crates/but-api/src/legacy/governance.rs`, so "the grep stays green" was *vacuous* — a
+  cover the **net-new** `crates/but-api/src/legacy/governance.rs`, so "the grep stays green" was _vacuous_ — a
   role-label / human-vs-AI branch in the file that makes the governance authorization decision would not fail
   CI. Remediated: CLI-001 adds `governance.rs` to `ENFORCEMENT_PATHS` **plus** an `AUTHORITY_POSITIVE_PATTERN`
   assertion (additive-only; a stub/empty governance.rs now fails), with a covering AC/TC; CLI-002 keeps its
   `group_*` inside the now-covered file and must not touch the grep.
 - **R1 (CRITICAL)** — gate step 7 (admin `perm revoke` → exit 0) had **no covering AC**; the misnamed AC only
-  proved the *denial* path, so a stub `perm_revoke → Ok` removing nothing would pass. Remediated: CLI-001 AC-4 —
+  proved the _denial_ path, so a stub `perm_revoke → Ok` removing nothing would pass. Remediated: CLI-001 AC-4 —
   positive revoke (token removed, unrelated preserved, idempotent no-op byte-unchanged).
 - **R2 (CRITICAL)** — `T-AUTHZ-007` (seeded day-one permissions) was claimed in coverage but provable by no AC
-  (all fixtures pre-seeded; inert writes never prove a seeded principal *authorizes*). Remediated: CLI-001 AC-3 —
+  (all fixtures pre-seeded; inert writes never prove a seeded principal _authorizes_). Remediated: CLI-001 AC-3 —
   first-grant into an **absent** config registers a `[[principal]]` block AND, once committed, the seeded
   principal authorizes (day-one effectiveness), via the new `perm_governance_seed` fixture.
 - **MEDIUM** — `--as` identity-override clap-rejection on the new verbs (S2); new-verb fail-closed paths

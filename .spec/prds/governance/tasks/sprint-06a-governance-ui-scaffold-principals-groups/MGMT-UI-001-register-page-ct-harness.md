@@ -4,7 +4,7 @@
 
 ## What this does
 
-Three structural prerequisites every downstream MGMT-UI-* task depends on: (1) extend the `ProjectSettingsPageId` union with a `governance` variant; (2) add a `"Permissions & Governance"` entry (`icon: 'lock'`, `adminOnly: true`) to `projectSettingsPages`; (3) scaffold the missing **`apps/desktop` Playwright CT harness** (T-MGMT-000 / B14) so `pnpm test:ct:desktop` can mount governance components against a `but-sdk` mock fixture — today `pnpm test:ct` runs only `@gitbutler/ui`, so none of the MGMT component tests can run without this.
+Three structural prerequisites every downstream MGMT-UI-\* task depends on: (1) extend the `ProjectSettingsPageId` union with a `governance` variant; (2) add a `"Permissions & Governance"` entry (`icon: 'lock'`, `adminOnly: true`) to `projectSettingsPages`; (3) scaffold the missing **`apps/desktop` Playwright CT harness** (T-MGMT-000 / B14) so `pnpm test:ct:desktop` can mount governance components against a `but-sdk` mock fixture — today `pnpm test:ct` runs only `@gitbutler/ui`, so none of the MGMT component tests can run without this.
 
 ## Why
 

@@ -25,7 +25,7 @@ generated_by: kb-sprint-tasks-plan
 > `cargo test -p but-api -p but-db -p but-authz` → 193 passed / 0 failed (incl. `merge_gate.rs` 6,
 > `forge_guard.rs` 2, `commit_gate.rs` 6, but-db review-store suite 126). No stubs in any gate path.
 > Deferrals (per-group strictness T-LOOP-008/009, T-GATES-012; mechanism-agnostic commit
-> T-GATES-016/017; T-LOOP-011 grep) remain scoped to **Sprint 04**; the forge-network *landing* of a
+> T-GATES-016/017; T-LOOP-011 grep) remain scoped to **Sprint 04**; the forge-network _landing_ of a
 > merge stays out of local scope per the documented gate-boundary re-scope. **Unblocks Sprints 02, 03, 04.**
 
 ## Overview
@@ -72,13 +72,13 @@ denied implementer that follows its `remediation_hint` lands through a reviewed 
 
 ## Tasks
 
-| ID | Title | Agent | Estimate |
-|----|-------|-------|----------|
-| GATES-002 | Local review record: `but-db` `local_review_verdicts` table (head-pinned) | rust-implementer | 150 min |
-| GATES-003 | Merge gate covering **both** `merge_review` AND `set_review_auto_merge` | rust-implementer | 270 min |
-| GATES-004 | Submit-review / open-PR / comment authz guards on the forge boundary | rust-implementer | 150 min |
-| GATES-005 | Stale-approval-@head dismissal + self-approval exclusion | rust-implementer | 150 min |
-| LOOP-001 | Reference-flow test (T-LOOP-006) + traversable proof (T-LOOP-013) + DryRun-no-bypass | rust-implementer | 240 min |
+| ID        | Title                                                                                | Agent            | Estimate |
+| --------- | ------------------------------------------------------------------------------------ | ---------------- | -------- |
+| GATES-002 | Local review record: `but-db` `local_review_verdicts` table (head-pinned)            | rust-implementer | 150 min  |
+| GATES-003 | Merge gate covering **both** `merge_review` AND `set_review_auto_merge`              | rust-implementer | 270 min  |
+| GATES-004 | Submit-review / open-PR / comment authz guards on the forge boundary                 | rust-implementer | 150 min  |
+| GATES-005 | Stale-approval-@head dismissal + self-approval exclusion                             | rust-implementer | 150 min  |
+| LOOP-001  | Reference-flow test (T-LOOP-006) + traversable proof (T-LOOP-013) + DryRun-no-bypass | rust-implementer | 240 min  |
 
 ## Dependencies
 
@@ -99,9 +99,9 @@ denied implementer that follows its `remediation_hint` lands through a reviewed 
 
 - **Deferred (honest scope):** the dedicated **per-required-group strictness** matrix —
   `T-LOOP-008`/`T-LOOP-009` (only-AI-approval blocks / only-human-approval blocks) and `T-GATES-012`
-  (an approval required from *each* required group as standalone test cases) — and the
+  (an approval required from _each_ required group as standalone test cases) — and the
   mechanism-agnostic commit coverage (`T-GATES-016/017`) are **deferred to Sprint 04** (GATES-006/007).
-  This sprint establishes the two-group requirement *plumbing* (`T-LOOP-007` parse +
+  This sprint establishes the two-group requirement _plumbing_ (`T-LOOP-007` parse +
   `T-LOOP-010` both-present-proceeds) and the single-required-group merge gate; Sprint 04 proves the
   only-one-blocked strictness and the dedicated two-group AI/human matrix.
 - **Accepted-leak (R6, by design):** the merge gate trusts a forgeable `local_review_verdicts` store.
@@ -109,14 +109,14 @@ denied implementer that follows its `remediation_hint` lands through a reviewed 
   accepted-leaks, not in-scope guarantees.
 - **Gate-boundary re-scope (red-hat cycle + user decision):** `merge_review`/`publish_review` are
   forge-bound (they call `derive_forge_repo_info`, which errors on a bare local repo with no remote)
-  and there is **no `but pr merge` CLI verb** — so the *positive* governed-merge/PR-open paths
+  and there is **no `but pr merge` CLI verb** — so the _positive_ governed-merge/PR-open paths
   (GATES-003 AC-1/AC-3, GATES-005 AC-2/AC-3, LOOP-001 AC-1 step 5 + AC-2) prove the **gate DECISION**
   (permit, no Denial) on the real seam + that execution reaches the forge call; the forge-network
   **completion** ("change lands on the remote trunk") is proven structurally / deferred to a
   forge-backed fixture. DENIAL paths, the commit gate, and the local `but review approve`
   verdict-write are all fully locally provable (no mocks).
 - **Upstream advisory (escalated, not blocking):** the locked PRD's T-LOOP-006 "merge succeeds" /
-  T-LOOP-013 "change LANDS" / T-LOOP-004 wording assumes a *locally-completable* governed merge that
+  T-LOOP-013 "change LANDS" / T-LOOP-004 wording assumes a _locally-completable_ governed merge that
   the current `but-api`/`but-forge` surface does not provide on a no-remote repo. Recommend
   reconciling via `/kb-sprint-plan --delta-replan` (the local canary proves the GATE's permit/deny +
   traversability, not the forge landing). Also: ROADMAP/SPRINT **step 1** prose ("implementer
@@ -130,7 +130,7 @@ denied implementer that follows its `remediation_hint` lands through a reviewed 
 
 Expanded by `/kb-sprint-tasks-plan` on 2026-06-18 — 1 full red-hat cycle (fresh `rust-reviewer` +
 `security-auditor`, no authoring context). Findings: **1 CRITICAL** (forge-bound positive-merge path
-— resolved by the user's *gate-boundary re-scope* decision + the upstream advisory above) and
+— resolved by the user's _gate-boundary re-scope_ decision + the upstream advisory above) and
 **5 MEDIUM** (GATES-005 governed-path seeding; LOOP-001 e2e fail-closed `AC-5` added; GATES-003
 both-entry-points grep tightened to function-scoped; GATES-003↔GATES-005 `depends_on` 2-cycle broken
 to one-directional; GATES-003 `but-db` wording; GATES-004 `but-clap` cli-docs note) — all remediated.

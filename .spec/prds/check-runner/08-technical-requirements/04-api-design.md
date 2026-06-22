@@ -8,11 +8,11 @@ prd_version: 1.0.0
 
 ## §1 — The three operations
 
-| Operation | Surface | Trust |
-|-----------|---------|-------|
-| **Run** (produce) | `but_checks::run_check` / `but check run` | Side-effectful producer; conclusion from real exit |
-| **Record** | `but_checks::record_result` (append a `CheckResult`) | Append-only; no UPDATE |
-| **Consume** (gate) | the required-checks clause in `enforce_merge_gate` | **Read-only**; pure evaluator |
+| Operation          | Surface                                              | Trust                                              |
+| ------------------ | ---------------------------------------------------- | -------------------------------------------------- |
+| **Run** (produce)  | `but_checks::run_check` / `but check run`            | Side-effectful producer; conclusion from real exit |
+| **Record**         | `but_checks::record_result` (append a `CheckResult`) | Append-only; no UPDATE                             |
+| **Consume** (gate) | the required-checks clause in `enforce_merge_gate`   | **Read-only**; pure evaluator                      |
 
 ## §1a — Mechanism-agnostic gate entry point (v1 requirement)
 
@@ -57,7 +57,7 @@ pub fn enforce_merge_gate_for_refs(
 
 **DECISION: `on-merge-attempt` is an orchestrator / CLI pre-merge step, not a
 gate trigger.** The gate stays read-only and never runs a check. The expensive
-checkout + run happens *before* the gate is invoked; the gate only reads the
+checkout + run happens _before_ the gate is invoked; the gate only reads the
 recorded result.
 
 ```text
@@ -137,7 +137,7 @@ pub fn evaluate_required_checks(
   `TimedOut` from outside-the-type input: `Conclusion::from_exit(status, codes)`
   (03 §4), which takes a `std::process::ExitStatus` — a value you can only obtain
   by having actually spawned and awaited a process.
-- `record_result` takes a fully-formed `CheckResult`, but the *only* code that
+- `record_result` takes a fully-formed `CheckResult`, but the _only_ code that
   builds one with an exit-derived conclusion is `run_check`. There is no
   `record_conclusion(name, head_oid, Conclusion::Success)` entry point.
 - This is enforced by the **type surface**, and proven by a **behavioral**
@@ -180,15 +180,15 @@ MergeGateError {
 
 ### Miss-reason tokens (carried in `unmet`)
 
-| Token | Meaning | `class` |
-|-------|---------|---------|
-| `check_missing` | No recorded result for a required check at the current head | `ActorCorrectable` |
-| `check_failed` | Latest result at the current head is non-`Success` | `ActorCorrectable` |
-| `check_stale_at_head` | A result exists but only at a prior OID (head moved) | `ActorCorrectable` |
-| `config_invalid` | Malformed `.gitbutler/checks/*.toml` or unsatisfiable `[[required_check]]` at the target ref | **`OperatorRequired`** |
+| Token                 | Meaning                                                                                      | `class`                |
+| --------------------- | -------------------------------------------------------------------------------------------- | ---------------------- |
+| `check_missing`       | No recorded result for a required check at the current head                                  | `ActorCorrectable`     |
+| `check_failed`        | Latest result at the current head is non-`Success`                                           | `ActorCorrectable`     |
+| `check_stale_at_head` | A result exists but only at a prior OID (head moved)                                         | `ActorCorrectable`     |
+| `config_invalid`      | Malformed `.gitbutler/checks/*.toml` or unsatisfiable `[[required_check]]` at the target ref | **`OperatorRequired`** |
 
 `config_invalid` is `OperatorRequired` because a malformed/unsatisfiable check
-*definition* is operator-owned (committed governance config), not something the
+_definition_ is operator-owned (committed governance config), not something the
 acting agent can fix by running a check — matching governance's treatment of
 `config.invalid` (merge_gate.rs:369).
 
@@ -200,15 +200,18 @@ acting agent can fix by running a check — matching governance's treatment of
 // from governance STEER-001 (not yet merged); pre-STEER-001 only the base keys
 // (code/message/remediation_hint/unmet) are present.
 {
-  "code": "gate.check_required",
-  "message": "required checks for main are not satisfied: cargo-test: check_missing",
-  "remediation_hint": "run the missing checks at the current head before merging",
-  "unmet": ["cargo-test: check_missing"],
-  "class": "actor_correctable",
-  "held_permissions": ["contents:write"],
-  "authorized_actions": [
-    { "command": "but check run cargo-test --head <oid>", "effect": "produce the missing check result" }
-  ]
+	"code": "gate.check_required",
+	"message": "required checks for main are not satisfied: cargo-test: check_missing",
+	"remediation_hint": "run the missing checks at the current head before merging",
+	"unmet": ["cargo-test: check_missing"],
+	"class": "actor_correctable",
+	"held_permissions": ["contents:write"],
+	"authorized_actions": [
+		{
+			"command": "but check run cargo-test --head <oid>",
+			"effect": "produce the missing check result",
+		},
+	],
 }
 ```
 
@@ -234,7 +237,7 @@ but check required        [--ref <target>] [--json]                           # 
   `ForgeReview`, so it must peel a non-forge ref it resolves itself (ties to §1a /
   R-ENTRY). With that, `but check run cargo-test` runs against the current head and
   binds the result to it.
-- `but check define` only *writes/validates the config file*; it does not commit
+- `but check define` only _writes/validates the config file_; it does not commit
   — committing the governance change is a normal governed commit (and is itself
   subject to the bootstrap-invariant, 01 §8).
 

@@ -6,7 +6,7 @@ Proves the merge gate requires a distinct approval from **each** group named in 
 
 ## Why
 
-Sprint 04 · PRD UC-GATES-02 (AC-5 each-required-group), UC-LOOP-02 (two-group AI+human) · capabilities CAP-AUTHZ-01. Sprint 01b shipped the two-group requirement *plumbing* (`merge_gate_two_group_both_present_proceeds` already exists) and single-group evaluation; the **only-one-blocked** matrix (AI-only blocks, human-only blocks) was deliberately deferred to here. This is the "human at the feature level, AI at the code level" quality model expressed entirely as `.gitbutler/gates.toml` config + group membership, with zero role-specific enforcement code.
+Sprint 04 · PRD UC-GATES-02 (AC-5 each-required-group), UC-LOOP-02 (two-group AI+human) · capabilities CAP-AUTHZ-01. Sprint 01b shipped the two-group requirement _plumbing_ (`merge_gate_two_group_both_present_proceeds` already exists) and single-group evaluation; the **only-one-blocked** matrix (AI-only blocks, human-only blocks) was deliberately deferred to here. This is the "human at the feature level, AI at the code level" quality model expressed entirely as `.gitbutler/gates.toml` config + group membership, with zero role-specific enforcement code.
 
 ## How to verify
 

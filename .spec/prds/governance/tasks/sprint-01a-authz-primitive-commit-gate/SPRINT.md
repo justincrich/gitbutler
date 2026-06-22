@@ -81,13 +81,13 @@ principal's commit lands, and protection is read only from the target-ref blob s
 
 ## Tasks
 
-| ID | Title | Agent | Estimate |
-|----|-------|-------|----------|
-| AUTHZ-001 | Create `but-authz` crate: `Authority`, `AuthoritySet`, `Principal`, `Group`, `Denial` | rust-implementer | 180 min |
-| AUTHZ-002 | Ref-pinned governance config loader (`gix`, target-ref blob read) | rust-implementer | 210 min |
-| AUTHZ-003 | `authorize()` + `BUT_AGENT_HANDLE` resolution + fail-closed default-deny | rust-implementer | 180 min |
-| GATES-001 | Commit gate at `commit_engine::create_commit` (target-ref-only, DryRun-enforced) | rust-implementer | 240 min |
-| AUTHZ-007 | Invariant build-gates — no role name, no human-vs-AI predicate, no `Permission` overload | rust-reviewer | 90 min |
+| ID        | Title                                                                                    | Agent            | Estimate |
+| --------- | ---------------------------------------------------------------------------------------- | ---------------- | -------- |
+| AUTHZ-001 | Create `but-authz` crate: `Authority`, `AuthoritySet`, `Principal`, `Group`, `Denial`    | rust-implementer | 180 min  |
+| AUTHZ-002 | Ref-pinned governance config loader (`gix`, target-ref blob read)                        | rust-implementer | 210 min  |
+| AUTHZ-003 | `authorize()` + `BUT_AGENT_HANDLE` resolution + fail-closed default-deny                 | rust-implementer | 180 min  |
+| GATES-001 | Commit gate at `commit_engine::create_commit` (target-ref-only, DryRun-enforced)         | rust-implementer | 240 min  |
+| AUTHZ-007 | Invariant build-gates — no role name, no human-vs-AI predicate, no `Permission` overload | rust-reviewer    | 90 min   |
 
 ## Dependencies
 
@@ -106,8 +106,8 @@ principal's commit lands, and protection is read only from the target-ref blob s
 
 ## Coverage Notes
 
-- **Opt-in by presence (product decision):** governance is activated by committing `.gitbutler/*.toml` at the target ref. A target ref with NO committed governance config is **ungoverned → commit allowed**; a PARTIAL (exactly one of the two files) or malformed config fails closed `config.invalid`; both files present and valid → governed → enforce. Soundness: landing on a governed trunk is mediated by the merge gate (Sprint 01b), which reads the *trunk's* target-ref config — a feature branch that self-ungates only affects that branch, and a repo whose trunk never committed governance is ungoverned by the owner's deliberate choice. A stronger anti-config-deletion guarantee (an explicit "governance enabled" signal) is a noted **Sprint-04** hardening candidate, not taken here.
-- **Deferred (honest scope):** UC-GATES-01's `T-GATES-016` (mechanism-agnostic parity: virtual-branch vs normal-git) and `T-GATES-017` (opt-in worktree path) are **not** proven in this sprint — they are deferred to **Sprint 04** (GATES-007). Sprint 01a sites the gate at the ref-aware `but-api` `_with_authz` seam, which makes the decision mechanism-independent *by construction*, but cross-mechanism PARITY is verified in Sprint 04. SPRINT coverage cites `T-GATES-001..007` only.
+- **Opt-in by presence (product decision):** governance is activated by committing `.gitbutler/*.toml` at the target ref. A target ref with NO committed governance config is **ungoverned → commit allowed**; a PARTIAL (exactly one of the two files) or malformed config fails closed `config.invalid`; both files present and valid → governed → enforce. Soundness: landing on a governed trunk is mediated by the merge gate (Sprint 01b), which reads the _trunk's_ target-ref config — a feature branch that self-ungates only affects that branch, and a repo whose trunk never committed governance is ungoverned by the owner's deliberate choice. A stronger anti-config-deletion guarantee (an explicit "governance enabled" signal) is a noted **Sprint-04** hardening candidate, not taken here.
+- **Deferred (honest scope):** UC-GATES-01's `T-GATES-016` (mechanism-agnostic parity: virtual-branch vs normal-git) and `T-GATES-017` (opt-in worktree path) are **not** proven in this sprint — they are deferred to **Sprint 04** (GATES-007). Sprint 01a sites the gate at the ref-aware `but-api` `_with_authz` seam, which makes the decision mechanism-independent _by construction_, but cross-mechanism PARITY is verified in Sprint 04. SPRINT coverage cites `T-GATES-001..007` only.
 - **Advisory (upstream):** the `admin` functional-catalog cardinality is asserted by **exhaustive membership** (every `Authority` variant present), not a literal count — `01-scope.md` lists 11 namespaced tokens while an earlier note implied 12; the test is decoupled from the count, and the PRD count should be reconciled in a future PRD edit.
 
 ## Task Detail Files

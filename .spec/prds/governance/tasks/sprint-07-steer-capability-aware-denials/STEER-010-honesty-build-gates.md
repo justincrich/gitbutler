@@ -15,7 +15,7 @@ PRIMARY **AC-1** — `cargo test -p but-authz --test invariant_build_gates steer
 ## Scope
 
 - crates/but-authz/tests/invariant_build_gates.rs (MODIFY — ADDITIVE ONLY) — add the closed-catalog + table/affordance-coverage pattern constants, path constants, assert calls, and seeded violating-fixture teeth controls; add the non-defaulted-class check
-- crates/but-authz/tests/compile_fail/*.rs (NEW) + the trybuild driver in invariant_build_gates.rs (or a sibling test) — the compile_fail control proving a removed/unhandled DenialCause arm does not compile; add trybuild as a dev-dependency in crates/but-authz/Cargo.toml [dev-dependencies] if absent
+- crates/but-authz/tests/compile_fail/\*.rs (NEW) + the trybuild driver in invariant_build_gates.rs (or a sibling test) — the compile_fail control proving a removed/unhandled DenialCause arm does not compile; add trybuild as a dev-dependency in crates/but-authz/Cargo.toml [dev-dependencies] if absent
 - crates/but-authz/Cargo.toml (MODIFY — [dev-dependencies] ONLY) — add the `trybuild` dev-dependency if not already present; NEVER touch [dependencies] or the deny/allow decision
 
 <details>
@@ -172,6 +172,7 @@ blocks: (none)
 
 CODING STANDARDS: crates/AGENTS.md, RULES.md
 ```
+
 </details>
 
 <!-- REQUIREMENT-CONTRACT v1 -->

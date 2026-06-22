@@ -40,8 +40,15 @@ test("renders GroupsList in the groups tab", async ({ mount }) => {
 		props: { pendingCount: 0 },
 	});
 
-	await component.getByRole("tab", { name: "Groups" }).click();
+	const principalsTab = component.getByRole("tab", { name: "Principals" });
+	const groupsTab = component.getByRole("tab", { name: "Groups" });
 
+	await expect(principalsTab).toHaveAttribute("aria-selected", "true");
+	await groupsTab.click();
+
+	await expect(groupsTab).toHaveAttribute("aria-selected", "true");
+	await expect(groupsTab).toHaveAttribute("tabindex", "0");
+	await expect(principalsTab).toHaveAttribute("aria-selected", "false");
 	await expect(component.getByTestId("groups-list")).toBeVisible();
 	await expect(component.getByTestId("governance-groups-control")).toHaveCount(0);
 });

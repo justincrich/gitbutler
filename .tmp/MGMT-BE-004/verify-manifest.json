@@ -1,0 +1,184 @@
+{
+  "task_id": "MGMT-BE-004",
+  "task_file": ".spec/prds/governance/tasks/sprint-06b-governance-ui-branch-gates-rules-safety/MGMT-BE-004-branch-gates-config-writer.md",
+  "generated_at": "2026-06-21T05:14:54.424Z",
+  "commit_sha": null,
+  "project": {
+    "typecheck_cmd": "cargo check -p but-authz -p but-api --all-targets",
+    "lint_cmd": "cargo clippy -p but-authz -p but-api --all-targets",
+    "test_cmd": "cargo test -p but-api branch_gates"
+  },
+  "verification_policy": {
+    "requires_tests": true,
+    "requires_red_evidence": true,
+    "requires_seeded_evidence": true
+  },
+  "requirements": [
+    {
+      "id": "AC-1",
+      "type": "acceptance_criterion",
+      "description": "GIVEN gates_governance_base: refs/heads/main has committed gates.toml with [[branch]] main protected=true and the full [[gate]] main requirement (min_approvals=2, distinct=true, groups=[code-reviewers,maintainers]); BUT_AGENT_HANDLE=admin; clean working tree; ref_id(main) captured WHEN branch_gates_update(&repo, \"refs/heads/main\", edit{branch=\"main\", min_approvals=3}) runs under #[serial_test::serial] via temp_env BUT_AGENT_HANDLE=admin THEN the call returns Ok; the WORKING-TREE .gitbutler/gates.toml now has min_approvals=3 for the main gate; AND branch_gates_read(&repo, \"refs/heads/main\") reports the COMMITTED main gate min_approvals=2 (read from the target-ref blob by the task's OWN reader — the edit is inert; the committed value is unchanged); ref_id(main) AFTER == BEFORE (no commit); the returned/printed caveat contains \"takes effect once committed to the target branch\"",
+      "verify": "cargo test -p but-api branch_gates_update_writes_worktree_inert_until_committed",
+      "maps_to_ac": null
+    },
+    {
+      "id": "AC-2",
+      "type": "acceptance_criterion",
+      "description": "GIVEN gates_governance_base: main is protected=true with a full [[gate]] requirement; BUT_AGENT_HANDLE=admin; clean working tree WHEN branch_gates_update(&repo, \"refs/heads/main\", edit{branch=\"main\", protected=false}) runs as admin (the unprotect write path) THEN the rewritten working-tree gates.toml has [[branch]] main protected=false; AND main's [[gate]] requirement (min_approvals=2, distinct=true, groups=[code-reviewers,maintainers]) is STILL present (unprotecting does not strip the review requirement); the caveat is returned",
+      "verify": "cargo test -p but-api branch_gates_update_unprotect_preserves_gate_requirement",
+      "maps_to_ac": null
+    },
+    {
+      "id": "AC-3",
+      "type": "acceptance_criterion",
+      "description": "GIVEN gates_governance_base: main protected=true with full [[gate]] main requirement; release protected=true with [[gate]] release requirement (min_approvals=1, groups=[maintainers]); BUT_AGENT_HANDLE=admin WHEN branch_gates_update(&repo, \"refs/heads/main\", edit{branch=\"main\", protected=true}) runs as admin (a protection-flag write that touches ONLY the main [[branch]] entry) THEN the rewritten working-tree gates.toml STILL carries main's full [[gate]] requirement (min_approvals=2, distinct=true, groups=[code-reviewers,maintainers]) AND release's unrelated [[branch]] (protected=true) + [[gate]] (min_approvals=1, groups=[maintainers]) entries — i.e. only the targeted main [[branch]] entry's value could change; no requirement field is dropped",
+      "verify": "cargo test -p but-api branch_gates_update_round_trips_full_gate_schema_lossless",
+      "maps_to_ac": null
+    },
+    {
+      "id": "AC-4",
+      "type": "acceptance_criterion",
+      "description": "GIVEN gates_governance_base: caller rust-implementer holds [\"contents:write\"] only (NO administration:write) at the target ref; the working-tree gates.toml captured byte-for-byte before the call WHEN branch_gates_update(&repo, \"refs/heads/main\", edit{branch=\"main\", protected=false}) runs with BUT_AGENT_HANDLE=rust-implementer (a self-escalation attempt to weaken the gate that protects against the caller) THEN the call returns Err; classify_error(&err) yields Some(AdminWriteGateError) whose .code == \"perm.denied\"; the message contains \"administration:write\"; AND the working-tree .gitbutler/gates.toml is byte-for-byte UNCHANGED from before the call (the admin gate ran BEFORE any write)",
+      "verify": "cargo test -p but-api branch_gates_update_non_admin_denied_writes_nothing",
+      "maps_to_ac": null
+    },
+    {
+      "id": "AC-5",
+      "type": "acceptance_criterion",
+      "description": "GIVEN gates_governance_base (committed main min_approvals=2), then an admin branch_gates_update(... min_approvals=3) has written min_approvals=3 to the working tree (uncommitted) — i.e. AC-1's post-state; BUT_AGENT_HANDLE=admin WHEN branch_gates_read(&repo, \"refs/heads/main\") runs as admin THEN the returned read shows the COMMITTED main gate (min_approvals=2, distinct=true, groups=[code-reviewers,maintainers], protected=true — read at the target ref) AND a pending=true signal because the working-tree min_approvals=3 differs from the committed min_approvals=2; on a clean working tree (no edit) pending=false",
+      "verify": "cargo test -p but-api branch_gates_read_returns_committed_set_with_pending_signal",
+      "maps_to_ac": null
+    },
+    {
+      "id": "AC-6",
+      "type": "acceptance_criterion",
+      "description": "GIVEN gates_governance_base: release is protected=true with [[gate]] release {min_approvals=1, require_approval_from_group=[\"maintainers\"], require_distinct_from_author default false}; BUT_AGENT_HANDLE=admin; clean working tree WHEN branch_gates_update(&repo, \"refs/heads/main\", edit{branch=\"release\", require_approval_from_group=[\"maintainers\",\"code-reviewers\"], require_distinct_from_author=true}) runs as admin (exercising the two fields no other AC writes) THEN the rewritten working-tree gates.toml [[gate]] release entry now has require_distinct_from_author=true AND require_approval_from_group=[\"maintainers\",\"code-reviewers\"] (exact list, exact values), re-loadable through the merge_gate-shaped GatesWire; release's min_approvals=1 is preserved; the caveat is returned",
+      "verify": "cargo test -p but-api branch_gates_update_sets_distinct_and_required_groups",
+      "maps_to_ac": null
+    },
+    {
+      "id": "AC-7",
+      "type": "acceptance_criterion",
+      "description": "GIVEN gates_governance_base: gates.toml has main+release entries but NO feature/x entry; BUT_AGENT_HANDLE=admin; SEPARATELY a second scenario whose working-tree .gitbutler/gates.toml is absent/empty WHEN branch_gates_update(&repo, \"refs/heads/main\", edit{branch=\"feature/x\", protected=true, min_approvals=1, require_approval_from_group=[\"maintainers\"]}) runs as admin against (case 1) the populated gates.toml and (case 2) an absent/empty gates.toml (the empty-state-then-add seeding path, mirroring CLI-001 perm_first_grant_seeds_principal) THEN case 1: the rewritten working-tree gates.toml APPENDS a new [[branch]] feature/x protected=true + [[gate]] feature/x min_approvals=1 groups=[maintainers] WHILE the pre-existing main+release [[branch]]/[[gate]] entries remain intact; case 2: the file is CREATED with exactly the new feature/x [[branch]]+[[gate]] entry",
+      "verify": "cargo test -p but-api branch_gates_update_appends_new_branch_and_creates_absent_file",
+      "maps_to_ac": null
+    },
+    {
+      "id": "AC-8",
+      "type": "acceptance_criterion",
+      "description": "GIVEN gates_governance_base: caller no-read-principal holds [\"contents:write\"] only (NO administration:read and NO administration:write) at the target ref; admin holds administration:read via administration:write WHEN branch_gates_read(&repo, \"refs/heads/main\") runs once as BUT_AGENT_HANDLE=admin (authorized) and once as BUT_AGENT_HANDLE=no-read-principal (the v1 decision: branch_gates_read enforces administration:read before returning any committed gate set) THEN as admin: returns Ok with the committed main gate set (min_approvals=2); as no-read-principal: returns Err whose classify_error(&err) yields Some(_) with .code == \"perm.denied\" naming \"administration:read\" — the gate set is NOT disclosed to an unauthorized caller",
+      "verify": "cargo test -p but-api branch_gates_read_requires_administration_read",
+      "maps_to_ac": null
+    },
+    {
+      "id": "TC-1",
+      "type": "test_criterion",
+      "description": "After admin branch_gates_update(min_approvals=3), the working-tree .gitbutler/gates.toml main gate reads min_approvals=3",
+      "verify": "cargo test -p but-api branch_gates_update_writes_worktree_inert_until_committed",
+      "maps_to_ac": "AC-1"
+    },
+    {
+      "id": "TC-2",
+      "type": "test_criterion",
+      "description": "After the update branch_gates_read reports the COMMITTED (target-ref) main gate min_approvals=2 AND ref_id(refs/heads/main) is identical before and after (inert / no commit)",
+      "verify": "cargo test -p but-api branch_gates_update_writes_worktree_inert_until_committed",
+      "maps_to_ac": "AC-1"
+    },
+    {
+      "id": "TC-3",
+      "type": "test_criterion",
+      "description": "The branch_gates_update result/printed caveat contains \"takes effect once committed to the target branch\"",
+      "verify": "cargo test -p but-api branch_gates_update_writes_worktree_inert_until_committed",
+      "maps_to_ac": "AC-1"
+    },
+    {
+      "id": "TC-4",
+      "type": "test_criterion",
+      "description": "Unprotecting main (protected=false) lands protected=false AND main's [[gate]] requirement (min_approvals=2, distinct=true, groups=[code-reviewers,maintainers]) survives",
+      "verify": "cargo test -p but-api branch_gates_update_unprotect_preserves_gate_requirement",
+      "maps_to_ac": "AC-2"
+    },
+    {
+      "id": "TC-5",
+      "type": "test_criterion",
+      "description": "A protection-only edit re-serializes BOTH the full main [[gate]] requirement AND the unrelated release [[branch]]/[[gate]] entries (lossless round-trip; no [[gate]] drop)",
+      "verify": "cargo test -p but-api branch_gates_update_round_trips_full_gate_schema_lossless",
+      "maps_to_ac": "AC-3"
+    },
+    {
+      "id": "TC-6",
+      "type": "test_criterion",
+      "description": "Re-loading the rewritten file through the merge_gate-shaped GatesWire confirms min_approvals and require_approval_from_group survive (no silent weakening of the merge gate)",
+      "verify": "cargo test -p but-api branch_gates_update_round_trips_full_gate_schema_lossless",
+      "maps_to_ac": "AC-3"
+    },
+    {
+      "id": "TC-7",
+      "type": "test_criterion",
+      "description": "A non-admin branch_gates_update returns Err; classify_error(&err) yields Some(AdminWriteGateError) whose .code == \"perm.denied\" and the message contains \"administration:write\"",
+      "verify": "cargo test -p but-api branch_gates_update_non_admin_denied_writes_nothing",
+      "maps_to_ac": "AC-4"
+    },
+    {
+      "id": "TC-8",
+      "type": "test_criterion",
+      "description": "After the denied non-admin (self-escalation) branch_gates_update, the working-tree .gitbutler/gates.toml is byte-for-byte unchanged (gate ran before any write; control not flipped)",
+      "verify": "cargo test -p but-api branch_gates_update_non_admin_denied_writes_nothing",
+      "maps_to_ac": "AC-4"
+    },
+    {
+      "id": "TC-9",
+      "type": "test_criterion",
+      "description": "branch_gates_read returns committed main min_approvals=2 with pending=true after an uncommitted min_approvals=3 edit; pending=false on a clean working tree",
+      "verify": "cargo test -p but-api branch_gates_read_returns_committed_set_with_pending_signal",
+      "maps_to_ac": "AC-5"
+    },
+    {
+      "id": "TC-10",
+      "type": "test_criterion",
+      "description": "`pnpm build:sdk && pnpm format` regenerates packages/but-sdk/src/generated containing branch_gates_read and branch_gates_update commands/types, and the generated TS type-checks (no hand-edit)",
+      "verify": "pnpm build:sdk && pnpm format && git diff --name-only packages/but-sdk/src/generated | grep -q . && grep -rq \"branch_gates_update\\|branchGatesUpdate\" packages/but-sdk/src/generated",
+      "maps_to_ac": "AC-1"
+    },
+    {
+      "id": "TC-11",
+      "type": "test_criterion",
+      "description": "branch_gates_update(edit{branch=release, require_distinct_from_author=true, require_approval_from_group=[\"maintainers\",\"code-reviewers\"]}) lands require_distinct_from_author=true AND require_approval_from_group=[\"maintainers\",\"code-reviewers\"] on the release [[gate]] (re-loadable via the merge_gate-shaped GatesWire)",
+      "verify": "cargo test -p but-api branch_gates_update_sets_distinct_and_required_groups",
+      "maps_to_ac": "AC-6"
+    },
+    {
+      "id": "TC-12",
+      "type": "test_criterion",
+      "description": "A protection-only edit re-serializes a file whose full [[branch]]+[[gate]] structure re-parses (via the merge_gate-shaped GatesWire) with branch.len() and gate.len() preserved and every [[gate]] field value identical (SEC-1 structural round-trip: gate.len() and the full set survive)",
+      "verify": "cargo test -p but-api branch_gates_update_round_trips_full_gate_schema_lossless",
+      "maps_to_ac": "AC-3"
+    },
+    {
+      "id": "TC-13",
+      "type": "test_criterion",
+      "description": "branch_gates_update against a populated gates.toml APPENDS a new feature/x [[branch]]+[[gate]] while preserving the existing main+release entries (no clobber)",
+      "verify": "cargo test -p but-api branch_gates_update_appends_new_branch_and_creates_absent_file",
+      "maps_to_ac": "AC-7"
+    },
+    {
+      "id": "TC-14",
+      "type": "test_criterion",
+      "description": "branch_gates_update against an absent/empty .gitbutler/gates.toml CREATES the file with exactly the new feature/x [[branch]]+[[gate]] entry (the empty-state-then-add seeding path)",
+      "verify": "cargo test -p but-api branch_gates_update_appends_new_branch_and_creates_absent_file",
+      "maps_to_ac": "AC-7"
+    },
+    {
+      "id": "TC-15",
+      "type": "test_criterion",
+      "description": "branch_gates_read as admin returns Ok committed min_approvals=2; as no-read-principal (no administration:read) returns Err with classify_error(&err)=Some(_) .code==perm.denied naming administration:read (the read scope is gated, not a recon leak)",
+      "verify": "cargo test -p but-api branch_gates_read_requires_administration_read",
+      "maps_to_ac": "AC-8"
+    }
+  ],
+  "red_evidence": {
+    "required": true,
+    "path": ".kb-run-sprint/tasks/MGMT-BE-004/red/2/red-output.txt",
+    "command": "cargo test -p but-api branch_gates"
+  }
+}

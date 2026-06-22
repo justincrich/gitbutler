@@ -556,3 +556,159 @@ commit affordance is unavailable rather than disabled in-place.
 - Any use-site values are component props or slot content only.
 - No governance-prefixed or management-prefixed CSS custom properties are part
   of this design.
+
+## Sprint 07 LPR-014 — Principal `kind` Badge And Editor Selector
+
+This section extends the Sprint 06a/Sprint 07 governance contracts for the
+additive `kind` descriptor on `PrincipalsListEntry` (LPR-005 / LPR-014). `kind`
+is a descriptor only: it is not consulted by any authorization decision, not
+part of the enforcement configuration map, and not read by any gate predicate.
+The UI representation is informational only.
+
+### Badge Component And Variants
+
+The kind read display uses the existing `Badge` component from
+`packages/ui/src/lib/components/Badge.svelte` in neutral/secondary styling.
+There is exactly one rendered variant in the principal row:
+
+| `kind` value         | Row badge                                                                                                                                                                                                           | Reason                                                                                                                               |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `'agent'`            | `<Badge style="gray" kind="soft" size="tag" tooltip="...descriptor-only disclosure...">agent</Badge>` rendered beside the `<strong>{principalId}</strong>` in `PrincipalsList.svelte` after the pending `○` marker. | The agent value is the only one that needs a visible marker — it is what enables the agent-authored tag derivation.                  |
+| `'human'`            | No badge.                                                                                                                                                                                                           | Peer descriptor; absence is the conservative default-human presentation.                                                             |
+| absent / `undefined` | No badge.                                                                                                                                                                                                           | Conservative default-human posture (LPR-005 AC-4): absence means human, never agent. The badge must NOT be blank; it must be absent. |
+
+Neutral/secondary styling is mandatory: `style="gray"`, `kind="soft"`. Do not
+use `style="safe"`, `style="warning"`, `style="danger"`, `style="pop"`, or
+`style="purple"` for the kind badge. 'Agent' and 'Human' are peer-level
+descriptors, not statuses — color that implies trust/restriction is wrong.
+
+### Non-Enforcement Disclosure
+
+The kind `Badge` carries a `tooltip` prop with the verbatim text:
+
+> This label identifies the principal as an agent or human for tagging purposes.
+> It does not change any permission grant or gate decision.
+
+In edit mode, the kind `SegmentControl` has a caption immediately below it
+rendered as a `<p class="principal-editor__kind-caption">` element carrying the
+same disclosure text. The caption uses `data-testid="principal-editor-kind-caption"`
+so the disclosure is queryable in component tests. The disclosure must appear in
+both read (badge tooltip) and edit (selector caption) modes because an operator
+may only see one of the two during a session.
+
+### Display-Only Contract
+
+The agent `Badge` is decorative only. It MUST NOT:
+
+- have `role="button"` (the `Badge` component renders `role="presentation"` when
+  no `onclick` is passed — keep it that way),
+- carry an `aria-pressed` attribute,
+- attach an `onclick`/`onkeydown` handler that mutates state or fires an SDK
+  write,
+- be described in copy or tooltip as granting, denying, or otherwise changing
+  authorization outcomes.
+
+Clicking the badge may bubble up to the row's expand/collapse handler (the row's
+existing behavior is unchanged) but MUST NOT fire any `principalKindUpdate` SDK
+write. AC-2 verifies this with a spy.
+
+### Edit Selector
+
+The kind edit control is a two-option `SegmentControl` placed in the
+`PrincipalEditor` form, immediately after the Preset `SegmentControl` and before
+the Permissions table. It uses the same `SegmentControl` + `SegmentControl.Item`
+components already imported by the editor for the role preset strip:
+
+```svelte
+<div class="principal-editor__section">
+	<span class="principal-editor__label">Kind</span>
+	<SegmentControl
+		selected={stagedKind}
+		onselect={(id) => setKind(id === "agent" ? "agent" : "human")}
+	>
+		<SegmentControl.Item
+			id="human"
+			testId="principal-editor-kind-human"
+			disabled={controlsDisabled}
+		>
+			Human
+		</SegmentControl.Item>
+		<SegmentControl.Item
+			id="agent"
+			testId="principal-editor-kind-agent"
+			disabled={controlsDisabled}
+		>
+			Agent
+		</SegmentControl.Item>
+	</SegmentControl>
+	<p class="principal-editor__kind-caption" data-testid="principal-editor-kind-caption">
+		This label identifies the principal as an agent or human for tagging purposes. It does not
+		change any permission grant or gate decision.
+	</p>
+</div>
+```
+
+The selector offers exactly two options. Selecting one stages a local kind change
+(`stagedKind`) that is committed on the existing `Save changes` button click — the
+same write path that saves other principal fields (permissions, groups). The
+write goes through the governance IPC path (administration:write-gated — the same
+route as `permGrant`/`permRevoke` in `PrincipalEditorService`), NOT the
+project-settings path.
+
+### Default Selector Value
+
+When the principal's SDK entry has no `kind` field (`undefined`), the selector
+defaults to `'human'` (the conservative default-human posture per LPR-005 AC-4).
+The default is explicit: `kind = "human"` as the prop default, and
+`initialKind = kind === "agent" || kind === "human" ? kind : "human"` as the
+resolved initial value. The selector must NEVER default to `'agent'`.
+
+### Pending After Kind Write
+
+After a successful kind write, the principal's row gains the existing pending
+`Badge` pattern — exactly the same shape as the principals-list-pending-\* badge
+at `PrincipalsList.svelte` lines 178-187:
+
+```svelte
+<Badge
+	testId={`principals-list-pending-${slug(principal.principalId)}`}
+	style="warning"
+	kind="soft"
+	size="icon"
+>
+	○
+</Badge>
+```
+
+No new pending shape is introduced for kind writes. The kind-write pending
+indicator is the existing pending indicator. `PrincipalsList.svelte` marks the
+just-saved principal's `pending` field to `true` in local state on
+`refreshAfterSave` and invokes the optional `onPrincipalPending(principalId)`
+callback so the parent (`GovernanceSettings`) can increment the governance
+pending-banner count via the existing `pendingStore`.
+
+### Read-Only Treatment
+
+When `isReadOnly=true`, both kind selector segments receive `disabled=true` via
+the existing `controlsDisabled` derived flag. No `principalKindUpdate` SDK write
+fires on any interaction (force-click included). The agent `Badge` continues to
+render in the row when `kind='agent'` — read-only does not hide the descriptor.
+
+### Integration With Existing Edit Mode
+
+The kind `SegmentControl` is rendered alongside the existing editor sections
+(Preset, Permissions, Groups). It does not introduce a new edit mode or a
+separate inline-edit toggle. The selector is visible whenever the
+`PrincipalEditor` is open (which is the existing principal row expand/collapse
+behavior). In read mode (editor closed), only the row `Badge` is shown; in edit
+mode (editor open), both the row `Badge` and the editor `SegmentControl` are
+visible.
+
+### Token And Styling Compliance
+
+This section introduces no new CSS variables, color literals, spacing values, or
+typography rules. The kind `Badge` uses `style="gray"` and `kind="soft"` —
+existing component variants. The kind caption uses `var(--clr-text-2)` and
+`var(--font-size-sm, 0.85rem)` — existing tokens. The kind `SegmentControl` and
+`SegmentControl.Item` components use their own stylesheets. No `var(--kind-*)`
+or `var(--agent-*)` tokens are introduced.

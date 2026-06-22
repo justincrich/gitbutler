@@ -14,10 +14,10 @@ PRIMARY **AC-1** — `cargo test -p but-api list_workspace_rules_scoped_none_equ
 
 ## Scope
 
-  - crates/but-api/src/legacy/rules.rs (MODIFY — add list_workspace_rules_scoped(ctx, principal_id: Option<&str>) beside list_workspace_rules; the None path delegates to / preserves the existing in-workspace filter, the Some path layers a session_id() filter on top)
-  - crates/but-api/tests/rules_scoped.rs (NEW — the PRIMARY but-api proofs AC-1..AC-3 against a real but-db rules store via but_testsupport)
-  - the desktop Tauri command file under crates/ that registers the rules-list #[tauri::command] (MODIFY — forward the optional principalId to list_workspace_rules_scoped; follow the existing convention)
-  - packages/but-sdk/src/generated/** (REGENERATE ONLY via `pnpm build:sdk && pnpm format` — NEVER hand-edit)
+- crates/but-api/src/legacy/rules.rs (MODIFY — add list_workspace_rules_scoped(ctx, principal_id: Option<&str>) beside list_workspace_rules; the None path delegates to / preserves the existing in-workspace filter, the Some path layers a session_id() filter on top)
+- crates/but-api/tests/rules_scoped.rs (NEW — the PRIMARY but-api proofs AC-1..AC-3 against a real but-db rules store via but_testsupport)
+- the desktop Tauri command file under crates/ that registers the rules-list #[tauri::command] (MODIFY — forward the optional principalId to list_workspace_rules_scoped; follow the existing convention)
+- packages/but-sdk/src/generated/\*\* (REGENERATE ONLY via `pnpm build:sdk && pnpm format` — NEVER hand-edit)
 
 <details>
 <summary>▸ Full agent specification (TASK-TEMPLATE v5.2 — required reading for implementer + reviewer)</summary>
@@ -218,6 +218,7 @@ DEPENDENCIES
 Depends on: Sprint 06a MGMT-IPC-004 (the SDK regen base this task's rules-list command/SDK delta extends)
 Blocks:     MGMT-UI-010 (RulesList's optional principalId prop consumes the list_workspace_rules_scoped SDK)
 ```
+
 </details>
 
 <!-- REQUIREMENT-CONTRACT v1 -->

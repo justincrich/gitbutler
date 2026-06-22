@@ -14,8 +14,8 @@ PRIMARY **AC-1** — `pnpm test:ct:desktop -- GovernanceErrorBoundary`: ErrorBou
 
 ## Scope
 
-  - apps/desktop/src/components/settings/GovernanceSettings.svelte (MODIFY — add ErrorBoundary import + wrap only; no logic change)
-  - apps/desktop/tests/governance/GovernanceErrorBoundary.spec.ts (NEW — CT spec)
+- apps/desktop/src/components/settings/GovernanceSettings.svelte (MODIFY — add ErrorBoundary import + wrap only; no logic change)
+- apps/desktop/tests/governance/GovernanceErrorBoundary.spec.ts (NEW — CT spec)
 
 <details>
 <summary>▸ Full agent specification (TASK-TEMPLATE v5.2 — required reading for implementer + reviewer)</summary>
@@ -131,7 +131,7 @@ provides:
   - l
   - t
   - e
-  -  
+  -
   - w
   - r
   - a
@@ -139,10 +139,10 @@ provides:
   - p
   - e
   - d
-  -  
+  -
   - i
   - n
-  -  
+  -
   - s
   - h
   - a
@@ -163,14 +163,14 @@ provides:
   - a
   - r
   - y
-  -  
+  -
   - s
   - o
-  -  
+  -
   - a
   - n
   - y
-  -  
+  -
   - r
   - e
   - n
@@ -185,7 +185,7 @@ provides:
   - i
   - m
   - e
-  -  
+  -
   - f
   - a
   - i
@@ -193,10 +193,10 @@ provides:
   - u
   - r
   - e
-  -  
+  -
   - i
   - n
-  -  
+  -
   - g
   - o
   - v
@@ -207,13 +207,13 @@ provides:
   - n
   - c
   - e
-  -  
+  -
   - c
   - h
   - i
   - l
   - d
-  -  
+  -
   - c
   - o
   - m
@@ -224,17 +224,17 @@ provides:
   - n
   - t
   - s
-  -  
+  -
   - s
   - h
   - o
   - w
   - s
-  -  
+  -
   - t
   - h
   - e
-  -  
+  -
   - b
   - o
   - u
@@ -243,7 +243,7 @@ provides:
   - a
   - r
   - y
-  -  
+  -
   - f
   - a
   - l
@@ -252,7 +252,7 @@ provides:
   - a
   - c
   - k
-  -  
+  -
   - i
   - n
   - s
@@ -260,10 +260,10 @@ provides:
   - e
   - a
   - d
-  -  
+  -
   - o
   - f
-  -  
+  -
   - b
   - r
   - e
@@ -272,11 +272,11 @@ provides:
   - i
   - n
   - g
-  -  
+  -
   - t
   - h
   - e
-  -  
+  -
   - s
   - e
   - t
@@ -285,18 +285,18 @@ provides:
   - n
   - g
   - s
-  -  
+  -
   - m
   - o
   - d
   - a
   - l
   - ;
-  -  
+  -
   - t
   - h
   - e
-  -  
+  -
   - w
   - r
   - a
@@ -305,14 +305,14 @@ provides:
   - i
   - n
   - g
-  -  
+  -
   - i
   - s
-  -  
+  -
   - t
   - h
   - e
-  -  
+  -
   - i
   - n
   - s
@@ -322,13 +322,13 @@ provides:
   - i
   - o
   - n
-  -  
+  -
   - p
   - o
   - i
   - n
   - t
-  -  
+  -
   - M
   - G
   - M
@@ -340,7 +340,7 @@ provides:
   - 0
   - 0
   - 3
-  -  
+  -
   - d
   - e
   - f
@@ -349,17 +349,17 @@ provides:
   - r
   - e
   - d
-  -  
+  -
   - t
   - o
-  -  
+  -
   - S
   - p
   - r
   - i
   - n
   - t
-  -  
+  -
   - 0
   - 6
   - b
@@ -433,6 +433,7 @@ DEPENDENCIES
 Depends on: MGMT-UI-003 (GovernanceSettings.svelte — the file being modified; from Sprint 06a); MGMT-UI-001 (desktop CT harness — prerequisite for all component tests; from Sprint 06a); DESIGN-MGMT-008 (error-boundary fallback visual contract)
 Blocks:     MGMT-UI-011 (a11y + IPC-failure banner + Retry — must run inside a wrapped, boundary-protected GovernanceSettings)
 ```
+
 </details>
 
 <!-- REQUIREMENT-CONTRACT v1 -->
@@ -469,6 +470,10 @@ Blocks:     MGMT-UI-011 (a11y + IPC-failure banner + Retry — must run inside a
       "id": "AC-1",
       "type": "acceptance_criterion",
       "primary": true,
+      "implements_design": [
+        "DESIGN-MGMT-008:AC-1",
+        "DESIGN-MGMT-008:AC-4"
+      ],
       "description": "GIVEN GovernanceSettings is wrapped in shared/ErrorBoundary and a governance child component throws on mount WHEN the component tree renders THEN the .boundary-error fallback div renders with a title and the settings modal container remains in the DOM",
       "verify": "pnpm test:ct:desktop -- GovernanceErrorBoundary",
       "scenario": {

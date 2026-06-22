@@ -25,14 +25,14 @@ Sprint 02 made the merge/forge negative space fail-closed; Sprint 03 made groupi
 **deepens both gates** along the two strictness axes the walking skeleton deliberately deferred:
 
 1. **Merge-gate strictness — per-required-group evaluation.** Sprint 01b shipped the two-group
-   requirement *plumbing* (`T-LOOP-007` parse + `T-LOOP-010` both-present-proceeds) and the
+   requirement _plumbing_ (`T-LOOP-007` parse + `T-LOOP-010` both-present-proceeds) and the
    single-required-group gate. Sprint 04 proves the **only-one-blocked** matrix as standalone test
-   cases — an approval from *each* required group is needed at the current head, so an AI-only
+   cases — an approval from _each_ required group is needed at the current head, so an AI-only
    (`code-reviewers`) approval blocks (the human hasn't owned it) and a human-only (`maintainers`)
    approval blocks (the AI code-level pass is also required), order-independent. This is the
    "human-at-feature + AI-at-code as pure config" model expressed entirely in `.gitbutler/gates.toml`
-   + group membership, with **no enforcement code that distinguishes a human from an AI**
-   (the `T-LOOP-011` grep, deferred from 01b, lands here).
+   - group membership, with **no enforcement code that distinguishes a human from an AI**
+     (the `T-LOOP-011` grep, deferred from 01b, lands here).
 
 2. **Commit-gate coverage — mechanism-agnostic.** Sprint 01a sited the commit gate at the `but-api`
    `_with_authz` seam + CLI commit path. Sprint 04 makes the gate **actually** mechanism-agnostic:
@@ -49,7 +49,7 @@ it, proven as a dedicated test rather than as a side-effect of another case.
 > classification — deterministic `config.invalid` vs `perm.denied` vs `gate.review_required` ordering,
 > unknown/no-handle deny, and the **undefined-`require_approval_from_group` hard-deny** — already
 > LANDED in Sprint 02 (`AUTHZ-004`, `crates/but-api/src/legacy/merge_gate.rs`). Sprint 04 GATES-008 is
-> the **deepening / standalone-proof** of the *target-ref-only read* property and the commit-gate
+> the **deepening / standalone-proof** of the _target-ref-only read_ property and the commit-gate
 > fail-closed surface, **not** a competing owner of the merge-path undefined-group check. The expansion
 > must re-ground GATES-008 honestly against what AUTHZ-004 already owns — no duplicate implementation.
 
@@ -79,18 +79,18 @@ commit gate, and a working-tree `gates.toml` edit cannot weaken either gate.
 
 ## Tasks
 
-| ID | Title | Agent | Estimate |
-|----|-------|-------|----------|
-| GATES-006 | Per-required-group approval evaluation (two-group AI + human model) | rust-implementer | 150 min |
-| GATES-007 | Mechanism-agnostic commit gate — **actually** gate `branch::apply`, `integrate_branch_with_steps`, worktree-integrate | rust-implementer | 270 min |
-| GATES-008 | Standalone target-ref-only read proof for the merge gate — feature-head requirement-drop ignored (deepening; AUTHZ-004 owns merge-path fail-closed) | rust-implementer | 120 min |
-| GATES-REM-001 | Close CLI `but branch apply` bypass through governed public seam | rust-implementer | 120 min |
-| GATES-REM-002 | Fix sprint human testing gate prose for commit-coverage reality | rust-implementer | 30 min |
-| GATES-REM-003 | Define required-group overlap semantics for two-tier human+AI model | rust-implementer | 180 min |
-| GATES-REM-004 | Add governed missing-target fail-closed proof for no-target apply/integrate | rust-implementer | 120 min |
-| GATES-REM-005 | Replace compile-only structural TCs with discriminating checked scripts | rust-implementer | 90 min |
-| GATES-REM-006 | Add deterministic source-contract test for gate-before-guard placement | rust-implementer | 120 min |
-| GATES-REM-007 | Tighten GATES-008 production-diff gate to zero-diff baseline range | rust-implementer | 60 min |
+| ID            | Title                                                                                                                                               | Agent            | Estimate |
+| ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------- | -------- |
+| GATES-006     | Per-required-group approval evaluation (two-group AI + human model)                                                                                 | rust-implementer | 150 min  |
+| GATES-007     | Mechanism-agnostic commit gate — **actually** gate `branch::apply`, `integrate_branch_with_steps`, worktree-integrate                               | rust-implementer | 270 min  |
+| GATES-008     | Standalone target-ref-only read proof for the merge gate — feature-head requirement-drop ignored (deepening; AUTHZ-004 owns merge-path fail-closed) | rust-implementer | 120 min  |
+| GATES-REM-001 | Close CLI `but branch apply` bypass through governed public seam                                                                                    | rust-implementer | 120 min  |
+| GATES-REM-002 | Fix sprint human testing gate prose for commit-coverage reality                                                                                     | rust-implementer | 30 min   |
+| GATES-REM-003 | Define required-group overlap semantics for two-tier human+AI model                                                                                 | rust-implementer | 180 min  |
+| GATES-REM-004 | Add governed missing-target fail-closed proof for no-target apply/integrate                                                                         | rust-implementer | 120 min  |
+| GATES-REM-005 | Replace compile-only structural TCs with discriminating checked scripts                                                                             | rust-implementer | 90 min   |
+| GATES-REM-006 | Add deterministic source-contract test for gate-before-guard placement                                                                              | rust-implementer | 120 min  |
+| GATES-REM-007 | Tighten GATES-008 production-diff gate to zero-diff baseline range                                                                                  | rust-implementer | 60 min   |
 
 ## Dependencies
 
@@ -101,9 +101,9 @@ commit gate, and a working-tree `gates.toml` edit cannot weaken either gate.
 
 - **Use cases:** UC-GATES-01 (mechanism-agnostic coverage), UC-GATES-02, UC-LOOP-02
 - **Criteria:** T-GATES-012/013/016/017/019, T-LOOP-008/009/010/011/012
-  - *T-GATES-018 (merge-gate fail-closed on malformed/undefined-group config) is owned by **AUTHZ-004 (Sprint 02)**, where it already landed and its tests pass; GATES-008 consumes it and re-proves the residual target-ref-only read (T-GATES-019) on the merge path — it is not re-listed as a Sprint-04 deliverable.*
-  - *T-LOOP-011 (no human-vs-AI enforcement branch) was deferred from Sprint 01b and lands here as the GATES-006 AC-3 build-gate.*
-  - *T-GATES-016/017 are re-grounded against live code: `branch::apply` bails on the target and `integrate_branch_with_steps` writes a feature branch (neither advances a protected trunk), so GATES-007 proves mechanism parity as **contents:write/perm.denied on apply + integrate** plus **`worktree_integrate` advancing a protected `target` → `branch.protected`** — not "apply/integrate advancing main → branch.protected".*
+  - _T-GATES-018 (merge-gate fail-closed on malformed/undefined-group config) is owned by **AUTHZ-004 (Sprint 02)**, where it already landed and its tests pass; GATES-008 consumes it and re-proves the residual target-ref-only read (T-GATES-019) on the merge path — it is not re-listed as a Sprint-04 deliverable._
+  - _T-LOOP-011 (no human-vs-AI enforcement branch) was deferred from Sprint 01b and lands here as the GATES-006 AC-3 build-gate._
+  - _T-GATES-016/017 are re-grounded against live code: `branch::apply` bails on the target and `integrate_branch_with_steps` writes a feature branch (neither advances a protected trunk), so GATES-007 proves mechanism parity as **contents:write/perm.denied on apply + integrate** plus **`worktree_integrate` advancing a protected `target` → `branch.protected`** — not "apply/integrate advancing main → branch.protected"._
 
 ## Capability Coverage
 

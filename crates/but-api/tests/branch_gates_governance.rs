@@ -67,7 +67,12 @@ fn branch_gates_update_upserts_under_admin_write() -> anyhow::Result<()> {
             &repo,
             MAIN_REF,
             "main",
-            BranchProtectionInput { protected: false },
+            BranchProtectionInput {
+                protected: false,
+                min_approvals: None,
+                require_distinct_from_author: None,
+                require_approval_from_group: None,
+            },
         )
     })?;
     assert_gates_entry(&updated, "main", false);
@@ -83,7 +88,12 @@ fn branch_gates_update_upserts_under_admin_write() -> anyhow::Result<()> {
             &repo,
             MAIN_REF,
             "featureBranch",
-            BranchProtectionInput { protected: true },
+            BranchProtectionInput {
+                protected: true,
+                min_approvals: None,
+                require_distinct_from_author: None,
+                require_approval_from_group: None,
+            },
         )
     })?;
     assert_gates_entry(&inserted, "featureBranch", true);
@@ -109,7 +119,12 @@ fn branch_gates_update_non_admin_denied_writes_nothing() -> anyhow::Result<()> {
             &repo,
             MAIN_REF,
             "main",
-            BranchProtectionInput { protected: false },
+            BranchProtectionInput {
+                protected: false,
+                min_approvals: None,
+                require_distinct_from_author: None,
+                require_approval_from_group: None,
+            },
         )
     });
 

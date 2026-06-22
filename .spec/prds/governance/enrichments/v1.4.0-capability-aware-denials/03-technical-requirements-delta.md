@@ -14,11 +14,11 @@ Additive to `10-technical-requirements/`. Backward-compatible for the deny/allow
 
 ## 1. The denial carriers — additive fields on all three
 
-| Carrier | Crate / file | Today | Produces |
-|---|---|---|---|
-| `Denial` | `but-authz/src/denial.rs:13` | `code, message, remediation_hint` (derives `Debug,Clone,PartialEq,Eq`) | `perm.denied` (missing authority, no-handle, unknown-principal) |
+| Carrier          | Crate / file                          | Today                                                                                      | Produces                                                                     |
+| ---------------- | ------------------------------------- | ------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------- |
+| `Denial`         | `but-authz/src/denial.rs:13`          | `code, message, remediation_hint` (derives `Debug,Clone,PartialEq,Eq`)                     | `perm.denied` (missing authority, no-handle, unknown-principal)              |
 | `MergeGateError` | `but-api/src/legacy/merge_gate.rs:19` | `code, message, remediation_hint, unmet: Vec<String>` (derives `Serialize, PartialEq, Eq`) | `gate.review_required`, `perm.denied` (merge), `config.invalid` (merge path) |
-| `ConfigError` | `but-authz/src/config.rs` | `thiserror` struct: `message` + `#[source]` + `code()` | `config.invalid` (authz/commit path) |
+| `ConfigError`    | `but-authz/src/config.rs`             | `thiserror` struct: `message` + `#[source]` + `code()`                                     | `config.invalid` (authz/commit path)                                         |
 
 Each gains the four additive steering fields:
 
@@ -46,33 +46,33 @@ pub struct AuthorizedAction { pub command: &'static str, pub effect: &'static st
 
 ### Serialization sites (C2-fix — there is no single `json::Error` CLI path)
 
-The CLI hand-rolls denial JSON in **three** places; the four new fields must be added to **each**, and two of them already drop `remediation_hint` today (a pre-existing asymmetry — so UC-STEER-01 AC-2's "no regression" means *relative to each site's current output*, not "all sites already emit all fields"):
+The CLI hand-rolls denial JSON in **three** places; the four new fields must be added to **each**, and two of them already drop `remediation_hint` today (a pre-existing asymmetry — so UC-STEER-01 AC-2's "no regression" means _relative to each site's current output_, not "all sites already emit all fields"):
 
-| Site | File | Emits today | Add |
-|---|---|---|---|
-| commit gate | `but/src/command/legacy/commit2.rs:~679` `commit_gate_cli_error` | `{code, message}` | 4 new fields (+ already-missing `remediation_hint`) |
-| review/forge gate | `but/src/command/legacy/forge/review.rs:~89` `review_gate_cli_error` | `{code, message}` | 4 new fields (+ already-missing `remediation_hint`) |
-| merge gate | `but/src/command/legacy/forge/review.rs:~246` `merge_gate_cli_error` | `{code, message, remediation_hint, unmet}` | 4 new fields |
+| Site              | File                                                                 | Emits today                                | Add                                                 |
+| ----------------- | -------------------------------------------------------------------- | ------------------------------------------ | --------------------------------------------------- |
+| commit gate       | `but/src/command/legacy/commit2.rs:~679` `commit_gate_cli_error`     | `{code, message}`                          | 4 new fields (+ already-missing `remediation_hint`) |
+| review/forge gate | `but/src/command/legacy/forge/review.rs:~89` `review_gate_cli_error` | `{code, message}`                          | 4 new fields (+ already-missing `remediation_hint`) |
+| merge gate        | `but/src/command/legacy/forge/review.rs:~246` `merge_gate_cli_error` | `{code, message, remediation_hint, unmet}` | 4 new fields                                        |
 
-The **Tauri/MGMT** surface uses a *separate* serializer, `but-api/src/json.rs` `Error` (emits `code`+`message`). Sprint 06a **`MGMT-IPC-002`** is the task adding `remediation_hint` to that path; STEER's new fields for the desktop surface coordinate there (D6). The CLI and Tauri serializers are distinct — both must be updated for full coverage, or N-API/Tauri steering is explicitly deferred (see §7).
+The **Tauri/MGMT** surface uses a _separate_ serializer, `but-api/src/json.rs` `Error` (emits `code`+`message`). Sprint 06a **`MGMT-IPC-002`** is the task adding `remediation_hint` to that path; STEER's new fields for the desktop surface coordinate there (D6). The CLI and Tauri serializers are distinct — both must be updated for full coverage, or N-API/Tauri steering is explicitly deferred (see §7).
 
 ## 2. `class` mapping — exhaustive, by (code, principal-resolution)
 
 `class` is NOT a pure function of `code` alone: `perm.denied` splits by whether a principal was resolved. The mapping is an **exhaustive, non-defaulted match** (M3/PM-fix) — adding a future code/cause without classifying it is a compile break, never a silent `actor_correctable`:
 
-| Denial cause | code | class | menu | do_not |
-|---|---|---|---|---|
-| resolved principal lacks authority | `perm.denied` | `actor_correctable` | derived (§3) | positive-only |
-| direct commit to protected branch | `branch.protected` | `actor_correctable` | derived (§3, gate-state-aware) | positive-only |
-| review requirement unmet | `gate.review_required` | `actor_correctable` | derived (§3) + existing `unmet[]` | positive-only |
-| **no handle / unknown principal** | `perm.denied` | **`operator_required`** | **empty** | "an operator must register this principal / set BUT_AGENT_HANDLE — do not retry as-is" |
-| malformed/incomplete config | `config.invalid` | `operator_required` | empty | "do not retry — an operator must fix the committed `.gitbutler` config" |
+| Denial cause                       | code                   | class                   | menu                              | do_not                                                                                 |
+| ---------------------------------- | ---------------------- | ----------------------- | --------------------------------- | -------------------------------------------------------------------------------------- |
+| resolved principal lacks authority | `perm.denied`          | `actor_correctable`     | derived (§3)                      | positive-only                                                                          |
+| direct commit to protected branch  | `branch.protected`     | `actor_correctable`     | derived (§3, gate-state-aware)    | positive-only                                                                          |
+| review requirement unmet           | `gate.review_required` | `actor_correctable`     | derived (§3) + existing `unmet[]` | positive-only                                                                          |
+| **no handle / unknown principal**  | `perm.denied`          | **`operator_required`** | **empty**                         | "an operator must register this principal / set BUT_AGENT_HANDLE — do not retry as-is" |
+| malformed/incomplete config        | `config.invalid`       | `operator_required`     | empty                             | "do not retry — an operator must fix the committed `.gitbutler` config"                |
 
 The **no-handle / unknown-principal** rows are the C5-adjacent correctness fix (security HIGH #2): such a caller has no resolved authority and **cannot self-correct in-system**, so `operator_required` (not `actor_correctable`) is correct — otherwise the agent loops trying actions it has no authority for.
 
 ## 3. `authorized_actions` — gate-state-aware derivation (the load-bearing mechanism, C5-corrected)
 
-The earlier pure-authority intersection was **unsound for `branch.protected`**: branch protection is `authority ∧ ¬protected`, so a caller who hit `branch.protected` *holds* `contents:write` — a pure `required_authority ⊆ held` would offer the very `commit` that was just denied (a lying menu). The corrected derivation **subtracts the (route, predicate, ref) that actually fired** and binds every entry to a *succeeding context*:
+The earlier pure-authority intersection was **unsound for `branch.protected`**: branch protection is `authority ∧ ¬protected`, so a caller who hit `branch.protected` _holds_ `contents:write` — a pure `required_authority ⊆ held` would offer the very `commit` that was just denied (a lying menu). The corrected derivation **subtracts the (route, predicate, ref) that actually fired** and binds every entry to a _succeeding context_:
 
 ```
 authorized_actions(principal, denied={route_d, predicate_d, ref_d}, cfg, target_ref):
@@ -84,7 +84,7 @@ authorized_actions(principal, denied={route_d, predicate_d, ref_d}, cfg, target_
     scoped.map(c → CATALOG[c]) ++ [CATALOG[discovery]]
 ```
 
-- **Gate-state-aware (C5).** For `branch.protected`, the affordance is "commit to a **feature branch**" (a *different* ref that is not protected) + review actions — never "commit to the protected ref" the caller just hit. The menu offers a route+context that *succeeds*, not the authority-equivalent action that fails the predicate.
+- **Gate-state-aware (C5).** For `branch.protected`, the affordance is "commit to a **feature branch**" (a _different_ ref that is not protected) + review actions — never "commit to the protected ref" the caller just hit. The menu offers a route+context that _succeeds_, not the authority-equivalent action that fails the predicate.
 - **`effective_authority` is NOT free on the `branch.protected` path (C5).** `branch_protected(principal, branch_name)` (`gate.rs:159`) does not receive `cfg` or the held set (it is dropped on `authorize`'s `Ok` path). A signature change to `branch_protected(principal, &cfg, branch_name)` + a re-call of `effective_authority` is required. Captured in [05 D3](./05-delta-replan.md).
 - **Same cfg/ref by construction (M2).** The menu derives from the **exact `cfg` the gate already loaded** at its ref (passed in, not re-loaded) — so menu and gate cannot diverge on config/ref. This is a runtime property (proven by integration test T-STEER-009/024), NOT something a static build-gate can assert (M2-fix).
 - **Self-approval excluded (security HIGH #3).** `AFFORDANCE_MAP` for a `branch.protected`/own-branch denial yields `request-changes` + `comment`, never `but review approve` — an L1 exclusion, not left to the primer.
@@ -93,27 +93,27 @@ authorized_actions(principal, denied={route_d, predicate_d, ref_d}, cfg, target_
 
 There is **no `Route` type and no table today** — each gate calls `authorize(p, Authority::X, &cfg)` at a scattered, heterogeneous site:
 
-| Site | File | Shape |
-|---|---|---|
-| commit gate | `commit/gate.rs:67` | `authorize(p, ContentsWrite)` **then** a separate branch-protection predicate |
-| merge gate | `legacy/merge_gate.rs:48` | `authorize(p, Merge)` **then** the review-requirement engine (min-approvals/distinct/groups) |
-| forge | `legacy/forge.rs:47` `authorize_branch_action` | a **`match` on `Authority`** with arms `ReviewsWrite`/`CommentsWrite`/`PullRequestsWrite` and an `other => authorize(p, other)` catch-all |
-| admin write | `config_mutate.rs:25` | `authorize(p, AdministrationWrite)` |
+| Site        | File                                           | Shape                                                                                                                                     |
+| ----------- | ---------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| commit gate | `commit/gate.rs:67`                            | `authorize(p, ContentsWrite)` **then** a separate branch-protection predicate                                                             |
+| merge gate  | `legacy/merge_gate.rs:48`                      | `authorize(p, Merge)` **then** the review-requirement engine (min-approvals/distinct/groups)                                              |
+| forge       | `legacy/forge.rs:47` `authorize_branch_action` | a **`match` on `Authority`** with arms `ReviewsWrite`/`CommentsWrite`/`PullRequestsWrite` and an `other => authorize(p, other)` catch-all |
+| admin write | `config_mutate.rs:25`                          | `authorize(p, AdministrationWrite)`                                                                                                       |
 
-Promoting this to one enumerable `&[(Route, Authority, command, effect)]` is the **single largest piece of work** in the enrichment: it must (a) introduce a `Route` enum that does not exist; (b) keep the **non-authority predicates** (branch protection, review requirement) *out* of the table but composed around it; (c) reconcile the forge `match` incl. the `other =>` arm into explicit rows; (d) **preserve the shipped honesty build-gate** — `invariant_build_gates.rs` asserts the literal `but_authz::authorize` / `Authority::*` patterns appear in each enforcement file (the `AUTHORITY_POSITIVE_PATTERN` grep); a table-driven helper that hides those literals would break it, so either keep the literal `authorize` calls (table feeds the menu + a coverage assertion) or update the grep too. **Behavior-neutral for the deny/allow *decision*; a genuine multi-site refactor otherwise** — re-budget accordingly. Crate ownership (L4): the table + catalog live in **`but-authz`** (so `authorize`/the menu can use them without a `but-authz → but-api` cycle, RULES.md); the gates in `but-api` consume them.
+Promoting this to one enumerable `&[(Route, Authority, command, effect)]` is the **single largest piece of work** in the enrichment: it must (a) introduce a `Route` enum that does not exist; (b) keep the **non-authority predicates** (branch protection, review requirement) _out_ of the table but composed around it; (c) reconcile the forge `match` incl. the `other =>` arm into explicit rows; (d) **preserve the shipped honesty build-gate** — `invariant_build_gates.rs` asserts the literal `but_authz::authorize` / `Authority::*` patterns appear in each enforcement file (the `AUTHORITY_POSITIVE_PATTERN` grep); a table-driven helper that hides those literals would break it, so either keep the literal `authorize` calls (table feeds the menu + a coverage assertion) or update the grep too. **Behavior-neutral for the deny/allow _decision_; a genuine multi-site refactor otherwise** — re-budget accordingly. Crate ownership (L4): the table + catalog live in **`but-authz`** (so `authorize`/the menu can use them without a `but-authz → but-api` cycle, RULES.md); the gates in `but-api` consume them.
 
 ## 5. The denied-intent → affordance-category map (curated, bounded)
 
 The one curated (not derived) piece, bounded by the ~7 gated routes, maintained beside the table. Each category names a route **in a succeeding context** (per §3):
 
-| denied (cause @ ref) | affordance categories (succeeding context) |
-|---|---|
-| commit to protected branch | commit-to-a-**feature**-branch, review (request-changes/comment — **not** approve on own branch), discovery |
-| commit, missing `contents:write` | review, discovery |
-| merge, missing `merge` | review-status, hand-off, discovery |
-| merge, `gate.review_required` | review-status (+ existing `unmet[]`), discovery |
-| submit review, missing `reviews:write` | comment, discovery |
-| admin write, missing `administration:write` | read/inspect, request-config-change, discovery |
+| denied (cause @ ref)                        | affordance categories (succeeding context)                                                                  |
+| ------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| commit to protected branch                  | commit-to-a-**feature**-branch, review (request-changes/comment — **not** approve on own branch), discovery |
+| commit, missing `contents:write`            | review, discovery                                                                                           |
+| merge, missing `merge`                      | review-status, hand-off, discovery                                                                          |
+| merge, `gate.review_required`               | review-status (+ existing `unmet[]`), discovery                                                             |
+| submit review, missing `reviews:write`      | comment, discovery                                                                                          |
+| admin write, missing `administration:write` | read/inspect, request-config-change, discovery                                                              |
 
 Intent-scoping prevents bloat and the "irrelevant advice confuses agents" failure. A build-gate asserts every `ROUTE_AUTHORITY_TABLE` route has an `AFFORDANCE_MAP` entry that does **not** include the denied route at the denied ref (security LOW #9 — keeps the map from going stale independently of the table).
 
@@ -123,11 +123,11 @@ Intent-scoping prevents bloat and the "irrelevant advice confuses agents" failur
 
 ## 7. Layers (where steering lives)
 
-| Layer | Owner | Grip | This delta |
-|---|---|---|---|
-| **L1 — denial contract** | GitButler (deterministic) | full | §1–§6: additive fields on all three carriers + gate-state-aware derivation |
-| **L2 — agent priming** | harness/orchestrator (probabilistic) | none (Stance 6) | a shippable **reference** primer (UC-STEER-05), non-enforced |
-| **L3 — traversability + integrity** | GitButler (gates + tests) | full | §3 gate-state-aware no-lying-menu + closed catalog, proven by the extended `governed_loop` ([04](./04-e2e-testing-criteria.md)) |
+| Layer                               | Owner                                | Grip            | This delta                                                                                                                      |
+| ----------------------------------- | ------------------------------------ | --------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| **L1 — denial contract**            | GitButler (deterministic)            | full            | §1–§6: additive fields on all three carriers + gate-state-aware derivation                                                      |
+| **L2 — agent priming**              | harness/orchestrator (probabilistic) | none (Stance 6) | a shippable **reference** primer (UC-STEER-05), non-enforced                                                                    |
+| **L3 — traversability + integrity** | GitButler (gates + tests)            | full            | §3 gate-state-aware no-lying-menu + closed catalog, proven by the extended `governed_loop` ([04](./04-e2e-testing-criteria.md)) |
 
 **Caller coverage (PM M1).** The four `but-api` callers (Tauri, `but` CLI, TUI, N-API) consume denials via the serializers in §1. The CLI serializers (3 sites) are STEER's primary target; the Tauri/N-API surface rides `json::Error` and coordinates with `MGMT-IPC-002` (D6). If the Tauri/N-API serializer change is deferred, that is an **explicit out-of-scope decision** ([01-scope-delta](./01-scope-delta.md)), not a silent gap.
 

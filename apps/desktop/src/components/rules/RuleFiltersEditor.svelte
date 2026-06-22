@@ -48,6 +48,9 @@
 		contentMatchesRegex: 1,
 		fileChangeType: 2,
 		semanticType: 3,
+		// Backend-only filter (not user-editable); sentinel keeps it out of the
+		// editor's "last filter" logic without crashing type exhaustiveness.
+		claudeCodeSessionId: Number.POSITIVE_INFINITY,
 	};
 
 	function isLastFilterType(type: RuleFilterType): boolean {
@@ -70,6 +73,10 @@
 			case "semanticType":
 				// For now, user defined is not considered ready
 				return semanticType !== undefined && semanticType !== "userDefined";
+			case "claudeCodeSessionId":
+				// Backend-only filter; never appears as a draft the user is editing,
+				// so treat it as always ready to satisfy exhaustiveness.
+				return true;
 		}
 	}
 

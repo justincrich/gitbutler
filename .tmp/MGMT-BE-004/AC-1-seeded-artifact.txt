@@ -1,0 +1,1 @@
+AC-1 seeded: working main min_approvals=3; committed main min_approvals=2; pending=true; ref_unchanged=true; caveat=takes effect once committed to the target branch

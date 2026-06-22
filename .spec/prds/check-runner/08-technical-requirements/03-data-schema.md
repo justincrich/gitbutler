@@ -19,7 +19,7 @@ A **plain `but-db` table**. Modeled on `local_review_verdicts`
 and `ci_checks` (`crates/but-db/src/table/ci_checks.rs` — `name TEXT`,
 `head_sha TEXT`, `status_conclusion TEXT`). The store needs **no more protection
 than `local_review_verdicts`**: governance already accepts that store as
-forgeable-by-direct-DB-write (its R6); a check is a *reproducible* deterministic
+forgeable-by-direct-DB-write (its R6); a check is a _reproducible_ deterministic
 review — safer in detectability (a forged green is detectable post-merge), **not** strictly safer (no principal identity). There is **no signing, HMAC, or hardening** (see
 01 §5, 08 R-FORGERY).
 
@@ -62,15 +62,15 @@ pub struct CheckResult {
 
 ### Column rationale
 
-| Column | Type | Why |
-|--------|------|-----|
-| `id` | TEXT PK | Per-run identity (mirrors `LocalReviewVerdict.id`). Append-only; never updated in place. |
-| `name` | TEXT | Joins to the `[[check]]` `name` and to `[[required_check]].name`. |
-| `head_oid` | TEXT | **The SHA-binding key.** The exact OID the check ran against. The gate matches on `(name, head_oid == current_head)`. |
-| `conclusion` | TEXT | Serialized `Conclusion` enum (§4). v1 producer emits `success` / `failure` / `timed_out`. |
-| `recorded_at` | TIMESTAMP | When the producer recorded the result. The gate may use it only for tie-breaking the latest row per `(name, head_oid)`. |
-| `metadata` | TEXT (JSON) | Observability payload: real `exit_code`, `duration_ms`, `runner_version`, `checkout_kind` (07), truncated tail of stdout/stderr. **Never** carries the conclusion itself — the conclusion is the typed column derived from the real exit code. |
-| `signature` | TEXT NULL | **Forward-compat seam.** When producers eventually run off-host, a producer identity proof could live here. v1 writes `NULL` and the gate **ignores** it. Documented as NOT a v1 security control (01 §5). |
+| Column        | Type        | Why                                                                                                                                                                                                                                            |
+| ------------- | ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`          | TEXT PK     | Per-run identity (mirrors `LocalReviewVerdict.id`). Append-only; never updated in place.                                                                                                                                                       |
+| `name`        | TEXT        | Joins to the `[[check]]` `name` and to `[[required_check]].name`.                                                                                                                                                                              |
+| `head_oid`    | TEXT        | **The SHA-binding key.** The exact OID the check ran against. The gate matches on `(name, head_oid == current_head)`.                                                                                                                          |
+| `conclusion`  | TEXT        | Serialized `Conclusion` enum (§4). v1 producer emits `success` / `failure` / `timed_out`.                                                                                                                                                      |
+| `recorded_at` | TIMESTAMP   | When the producer recorded the result. The gate may use it only for tie-breaking the latest row per `(name, head_oid)`.                                                                                                                        |
+| `metadata`    | TEXT (JSON) | Observability payload: real `exit_code`, `duration_ms`, `runner_version`, `checkout_kind` (07), truncated tail of stdout/stderr. **Never** carries the conclusion itself — the conclusion is the typed column derived from the real exit code. |
+| `signature`   | TEXT NULL   | **Forward-compat seam.** When producers eventually run off-host, a producer identity proof could live here. v1 writes `NULL` and the gate **ignores** it. Documented as NOT a v1 security control (01 §5).                                     |
 
 > **`trigger` is NOT a `check_results` column.** A check's `trigger` (`on-commit` / `on-merge-attempt`) is a **definition-time** field in `.gitbutler/checks/*.toml`, never part of a result row. A consumer that displays a result's trigger (e.g. the desktop `CheckResultRow`, TR §10) **joins** the result's `name` to the check definition; it is never stored per-result.
 
@@ -234,7 +234,7 @@ impl Conclusion {
 ```
 
 The gate treats **only `Success`** as passing. `Neutral`/`Skipped` are **not**
-passing for a *required* check (a required check that no-ops must not satisfy the
+passing for a _required_ check (a required check that no-ops must not satisfy the
 gate — fail-closed, 08 R-FAILCLOSED).
 
 ## Cross-references

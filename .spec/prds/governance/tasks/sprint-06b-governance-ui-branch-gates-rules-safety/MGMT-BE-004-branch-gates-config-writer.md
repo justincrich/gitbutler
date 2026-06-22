@@ -14,13 +14,13 @@ PRIMARY **AC-1** — `cargo test -p but-api branch_gates_update_writes_worktree_
 
 ## Scope
 
-  - crates/but-api/src/legacy/governance.rs (MODIFY — add branch_gates_read/branch_gates_update + the private gates.toml read-modify-write writer + the raw GatesWire/BranchWire/GateWire wire structs with #[derive(Serialize, Deserialize)] + the BranchGatesError/caveat constant; sited BESIDE CLI-001's perm_* fns)
-  - crates/but-authz/src/config.rs (MODIFY — ADDITIVE ONLY: add `pub fn gates_path() -> &'static str` returning GATES_PATH; do NOT change loader/normalize semantics; do NOT widen BranchProtection or the loader's BranchWire)
-  - crates/but-authz/src/lib.rs (MODIFY — re-export gates_path from the config pub use block)
-  - crates/but-api/src/legacy/mod.rs (MODIFY — ensure governance module is declared; no-op if CLI-001 already added it)
-  - crates/but-api/tests/branch_gates.rs (NEW — the PRIMARY but-api proofs AC-1..AC-5)
-  - the desktop Tauri command file under crates/ that registers #[tauri::command] governance commands (MODIFY — register branch_gates_read/branch_gates_update beside the Sprint-06a perm_*/group_* commands; follow the existing snake_case #[tauri::command] convention) and src-tauri/capabilities/ allow-branch_gates_* entry (MODIFY — mirror the allow-perm_*/allow-group_* convention)
-  - packages/but-sdk/src/generated/** (REGENERATE ONLY via `pnpm build:sdk && pnpm format` — NEVER hand-edit)
+- crates/but-api/src/legacy/governance.rs (MODIFY — add branch*gates_read/branch_gates_update + the private gates.toml read-modify-write writer + the raw GatesWire/BranchWire/GateWire wire structs with #[derive(Serialize, Deserialize)] + the BranchGatesError/caveat constant; sited BESIDE CLI-001's perm*\* fns)
+- crates/but-authz/src/config.rs (MODIFY — ADDITIVE ONLY: add `pub fn gates_path() -> &'static str` returning GATES_PATH; do NOT change loader/normalize semantics; do NOT widen BranchProtection or the loader's BranchWire)
+- crates/but-authz/src/lib.rs (MODIFY — re-export gates_path from the config pub use block)
+- crates/but-api/src/legacy/mod.rs (MODIFY — ensure governance module is declared; no-op if CLI-001 already added it)
+- crates/but-api/tests/branch_gates.rs (NEW — the PRIMARY but-api proofs AC-1..AC-5)
+- the desktop Tauri command file under crates/ that registers #[tauri::command] governance commands (MODIFY — register branch*gates_read/branch_gates_update beside the Sprint-06a perm*\_/group\__ commands; follow the existing snake*case #[tauri::command] convention) and src-tauri/capabilities/ allow-branch_gates*_ entry (MODIFY — mirror the allow-perm\_\_/allow-group\_\* convention)
+- packages/but-sdk/src/generated/\*\* (REGENERATE ONLY via `pnpm build:sdk && pnpm format` — NEVER hand-edit)
 
 <details>
 <summary>▸ Full agent specification (TASK-TEMPLATE v5.2 — required reading for implementer + reviewer)</summary>
@@ -282,6 +282,7 @@ DEPENDENCIES
 Depends on: Sprint 05 CLI-001 (the permissions.toml writer pattern + crates/but-api/src/legacy/governance.rs which this task is sited beside, plus the gates_path-analog permissions_path accessor pattern); Sprint 04 (the merge-requirement schema in crates/but-api/src/legacy/merge_gate.rs — the [[branch]]+[[gate]] field set the writer must round-trip losslessly); Sprint 06a MGMT-IPC-004 (the SDK regen base this task's command/SDK delta extends); Sprint 06a MGMT-IPC-003 (the v1 human-fleet-owner identity shim — UserService, T-MGMT-042 — that the desktop branch_gates_* Tauri command resolves, since BUT_AGENT_HANDLE is unset in the desktop process; SEC-3)
 Blocks:     MGMT-UI-009 (BranchGatesList consumes the branch_gates_read/branch_gates_update SDK)
 ```
+
 </details>
 
 <!-- REQUIREMENT-CONTRACT v1 -->

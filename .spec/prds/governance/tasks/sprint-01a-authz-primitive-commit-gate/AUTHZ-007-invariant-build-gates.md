@@ -15,7 +15,7 @@ PRIMARY **AC-1** — `test -s crates/but-authz/src/authorize.rs && test -s crate
 ## Scope
 
 - crates/but-authz/tests/invariant_build_gates.rs (NEW) — the committed harness that runs the three greps and asserts clean/violation
-- .github/workflows/** (MODIFY, optional) — add a CI step invoking the harness if the project wires build-gates in CI separately from cargo test
+- .github/workflows/\*\* (MODIFY, optional) — add a CI step invoking the harness if the project wires build-gates in CI separately from cargo test
 
 <details>
 <summary>▸ Full agent specification (TASK-TEMPLATE v5.2 — required reading for implementer + reviewer)</summary>

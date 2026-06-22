@@ -4,7 +4,7 @@
 
 ## What this does
 
-Runs the canonical SDK generation flow (`pnpm build:sdk && pnpm format`) so `packages/but-sdk/src/generated` gains the governance command symbols + their request/response types (perm/group/branch_gates/status) that MGMT-IPC-001 authored and MGMT-IPC-003 registered, and proves the desktop app type-checks against them. This is the **hard build-gate** (T-MGMT-034) before any MGMT-UI-* task imports the new bindings.
+Runs the canonical SDK generation flow (`pnpm build:sdk && pnpm format`) so `packages/but-sdk/src/generated` gains the governance command symbols + their request/response types (perm/group/branch_gates/status) that MGMT-IPC-001 authored and MGMT-IPC-003 registered, and proves the desktop app type-checks against them. This is the **hard build-gate** (T-MGMT-034) before any MGMT-UI-\* task imports the new bindings.
 
 ## Why
 

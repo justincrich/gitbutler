@@ -75,6 +75,12 @@
 					label: semanticTypeToString(filter.subject.type),
 					tooltip: `Semantic type: ${semanticTypeToString(filter.subject.type)}`,
 				};
+			case "claudeCodeSessionId":
+				return {
+					icon: "agent",
+					label: filter.subject,
+					tooltip: `Claude Code session: ${filter.subject}`,
+				};
 		}
 	}
 

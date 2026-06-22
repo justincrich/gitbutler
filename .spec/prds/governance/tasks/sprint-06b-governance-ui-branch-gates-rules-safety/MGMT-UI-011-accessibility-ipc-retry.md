@@ -6,7 +6,7 @@ Add aria + keyboard nav to the four-tab strip, surface IPC failures as a danger 
 
 ## Why
 
-Sprint 06b · PRD UC-MGMT-07, UC-MGMT-06 · capability CAP-AUTHZ-01. CT asserts: (a) tab strip has aria-label and Tab/Arrow/Enter keyboard navigation works; (b) mocked IPC failure renders a danger InfoMessage with {code,message,remediation_hint} text and a Retry button; (c) Retry re-issues the SDK call; (d) 
+Sprint 06b · PRD UC-MGMT-07, UC-MGMT-06 · capability CAP-AUTHZ-01. CT asserts: (a) tab strip has aria-label and Tab/Arrow/Enter keyboard navigation works; (b) mocked IPC failure renders a danger InfoMessage with {code,message,remediation_hint} text and a Retry button; (c) Retry re-issues the SDK call; (d)
 
 ## How to verify
 
@@ -14,12 +14,12 @@ PRIMARY **AC-1** — `pnpm test:ct:desktop -- GovernanceTabsA11y`: Tab navigatio
 
 ## Scope
 
-  - apps/desktop/src/components/settings/GovernanceSettings.svelte (MODIFY — add IPC-failure state, danger InfoMessage, Retry; read-only info InfoMessage; aria props passed to Tabs)
-  - apps/desktop/src/components/shared/TabList.svelte (MODIFY — add role='tablist' on <ul>, add aria-label prop, add ArrowLeft/ArrowRight/Home/End keydown handler for roving tabindex keyboard nav — CONFIRMED MISSING in live code)
-  - apps/desktop/src/components/shared/TabTrigger.svelte (MODIFY — FIX inverted tabindex: change tabindex={isActive ? -1 : 0} to tabindex={isActive ? 0 : -1}; active tab MUST be tabindex=0 — CONFIRMED WRONG in live code)
-  - apps/desktop/src/components/shared/TabContent.svelte (MODIFY — add role='tabpanel' and aria-labelledby={value} pointing to corresponding TabTrigger id — CONFIRMED MISSING in live code)
-  - apps/desktop/src/components/shared/Tabs.svelte (MODIFY — add keyboard nav context if needed for focus management)
-  - apps/desktop/tests/governance/GovernanceA11yIPC.spec.ts (NEW — CT specs for all ACs)
+- apps/desktop/src/components/settings/GovernanceSettings.svelte (MODIFY — add IPC-failure state, danger InfoMessage, Retry; read-only info InfoMessage; aria props passed to Tabs)
+- apps/desktop/src/components/shared/TabList.svelte (MODIFY — add role='tablist' on <ul>, add aria-label prop, add ArrowLeft/ArrowRight/Home/End keydown handler for roving tabindex keyboard nav — CONFIRMED MISSING in live code)
+- apps/desktop/src/components/shared/TabTrigger.svelte (MODIFY — FIX inverted tabindex: change tabindex={isActive ? -1 : 0} to tabindex={isActive ? 0 : -1}; active tab MUST be tabindex=0 — CONFIRMED WRONG in live code)
+- apps/desktop/src/components/shared/TabContent.svelte (MODIFY — add role='tabpanel' and aria-labelledby={value} pointing to corresponding TabTrigger id — CONFIRMED MISSING in live code)
+- apps/desktop/src/components/shared/Tabs.svelte (MODIFY — add keyboard nav context if needed for focus management)
+- apps/desktop/tests/governance/GovernanceA11yIPC.spec.ts (NEW — CT specs for all ACs)
 
 <details>
 <summary>▸ Full agent specification (TASK-TEMPLATE v5.2 — required reading for implementer + reviewer)</summary>
@@ -101,10 +101,10 @@ AC-3: Retry re-issues SDK call; persistent failure keeps UI read-only
   TEST_TIER: integration   VERIFICATION_SERVICE: desktop-ct-harness
   VERIFY: pnpm test:ct:desktop -- GovernanceIPCRetry
 
-AC-4: Self-escalation denial surfaced without flipping the control
+AC-4: Self-escalation denial surfaced without flipping the control (pre-click aria-checked oracle)
   GIVEN: GovernanceSettings mounted with seeded_self_escalation_denial; administration:write Toggle starts OFF
   WHEN:  user clicks the administration:write Toggle to grant it to themselves
-  THEN:  the governed path returns perm.denied; a danger InfoMessage with 'You cannot modify your own administration grants' is visible; the Toggle remains in the OFF state (not flipped)
+  THEN:  the test MUST capture aria-checked BEFORE the click and assert it remains unchanged after the denial; the governed path returns perm.denied; a danger InfoMessage with 'You cannot modify your own administration grants' is visible; the Toggle remains in the OFF state (pre-click aria-checked == post-denial aria-checked, not flipped)
   TEST_TIER: integration   VERIFICATION_SERVICE: desktop-ct-harness
   VERIFY: pnpm test:ct:desktop -- GovernanceSelfEscalationNoFlip
 
@@ -124,7 +124,7 @@ TEST CRITERIA (boolean; maps to ACs)
     VERIFY: pnpm test:ct:desktop -- GovernanceIPCFailureBanner
 - TC-3 (-> AC-3): Retry re-issues the SDK call (call count increments); persistent failure keeps danger InfoMessage visible and controls disabled
     VERIFY: pnpm test:ct:desktop -- GovernanceIPCRetry
-- TC-4 (-> AC-4): Self-escalation attempt: perm.denied surfaces danger InfoMessage with denial text; Toggle stays OFF (not flipped)
+- TC-4 (-> AC-4): Self-escalation attempt: test captures aria-checked BEFORE the click; perm.denied surfaces danger InfoMessage with denial text; Toggle stays OFF (pre-click aria-checked == post-denial aria-checked, not flipped)
     VERIFY: pnpm test:ct:desktop -- GovernanceSelfEscalationNoFlip
 - TC-5 (-> AC-5): hasAdminWrite=false: info InfoMessage with 'administration:write is required' visible; ALL Toggles/Textboxes/TagInputs/Buttons disabled; 0 interactive write controls
     VERIFY: pnpm test:ct:desktop -- GovernanceReadOnlyA11y
@@ -142,7 +142,7 @@ provides:
   - t
   - a
   - b
-  -  
+  -
   - n
   - a
   - v
@@ -153,12 +153,12 @@ provides:
   - i
   - o
   - n
-  -  
+  -
   - w
   - i
   - t
   - h
-  -  
+  -
   - a
   - r
   - i
@@ -185,11 +185,11 @@ provides:
   - d
   - b
   - y
-  -  
+  -
   - a
   - n
   - d
-  -  
+  -
   - k
   - e
   - y
@@ -198,11 +198,11 @@ provides:
   - a
   - r
   - d
-  -  
+  -
   - n
   - a
   - v
-  -  
+  -
   - (
   - T
   - a
@@ -221,7 +221,7 @@ provides:
   - w
   - )
   - ;
-  -  
+  -
   - I
   - P
   - C
@@ -233,14 +233,14 @@ provides:
   - u
   - r
   - e
-  -  
+  -
   - d
   - a
   - n
   - g
   - e
   - r
-  -  
+  -
   - I
   - n
   - f
@@ -252,30 +252,30 @@ provides:
   - a
   - g
   - e
-  -  
+  -
   - w
   - i
   - t
   - h
-  -  
+  -
   - R
   - e
   - t
   - r
   - y
-  -  
+  -
   - b
   - u
   - t
   - t
   - o
   - n
-  -  
+  -
   - t
   - h
   - a
   - t
-  -  
+  -
   - r
   - e
   - -
@@ -285,26 +285,26 @@ provides:
   - u
   - e
   - s
-  -  
+  -
   - t
   - h
   - e
-  -  
+  -
   - s
   - a
   - m
   - e
-  -  
+  -
   - S
   - D
   - K
-  -  
+  -
   - c
   - a
   - l
   - l
   - ;
-  -  
+  -
   - p
   - e
   - r
@@ -315,7 +315,7 @@ provides:
   - e
   - n
   - t
-  -  
+  -
   - f
   - a
   - i
@@ -323,28 +323,28 @@ provides:
   - u
   - r
   - e
-  -  
+  -
   - k
   - e
   - e
   - p
   - s
-  -  
+  -
   - t
   - h
   - e
-  -  
+  -
   - U
   - I
-  -  
+  -
   - i
   - n
-  -  
+  -
   - s
   - a
   - f
   - e
-  -  
+  -
   - r
   - e
   - a
@@ -354,14 +354,14 @@ provides:
   - n
   - l
   - y
-  -  
+  -
   - s
   - t
   - a
   - t
   - e
   - ;
-  -  
+  -
   - s
   - e
   - l
@@ -377,14 +377,14 @@ provides:
   - i
   - o
   - n
-  -  
+  -
   - d
   - e
   - n
   - i
   - a
   - l
-  -  
+  -
   - s
   - u
   - r
@@ -393,17 +393,17 @@ provides:
   - c
   - e
   - d
-  -  
+  -
   - a
   - s
-  -  
+  -
   - d
   - a
   - n
   - g
   - e
   - r
-  -  
+  -
   - I
   - n
   - f
@@ -415,7 +415,7 @@ provides:
   - a
   - g
   - e
-  -  
+  -
   - w
   - i
   - t
@@ -423,7 +423,7 @@ provides:
   - o
   - u
   - t
-  -  
+  -
   - f
   - l
   - i
@@ -432,11 +432,11 @@ provides:
   - i
   - n
   - g
-  -  
+  -
   - t
   - h
   - e
-  -  
+  -
   - c
   - o
   - n
@@ -444,7 +444,7 @@ provides:
   - r
   - o
   - l
-  -  
+  -
   - (
   - c
   - o
@@ -459,16 +459,16 @@ provides:
   - i
   - d
   - e
-  -  
+  -
   - p
   - r
   - o
   - o
   - f
-  -  
+  -
   - o
   - f
-  -  
+  -
   - C
   - A
   - P
@@ -481,7 +481,7 @@ provides:
   - -
   - 0
   - 1
-  -  
+  -
   - n
   - o
   - -
@@ -493,7 +493,7 @@ provides:
   - s
   - )
   - ;
-  -  
+  -
   - r
   - e
   - a
@@ -503,13 +503,13 @@ provides:
   - n
   - l
   - y
-  -  
+  -
   - s
   - t
   - a
   - t
   - e
-  -  
+  -
   - s
   - u
   - r
@@ -518,16 +518,16 @@ provides:
   - c
   - e
   - s
-  -  
+  -
   - t
   - h
   - e
-  -  
+  -
   - i
   - n
   - f
   - o
-  -  
+  -
   - I
   - n
   - f
@@ -539,13 +539,13 @@ provides:
   - a
   - g
   - e
-  -  
+  -
   - u
   - n
   - d
   - e
   - r
-  -  
+  -
   - m
   - i
   - s
@@ -553,7 +553,7 @@ provides:
   - i
   - n
   - g
-  -  
+  -
   - a
   - d
   - m
@@ -665,6 +665,7 @@ DEPENDENCIES
 Depends on: MGMT-UI-004 (GovernanceSettings wrapped in ErrorBoundary — a11y + IPC additions must be inside the boundary); MGMT-UI-001 (desktop CT harness; from Sprint 06a); MGMT-IPC-002 (structured denial shape {code,message,remediation_hint}; from Sprint 06a); DESIGN-MGMT-004 (structured-denial banner + self-escalation no-flip visual contract); DESIGN-MGMT-007 (four-tab aria + keyboard-nav contract); DESIGN-MGMT-008 (IPC-failure/retry pattern)
 Blocks:     MGMT-UI-012 (build-gate tests verify no +page.server.ts and no direct config write across all governance components including those modified here)
 ```
+
 </details>
 
 <!-- REQUIREMENT-CONTRACT v1 -->
@@ -722,6 +723,11 @@ Blocks:     MGMT-UI-012 (build-gate tests verify no +page.server.ts and no direc
       "id": "AC-1",
       "type": "acceptance_criterion",
       "primary": true,
+      "implements_design": [
+        "DESIGN-MGMT-007:AC-1",
+        "DESIGN-MGMT-007:AC-2",
+        "DESIGN-MGMT-007:AC-3"
+      ],
       "description": "GIVEN GovernanceSettings mounted and the four-tab strip rendered WHEN a keyboard user presses Tab to focus the tab strip, then Arrow keys to move between tabs, then Enter to activate THEN focus moves to the tab strip (TabList has aria-label or aria-labelledby), Arrow keys move focus between the four TabTriggers, Enter activates the focused tab and its aria-selected becomes true",
       "verify": "pnpm test:ct:desktop -- GovernanceTabsA11y",
       "scenario": {
@@ -780,6 +786,10 @@ Blocks:     MGMT-UI-012 (build-gate tests verify no +page.server.ts and no direc
       "id": "AC-2",
       "type": "acceptance_criterion",
       "primary": false,
+      "implements_design": [
+        "DESIGN-MGMT-008:AC-2",
+        "DESIGN-MGMT-008:AC-4"
+      ],
       "description": "GIVEN GovernanceSettings mounted with seeded_ipc_failure (SDK call will reject with perm.denied) WHEN a write SDK call is triggered and it returns the structured denial THEN a danger-variant InfoMessage appears with the denial/error text; a Retry button is visible; this applies to BOTH write-path perm.denied failures AND read-path transport errors",
       "verify": "pnpm test:ct:desktop -- GovernanceIPCFailureBanner",
       "scenario": {
@@ -853,6 +863,9 @@ Blocks:     MGMT-UI-012 (build-gate tests verify no +page.server.ts and no direc
       "id": "AC-3",
       "type": "acceptance_criterion",
       "primary": false,
+      "implements_design": [
+        "DESIGN-MGMT-008:AC-3"
+      ],
       "description": "GIVEN GovernanceSettings with seeded_ipc_failure and the danger InfoMessage visible with Retry WHEN user clicks Retry; then the SDK mock is configured for persistent failure (seeded_ipc_persistent_failure) and Retry is clicked again THEN first Retry re-issues the SDK call (call count increments to 2); with persistent failure the danger InfoMessage remains visible and controls stay disabled (safe read-only state)",
       "verify": "pnpm test:ct:desktop -- GovernanceIPCRetry",
       "scenario": {
@@ -903,7 +916,12 @@ Blocks:     MGMT-UI-012 (build-gate tests verify no +page.server.ts and no direc
       "id": "AC-4",
       "type": "acceptance_criterion",
       "primary": false,
-      "description": "GIVEN GovernanceSettings mounted with seeded_self_escalation_denial; administration:write Toggle starts OFF WHEN user clicks the administration:write Toggle to grant it to themselves THEN the governed path returns perm.denied; a danger InfoMessage with 'You cannot modify your own administration grants' is visible; the Toggle remains in the OFF state (not flipped)",
+      "implements_design": [
+        "DESIGN-MGMT-004:AC-1",
+        "DESIGN-MGMT-004:AC-2",
+        "DESIGN-MGMT-004:AC-3"
+      ],
+      "description": "GIVEN GovernanceSettings mounted with seeded_self_escalation_denial; administration:write Toggle starts OFF WHEN user clicks the administration:write Toggle to grant it to themselves THEN the test MUST capture aria-checked BEFORE the click and assert it remains unchanged after the denial; the governed path returns perm.denied; a danger InfoMessage with 'You cannot modify your own administration grants' is visible; the Toggle remains in the OFF state (pre-click aria-checked == post-denial aria-checked, not flipped)",
       "verify": "pnpm test:ct:desktop -- GovernanceSelfEscalationNoFlip",
       "scenario": {
         "id": "SC-MGMT-UI-011-4",
@@ -916,7 +934,8 @@ Blocks:     MGMT-UI-012 (build-gate tests verify no +page.server.ts and no direc
             "the Toggle flips to `aria-checked='true'` optimistically before the SDK response (no-bypass promise broken)",
             "the danger InfoMessage is absent after the denied call (`0` InfoMessage elements with `style='danger'`)",
             "the Toggle has `aria-checked='true'` after `perm.denied` (optimistic flip not reverted)",
-            "a Retry button appears on a perm.denied self-escalation denial (unified error banner with generic Retry bypasses the no-Retry-on-denial contract)"
+            "a Retry button appears on a perm.denied self-escalation denial (unified error banner with generic Retry bypasses the no-Retry-on-denial contract)",
+            "stub Toggle always reports `aria-checked='true'` regardless of click \u2014 without a pre-click aria-checked assertion, this stub passes (no-op-handler stub-pass vector closed by REMEDIATE-UI-5)"
           ]
         },
         "evidence": {
@@ -930,21 +949,28 @@ Blocks:     MGMT-UI-012 (build-gate tests verify no +page.server.ts and no direc
               "actor": "user",
               "steps": [
                 "locate the administration:write Toggle (initial state: OFF)",
+                "capture the pre-click aria-checked value BEFORE the click (REMEDIATE-UI-5 strengthening)",
                 "click the Toggle to attempt self-escalation",
+                "capture the post-denial aria-checked value AFTER the perm.denied response",
+                "assert the pre-click and post-denial aria-checked values are EQUAL (no flip)",
                 "observe the Toggle state and InfoMessage"
               ]
             },
             "end_state": {
               "must_observe": [
                 "an `InfoMessage` with `style='danger'` containing text `'cannot modify your own administration grants'`",
-                "the administration:write Toggle has `aria-checked='false'` (remains in OFF state, not flipped)",
+                "a pre-click `aria-checked='false'` capture/assertion is present (Toggle starts OFF, captured BEFORE the click)",
+                "the administration:write Toggle has `aria-checked='false'` (remains in OFF state, not flipped) AFTER the denial",
+                "an equality/comparison assertion between the pre-click and post-denial aria-checked values is present (closes the no-op stub Toggle vector)",
                 "the InfoMessage body contains `'Self-escalation is not permitted'` (the seeded `remediation_hint`)"
               ],
               "must_not_observe": [
                 "the Toggle with `aria-checked='true'` (optimistic flip occurred)",
                 "`0` InfoMessage elements with `style='danger'` after the denied self-escalation attempt",
                 "a `warning` or `info` InfoMessage variant (wrong variant for a `perm.denied` denial)",
-                "a button with accessible name `'Retry'` visible when the denial code is `'perm.denied'` (self-escalation denials MUST NOT offer Retry \u2014 DESIGN-MGMT-004 contract)"
+                "a button with accessible name `'Retry'` visible when the denial code is `'perm.denied'` (self-escalation denials MUST NOT offer Retry \u2014 DESIGN-MGMT-004 contract)",
+                "only a post-click aria-checked assertion with no pre-click capture (a stub Toggle that always reports `aria-checked='true'` would pass such a weak oracle)",
+                "pre-click and post-denial aria-checked values captured without an equality/comparison step"
               ]
             }
           }
@@ -955,6 +981,9 @@ Blocks:     MGMT-UI-012 (build-gate tests verify no +page.server.ts and no direc
       "id": "AC-5",
       "type": "acceptance_criterion",
       "primary": false,
+      "implements_design": [
+        "DESIGN-MGMT-006:AC-3"
+      ],
       "description": "GIVEN GovernanceSettings mounted with seeded_read_only (hasAdminWrite=false) WHEN the component renders THEN an info-variant InfoMessage mentioning 'administration:write is required' is visible; ALL Toggles have aria-disabled=true or disabled; ALL Textbox inputs have disabled; ALL TagInputs/Selects are readonly/disabled; ALL write Buttons have disabled; 0 interactive write controls exist",
       "verify": "pnpm test:ct:desktop -- GovernanceReadOnlyA11y",
       "scenario": {

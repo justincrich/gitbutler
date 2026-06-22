@@ -4,6 +4,7 @@ last_validated: 2026-06-18
 prd_version: 1.3.0
 section: technical-requirements
 ---
+
 # UI Infrastructure — Governance Management Surface (MGMT)
 
 The human management surface added in v1.1.0 — **a feature inside the existing `apps/desktop` (SvelteKit + Tauri) app, not a new app.** The design **extends existing patterns** (the project-settings sections and the `rules/` components); it introduces **no new design-system work** — every token, control, and feedback component already exists in `packages/ui` (Svelte) or `apps/desktop/src/components/shared`. Frontend specialists: **`sveltekit-*` + `tauri-*` + `frontend-designer`**.
@@ -18,10 +19,10 @@ The human management surface added in v1.1.0 — **a feature inside the existing
 
 ## Routing & Views
 
-**Routing decision: a STATE of the existing Settings surface — NOT a new route.** Per the route-vs-state discriminator, the governance surface adds a *section* to the project Settings modal (whose own composition does not change), so it is a state, not a new `[projectId]/…` route. The CLI/engine layers remain routing-N/A; the desktop app gains one settings-section state. **Implementation:** extend the `ProjectSettingsPageId` type union (`projectSettingsPages.ts`) with the governance page id and branch `ProjectSettingsModalContent.svelte` to render `GovernanceSettings.svelte` when that page is active; all pending-state tracking is CLIENT-ONLY (Svelte stores, no `+page.server.ts`), consistent with `apps/desktop` adapter-static.
+**Routing decision: a STATE of the existing Settings surface — NOT a new route.** Per the route-vs-state discriminator, the governance surface adds a _section_ to the project Settings modal (whose own composition does not change), so it is a state, not a new `[projectId]/…` route. The CLI/engine layers remain routing-N/A; the desktop app gains one settings-section state. **Implementation:** extend the `ProjectSettingsPageId` type union (`projectSettingsPages.ts`) with the governance page id and branch `ProjectSettingsModalContent.svelte` to render `GovernanceSettings.svelte` when that page is active; all pending-state tracking is CLIENT-ONLY (Svelte stores, no `+page.server.ts`), consistent with `apps/desktop` adapter-static.
 
-| Route / surface | Kind | States added | Primary UCs | Enter when |
-|---|---|---|---|---|
+| Route / surface        | Kind               | States added                                                                                                    | Primary UCs    | Enter when                   |
+| ---------------------- | ------------------ | --------------------------------------------------------------------------------------------------------------- | -------------- | ---------------------------- |
 | Project Settings modal | overlay (existing) | **+ `Permissions & Governance` section** (admin-only), with Principals · Groups · Branch Gates · Rules sub-tabs | UC-MGMT-01..07 | admin opens project settings |
 
 **Route Delta (v1.1.0):** | Project Settings modal | CHANGED | +1 admin-only section (`Permissions & Governance`) with 4 sub-tabs | a state of the existing settings surface, not a seam → no new route |
@@ -29,6 +30,7 @@ The human management surface added in v1.1.0 — **a feature inside the existing
 ## Wireframes
 
 ### Principals list (section entry)
+
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │ Project settings        Permissions & Governance            (adminOnly page) │
@@ -48,6 +50,7 @@ Legend: [●] committed   [○] pending (not yet committed to ref)   ··· = Ke
 ```
 
 ### Per-principal permission editor (inline, mirrors RuleEditor slide-in)
+
 ```
 ┌──────────────────────────────────────────────────────────────────┐
 │ Principal: agent:codex-staging                          [✕ Close] │
@@ -64,9 +67,11 @@ Legend: [●] committed   [○] pending (not yet committed to ref)   ··· = Ke
 │                              [Cancel] [Save changes ○ pending]    │
 └──────────────────────────────────────────────────────────────────┘
 ```
+
 > **Save model (B16 / Y-NEW-11 — batch-save).** The editor uses a **batch-save** model, consistent with the `[Save changes ○ pending]` control and the pending-until-committed paradigm: individual `Toggle`s and group-chip changes update **local UI state only**; `[Save changes]` writes the staged set together to the working-tree `permissions.toml`. The batch is implemented as a **sequence of the already-specified `but perm grant`/`revoke` (and `but group add-member`/`remove-member`) verbs** — additive, no new governed verb. A proposed `but perm set --principal … --permissions …` (overwrite) verb is **deferred (C2)** — there is no per-toggle write and no new overwrite verb in the POC.
 
 ### Groups tab
+
 ```
 ┌──────────────────────────────────────────────────────────────────┐
 │ Groups                                               [+ New group]│
@@ -81,6 +86,7 @@ Delete (B11) maps to `but group delete`; the confirmation dialog (B17) precedes 
 ```
 
 ### Branch Gates tab
+
 ```
 ┌──────────────────────────────────────────────────────────────────┐
 │ Branch Gates             reads .gitbutler/gates.toml   [+ Add]   │
@@ -97,6 +103,7 @@ Delete (B11) maps to `but group delete`; the confirmation dialog (B17) precedes 
 ```
 
 ### Rules tab (reuses existing RulesList, scoped by principalId)
+
 ```
 ┌──────────────────────────────────────────────────────────────────┐
 │ Rules                  Automate per-agent workspace behavior     │
@@ -110,63 +117,66 @@ Delete (B11) maps to `but group delete`; the confirmation dialog (B17) precedes 
 ```
 
 ### Cross-cutting states
+
 ```
 ⚠  4 pending governance changes — take effect once committed.  [Commit →]   InfoMessage warning
 ℹ  Read-only: administration:write is required to change governance.         InfoMessage info
 ✕  perm.denied — you cannot modify your own administration grants.           InfoMessage danger
    (empty) EmptyStatePlaceholder "No principals configured" [+ Add first]
 ```
+
 > **Commit semantics (B15 / Y-NEW-10).** "Commit changes" commits working-tree `.gitbutler/{permissions,gates}.toml` to the current workspace branch (the branch checked out in the desktop session) with message `chore: update governance config`. If `.gitbutler/*.toml` is clean (no diff vs HEAD), the banner is hidden. Staging is implicit (all `.gitbutler/*.toml` changes commit together). The commit itself goes through the commit gate.
 
 ## Component reuse (verified against source — cite in tasks for efficient build)
 
-| UI element | Existing component | Path | Reuse |
-|---|---|---|---|
-| Settings sidebar + page scaffold | `SettingsModalLayout` | `apps/desktop/src/components/settings/SettingsModalLayout.svelte` | as-is (+1 page in `projectSettingsPages.ts`) |
-| Settings page host | `ProjectSettingsModalContent` | `apps/desktop/src/components/settings/ProjectSettingsModalContent.svelte` | extend (add `governance` branch) |
-| Section header/description | `SettingsSection` | `apps/desktop/src/components/shared/SettingsSection.svelte` | as-is |
-| Secondary tabs | `Tabs`/`TabList`/`TabTrigger`/`TabContent` | `apps/desktop/src/components/shared/Tabs.svelte` (+TabList/Trigger/Content) | as-is |
-| Card rows | `CardGroup` | `packages/ui/src/lib/components/cardGroup/CardGroupRoot.svelte` + `CardGroupItem.svelte` | as-is |
-| Permission toggles | `Toggle` | `packages/ui/src/lib/components/Toggle.svelte` | as-is (`disabled` for inherited/read-only) |
-| Role preset strip | `SegmentControl`/`Segment` | `packages/ui/src/lib/components/segmentControl/SegmentControl.svelte` | as-is |
-| Group/member/required-group chips | `TagInput` | `packages/ui/src/lib/components/TagInput.svelte` | as-is (`readonly` in read-only state) |
-| Expandable group / gate rows | `ExpandableSection` | `apps/desktop/src/components/shared/ExpandableSection.svelte` | as-is |
-| Badges (role/status/pending) | `Badge` | `packages/ui/src/lib/components/Badge.svelte` | as-is (`warning`/`soft` = pending) |
-| Pending/read-only/denial banners | `InfoMessage` | `packages/ui/src/lib/components/InfoMessage.svelte` | as-is (warning/info/danger) |
-| Destructive-action confirmation | `Modal`/confirmation dialog | `packages/ui/src/lib/components/Modal.svelte` | as-is (group delete / unprotect-branch confirmations, B17) |
-| Empty states | `EmptyStatePlaceholder` | `packages/ui/src/lib/components/EmptyStatePlaceholder.svelte` | as-is |
-| Buttons (add/create/commit) | `Button` | `packages/ui/src/lib/components/Button.svelte` | as-is |
-| Row overflow actions | `KebabButton` (+ ContextMenu) | `packages/ui/src/lib/components/KebabButton.svelte` | as-is |
-| Min-approvals field | `Textbox` | `packages/ui/src/lib/components/Textbox.svelte` | as-is (`type=number`) |
-| Group selector dropdown | `Select`/`SelectItem` | `packages/ui/src/lib/components/select/Select.svelte` | as-is |
-| Toasts (staged/error) | `chipToasts` | `packages/ui/src/lib/components/chipToast/chipToastStore.ts` | as-is |
-| Scroll container | `AppScrollableContainer` | `apps/desktop/src/components/shared/AppScrollableContainer.svelte` | as-is |
-| Async/loading | `ReduxResult` (+ `SkeletonBone`) | `apps/desktop/src/components/shared/ReduxResult.svelte` | as-is |
-| **Per-principal rules** | `RulesList` (+ `Rule`/`RuleEditor`/`RuleFiltersEditor`/`NewRuleMenu`) | `apps/desktop/src/components/rules/RulesList.svelte` | **extend: add optional `principalId` prop** (sole rules change; today takes only `projectId`) |
+| UI element                        | Existing component                                                    | Path                                                                                     | Reuse                                                                                         |
+| --------------------------------- | --------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| Settings sidebar + page scaffold  | `SettingsModalLayout`                                                 | `apps/desktop/src/components/settings/SettingsModalLayout.svelte`                        | as-is (+1 page in `projectSettingsPages.ts`)                                                  |
+| Settings page host                | `ProjectSettingsModalContent`                                         | `apps/desktop/src/components/settings/ProjectSettingsModalContent.svelte`                | extend (add `governance` branch)                                                              |
+| Section header/description        | `SettingsSection`                                                     | `apps/desktop/src/components/shared/SettingsSection.svelte`                              | as-is                                                                                         |
+| Secondary tabs                    | `Tabs`/`TabList`/`TabTrigger`/`TabContent`                            | `apps/desktop/src/components/shared/Tabs.svelte` (+TabList/Trigger/Content)              | as-is                                                                                         |
+| Card rows                         | `CardGroup`                                                           | `packages/ui/src/lib/components/cardGroup/CardGroupRoot.svelte` + `CardGroupItem.svelte` | as-is                                                                                         |
+| Permission toggles                | `Toggle`                                                              | `packages/ui/src/lib/components/Toggle.svelte`                                           | as-is (`disabled` for inherited/read-only)                                                    |
+| Role preset strip                 | `SegmentControl`/`Segment`                                            | `packages/ui/src/lib/components/segmentControl/SegmentControl.svelte`                    | as-is                                                                                         |
+| Group/member/required-group chips | `TagInput`                                                            | `packages/ui/src/lib/components/TagInput.svelte`                                         | as-is (`readonly` in read-only state)                                                         |
+| Expandable group / gate rows      | `ExpandableSection`                                                   | `apps/desktop/src/components/shared/ExpandableSection.svelte`                            | as-is                                                                                         |
+| Badges (role/status/pending)      | `Badge`                                                               | `packages/ui/src/lib/components/Badge.svelte`                                            | as-is (`warning`/`soft` = pending)                                                            |
+| Pending/read-only/denial banners  | `InfoMessage`                                                         | `packages/ui/src/lib/components/InfoMessage.svelte`                                      | as-is (warning/info/danger)                                                                   |
+| Destructive-action confirmation   | `Modal`/confirmation dialog                                           | `packages/ui/src/lib/components/Modal.svelte`                                            | as-is (group delete / unprotect-branch confirmations, B17)                                    |
+| Empty states                      | `EmptyStatePlaceholder`                                               | `packages/ui/src/lib/components/EmptyStatePlaceholder.svelte`                            | as-is                                                                                         |
+| Buttons (add/create/commit)       | `Button`                                                              | `packages/ui/src/lib/components/Button.svelte`                                           | as-is                                                                                         |
+| Row overflow actions              | `KebabButton` (+ ContextMenu)                                         | `packages/ui/src/lib/components/KebabButton.svelte`                                      | as-is                                                                                         |
+| Min-approvals field               | `Textbox`                                                             | `packages/ui/src/lib/components/Textbox.svelte`                                          | as-is (`type=number`)                                                                         |
+| Group selector dropdown           | `Select`/`SelectItem`                                                 | `packages/ui/src/lib/components/select/Select.svelte`                                    | as-is                                                                                         |
+| Toasts (staged/error)             | `chipToasts`                                                          | `packages/ui/src/lib/components/chipToast/chipToastStore.ts`                             | as-is                                                                                         |
+| Scroll container                  | `AppScrollableContainer`                                              | `apps/desktop/src/components/shared/AppScrollableContainer.svelte`                       | as-is                                                                                         |
+| Async/loading                     | `ReduxResult` (+ `SkeletonBone`)                                      | `apps/desktop/src/components/shared/ReduxResult.svelte`                                  | as-is                                                                                         |
+| **Per-principal rules**           | `RulesList` (+ `Rule`/`RuleEditor`/`RuleFiltersEditor`/`NewRuleMenu`) | `apps/desktop/src/components/rules/RulesList.svelte`                                     | **extend: add optional `principalId` prop** (sole rules change; today takes only `projectId`) |
 
 ## Net-new components (thin compositions of the above)
 
-| New component | Purpose | Location |
-|---|---|---|
-| `GovernanceSettings.svelte` | Top-level page: CLIENT-ONLY pending-state store (Svelte store, no `+page.server.ts`), `administration:write` check, tab layout, commit action (commit semantics per B15) | `apps/desktop/src/components/settings/GovernanceSettings.svelte` |
-| `GovernanceErrorBoundary.svelte` | Error boundary wrapping the governance surface to catch render/runtime failures and show a fallback | `apps/desktop/src/components/governance/GovernanceErrorBoundary.svelte` |
-| `PrincipalsList.svelte` | Principals tab: principal rows + inline editor toggle | `apps/desktop/src/components/governance/PrincipalsList.svelte` |
-| `PrincipalEditor.svelte` | Inline editor: preset `SegmentControl` + functional `Toggle` table + group `TagInput`; **batch-save** (B16) | `apps/desktop/src/components/governance/PrincipalEditor.svelte` |
-| `GroupsList.svelte` | Groups tab: `ExpandableSection` per group; group delete + confirmation (B11/B17) | `apps/desktop/src/components/governance/GroupsList.svelte` |
-| `BranchGatesList.svelte` | Branch Gates tab: `ExpandableSection` per branch; unprotect confirmation (B17) | `apps/desktop/src/components/governance/BranchGatesList.svelte` |
-| `GovernancePendingBanner.svelte` | Warning `InfoMessage` tracking `pendingCount` + commit | `apps/desktop/src/components/governance/GovernancePendingBanner.svelte` |
+| New component                    | Purpose                                                                                                                                                                  | Location                                                                |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------- |
+| `GovernanceSettings.svelte`      | Top-level page: CLIENT-ONLY pending-state store (Svelte store, no `+page.server.ts`), `administration:write` check, tab layout, commit action (commit semantics per B15) | `apps/desktop/src/components/settings/GovernanceSettings.svelte`        |
+| `GovernanceErrorBoundary.svelte` | Error boundary wrapping the governance surface to catch render/runtime failures and show a fallback                                                                      | `apps/desktop/src/components/governance/GovernanceErrorBoundary.svelte` |
+| `PrincipalsList.svelte`          | Principals tab: principal rows + inline editor toggle                                                                                                                    | `apps/desktop/src/components/governance/PrincipalsList.svelte`          |
+| `PrincipalEditor.svelte`         | Inline editor: preset `SegmentControl` + functional `Toggle` table + group `TagInput`; **batch-save** (B16)                                                              | `apps/desktop/src/components/governance/PrincipalEditor.svelte`         |
+| `GroupsList.svelte`              | Groups tab: `ExpandableSection` per group; group delete + confirmation (B11/B17)                                                                                         | `apps/desktop/src/components/governance/GroupsList.svelte`              |
+| `BranchGatesList.svelte`         | Branch Gates tab: `ExpandableSection` per branch; unprotect confirmation (B17)                                                                                           | `apps/desktop/src/components/governance/BranchGatesList.svelte`         |
+| `GovernancePendingBanner.svelte` | Warning `InfoMessage` tracking `pendingCount` + commit                                                                                                                   | `apps/desktop/src/components/governance/GovernancePendingBanner.svelte` |
 
 Plus: **+1 entry** in `apps/desktop/src/lib/settings/projectSettingsPages.ts`, **+1 prop** (`principalId`) on `RulesList`, the **`but-sdk` regeneration** for the new `but perm`/`but group`/gate Tauri commands, and the **desktop CT/Vitest config** (B14 / T-MGMT-000) the component tests run against.
 
 ## Specialist ownership (frontend)
 
-| Work | Owner |
-|---|---|
-| SvelteKit governance components + reuse wiring | `sveltekit-implementer` → `sveltekit-reviewer` |
-| Tauri command surface + `but-sdk` regeneration (expose `but-authz` to the frontend) | `tauri-implementer` → `tauri-reviewer` |
+| Work                                                                                                | Owner                                                  |
+| --------------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
+| SvelteKit governance components + reuse wiring                                                      | `sveltekit-implementer` → `sveltekit-reviewer`         |
+| Tauri command surface + `but-sdk` regeneration (expose `but-authz` to the frontend)                 | `tauri-implementer` → `tauri-reviewer`                 |
 | Desktop CT/Vitest harness scaffold (B14 / T-MGMT-000) — the prerequisite for the 38 component tests | `sveltekit-implementer` (with `tauri-*` for IPC mocks) |
-| UX/layout/wireframe fidelity | `frontend-designer` |
-| The backend `but-authz` / `but perm`/`but group`/gate functions these call | `rust-*` (see `02-system-components.md`) |
+| UX/layout/wireframe fidelity                                                                        | `frontend-designer`                                    |
+| The backend `but-authz` / `but perm`/`but group`/gate functions these call                          | `rust-*` (see `02-system-components.md`)               |
 
 ## Verification posture
+
 Playwright component tests (`pnpm test:ct`) over the real `packages/ui`/desktop components (no mocked UI), asserting: admin-gated sidebar visibility, the per-principal batch-save → governed SDK call(s), pending-banner appearance on edit, read-only state under missing `administration:write`, and a denied write surfacing the structured error without applying. **Prerequisite (B14 / T-MGMT-000):** an `apps/desktop` CT/Vitest config must exist (`pnpm test:ct:desktop` or `pnpm test --filter @gitbutler/desktop`) running governance component tests against a `but-sdk` mock layer — `pnpm test:ct` today runs only `packages/ui`, so without the desktop CT config none of the 38 MGMT/desktop component tests can run. E2E (WebdriverIO/Playwright) covers the full admin flow open→edit→commit.

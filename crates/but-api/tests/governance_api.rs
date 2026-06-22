@@ -1,6 +1,7 @@
 use but_api::legacy::governance::{
-    GovernancePendingChange, REF_PIN_CAVEAT, governance_commit, governance_pending,
-    governance_principals_list, governance_status_read, group_add_member, perm_grant,
+    BranchProtectionInput, GovernancePendingChange, REF_PIN_CAVEAT, branch_gates_update,
+    governance_commit, governance_pending, governance_principals_list, governance_status_read,
+    group_add_member, perm_grant,
 };
 use but_authz::Authority;
 use serde_json::Value;
@@ -195,6 +196,89 @@ fn governance_api_pending_reports_uncommitted_grant() -> anyhow::Result<()> {
                 && token.change == Some(GovernancePendingChange::Grant)
         }),
         "rust-implementer must show reviews:write as an uncommitted grant: {rust_implementer:?}"
+    );
+    Ok(())
+}
+
+#[test]
+#[serial_test::serial]
+fn governance_api_pending_reports_branch_gate_change() -> anyhow::Result<()> {
+    let (repo, _tmp) = governance_api_repo();
+    let ctx = context_for(&repo)?;
+    let clean = governance_pending(&ctx, TARGET_REF.to_owned())?;
+
+    temp_env::with_var("BUT_AGENT_HANDLE", Some("admin"), || {
+        branch_gates_update(
+            &ctx,
+            TARGET_REF.to_owned(),
+            "main".to_owned(),
+            BranchProtectionInput {
+                protected: true,
+                min_approvals: Some(2),
+                require_distinct_from_author: Some(true),
+                require_approval_from_group: Some(vec!["eng".to_owned()]),
+            },
+        )
+    })?;
+
+    let pending = governance_pending(&ctx, TARGET_REF.to_owned())?;
+    assert_eq!(
+        clean.pending_count, 0,
+        "clean governance fixture must start with no pending permissions or gates"
+    );
+    assert_eq!(
+        pending.pending_count,
+        clean.pending_count + 1,
+        "pending_count must include the uncommitted working-tree gates.toml diff"
+    );
+    assert!(
+        pending
+            .principals
+            .iter()
+            .all(|principal| principal.tokens.iter().all(|token| !token.pending)),
+        "branch gate diffs must not be reported as permission-token diffs: {pending:?}"
+    );
+    Ok(())
+}
+
+#[test]
+#[serial_test::serial]
+fn governance_api_branch_gate_pending_clears_after_commit() -> anyhow::Result<()> {
+    let (repo, _tmp) = governance_api_repo();
+    let ctx = context_for(&repo)?;
+
+    temp_env::with_var("BUT_AGENT_HANDLE", Some("admin"), || {
+        branch_gates_update(
+            &ctx,
+            TARGET_REF.to_owned(),
+            "main".to_owned(),
+            BranchProtectionInput {
+                protected: true,
+                min_approvals: Some(2),
+                require_distinct_from_author: Some(true),
+                require_approval_from_group: Some(vec!["eng".to_owned()]),
+            },
+        )
+    })?;
+    let pending = governance_pending(&ctx, TARGET_REF.to_owned())?;
+    assert!(
+        pending.pending_count > 0,
+        "branch gate edits must be pending before governance_commit"
+    );
+
+    let outcome = temp_env::with_var("BUT_AGENT_HANDLE", Some("admin"), || {
+        governance_commit(&ctx, TARGET_REF.to_owned())
+    })?;
+    assert_eq!(
+        outcome.committed_paths,
+        vec![GATES_PATH.to_owned()],
+        "governance_commit must commit the pending gates.toml change"
+    );
+
+    let pending = governance_pending(&ctx, TARGET_REF.to_owned())?;
+    assert_eq!(
+        pending.pending_count, 0,
+        "governance_commit must clear the branch gate pending count"
     );
     Ok(())
 }

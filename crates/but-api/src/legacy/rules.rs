@@ -41,7 +41,14 @@ pub fn update_workspace_rule(
 
 #[but_api]
 #[instrument(err(Debug))]
-pub fn list_workspace_rules(ctx: &Context) -> Result<Vec<WorkspaceRule>> {
+pub fn list_workspace_rules(
+    ctx: &Context,
+    principal_id: Option<String>,
+) -> Result<Vec<WorkspaceRule>> {
+    list_workspace_rules_scoped_for_caller(ctx, principal_id.as_deref())
+}
+
+fn list_workspace_rules_unscoped(ctx: &Context) -> Result<Vec<WorkspaceRule>> {
     let in_workspace = crate::legacy::workspace::stacks_v3_from_ctx(
         ctx,
         but_workspace::legacy::StacksFilter::InWorkspace,
@@ -74,12 +81,12 @@ pub fn list_workspace_rules_scoped(
     ctx: &Context,
     principal_id: Option<&str>,
 ) -> Result<Vec<WorkspaceRule>> {
-    let rules = list_workspace_rules(ctx)?;
     let Some(principal_id) = principal_id else {
-        return Ok(rules);
+        return list_workspace_rules_unscoped(ctx);
     };
 
-    Ok(rules
+    let db = ctx.db.get_cache()?;
+    Ok(list_rules(&db)?
         .into_iter()
         .filter(|rule| rule.session_id().as_deref() == Some(principal_id))
         .collect())

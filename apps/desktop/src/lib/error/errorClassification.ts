@@ -33,7 +33,7 @@ export type Classification = {
 export type ClassifiedError = {
 	title: string;
 	message: string;
-	code?: Code;
+	code?: string;
 	severity: Severity;
 	userMessage?: string;
 	actionHint?: ActionHint;
@@ -155,7 +155,7 @@ function isUnrecoverableBundlingError(message: string): boolean {
  * possible.
  */
 const MESSAGE_PATTERNS: ReadonlyArray<{
-	matches: (parsed: { code?: Code; message: string }) => boolean;
+	matches: (parsed: { code?: string; message: string }) => boolean;
 	classification: Classification;
 }> = [
 	{
@@ -209,7 +209,7 @@ export function classify(error: unknown, callerTitle?: string): ClassifiedError 
 	}
 
 	const byMessage = MESSAGE_PATTERNS.find((p) => p.matches({ code, message }))?.classification;
-	const byCode = code ? CLASSIFICATIONS[code] : undefined;
+	const byCode = code && code in CLASSIFICATIONS ? CLASSIFICATIONS[code as Code] : undefined;
 	const effective = byMessage ?? byCode;
 	if (effective?.severity === "silent") {
 		return { title, message, code, severity: "silent" };
