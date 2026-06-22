@@ -43,7 +43,7 @@ RUNTIME_COMMANDS:
 --------------------------------------------------------------------------------
 OUTCOME
 --------------------------------------------------------------------------------
-Mounting BranchGatesList with seeded_gates_two_branches renders two ExpandableSection rows; expanding 'main' shows the four gate fields with their seeded values; toggling protected OFF shows the Modal confirmation; confirming calls branch_gates_update with protected:false; the row gains a pending indicator. Required-group selector options match seeded_defined_groups only. With seeded_empty_gates, EmptyStatePlaceholder renders. pnpm test:ct:desktop -- BranchGatesList passes. pnpm -F @gitbutler/desktop check and pnpm lint pass.
+Mounting BranchGatesList with seeded_gates_two_branches renders two ExpandableSection rows; expanding 'main' shows the four gate fields with their seeded values; toggling protected OFF shows the Modal confirmation; confirming calls branch_gates_update with protected:false; the row gains a pending indicator. Re-protecting (toggling protected ON from an unprotected state) calls branch_gates_update with protected:true immediately without a Modal (re-protect is non-destructive); the Toggle ends at aria-checked='true' and no danger InfoMessage appears. Required-group selector options match seeded_defined_groups only. With seeded_empty_gates, EmptyStatePlaceholder renders. pnpm test:ct:desktop -- BranchGatesList passes. pnpm -F @gitbutler/desktop check and pnpm lint pass.
 
 --------------------------------------------------------------------------------
 🚫 CRITICAL CONSTRAINTS (Never tier — read before acting)
@@ -70,6 +70,7 @@ DONE WHEN
 - [ ] AC-5: Unprotect branch requires Modal confirmation before staged write
 - [ ] AC-6: isReadOnly=true disables ALL gate field controls and fires 0 SDK calls on interaction (T-MGMT-029)
 - [ ] AC-7: Denied write (branch_gates_update returns perm.denied) surfaces danger InfoMessage without flipping the control (DESIGN-MGMT-004 consumer proof)
+- [ ] AC-8: Re-protect branch (toggle protected ON) is silent — no Modal, immediate write with protected:true, Toggle ends at aria-checked='true', no danger InfoMessage (REMEDIATE-UI-6, closes red-hat L2)
 - [ ] All verification gates pass; only write_allowed files modified
 
 --------------------------------------------------------------------------------
@@ -124,6 +125,13 @@ AC-7: Denied write (branch_gates_update returns perm.denied) surfaces danger Inf
   TEST_TIER: integration   VERIFICATION_SERVICE: desktop-ct-harness
   VERIFY: pnpm test:ct:desktop -- BranchGatesListWriteDenied
 
+AC-8: Re-protect branch (toggle protected ON) is silent — no Modal, immediate write, no danger InfoMessage (REMEDIATE-UI-6, closes red-hat L2)
+  GIVEN: BranchGatesList mounted with seeded_gates_two_branches, a branch currently unprotected (protected:false)
+  WHEN:  user toggles the protected Toggle ON
+  THEN:  no Modal confirmation appears (re-protect is non-destructive); branch_gates_update is called once with protected:true; the Toggle ends at aria-checked='true'; no danger InfoMessage appears
+  TEST_TIER: integration   VERIFICATION_SERVICE: desktop-ct-harness
+  VERIFY: pnpm test:ct:desktop -- BranchGatesListReprotect
+
 --------------------------------------------------------------------------------
 TEST CRITERIA (boolean; maps to ACs)
 --------------------------------------------------------------------------------
@@ -141,6 +149,8 @@ TEST CRITERIA (boolean; maps to ACs)
     VERIFY: pnpm test:ct:desktop -- BranchGatesListReadOnly
 - TC-7 (-> AC-7): branch_gates_update returning perm.denied: danger InfoMessage appears; control reverts to original value (no flip)
     VERIFY: pnpm test:ct:desktop -- BranchGatesListWriteDenied
+- TC-8 (-> AC-8): Toggling protected ON from an unprotected state fires branch_gates_update with protected:true immediately (no Modal), Toggle ends at aria-checked='true', and no danger InfoMessage appears
+    VERIFY: pnpm test:ct:desktop -- BranchGatesListReprotect
 
 --------------------------------------------------------------------------------
 CAPABILITY BOUNDARY
@@ -608,6 +618,7 @@ VERIFICATION GATES
 - pnpm test:ct:desktop -- BranchGatesListEmpty   -> Exit 0
 - pnpm test:ct:desktop -- BranchGatesListGroupSelector   -> Exit 0
 - pnpm test:ct:desktop -- BranchGatesListUnprotectConfirm   -> Exit 0
+- pnpm test:ct:desktop -- BranchGatesListReprotect   -> Exit 0
 - pnpm -F @gitbutler/desktop check   -> Exit 0
 - pnpm lint   -> Exit 0
 - grep -rn 'gates\.toml\|writeFile\|fs\.write' /Users/justinrich/Projects/gitbutler/apps/desktop/src/components/governance/BranchGatesList.svelte | grep -v 'but-sdk\|SDK\|import' | wc -l | grep '^0$'   -> Exit 0 (prints 0)
@@ -1070,6 +1081,59 @@ Blocks:     MGMT-UI-012 (build-gate tests assert no direct config write across a
       }
     },
     {
+      "id": "AC-8",
+      "type": "acceptance_criterion",
+      "primary": false,
+      "description": "GIVEN BranchGatesList mounted with seeded_gates_two_branches, a branch currently unprotected (protected:false) WHEN user toggles the protected Toggle ON THEN no Modal confirmation appears (re-protect is non-destructive); branch_gates_update is called once with protected:true; the Toggle ends at aria-checked='true'; no danger InfoMessage appears",
+      "verify": "pnpm test:ct:desktop -- BranchGatesListReprotect",
+      "scenario": {
+        "id": "SC-MGMT-UI-009-8",
+        "primary": false,
+        "tier": "visible",
+        "test_tier": "integration",
+        "verification_service": "desktop-ct-harness",
+        "negative_control": {
+          "would_fail_if": [
+            "a Modal confirmation appears during re-protect (re-protect is non-destructive and must not show a Modal)",
+            "the protected Toggle stays aria-checked='false' after the click (write did not go through)",
+            "the component stubs the click handler and never calls branch_gates_update",
+            "a danger InfoMessage appears after the re-protect write (write failed silently)"
+          ]
+        },
+        "evidence": {
+          "artifact_type": "screenshot",
+          "required_capture": true
+        },
+        "cases": [
+          {
+            "start_ref": "seeded_gates_two_branches",
+            "action": {
+              "actor": "user",
+              "steps": [
+                "expand 'main' row",
+                "click the protected Toggle to toggle OFF (unprotect) and confirm the Modal \u2014 seeds main with protected:false",
+                "click the protected Toggle to toggle ON (re-protect)"
+              ]
+            },
+            "end_state": {
+              "must_observe": [
+                "the 'main' protected Toggle has `aria-checked='true'`",
+                "branch_gates_update SDK spy called with `{branch: 'main', protected: true}`",
+                "document query for the unprotect modal returns hidden (not visible)",
+                "no InfoMessage with testId `'branch-gates-list-write-error'` in the DOM"
+              ],
+              "must_not_observe": [
+                "a Modal dialog in the DOM during the re-protect flow",
+                "Toggle `aria-checked='false'` after the re-protect click",
+                "branch_gates_update called with `protected: false` on the re-protect action",
+                "a danger InfoMessage after the re-protect write"
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
       "id": "TC-1",
       "type": "test_criterion",
       "description": "Mounting with seeded_gates_two_branches and expanding 'main' renders all four gate field controls with seeded values (protected ON, min_approvals '2', distinct ON, groups 'eng'+'security')",
@@ -1117,6 +1181,13 @@ Blocks:     MGMT-UI-012 (build-gate tests assert no direct config write across a
       "description": "branch_gates_update returning perm.denied: danger InfoMessage appears; control reverts to original value (no flip)",
       "verify": "pnpm test:ct:desktop -- BranchGatesListWriteDenied",
       "maps_to_ac": "AC-7"
+    },
+    {
+      "id": "TC-8",
+      "type": "test_criterion",
+      "description": "Toggling protected ON from an unprotected state fires branch_gates_update with protected:true immediately (no Modal), Toggle ends at aria-checked='true', and no danger InfoMessage appears",
+      "verify": "pnpm test:ct:desktop -- BranchGatesListReprotect",
+      "maps_to_ac": "AC-8"
     }
   ]
 }

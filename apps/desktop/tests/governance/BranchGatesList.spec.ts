@@ -212,6 +212,63 @@ test("BranchGatesListUnprotectConfirm gates protected off behind a modal", async
 	);
 });
 
+test("BranchGatesListReprotect toggles protected on without a modal and writes immediately", async ({
+	mount,
+	page,
+}) => {
+	const component = await mount(BranchGatesListBackendHarness);
+
+	// Seed a branch with protected:false by unprotecting 'main' via the modal flow first.
+	await component
+		.getByTestId("branch-gates-list-row-main")
+		.getByRole("button", { name: /main/ })
+		.click();
+	await component.getByTestId("branch-gates-list-protected-main").click();
+	await expect(page.getByTestId("branch-gates-list-unprotect-modal")).toBeVisible();
+	await page
+		.getByTestId("branch-gates-list-unprotect-modal")
+		.getByRole("button", { name: "Unprotect branch" })
+		.click();
+
+	// Wait for the unprotect write to settle: Toggle should now be unchecked (protected:false).
+	await expect(component.getByTestId("branch-gates-list-protected-main")).not.toBeChecked();
+
+	const updateCountAfterUnprotect = updateCalls(await backendCalls(component)).length;
+
+	// Re-protect: toggle protected ON — the symmetric action under test.
+	await component.getByTestId("branch-gates-list-protected-main").click();
+
+	// No Modal confirmation appears (re-protect is non-destructive).
+	await expect(page.getByTestId("branch-gates-list-unprotect-modal")).toBeHidden();
+
+	// branch_gates_update is called once more with protected:true.
+	await expect
+		.poll(async () => updateCalls(await backendCalls(component)).length)
+		.toBe(updateCountAfterUnprotect + 1);
+	expect(latestUpdate(await backendCalls(component))).toEqual(
+		expect.objectContaining({
+			command: "branch_gates_update",
+			args: {
+				projectId: "project-1",
+				targetRef: "refs/remotes/origin/main",
+				branch: "main",
+				protection: {
+					protected: true,
+					min_approvals: 2,
+					require_distinct_from_author: true,
+					require_approval_from_group: ["eng", "security"],
+				},
+			},
+		}),
+	);
+
+	// The Toggle ends at aria-checked='true'.
+	await expect(component.getByTestId("branch-gates-list-protected-main")).toBeChecked();
+
+	// No danger InfoMessage appears (re-protect write succeeds without denial).
+	await expect(component.getByTestId("branch-gates-list-write-error")).toHaveCount(0);
+});
+
 test("BranchGatesListReadOnly disables mutating controls and fires zero SDK calls", async ({
 	mount,
 }) => {
