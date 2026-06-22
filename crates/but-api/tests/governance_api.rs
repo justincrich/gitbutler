@@ -88,15 +88,15 @@ fn governance_api_status_read_returns_own_effective_set() -> anyhow::Result<()> 
     })?;
 
     assert!(
-        effective.contains(Authority::ContentsWrite),
+        effective.authorities.iter().any(|a| a == Authority::ContentsWrite.name()),
         "governance_status_read must include the caller's own contents:write authority"
     );
     assert!(
-        effective.contains(Authority::PullRequestsWrite),
+        effective.authorities.iter().any(|a| a == Authority::PullRequestsWrite.name()),
         "governance_status_read must include authority inherited from the caller's committed groups"
     );
     assert!(
-        effective.len() >= 2,
+        effective.authorities.len() >= 2,
         "status read must return the effective union, not only one side of own/group authority"
     );
     Ok(())
@@ -143,11 +143,11 @@ fn governance_api_status_read_is_self_scoped_no_foreign_principal() -> anyhow::R
     })?;
 
     assert!(
-        effective.contains(Authority::ContentsWrite),
+        effective.authorities.iter().any(|a| a == Authority::ContentsWrite.name()),
         "self-scoped status must return rust-implementer's own effective set"
     );
     assert!(
-        !effective.contains(Authority::AdministrationWrite),
+        !effective.authorities.iter().any(|a| a == Authority::AdministrationWrite.name()),
         "self-scoped status must not leak admin's foreign administration:write authority"
     );
     assert_governance_status_read_has_no_foreign_principal_parameter()?;
