@@ -37,6 +37,45 @@ pub fn load_governance_config(
     load_governance_config_inner(repo, target_ref).map_err(ConfigError::invalid)
 }
 
+/// Load the raw `[[principal]]`/`[[group]]` wire format from the committed
+/// `.gitbutler/permissions.toml` at the supplied target ref.
+///
+/// Unlike [`load_governance_config`] (which desugars roles into a flat
+/// `GovConfig` authority map and discards non-enforcement fields), this
+/// preserves the additive optional fields that do not flow into enforcement —
+/// notably [`PrincipalWire::kind`], the descriptor the agent-PR tag derivation
+/// reads. Reads at the target ref like all governance config (anti-self-
+/// escalation); the working tree is never consulted. Returns `Ok(PermissionsWire::default())`
+/// when the target ref does not carry a committed `permissions.toml` (a
+/// non-governed ref has no tag to derive).
+///
+/// ```
+/// # fn example(repo: &gix::Repository) -> anyhow::Result<()> {
+/// let wire = but_authz::load_permissions_wire(repo, "refs/heads/main")?;
+/// assert!(wire.principal.is_empty() || !wire.principal.is_empty());
+/// # Ok(())
+/// # }
+/// ```
+pub fn load_permissions_wire(
+    repo: &gix::Repository,
+    target_ref: &str,
+) -> anyhow::Result<PermissionsWire> {
+    let permissions_blob = match read_config_blob(repo, target_ref, PERMISSIONS_PATH) {
+        Ok(blob) => blob,
+        Err(error)
+            if error
+                .to_string()
+                .starts_with(&format!("missing {PERMISSIONS_PATH} ")) =>
+        {
+            return Ok(PermissionsWire::default());
+        }
+        Err(error) => return Err(error),
+    };
+    let permissions = toml::from_str::<PermissionsWire>(&permissions_blob)
+        .with_context(|| format!("parsing {PERMISSIONS_PATH} at {target_ref}"))?;
+    Ok(permissions)
+}
+
 /// Whether governance is opted-in at `target_ref`.
 ///
 /// Governance is **opt-in by presence**: a ref is governed once it commits at
@@ -427,6 +466,14 @@ pub struct PrincipalWire {
     pub permissions: Vec<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub role: Option<String>,
+    /// Additive, enforcement-neutral descriptor naming the principal's kind
+    /// (e.g. `"agent"` / `"human"`). Source-of-truth for the agent-PR tag
+    /// derivation, which reads this at the target ref like all governance
+    /// config. Older committed files without `kind` deserialize to `None`
+    /// (default-human). The `kind` field does NOT enter `GovConfig.principals`
+    /// and no gate reads it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub kind: Option<String>,
     #[serde(default)]
     pub groups: Vec<String>,
 }

@@ -950,6 +950,219 @@ pub async fn close_review(ctx: ThreadSafeContext, branch: String) -> Result<()> 
     ))
 }
 
+/// Derived PR lifecycle view computed at query time (read-only — no mutation).
+///
+/// Mirrors `enforce_merge_gate`'s read of `local_review_verdicts` at head
+/// (`merge_gate.rs:84` → `review_requirement::evaluate`) but reads no authority,
+/// writes no row, and is never consulted by the gate. The lifecycle label is
+/// presentation-only; the merge decision still re-derives verdict-at-head
+/// itself (§E safe seam — the load-bearing invariant).
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "export-schema", derive(schemars::JsonSchema))]
+pub struct ReviewStatus {
+    /// The queried target ref (`refs/heads/<branch>`).
+    pub target: String,
+    /// Reviewer assignments on the target, in arrival order — every
+    /// `local_review_assignments` row, including pending/approved/changes_requested.
+    pub assignments: Vec<but_db::LocalReviewAssignment>,
+    /// The verdict-at-head literal (`"approved"` / `"changes_requested"`) when a
+    /// verdict row exists at the current HEAD, else `None`. The same input the
+    /// merge gate re-derives itself.
+    pub verdict_at_head: Option<String>,
+    /// Presentation label derived from verdict + assignments:
+    /// `Open` / `AwaitingReview` / `ChangesRequested` / `Approved`.
+    pub lifecycle: String,
+    /// `true` iff the opener principal's committed `permissions.toml` entry at
+    /// the target ref declares `kind = "agent"` (read at the target ref like all
+    /// governance config — never handle-resolution, never a comment body). The
+    /// tag is descriptive only; no enforcement path reads it.
+    pub agent_authored: bool,
+    /// Count of unresolved comment threads (one per distinct `thread_id` where
+    /// at least one comment has `resolved = false`).
+    pub open_threads: usize,
+}
+
+#[cfg(feature = "export-schema")]
+but_schemars::register_sdk_type!(ReviewStatus);
+
+/// Query the derived PR lifecycle for a branch — READ-ONLY, no write authority.
+///
+/// The read model is computed at query time from the same inputs the merge gate
+/// uses (verdict-at-head + open assignments + open threads), plus the opener
+/// principal's declared `kind` in committed `permissions.toml` (read at the
+/// target ref) for the `agent_authored` tag. The lifecycle derivation order:
+///
+/// - no assignments → `Open`
+/// - a `changes_requested` verdict at head → `ChangesRequested`
+/// - an `approved` verdict at head → `Approved`
+/// - otherwise (assignments, no verdict at head) → `AwaitingReview`
+///
+/// This is branch-scoped drive-metadata: any caller on the project that can
+/// name a branch sees the branch's full review surface (F-006 accepted
+/// disclosure). It is **not** the per-principal self-scoping that
+/// `governance_status_read` provides, and the merge gate **never** reads it.
+#[but_api(napi)]
+#[instrument(err(Debug))]
+pub async fn review_status(ctx: ThreadSafeContext, branch: String) -> Result<ReviewStatus> {
+    let ctx = ctx.into_thread_local();
+    let repo = ctx.repo.get()?;
+    let ref_name = branch_ref(&branch);
+
+    // Current HEAD OID at the target ref — the merge-gate's own re-derivation
+    // input. Filter the verdict rows to those pinned at this exact head.
+    let head_oid = repo
+        .find_reference(&ref_name)
+        .with_context(|| format!("resolving {ref_name} for review_status"))?
+        .peel_to_commit()
+        .with_context(|| format!("peeling {ref_name} to a commit for review_status"))?
+        .id
+        .to_string();
+
+    let db = ctx.db.get_cache()?;
+    let assignments = db
+        .local_review_assignments()
+        .list_by_target(&branch)
+        .context("listing local_review_assignments for review_status")?;
+    let verdicts = db
+        .local_review_verdicts()
+        .list_by_target(&branch)
+        .context("listing local_review_verdicts for review_status")?;
+    let comments = db
+        .local_review_comments()
+        .list_by_target(&branch)
+        .context("listing local_review_comments for review_status")?;
+
+    // verdict_at_head: any verdict row pinned to the current HEAD; the literals
+    // `approved` / `changes_requested` are the values approve_review and
+    // request_changes_review already write. `changes_requested` wins ties so a
+    // pending remediation is never hidden by an older approval at the same head.
+    let verdict_at_head = derive_verdict_at_head(&verdicts, &head_oid);
+
+    // open_threads: a thread is open if any of its comments has resolved=false.
+    // The reserved __pr_meta__ marker thread is filtered out (the opener lives
+    // in local_review_meta, not a comment row).
+    let open_threads = count_open_threads(&comments);
+
+    // agent_authored: derived from the opener principal's declared `kind` in the
+    // committed permissions.toml at the target ref. Read at the target ref (not
+    // the working tree), so an actor cannot self-escalate its own kind. Missing
+    // permissions.toml / missing opener / omitted kind all default to false
+    // (the conservative posture — a principal is agent only if config says so).
+    let opener_principal = db
+        .local_review_meta()
+        .get(&branch, "opener_principal")
+        .context("reading opener_principal meta for review_status")?
+        .map(|row| row.value);
+    let agent_authored = match opener_principal.as_deref() {
+        Some(opener_id) => is_agent_opener(&repo, &ref_name, opener_id)?,
+        None => false,
+    };
+
+    let lifecycle = derive_lifecycle(&assignments, verdict_at_head.as_deref());
+
+    Ok(ReviewStatus {
+        target: branch,
+        assignments,
+        verdict_at_head,
+        lifecycle,
+        agent_authored,
+        open_threads,
+    })
+}
+
+/// Pick the verdict-at-head literal from the rows, preferring
+/// `changes_requested` over `approved` at the same head (a pending remediation
+/// must not be hidden by a stale approval).
+fn derive_verdict_at_head(
+    verdicts: &[but_db::LocalReviewVerdict],
+    head_oid: &str,
+) -> Option<String> {
+    let at_head: Vec<&str> = verdicts
+        .iter()
+        .filter(|verdict| verdict.head_oid == head_oid)
+        .map(|verdict| verdict.verdict.as_str())
+        .collect();
+    if at_head.contains(&"changes_requested") {
+        Some("changes_requested".to_owned())
+    } else if at_head.contains(&"approved") {
+        Some("approved".to_owned())
+    } else {
+        None
+    }
+}
+
+/// Count distinct comment threads carrying at least one unresolved comment,
+/// excluding the reserved `__pr_meta__` marker thread.
+fn count_open_threads(comments: &[but_db::LocalReviewComment]) -> usize {
+    use std::collections::HashSet;
+
+    let mut open_threads: HashSet<&str> = HashSet::new();
+    for comment in comments {
+        if comment.thread_id == RESERVED_PR_META_THREAD {
+            continue;
+        }
+        if !comment.resolved {
+            open_threads.insert(comment.thread_id.as_str());
+        }
+    }
+    open_threads.len()
+}
+
+/// Derive the presentation lifecycle label from the verdict-at-head and the
+/// assignment drive-state. `verdict_at_head` is sourced strictly from
+/// `local_review_verdicts` filtered by `head_oid == HEAD`; the assignment state
+/// (`pending` / `changes_requested` / `approved`) is the drive-state signal that
+/// mirrors the verdict but never reaches the gate (the safe seam — gates read
+/// verdicts only). Either signal can flip the lifecycle so an orchestrator that
+/// drives via `request_changes_review` sees `ChangesRequested` even before a
+/// reviewer posts a head-pinned verdict.
+fn derive_lifecycle(
+    assignments: &[but_db::LocalReviewAssignment],
+    verdict_at_head: Option<&str>,
+) -> String {
+    if assignments.is_empty() {
+        return "Open".to_owned();
+    }
+    // Verdict-at-head wins: a head-pinned verdict is the merge-gate input.
+    if verdict_at_head == Some("changes_requested") {
+        return "ChangesRequested".to_owned();
+    }
+    if verdict_at_head == Some("approved") {
+        return "Approved".to_owned();
+    }
+    // Fall back to the assignment drive-state (mirrors the verdict but never
+    // reaches the gate). `changes_requested` wins ties over `approved` so a
+    // pending remediation is never hidden by an earlier approval.
+    let any_assignment_changes_requested = assignments
+        .iter()
+        .any(|assignment| assignment.state == "changes_requested");
+    let any_assignment_approved = assignments
+        .iter()
+        .any(|assignment| assignment.state == "approved");
+    if any_assignment_changes_requested {
+        return "ChangesRequested".to_owned();
+    }
+    if any_assignment_approved {
+        return "Approved".to_owned();
+    }
+    "AwaitingReview".to_owned()
+}
+
+/// Read the opener principal's declared `kind` from the committed
+/// `permissions.toml` at the target ref and return `true` iff that entry
+/// declares `kind = "agent"`. Missing config / missing principal / omitted kind
+/// all default to `false` (the conservative human-default posture).
+fn is_agent_opener(repo: &gix::Repository, target_ref: &str, opener_id: &str) -> Result<bool> {
+    let permissions = but_authz::load_permissions_wire(repo, target_ref)?;
+    let is_agent = permissions
+        .principal
+        .iter()
+        .find(|principal| principal.id == opener_id)
+        .and_then(|principal| principal.kind.as_deref())
+        == Some("agent");
+    Ok(is_agent)
+}
+
 /// Merge a review on the forge.
 #[but_api(napi)]
 #[instrument(err(Debug))]

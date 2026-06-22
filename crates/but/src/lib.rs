@@ -1365,6 +1365,11 @@ async fn match_subcommand(
                         .await
                         .emit_metrics(metrics_ctx)
                 }
+                Some(forge::pr::Subcommands::Status { branch }) => {
+                    command::legacy::forge::review::status(&mut ctx, branch, out)
+                        .await
+                        .emit_metrics(metrics_ctx)
+                }
                 Some(forge::pr::Subcommands::Merge {
                     selector,
                     method,

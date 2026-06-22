@@ -128,6 +128,53 @@ pub async fn close(
     Ok(())
 }
 
+/// Print the derived PR lifecycle status for a branch (read-only).
+///
+/// Routes through `but_api::legacy::forge::review_status` — a branch-scoped
+/// read with no write authority. The derivation reads the same verdict-at-head
+/// input the merge gate re-derives itself, plus the open assignments, open
+/// comment threads, and the opener principal's declared `kind` in committed
+/// `permissions.toml` (read at the target ref). The lifecycle label and
+/// `agent_authored` flag are descriptive only — no enforcement path reads them.
+pub async fn status(
+    ctx: &mut Context,
+    branch: String,
+    out: &mut OutputChannel,
+) -> anyhow::Result<(), CliError> {
+    let status = but_api::legacy::forge::review_status(ctx.to_sync(), branch.clone())
+        .await
+        .map_err(review_gate_cli_error)?;
+
+    if let Some(out) = out.for_json() {
+        out.write_value(status)?;
+    } else if let Some(out) = out.for_human() {
+        let agent_marker = if status.agent_authored {
+            " (agent-authored)"
+        } else {
+            ""
+        };
+        let verdict_at_head = status.verdict_at_head.as_deref().unwrap_or("none");
+        writeln!(
+            out,
+            "Review for {branch}: {} (verdict-at-head: {verdict_at_head}, open threads: {}){agent_marker}",
+            status.lifecycle, status.open_threads,
+        )?;
+        if status.assignments.is_empty() {
+            writeln!(out, "  no assignments")?;
+        } else {
+            for assignment in &status.assignments {
+                writeln!(
+                    out,
+                    "  assigned {} [{}]",
+                    assignment.reviewer_principal, assignment.state,
+                )?;
+            }
+        }
+    }
+
+    Ok(())
+}
+
 fn review_gate_cli_error(err: anyhow::Error) -> CliError {
     if let Some(gate_error) = but_api::legacy::forge::classify_error(&err) {
         return anyhow::anyhow!(

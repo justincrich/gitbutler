@@ -14,7 +14,8 @@ pub use authorize::{
 };
 pub use config::{
     BranchName, BranchProtection, ConfigError, GovConfig, GroupWire, PermissionsWire,
-    PrincipalWire, governance_present, load_governance_config, permissions_path,
+    PrincipalWire, governance_present, load_governance_config, load_permissions_wire,
+    permissions_path,
 };
 pub use denial::Denial;
 pub use principal::{Group, GroupName, Principal, PrincipalId};

@@ -108,6 +108,18 @@ pub mod pr {
             #[clap(value_name = "BRANCH")]
             branch: String,
         },
+        /// Print the derived PR lifecycle status for a branch (read-only).
+        ///
+        /// Shows the branch's lifecycle (Open / AwaitingReview /
+        /// ChangesRequested / Approved), the verdict-at-head if any,
+        /// the assignment list, the open-thread count, and whether the
+        /// review is agent-authored (derived from the opener principal's
+        /// declared `kind` in committed `permissions.toml`).
+        Status {
+            /// The branch to query.
+            #[clap(value_name = "BRANCH")]
+            branch: String,
+        },
         /// Merge a review after enforcing local governance.
         Merge {
             /// The target of this operation.

@@ -1696,6 +1696,7 @@ fn principal_entry_mut<'a>(
         id: principal.to_owned(),
         permissions: Vec::new(),
         role: None,
+        kind: None,
         groups: Vec::new(),
     });
     permissions
