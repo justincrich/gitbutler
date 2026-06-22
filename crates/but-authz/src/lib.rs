@@ -19,7 +19,7 @@ pub use config::{
     PrincipalWire, governance_present, load_governance_config, load_permissions_wire,
     permissions_path,
 };
-pub use denial::{AuthorizedAction, Denial, DenialClass, to_envelope};
+pub use denial::{AuthorizedAction, Denial, DenialClass, steer_envelope_from_parts, to_envelope};
 pub use menu::{
     AFFORDANCE_MAP, Affordance, CATALOG, DenialPredicate, DeniedRoute, authorized_actions,
 };

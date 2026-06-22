@@ -6,7 +6,9 @@
 //! If a JSON type only mirrors one API submodule, define it next to that API in
 //! a local `json` module instead of adding it here. See `crate::branch::json`,
 //! `crate::commit::json`, and `crate::diff::json` for the intended pattern.
-pub use error::{ConfigInvalid, Error, ToJsonError, UnmarkedError};
+pub use error::{
+    ConfigInvalid, Error, STEER_TAURI_JSON_ERROR_DEFERRAL, ToJsonError, UnmarkedError,
+};
 use gix::refs::Target;
 use schemars::{self, JsonSchema};
 use serde::{Deserialize, Serialize};
@@ -343,6 +345,22 @@ mod error {
             map.end()
         }
     }
+
+    /// STEER-005 (SA-8): the Tauri/MGMT desktop surface rides this `Error`
+    /// type, which emits `{code, message, remediation_hint}`. The four
+    /// steering fields (`class`/`held_permissions`/`authorized_actions`/
+    /// `do_not`) are NOT yet co-landed here because Sprint 06a `MGMT-IPC-002`
+    /// owns the `remediation_hint` addition and its task file is frozen.
+    ///
+    /// This constant is the explicit, verifiable recorded decision: the
+    /// desktop steering-field gap is DEFERRED to MGMT-IPC-002. The test
+    /// `steer_json_error_decision_recorded` asserts this decision exists so
+    /// the gap is never silent.
+    pub const STEER_TAURI_JSON_ERROR_DEFERRAL: &str = "STEER-005 SA-8: the four steering fields (class/held_permissions/\
+         authorized_actions/do_not) are deferred on json::Error until Sprint \
+         06a MGMT-IPC-002 lands. The desktop surface currently emits \
+         {code,message,remediation_hint} only. This is a tracked deferral, \
+         not a silent gap.";
 
     #[cfg(test)]
     mod tests {

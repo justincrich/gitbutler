@@ -678,16 +678,26 @@ fn default_gate_config_ref(head_info: &RefInfo) -> anyhow::Result<FullName> {
 
 fn commit_gate_cli_error(err: anyhow::Error) -> CliError {
     if let Some(gate_error) = but_api::commit::create::gate::classify_error(&err) {
-        return anyhow::anyhow!(
-            "{}",
-            serde_json::json!({
-                "error": {
-                    "code": gate_error.code,
-                    "message": gate_error.message,
-                }
-            })
-        )
-        .into();
+        // STEER-005: render the full steering envelope (class,
+        // held_permissions, authorized_actions, do_not) PLUS the
+        // long-missing remediation_hint through the shared
+        // steer_envelope_from_parts(). The remediation_hint is sourced
+        // from the underlying Denial (the carrier drops it during
+        // classify_error); best-effort: a serialization fault still emits
+        // code/message/remediation_hint + exit 1 (invariant §9.5).
+        let remediation_hint = err
+            .downcast_ref::<but_authz::Denial>()
+            .map(|denial| denial.remediation_hint.as_str());
+        let envelope = but_authz::steer_envelope_from_parts(
+            gate_error.code,
+            &gate_error.message,
+            remediation_hint,
+            gate_error.class,
+            &gate_error.held_permissions,
+            &gate_error.authorized_actions,
+            gate_error.do_not,
+        );
+        return anyhow::anyhow!("{}", serde_json::json!({ "error": envelope })).into();
     }
 
     err.into()

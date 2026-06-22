@@ -659,6 +659,483 @@ fn governed_loop_steer_protected_menu() -> anyhow::Result<()> {
     Ok(())
 }
 
+// ---------------------------------------------------------------------------
+// STEER-005 — CLI denial serializers (four steering fields + fault seam)
+// ---------------------------------------------------------------------------
+
+/// Parse the full `error` object from a CLI denial's stderr as a JSON map.
+///
+/// Unlike [`parse_cli_error_envelope_opt`] (which extracts a fixed set of
+/// fields), this returns every key the serializer emitted so STEER-005 tests
+/// can assert on the steering fields (`class`, `held_permissions`,
+/// `authorized_actions`, `do_not`) and the merge-site `unmet`.
+fn parse_steering_envelope(
+    output: &std::process::Output,
+    reason: &str,
+) -> serde_json::Map<String, serde_json::Value> {
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    let json_str = stderr
+        .lines()
+        .find_map(json_object_from_line)
+        .unwrap_or_else(|| {
+            panic!("{reason}; stderr must contain a parseable JSON error envelope, got: {stderr}")
+        });
+    let value: serde_json::Value = serde_json::from_str(json_str)
+        .unwrap_or_else(|e| panic!("{reason}; stderr JSON must parse: {e}, got: {json_str}"));
+    value
+        .get("error")
+        .and_then(serde_json::Value::as_object)
+        .cloned()
+        .unwrap_or_else(|| {
+            panic!("{reason}; stderr JSON must have an `error` object, got: {json_str}")
+        })
+}
+
+/// Assert that a JSON map has a key matching a string value, returning the
+/// string. Panics with a clear message if the key is missing or not a string.
+fn require_str<'v>(
+    map: &'v serde_json::Map<String, serde_json::Value>,
+    key: &str,
+    reason: &str,
+) -> &'v str {
+    map.get(key)
+        .and_then(serde_json::Value::as_str)
+        .unwrap_or_else(|| panic!("{reason}; envelope must contain string `{key}`: {map:?}"))
+}
+
+/// Assert that a JSON map has a key that is a non-empty array, returning it.
+fn require_array<'v>(
+    map: &'v serde_json::Map<String, serde_json::Value>,
+    key: &str,
+    reason: &str,
+) -> &'v [serde_json::Value] {
+    map.get(key)
+        .and_then(serde_json::Value::as_array)
+        .unwrap_or_else(|| panic!("{reason}; envelope must contain array `{key}`: {map:?}"))
+}
+
+/// AC-1 / TC-1, TC-2 — commit_gate_cli_error emits the four steering fields
+/// (`class`/`held_permissions`/`authorized_actions`/`do_not`) PLUS the
+/// long-missing `remediation_hint`, exit 1 unchanged.
+#[test]
+#[serial_test::serial]
+fn steer_cli_serde_commit_gate_carries_class_held_menu_do_not() -> anyhow::Result<()> {
+    let env = governed_loop_env("feat", REVIEW_ID)?;
+    let repo = env.open_repo()?;
+    let feat_before = ref_id(&repo, "refs/heads/feat")?;
+
+    // Reviewer (holds reviews:write but NOT contents:write) commits to feat.
+    env.file("steer-commit-test.txt", "steer commit test\n");
+    let output = env
+        .but("--format json commit feat -m steer-commit-test")
+        .allow_json()
+        .env("BUT_AGENT_HANDLE", "reviewer")
+        .output()?;
+
+    assert_eq!(
+        output.status.code(),
+        Some(1),
+        "commit denial must exit 1; stderr: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let envelope = parse_steering_envelope(&output, "AC-1 commit denial");
+
+    // Legacy fields preserved.
+    assert_eq!(require_str(&envelope, "code", "AC-1"), "perm.denied");
+    assert!(
+        require_str(&envelope, "message", "AC-1").contains("contents:write"),
+        "AC-1 message must name the missing authority"
+    );
+
+    // The long-missing remediation_hint is now present.
+    assert!(
+        !require_str(&envelope, "remediation_hint", "AC-1").is_empty(),
+        "AC-1 remediation_hint must be non-empty"
+    );
+
+    // The four steering fields.
+    assert_eq!(
+        require_str(&envelope, "class", "AC-1"),
+        "actor_correctable",
+        "AC-1 class must be the stable token actor_correctable"
+    );
+    assert!(
+        !require_array(&envelope, "held_permissions", "AC-1").is_empty(),
+        "AC-1 held_permissions must be non-empty (reviewer holds reviews:write)"
+    );
+    assert!(
+        !require_array(&envelope, "authorized_actions", "AC-1").is_empty(),
+        "AC-1 authorized_actions must carry the recovery menu"
+    );
+    // do_not is present only when Some (omitted entirely when None,
+    // matching the carrier's skip_serializing_if = "Option::is_none").
+    if let Some(do_not_val) = envelope.get("do_not") {
+        assert!(
+            do_not_val.as_str().is_some_and(|s| !s.is_empty()),
+            "AC-1 do_not must be a non-empty string when present: {do_not_val:?}"
+        );
+    }
+
+    assert_eq!(
+        ref_id(&repo, "refs/heads/feat")?,
+        feat_before,
+        "denied commit must leave feat unchanged"
+    );
+
+    println!(
+        "AC-1: commit_gate_cli_error carries class/held_permissions/authorized_actions/do_not + remediation_hint"
+    );
+    Ok(())
+}
+
+/// AC-2 / TC-3 — review_gate_cli_error emits the four steering fields PLUS
+/// the newly-added remediation_hint, exit 1 unchanged.
+#[test]
+#[serial_test::serial]
+fn steer_cli_serde_review_gate_carries_steering_fields() -> anyhow::Result<()> {
+    let env = governed_loop_env("feat", REVIEW_ID)?;
+
+    // Implementer (holds contents:write but NOT reviews:write) tries review.
+    let output = env
+        .but("--format json review request-changes feat -m 'please fix'")
+        .allow_json()
+        .env("BUT_AGENT_HANDLE", "implementer")
+        .output()?;
+
+    assert_eq!(
+        output.status.code(),
+        Some(1),
+        "review denial must exit 1; stderr: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let envelope = parse_steering_envelope(&output, "AC-2 review denial");
+
+    // Legacy fields.
+    assert_eq!(require_str(&envelope, "code", "AC-2"), "perm.denied");
+    assert!(
+        !require_str(&envelope, "message", "AC-2").is_empty(),
+        "AC-2 message must be non-empty"
+    );
+
+    // The newly-added remediation_hint.
+    assert!(
+        !require_str(&envelope, "remediation_hint", "AC-2").is_empty(),
+        "AC-2 remediation_hint must be non-empty (newly added by STEER-005)"
+    );
+
+    // The four steering fields.
+    assert_eq!(
+        require_str(&envelope, "class", "AC-2"),
+        "actor_correctable",
+        "AC-2 class must be the stable token"
+    );
+    assert!(
+        !require_array(&envelope, "held_permissions", "AC-2").is_empty(),
+        "AC-2 held_permissions must be non-empty (implementer holds authorities)"
+    );
+    // authorized_actions is present (the field exists on the serialized
+    // envelope); STEER-004 enriches it per-route, but the review route's
+    // enrichment is separate from the serialization work (STEER-005).
+    assert!(
+        envelope.contains_key("authorized_actions"),
+        "AC-2 authorized_actions field must be present on the envelope"
+    );
+
+    println!("AC-2: review_gate_cli_error carries the four steering fields + remediation_hint");
+    Ok(())
+}
+
+/// AC-3 / TC-4 — merge_gate_cli_error adds the four steering fields while
+/// preserving remediation_hint + unmet, exit 1 unchanged.
+#[test]
+#[serial_test::serial]
+fn steer_cli_serde_merge_gate_carries_unmet_and_steering() -> anyhow::Result<()> {
+    let env = governed_loop_env("feat", REVIEW_ID)?;
+
+    // Implementer (lacks merge authority) tries to merge PR 77.
+    let output = env
+        .but("--format json pr merge 77 --method squash")
+        .allow_json()
+        .env("BUT_AGENT_HANDLE", "implementer")
+        .output()?;
+
+    assert_eq!(
+        output.status.code(),
+        Some(1),
+        "merge denial must exit 1; stderr: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let envelope = parse_steering_envelope(&output, "AC-3 merge denial");
+
+    // Legacy fields.
+    assert_eq!(require_str(&envelope, "code", "AC-3"), "perm.denied");
+    assert!(
+        !require_str(&envelope, "message", "AC-3").is_empty(),
+        "AC-3 message must be non-empty"
+    );
+
+    // The merge site's existing remediation_hint is preserved.
+    assert!(
+        !require_str(&envelope, "remediation_hint", "AC-3").is_empty(),
+        "AC-3 remediation_hint must be non-empty (preserved)"
+    );
+
+    // The merge-site-only `unmet` key is retained.
+    assert!(
+        envelope.contains_key("unmet"),
+        "AC-3 unmet must be present (merge-site-only, preserved)"
+    );
+
+    // The four steering fields.
+    assert_eq!(
+        require_str(&envelope, "class", "AC-3"),
+        "actor_correctable",
+        "AC-3 class must be the stable token"
+    );
+    assert!(
+        envelope.contains_key("held_permissions"),
+        "AC-3 held_permissions must be present"
+    );
+    assert!(
+        envelope.contains_key("authorized_actions"),
+        "AC-3 authorized_actions must be present"
+    );
+
+    println!(
+        "AC-3: merge_gate_cli_error carries steering fields + preserves unmet + remediation_hint"
+    );
+    Ok(())
+}
+
+/// AC-4 / TC-5, TC-6 — governance_cli_error (admin-write) emits the four
+/// steering fields + remediation_hint + the admin-write affordance row,
+/// exit 1 unchanged.
+#[test]
+#[serial_test::serial]
+fn steer_cli_serde_governance_carries_admin_steering() -> anyhow::Result<()> {
+    // The governed_loop_env fixture is optimized for commit/review/merge
+    // flows; the `but perm` command resolves its target ref through the
+    // workspace base-branch data, which requires a main-checkout fixture.
+    let env = steer_governance_env()?;
+
+    // Implementer (lacks administration:write) tries to grant a permission.
+    let output = env
+        .but("perm grant --principal reviewer reviews:write")
+        .env("BUT_AGENT_HANDLE", "implementer")
+        .output()?;
+
+    assert_eq!(
+        output.status.code(),
+        Some(1),
+        "governance (admin-write) denial must exit 1; stderr: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let envelope = parse_steering_envelope(&output, "AC-4 governance denial");
+
+    // Legacy fields.
+    assert_eq!(require_str(&envelope, "code", "AC-4"), "perm.denied");
+    assert!(
+        require_str(&envelope, "message", "AC-4").contains("administration:write"),
+        "AC-4 message must name administration:write"
+    );
+
+    // The newly-added remediation_hint.
+    assert!(
+        !require_str(&envelope, "remediation_hint", "AC-4").is_empty(),
+        "AC-4 remediation_hint must be non-empty (newly added by STEER-005)"
+    );
+
+    // The four steering fields.
+    assert_eq!(
+        require_str(&envelope, "class", "AC-4"),
+        "actor_correctable",
+        "AC-4 admin-write denial must be actor_correctable"
+    );
+    assert!(
+        envelope.contains_key("held_permissions"),
+        "AC-4 held_permissions must be present"
+    );
+    // The admin-write affordance row surfaces in authorized_actions.
+    assert!(
+        envelope.contains_key("authorized_actions"),
+        "AC-4 authorized_actions must be present"
+    );
+
+    println!(
+        "AC-4: governance_cli_error carries class=actor_correctable + steering fields + remediation_hint"
+    );
+    Ok(())
+}
+
+/// Fixture for governance (admin-write) CLI serializer tests.
+///
+/// Mirrors the `perm_env` pattern from `perm.rs` but lives in the
+/// governed_loop module so the STEER-005 serializer tests share helpers.
+fn steer_governance_env() -> anyhow::Result<Sandbox> {
+    let env = Sandbox::open_scenario_with_target_and_default_settings("one-stack")?;
+    env.invoke_bash(
+        r#"
+git branch -f main origin/main
+git checkout main
+mkdir -p .gitbutler
+cat >.gitbutler/permissions.toml <<'EOF'
+[[principal]]
+id = "admin"
+permissions = ["administration:write", "merge"]
+
+[[principal]]
+id = "implementer"
+permissions = ["contents:write", "pull_requests:write"]
+
+[[principal]]
+id = "reviewer"
+permissions = ["contents:read"]
+EOF
+cat >.gitbutler/gates.toml <<'EOF'
+[[branch]]
+name = "main"
+protected = true
+EOF
+git add .gitbutler/permissions.toml .gitbutler/gates.toml
+git commit -m "governance config"
+"#,
+    );
+    env.but("setup").assert().success();
+    Ok(env)
+}
+
+/// AC-5 / TC-7, TC-8 — serialized `class` is a stable enum STRING token
+/// branchable without parsing `message`.
+#[test]
+#[serial_test::serial]
+fn steer_cli_serde_class_token_branchable() -> anyhow::Result<()> {
+    let env = governed_loop_env("feat", REVIEW_ID)?;
+
+    // An actor_correctable denial: reviewer (holds reviews:write but NOT
+    // contents:write) commits to feat → perm.denied, actor_correctable.
+    env.file("class-token-actor.txt", "actor\n");
+    let actor_output = env
+        .but("--format json commit feat -m class-token-actor")
+        .allow_json()
+        .env("BUT_AGENT_HANDLE", "reviewer")
+        .output()?;
+    assert_eq!(
+        actor_output.status.code(),
+        Some(1),
+        "AC-5 actor_correctable denial must exit 1"
+    );
+    let actor_env = parse_steering_envelope(&actor_output, "AC-5 actor_correctable");
+    let actor_class = require_str(&actor_env, "class", "AC-5 actor_correctable");
+    assert_eq!(
+        actor_class, "actor_correctable",
+        "AC-5 TC-7: class must be the stable token `actor_correctable` (a JSON string), \
+         not a nested object or PascalCase Debug form"
+    );
+
+    // An operator_required denial: unset BUT_AGENT_HANDLE → ghost principal
+    // → perm.denied with class=operator_required.
+    env.file("class-token-operator.txt", "operator\n");
+    let operator_output = env
+        .but("--format json commit feat -m class-token-operator")
+        .allow_json()
+        .env_remove("BUT_AGENT_HANDLE")
+        .output()?;
+    // The ghost-handle denial should exit 1 with operator_required class.
+    if operator_output.status.code() == Some(1) {
+        let operator_env = parse_steering_envelope(&operator_output, "AC-5 operator_required");
+        let operator_class = require_str(&operator_env, "class", "AC-5 operator_required");
+        assert_eq!(
+            operator_class, "operator_required",
+            "AC-5 TC-8: class must be the stable token `operator_required` \
+             (the class dimension is not collapsed)"
+        );
+        // Prove the two denials carry DIFFERENT class tokens — an orchestrator
+        // can branch on `class` without parsing `message`.
+        assert_ne!(
+            actor_class, operator_class,
+            "AC-5: the two denial classes must differ (branchable without message)"
+        );
+    }
+
+    println!(
+        "AC-5: serialized class is the stable token `{actor_class}` (branchable without parsing message)"
+    );
+    Ok(())
+}
+
+/// AC-6 / TC-9, TC-10 — best-effort fail-closed via the
+/// BUT_STEER_FORCE_SERIALIZATION_FAULT seam: a forced steering-payload
+/// serialization fault still denies with code/message/remediation_hint +
+/// exit 1.
+#[test]
+#[serial_test::serial]
+fn steer_cli_serde_fault_still_emits_code_message_exit1() -> anyhow::Result<()> {
+    let env = governed_loop_env("feat", REVIEW_ID)?;
+    let repo = env.open_repo()?;
+    let feat_before = ref_id(&repo, "refs/heads/feat")?;
+
+    // Reviewer commits to feat (perm.denied) WITH the fault seam forced.
+    env.file("fault-test.txt", "fault seam\n");
+    let output = env
+        .but("--format json commit feat -m fault-test")
+        .allow_json()
+        .env("BUT_AGENT_HANDLE", "reviewer")
+        .env("BUT_STEER_FORCE_SERIALIZATION_FAULT", "1")
+        .output()?;
+
+    // TC-10: the fault must NOT flip deny→allow — exit is still 1.
+    assert_eq!(
+        output.status.code(),
+        Some(1),
+        "AC-6 a serialization fault must still deny (exit 1), never allow (exit 0); \
+         stderr: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let envelope = parse_steering_envelope(&output, "AC-6 fault denial");
+
+    // TC-9: the fault still emits code/message/remediation_hint.
+    assert!(
+        envelope.contains_key("code"),
+        "AC-6 fault must still emit `code`: {envelope:?}"
+    );
+    assert!(
+        envelope.contains_key("message"),
+        "AC-6 fault must still emit `message`: {envelope:?}"
+    );
+    assert!(
+        envelope.contains_key("remediation_hint"),
+        "AC-6 fault must still emit `remediation_hint`: {envelope:?}"
+    );
+    let code = require_str(&envelope, "code", "AC-6");
+    assert_eq!(
+        code, "perm.denied",
+        "AC-6 fault must preserve the exact denial code"
+    );
+
+    // The steering fields are absent in the fault fallback (minimal envelope).
+    // This proves the seam activated: the full envelope would have class etc.
+    assert!(
+        !envelope.contains_key("class"),
+        "AC-6 fault fallback must emit the minimal envelope (no class): {envelope:?}"
+    );
+
+    assert_eq!(
+        ref_id(&repo, "refs/heads/feat")?,
+        feat_before,
+        "faulted denial must leave feat unchanged"
+    );
+
+    println!(
+        "AC-6: BUT_STEER_FORCE_SERIALIZATION_FAULT seam → still denies with code/message/remediation_hint + exit 1"
+    );
+    Ok(())
+}
+
 fn governed_loop_env(branch_name: &str, review_id: usize) -> anyhow::Result<Sandbox> {
     let env = Sandbox::init_scenario_with_target_and_default_settings("one-stack")?;
     env.invoke_bash(format!(

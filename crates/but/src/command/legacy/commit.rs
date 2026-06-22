@@ -581,16 +581,22 @@ pub(crate) fn commit_gate_cli_error(err: CliError) -> CliError {
     };
 
     if let Some(gate_error) = but_api::commit::create::gate::classify_error(&error) {
-        return anyhow::anyhow!(
-            "{}",
-            serde_json::json!({
-                "error": {
-                    "code": gate_error.code,
-                    "message": gate_error.message,
-                }
-            })
-        )
-        .into();
+        // STEER-005: render the full steering envelope (class,
+        // held_permissions, authorized_actions, do_not) PLUS the
+        // long-missing remediation_hint through steer_envelope_from_parts().
+        let remediation_hint = error
+            .downcast_ref::<but_authz::Denial>()
+            .map(|denial| denial.remediation_hint.as_str());
+        let envelope = but_authz::steer_envelope_from_parts(
+            gate_error.code,
+            &gate_error.message,
+            remediation_hint,
+            gate_error.class,
+            &gate_error.held_permissions,
+            &gate_error.authorized_actions,
+            gate_error.do_not,
+        );
+        return anyhow::anyhow!("{}", serde_json::json!({ "error": envelope })).into();
     }
 
     error.into()
