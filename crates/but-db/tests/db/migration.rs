@@ -450,6 +450,37 @@ mod run {
         	PRIMARY KEY(`path`, `hunk_header`)
         );
 
+        -- table local_review_assignments
+        CREATE TABLE `local_review_assignments`(
+        	`id` TEXT NOT NULL PRIMARY KEY,
+        	`target` TEXT NOT NULL,
+        	`reviewer_principal` TEXT NOT NULL,
+        	`state` TEXT NOT NULL,
+        	`assigned_at` TIMESTAMP NOT NULL
+        );
+
+        -- table local_review_comments
+        CREATE TABLE `local_review_comments`(
+        	`id` TEXT NOT NULL PRIMARY KEY,
+        	`target` TEXT NOT NULL,
+        	`author_principal` TEXT NOT NULL,
+        	`body` TEXT NOT NULL,
+        	`file` TEXT,
+        	`line` INTEGER,
+        	`thread_id` TEXT NOT NULL,
+        	`resolved` BOOL NOT NULL,
+        	`created_at` TIMESTAMP NOT NULL
+        );
+
+        -- table local_review_meta
+        CREATE TABLE `local_review_meta`(
+        	`target` TEXT NOT NULL,
+        	`key` TEXT NOT NULL,
+        	`value` TEXT NOT NULL,
+        	`created_at` TIMESTAMP NOT NULL,
+        	PRIMARY KEY (`target`, `key`)
+        );
+
         -- table local_review_verdicts
         CREATE TABLE `local_review_verdicts`(
         	`id` TEXT NOT NULL PRIMARY KEY,
@@ -545,6 +576,14 @@ mod run {
         -- index idx_ci_checks_reference
         CREATE INDEX `idx_ci_checks_reference` ON `ci_checks`(`reference`);
 
+        -- index idx_local_review_assignments_target_reviewer
+        CREATE UNIQUE INDEX `idx_local_review_assignments_target_reviewer`
+        ON `local_review_assignments`(`target`, `reviewer_principal`);
+
+        -- index idx_local_review_comments_target_thread
+        CREATE INDEX `idx_local_review_comments_target_thread`
+        ON `local_review_comments`(`target`, `thread_id`);
+
         -- index idx_local_review_verdicts_target_created_at
         CREATE INDEX `idx_local_review_verdicts_target_created_at`
         ON `local_review_verdicts`(`target`, `created_at`);
@@ -601,6 +640,9 @@ mod run {
         Text("20260407120000")
         Text("20260618093000")
         Text("20260619120000")
+        Text("20260621120000")
+        Text("20260621120100")
+        Text("20260621120200")
 
         Table: hunk_assignments
         hunk_header | path | path_bytes | stack_id | id | branch_ref
@@ -649,6 +691,15 @@ mod run {
 
         Table: local_review_verdicts
         id | target | principal_id | verdict | head_oid | created_at
+
+        Table: local_review_assignments
+        id | target | reviewer_principal | state | assigned_at
+
+        Table: local_review_comments
+        id | target | author_principal | body | file | line | thread_id | resolved | created_at
+
+        Table: local_review_meta
+        target | key | value | created_at
         "#);
 
         let count = migration::run(&mut db, but_db::migration::ours())?;

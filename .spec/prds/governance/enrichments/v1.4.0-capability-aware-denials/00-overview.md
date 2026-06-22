@@ -67,4 +67,4 @@ The implemented contract already ships `code` + `message` (naming the missing au
 | [02-uc-steer.md](./02-uc-steer.md) | STEER functional group + use cases (UC-STEER-01..06) |
 | [03-technical-requirements-delta.md](./03-technical-requirements-delta.md) | Additive contract fields, derivation, invariants, L1/L2/L3 layers |
 | [04-e2e-testing-criteria.md](./04-e2e-testing-criteria.md) | Per-UC T-STEER criteria (incl. the no-lying-menu traversability test) |
-| [05-delta-replan.md](./05-delta-replan.md) | Sprint 1–8 deltas + proposed Sprint 07 + frozen-file integration edits |
+| [05-delta-replan.md](./05-delta-replan.md) | Sprint 1–8 deltas + proposed Sprint 08 + frozen-file integration edits |

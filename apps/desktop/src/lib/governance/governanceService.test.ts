@@ -97,16 +97,46 @@ describe("governance renderer contract", () => {
 
 	test("derives hasAdminWrite and read-only from backend authority tokens", async () => {
 		expect(
-			governanceAccessFromStatus({ authorities: ["contents:write", "administration:write"] }),
+			governanceAccessFromStatus({
+				authorities: ["contents:write", "administration:write"],
+				not_configured: false,
+				target_ref: "refs/remotes/origin/master",
+			}),
 		).toEqual({
 			authorities: ["contents:write", "administration:write"],
 			hasAdminWrite: true,
 			isReadOnly: false,
+			isNotConfigured: false,
+			targetRef: "refs/remotes/origin/master",
 		});
-		expect(governanceAccessFromStatus({ authorities: ["administration:read"] })).toEqual({
+		expect(
+			governanceAccessFromStatus({
+				authorities: ["administration:read"],
+				not_configured: false,
+				target_ref: "refs/remotes/origin/master",
+			}),
+		).toEqual({
 			authorities: ["administration:read"],
 			hasAdminWrite: false,
 			isReadOnly: true,
+			isNotConfigured: false,
+			targetRef: "refs/remotes/origin/master",
+		});
+	});
+
+	test("maps the not-configured status to read-only access carrying the resolved target ref", () => {
+		expect(
+			governanceAccessFromStatus({
+				authorities: [],
+				not_configured: true,
+				target_ref: "refs/remotes/origin/master",
+			}),
+		).toEqual({
+			authorities: [],
+			hasAdminWrite: false,
+			isReadOnly: true,
+			isNotConfigured: true,
+			targetRef: "refs/remotes/origin/master",
 		});
 	});
 

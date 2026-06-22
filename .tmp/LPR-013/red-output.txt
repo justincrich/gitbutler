@@ -1,0 +1,31 @@
+=== RED baseline (AC tests do not exist) ===
+[cargo test -p but-api principal_kind_update_writes_worktree_inert_until_committed]
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 3 filtered out; finished in 0.00s
+
+
+[cargo test -p but-api principal_kind_update_round_trips_full_schema_lossless]
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 3 filtered out; finished in 0.00s
+
+
+[cargo test -p but-api principal_kind_read_returns_committed_kinds_with_pending_signal]
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 3 filtered out; finished in 0.00s
+
+
+[cargo test -p but-api principal_kind_update_non_admin_denied_writes_nothing]
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 3 filtered out; finished in 0.00s
+
+
+[grep for principal_kind in mgmt_ipc_003]
+0

@@ -1,0 +1,188 @@
+{
+  "fixtures": {
+    "desktop_admin_readonly_sessions": {
+      "description": "Real desktop E2E sessions seeded through the supported public test setup with an admin user whose governance status has hasAdminWrite=false.",
+      "seed_method": "public_api",
+      "records": [
+        "admin role:admin",
+        "governance_status.hasAdminWrite:false",
+        "governance_tabs_expected:4",
+        "project_settings_modal:testid=project-settings-modal"
+      ]
+    }
+  },
+  "requirements": [
+    {
+      "id": "AC-1",
+      "type": "acceptance_criterion",
+      "primary": true,
+      "description": "GIVEN admin desktop session WHEN Permissions & Governance opens THEN four tabs render and not-found fallback is absent.",
+      "verify": "PLAYWRIGHT_UI=1 pnpm test:e2e:playwright -- governance-settings-tabs-readonly.spec.ts",
+      "maps_to_ac": null,
+      "scenario": {
+        "id": "E2E-GOV-102-AC-1",
+        "test_tier": "e2e",
+        "tier": "visible",
+        "verification_service": "desktop-product-e2e",
+        "negative_control": {
+          "would_fail_if": [
+            "component-only mount with mocked tabs",
+            "missing tab shell",
+            "static settings fallback"
+          ]
+        },
+        "evidence": {
+          "artifact_type": "video",
+          "required_capture": true
+        },
+        "cases": [
+          {
+            "start_ref": "desktop_admin_readonly_sessions",
+            "action": {
+              "actor": "playwright_user",
+              "steps": [
+                "open Project Settings",
+                "click Permissions & Governance"
+              ]
+            },
+            "end_state": {
+              "must_observe": [
+                "tab \"Principals\" index == 1",
+                "tab \"Groups\" index == 2",
+                "tab \"Branch Gates\" index == 3",
+                "tab \"Rules\" index == 4",
+                "governance tab count == 4"
+              ],
+              "must_not_observe": [
+                "governance tab count == 0",
+                "empty governance page",
+                "text \"Settings page governance not Found.\""
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "AC-2",
+      "type": "acceptance_criterion",
+      "description": "GIVEN admin lacks administration:write WHEN governance opens THEN read-only message and disabled or absent write controls appear.",
+      "verify": "PLAYWRIGHT_UI=1 pnpm test:e2e:playwright -- governance-settings-tabs-readonly.spec.ts",
+      "maps_to_ac": null,
+      "scenario": {
+        "id": "E2E-GOV-102-AC-2",
+        "test_tier": "e2e",
+        "tier": "visible",
+        "verification_service": "desktop-product-e2e",
+        "negative_control": {
+          "would_fail_if": [
+            "hasAdminWrite mocked true",
+            "write controls left static-enabled",
+            "empty read-only page"
+          ]
+        },
+        "evidence": {
+          "artifact_type": "video",
+          "required_capture": true
+        },
+        "cases": [
+          {
+            "start_ref": "desktop_admin_readonly_sessions",
+            "action": {
+              "actor": "playwright_user",
+              "steps": [
+                "open Permissions & Governance",
+                "visit Principals",
+                "visit Groups",
+                "visit Branch Gates",
+                "visit Rules"
+              ]
+            },
+            "end_state": {
+              "must_observe": [
+                "read-only notice contains \"administration:write\"",
+                "Commit changes button disabled count >= 1",
+                "enabled write control count == 0"
+              ],
+              "must_not_observe": [
+                "read-only notice count == 0",
+                "enabled write control count > 0",
+                "empty governance page"
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "AC-3",
+      "type": "acceptance_criterion",
+      "description": "GIVEN read-only admin WHEN write controls are attempted THEN no perm_* or group_* write is observed.",
+      "verify": "PLAYWRIGHT_UI=1 pnpm test:e2e:playwright -- governance-settings-tabs-readonly.spec.ts",
+      "maps_to_ac": null,
+      "scenario": {
+        "id": "E2E-GOV-102-AC-3",
+        "test_tier": "e2e",
+        "tier": "visible",
+        "verification_service": "desktop-product-e2e",
+        "negative_control": {
+          "would_fail_if": [
+            "write RPC stub accepts disabled clicks",
+            "permission dispatch not disconnected for read-only",
+            "mocked event log is empty by default"
+          ]
+        },
+        "evidence": {
+          "artifact_type": "event_log",
+          "required_capture": true
+        },
+        "cases": [
+          {
+            "start_ref": "desktop_admin_readonly_sessions",
+            "action": {
+              "actor": "playwright_user",
+              "steps": [
+                "attempt Principals write control",
+                "attempt Groups write control",
+                "capture governance write events"
+              ]
+            },
+            "end_state": {
+              "must_observe": [
+                "event_log perm_write count == 0",
+                "event_log group_write count == 0",
+                "read-only notice contains \"administration:write\""
+              ],
+              "must_not_observe": [
+                "read-only notice count == 0",
+                "empty event log without attempted controls",
+                "enabled write control count > 0"
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "TC-1",
+      "type": "test_criterion",
+      "description": "Four tabs render from the real desktop settings page.",
+      "verify": "PLAYWRIGHT_UI=1 pnpm test:e2e:playwright -- governance-settings-tabs-readonly.spec.ts",
+      "maps_to_ac": "AC-1"
+    },
+    {
+      "id": "TC-2",
+      "type": "test_criterion",
+      "description": "Read-only admin can view governance settings but cannot edit any Sprint 06a governance surface.",
+      "verify": "PLAYWRIGHT_UI=1 pnpm test:e2e:playwright -- governance-settings-tabs-readonly.spec.ts",
+      "maps_to_ac": "AC-2"
+    },
+    {
+      "id": "TC-3",
+      "type": "test_criterion",
+      "description": "Read-only authority comes from governance_status_read, not user.role.",
+      "verify": "pnpm --filter @gitbutler/desktop test:ct:desktop -- GovernanceSettingsAdminRoleNoWrite",
+      "maps_to_ac": "AC-3"
+    }
+  ]
+}

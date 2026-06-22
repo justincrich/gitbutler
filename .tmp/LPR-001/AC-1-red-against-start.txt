@@ -1,0 +1,5 @@
+112 |     db.local_review_comments_mut().set_resolved("t1", /* &str */, true)?;
+    |                                                       +++++++++++
+
+For more information about this error, try `rustc --explain E0061`.
+error: could not compile `but-db` (test "db") due to 2 previous errors

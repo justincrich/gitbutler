@@ -83,6 +83,13 @@ impl From<Project> for UpdateRequest {
             snapshot_lines_threshold,
             forge_override,
             preferred_forge_user,
+            // LPR-006: `keep_reviews_local` is a DefaultTrue operator preference
+            // (R21 trusted-desktop). It round-trips through the project store via
+            // serde on `Project` itself; the `UpdateRequest` write surface is not
+            // extended here — the project-settings UI plumbing lands with the
+            // operator-facing surface in a later sprint. Discard explicitly so
+            // this exhaustive destructure stays exhaustive (signals future fields).
+            keep_reviews_local: _,
         }: Project,
     ) -> Self {
         UpdateRequest {

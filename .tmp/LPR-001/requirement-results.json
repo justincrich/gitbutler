@@ -1,0 +1,74 @@
+[
+  {
+    "id": "AC-1",
+    "verify": "cargo test -p but-db local_review_assignments_upsert_and_list_by_target",
+    "exit_code": 0,
+    "output_file": ".tmp/LPR-001/ac-1-output.txt"
+  },
+  {
+    "id": "AC-2",
+    "verify": "cargo test -p but-db local_review_assignments_set_state_targets_one_reviewer",
+    "exit_code": 0,
+    "output_file": ".tmp/LPR-001/ac-2-output.txt"
+  },
+  {
+    "id": "AC-3",
+    "verify": "cargo test -p but-db local_review_comments_insert_and_list",
+    "exit_code": 0,
+    "output_file": ".tmp/LPR-001/ac-3-output.txt"
+  },
+  {
+    "id": "AC-4",
+    "verify": "cargo test -p but-db local_review_comments_set_resolved_scopes_to_thread",
+    "exit_code": 0,
+    "output_file": ".tmp/LPR-001/ac-4-output.txt"
+  },
+  {
+    "id": "AC-5",
+    "verify": "cargo test -p but-db local_review_meta_opener_is_write_once_per_target_key",
+    "exit_code": 0,
+    "output_file": ".tmp/LPR-001/ac-5-output.txt"
+  },
+  {
+    "id": "AC-6",
+    "verify": "cargo test -p but-db local_review_tables_migrations_registered_zero",
+    "exit_code": 0,
+    "output_file": ".tmp/LPR-001/ac-6-output.txt"
+  },
+  {
+    "id": "TC-1",
+    "verify": "cargo test -p but-db local_review_assignments_upsert_and_list_by_target",
+    "exit_code": 0,
+    "output_file": ".tmp/LPR-001/tc-1-output.txt"
+  },
+  {
+    "id": "TC-2",
+    "verify": "cargo test -p but-db local_review_assignments_set_state_targets_one_reviewer",
+    "exit_code": 0,
+    "output_file": ".tmp/LPR-001/tc-2-output.txt"
+  },
+  {
+    "id": "TC-3",
+    "verify": "cargo test -p but-db local_review_comments_insert_and_list",
+    "exit_code": 0,
+    "output_file": ".tmp/LPR-001/tc-3-output.txt"
+  },
+  {
+    "id": "TC-4",
+    "verify": "cargo test -p but-db local_review_comments_set_resolved_scopes_to_thread",
+    "exit_code": 0,
+    "output_file": ".tmp/LPR-001/tc-4-output.txt"
+  },
+  {
+    "id": "TC-5",
+    "verify": "cargo test -p but-db local_review_meta_opener_is_write_once_per_target_key",
+    "exit_code": 0,
+    "output_file": ".tmp/LPR-001/tc-5-output.txt"
+  },
+  {
+    "id": "TC-6",
+    "verify": "cargo test -p but-db local_review_tables_migrations_registered_zero",
+    "exit_code": 0,
+    "output_file": ".tmp/LPR-001/tc-6-output.txt"
+  }
+]

@@ -3,7 +3,7 @@ use std::{borrow::Borrow, collections::BTreeMap, path::Path, str};
 use anyhow::{Context, anyhow};
 use serde::{Deserialize, Serialize};
 
-use crate::{AuthoritySet, Group, GroupName, PrincipalId};
+use crate::{AuthoritySet, DenialClass, Group, GroupName, PrincipalId};
 
 const PERMISSIONS_PATH: &str = ".gitbutler/permissions.toml";
 const GATES_PATH: &str = ".gitbutler/gates.toml";
@@ -35,6 +35,45 @@ pub fn load_governance_config(
     target_ref: &str,
 ) -> Result<GovConfig, ConfigError> {
     load_governance_config_inner(repo, target_ref).map_err(ConfigError::invalid)
+}
+
+/// Load the raw `[[principal]]`/`[[group]]` wire format from the committed
+/// `.gitbutler/permissions.toml` at the supplied target ref.
+///
+/// Unlike [`load_governance_config`] (which desugars roles into a flat
+/// `GovConfig` authority map and discards non-enforcement fields), this
+/// preserves the additive optional fields that do not flow into enforcement —
+/// notably [`PrincipalWire::kind`], the descriptor the agent-PR tag derivation
+/// reads. Reads at the target ref like all governance config (anti-self-
+/// escalation); the working tree is never consulted. Returns `Ok(PermissionsWire::default())`
+/// when the target ref does not carry a committed `permissions.toml` (a
+/// non-governed ref has no tag to derive).
+///
+/// ```
+/// # fn example(repo: &gix::Repository) -> anyhow::Result<()> {
+/// let wire = but_authz::load_permissions_wire(repo, "refs/heads/main")?;
+/// assert!(wire.principal.is_empty() || !wire.principal.is_empty());
+/// # Ok(())
+/// # }
+/// ```
+pub fn load_permissions_wire(
+    repo: &gix::Repository,
+    target_ref: &str,
+) -> anyhow::Result<PermissionsWire> {
+    let permissions_blob = match read_config_blob(repo, target_ref, PERMISSIONS_PATH) {
+        Ok(blob) => blob,
+        Err(error)
+            if error
+                .to_string()
+                .starts_with(&format!("missing {PERMISSIONS_PATH} ")) =>
+        {
+            return Ok(PermissionsWire::default());
+        }
+        Err(error) => return Err(error),
+    };
+    let permissions = toml::from_str::<PermissionsWire>(&permissions_blob)
+        .with_context(|| format!("parsing {PERMISSIONS_PATH} at {target_ref}"))?;
+    Ok(permissions)
 }
 
 /// Whether governance is opted-in at `target_ref`.
@@ -242,6 +281,14 @@ pub struct ConfigError {
     message: String,
     #[source]
     source: anyhow::Error,
+    /// Steering classification — who can recover. `None` until STEER-004
+    /// populates the value at the config-load denial sites; `to_envelope`
+    /// and the custom [`Serialize`] impl emit `class` only when `Some`.
+    pub class: Option<DenialClass>,
+    /// Optional "do not" hint — verbs the actor must NOT attempt. Emitted
+    /// only when `Some`; `None` omits the key entirely (matches
+    /// `Option::is_none` skip semantics used by the other carriers).
+    pub do_not: Option<&'static str>,
 }
 
 impl ConfigError {
@@ -260,7 +307,36 @@ impl ConfigError {
         Self {
             message: source.to_string(),
             source,
+            class: None,
+            do_not: None,
         }
+    }
+}
+
+impl Serialize for ConfigError {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use serde::ser::SerializeStruct as _;
+
+        let mut field_count = 2; // code + message are always present
+        if self.class.is_some() {
+            field_count += 1;
+        }
+        if self.do_not.is_some() {
+            field_count += 1;
+        }
+        let mut state = serializer.serialize_struct("ConfigError", field_count)?;
+        state.serialize_field("code", &self.code())?;
+        state.serialize_field("message", &self.message)?;
+        if let Some(class) = self.class {
+            state.serialize_field("class", &class)?;
+        }
+        if let Some(do_not) = self.do_not {
+            state.serialize_field("do_not", do_not)?;
+        }
+        state.end()
     }
 }
 
@@ -427,6 +503,14 @@ pub struct PrincipalWire {
     pub permissions: Vec<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub role: Option<String>,
+    /// Additive, enforcement-neutral descriptor naming the principal's kind
+    /// (e.g. `"agent"` / `"human"`). Source-of-truth for the agent-PR tag
+    /// derivation, which reads this at the target ref like all governance
+    /// config. Older committed files without `kind` deserialize to `None`
+    /// (default-human). The `kind` field does NOT enter `GovConfig.principals`
+    /// and no gate reads it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub kind: Option<String>,
     #[serde(default)]
     pub groups: Vec<String>,
 }

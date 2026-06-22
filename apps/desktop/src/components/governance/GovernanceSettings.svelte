@@ -3,31 +3,43 @@
 	import PrincipalsList from "$components/governance/PrincipalsList.svelte";
 	import TabContent from "$components/shared/TabContent.svelte";
 	import TabList from "$components/shared/TabList.svelte";
-	import Tabs from "$components/shared/Tabs.svelte";
 	import TabTrigger from "$components/shared/TabTrigger.svelte";
+	import Tabs from "$components/shared/Tabs.svelte";
 	import { BACKEND } from "$lib/backend";
+	import { URL_SERVICE } from "$lib/backend/url";
 	import {
 		createGovernanceRendererContract,
 		type GovernanceRendererContract,
 	} from "$lib/governance";
 	import { createGovernancePendingStore } from "$lib/governance/pendingStore.svelte";
 	import { injectOptional } from "@gitbutler/core/context";
-	import { InfoMessage } from "@gitbutler/ui";
+	import { Button, EmptyStatePlaceholder, InfoMessage } from "@gitbutler/ui";
 	import { untrack } from "svelte";
+	import type { GroupListEntry } from "@gitbutler/but-sdk";
+
+	// Governance has no in-app builder yet; the not-configured state links here so the
+	// user can set up `.gitbutler/permissions.toml` + `.gitbutler/gates.toml` themselves.
+	const GOVERNANCE_SETUP_DOCS_URL =
+		"https://github.com/justincrich/gitbutler/blob/master/docs/governance-setup.md";
 
 	type Props = {
 		projectId?: string;
 		targetRef?: string;
 		service?: GovernanceRendererContract;
+		initialGroups?: GroupListEntry[];
+		initialPendingGroups?: string[];
 	};
 
 	const {
 		projectId = "",
-		targetRef = "refs/remotes/origin/main",
+		targetRef = "refs/remotes/origin/master",
 		service: providedService,
+		initialGroups,
+		initialPendingGroups = [],
 	}: Props = $props();
 
 	const backend = injectOptional(BACKEND, undefined);
+	const urlService = injectOptional(URL_SERVICE, undefined);
 	const service = untrack(
 		() => providedService ?? (backend ? createGovernanceRendererContract(backend) : undefined),
 	);
@@ -36,128 +48,207 @@
 
 	const pendingCount = $derived(pendingStore?.pendingCount ?? 0);
 	const isReadOnly = $derived(pendingStore?.access.isReadOnly ?? false);
+	// "Not configured" is a normal first-run state (no committed governance config on the
+	// target branch), NOT an error — render guidance instead of the tabs or a red banner.
+	const isNotConfigured = $derived(pendingStore?.access.isNotConfigured ?? false);
+	// The backend resolves the real target ref; the renderer prop may be stale.
+	const resolvedTargetRef = $derived(pendingStore?.access.targetRef || targetRef);
 	const commitDisabled = $derived(
 		isReadOnly || pendingCount === 0 || Boolean(pendingStore?.isCommitting),
 	);
+	let pendingGroupNames = $state<string[]>(untrack(() => [...initialPendingGroups]));
+	let hasLoadedPending = $state(false);
 
 	$effect(() => {
 		if (pendingStore && projectId) {
 			untrack(() => {
-				void pendingStore.refresh();
+				void refreshGovernance();
 			});
 		}
 	});
 
-	function commitChanges() {
-		void pendingStore?.commit();
+	$effect(() => {
+		if (hasLoadedPending && pendingCount === 0) {
+			pendingGroupNames = [];
+		}
+	});
+
+	async function commitChanges() {
+		await pendingStore?.commit();
+		hasLoadedPending = true;
 	}
 
-	function refreshGovernance() {
-		void pendingStore?.refresh();
+	async function refreshGovernance() {
+		await pendingStore?.refresh();
+		hasLoadedPending = true;
+	}
+
+	async function openSetupGuide() {
+		await urlService?.openExternalUrl(GOVERNANCE_SETUP_DOCS_URL);
+	}
+
+	function markGroupPending(groupName: string) {
+		if (pendingGroupNames.includes(groupName)) return;
+		pendingGroupNames = [...pendingGroupNames, groupName].sort((left, right) =>
+			left.localeCompare(right),
+		);
 	}
 </script>
 
 <section class="governance-settings" data-testid="governance-settings">
 	<h2>Permissions & Governance</h2>
 
-	{#if isReadOnly}
-		<div data-testid="GovernanceReadOnlyMessage">
-			<InfoMessage testId="governance-read-only-message" filled outlined={false} style="info">
-				{#snippet title()}Read-only governance settings{/snippet}
-				{#snippet content()}
-					You need administration:write authority to edit governance settings.
+	{#if isNotConfigured}
+		<!-- First-run guidance: there's no in-app builder, so tell the user exactly how to
+		     stand governance up themselves and link to the full setup guide. -->
+		<div data-testid="governance-not-configured">
+			<EmptyStatePlaceholder gap={12} topBottomPadding={32} width={440}>
+				{#snippet title()}Governance isn't set up yet{/snippet}
+				{#snippet caption()}
+					Permissions and branch gates are read from
+					<code>.gitbutler/permissions.toml</code> and
+					<code>.gitbutler/gates.toml</code>, committed to the target branch (<code
+						>{resolvedTargetRef}</code
+					>). Nothing is committed there yet, so there's nothing to manage here.
+					<br /><br />
+					There's no in-app setup yet. To enable governance: add those two files (or build them with the
+					<code>but</code> CLI), commit them to the target branch, then reopen this page. The setup guide
+					walks through the schema and CLI.
 				{/snippet}
-			</InfoMessage>
+				{#snippet actions()}
+					<Button
+						kind="solid"
+						style="pop"
+						icon="docs"
+						onclick={openSetupGuide}
+						disabled={!urlService}
+						testId="governance-setup-guide-link"
+					>
+						Open setup guide
+					</Button>
+				{/snippet}
+			</EmptyStatePlaceholder>
 		</div>
-	{/if}
-
-	{#if pendingCount > 0}
-		<div data-testid="GovernancePendingBanner">
-			<div class="pending-banner" data-testid="governance-pending-banner">
-				<div class="pending-banner__copy">
-					<strong>{pendingCount} pending changes</strong>
-					<span>Commit governance changes to the configured target branch.</span>
-				</div>
-				<button
-					disabled={commitDisabled}
-					onclick={commitChanges}
-					type="button"
-					class="governance-button governance-button--primary"
-					data-testid="governance-commit-button"
+	{:else}
+		{#if pendingStore?.error}
+			<div data-testid="GovernanceErrorMessage">
+				<InfoMessage
+					style="danger"
+					error={pendingStore.error}
+					primaryLabel="Retry"
+					primaryAction={refreshGovernance}
+					primaryTestId="governance-retry-button"
 				>
-					{pendingStore?.isCommitting ? "Committing..." : "Commit changes"}
-				</button>
+					{#snippet title()}Couldn't load governance settings{/snippet}
+					{#snippet content()}
+						The governance config couldn't be read from the target branch. Retry, or see the setup
+						guide if governance hasn't been configured.
+					{/snippet}
+				</InfoMessage>
 			</div>
-		</div>
-	{/if}
+		{/if}
 
-	<Tabs defaultSelected="principals">
-		<TabList>
-			<TabTrigger value="principals">Principals</TabTrigger>
-			<TabTrigger value="groups">Groups</TabTrigger>
-			<TabTrigger value="branch-gates">Branch Gates</TabTrigger>
-			<TabTrigger value="rules">Rules</TabTrigger>
-		</TabList>
+		{#if isReadOnly}
+			<div data-testid="GovernanceReadOnlyMessage">
+				<InfoMessage testId="governance-read-only-message" filled outlined={false} style="info">
+					{#snippet title()}Read-only governance settings{/snippet}
+					{#snippet content()}
+						You need administration:write authority to edit governance settings.
+					{/snippet}
+				</InfoMessage>
+			</div>
+		{/if}
 
-		<TabContent value="principals">
-			<section
-				class="governance-panel governance-panel--principals"
-				data-testid="governance-principals-panel"
-			>
-				<h3>Principals</h3>
-				<PrincipalsList
-					{projectId}
-					{targetRef}
-					{isReadOnly}
-					{service}
-					onRefresh={refreshGovernance}
-				/>
-			</section>
-		</TabContent>
+		{#if pendingCount > 0}
+			<div data-testid="GovernancePendingBanner">
+				<div class="pending-banner" data-testid="governance-pending-banner">
+					<div class="pending-banner__copy">
+						<strong>{pendingCount} pending changes</strong>
+						<span>Commit governance changes to the configured target branch.</span>
+					</div>
+					<button
+						disabled={commitDisabled}
+						onclick={commitChanges}
+						type="button"
+						class="governance-button governance-button--primary"
+						data-testid="governance-commit-button"
+					>
+						{pendingStore?.isCommitting ? "Committing..." : "Commit changes"}
+					</button>
+				</div>
+			</div>
+		{/if}
 
-		<TabContent value="groups">
-			<section
-				class="governance-panel governance-panel--groups"
-				data-testid="governance-groups-panel"
-			>
-				<h3>Groups</h3>
-				<GroupsList {projectId} {targetRef} {isReadOnly} onRefresh={refreshGovernance} />
-			</section>
-		</TabContent>
+		<Tabs defaultSelected="principals">
+			<TabList>
+				<TabTrigger value="principals">Principals</TabTrigger>
+				<TabTrigger value="groups">Groups</TabTrigger>
+				<TabTrigger value="branch-gates">Branch Gates</TabTrigger>
+				<TabTrigger value="rules">Rules</TabTrigger>
+			</TabList>
 
-		<TabContent value="branch-gates">
-			<section class="governance-panel" data-testid="governance-branch-gates-panel">
-				<h3>Branch Gates</h3>
-				<button
-					type="button"
-					class="governance-button"
-					disabled={isReadOnly}
-					data-testid="governance-branch-gates-control"
+			<TabContent value="principals">
+				<section
+					class="governance-panel governance-panel--principals"
+					data-testid="governance-principals-panel"
 				>
-					Add gate
-				</button>
-			</section>
-		</TabContent>
+					<h3>Principals</h3>
+					<PrincipalsList
+						{projectId}
+						targetRef={resolvedTargetRef}
+						{isReadOnly}
+						{service}
+						onRefresh={refreshGovernance}
+					/>
+				</section>
+			</TabContent>
 
-		<TabContent value="rules">
-			<section class="governance-panel" data-testid="governance-rules-panel">
-				<h3>Rules</h3>
-				<button
-					type="button"
-					class="governance-button"
-					disabled={isReadOnly}
-					data-testid="governance-rules-control"
+			<TabContent value="groups">
+				<section
+					class="governance-panel governance-panel--groups"
+					data-testid="governance-groups-panel"
 				>
-					Add rule
-				</button>
-			</section>
-		</TabContent>
-	</Tabs>
+					<h3>Groups</h3>
+					<GroupsList
+						{projectId}
+						targetRef={resolvedTargetRef}
+						{isReadOnly}
+						groups={initialGroups}
+						pendingGroups={pendingGroupNames}
+						onRefresh={refreshGovernance}
+						onGroupPending={markGroupPending}
+					/>
+				</section>
+			</TabContent>
 
-	{#if pendingStore?.error}
-		<InfoMessage style="danger" error={pendingStore.error}>
-			{#snippet title()}Governance settings failed{/snippet}
-		</InfoMessage>
+			<TabContent value="branch-gates">
+				<section class="governance-panel" data-testid="governance-branch-gates-panel">
+					<h3>Branch Gates</h3>
+					<button
+						type="button"
+						class="governance-button"
+						disabled={isReadOnly}
+						data-testid="governance-branch-gates-control"
+					>
+						Add gate
+					</button>
+				</section>
+			</TabContent>
+
+			<TabContent value="rules">
+				<section class="governance-panel" data-testid="governance-rules-panel">
+					<h3>Rules</h3>
+					<button
+						type="button"
+						class="governance-button"
+						disabled={isReadOnly}
+						data-testid="governance-rules-control"
+					>
+						Add rule
+					</button>
+				</section>
+			</TabContent>
+		</Tabs>
 	{/if}
 </section>
 

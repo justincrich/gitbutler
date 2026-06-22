@@ -51,6 +51,10 @@ export type GovernanceAccess = {
 	authorities: string[];
 	hasAdminWrite: boolean;
 	isReadOnly: boolean;
+	/** True when the target ref has no committed governance config (a normal "not set up" state). */
+	isNotConfigured: boolean;
+	/** The backend-resolved governance target ref — reuse it for follow-up reads. */
+	targetRef: string;
 };
 
 export type GovernanceCommitOutcome = {
@@ -72,11 +76,11 @@ export function createGovernanceRendererContract(
 	backend: GovernanceBackend,
 ): GovernanceRendererContract {
 	return {
-		readPending(target) {
-			return backend.invoke<GovernancePending>("governance_pending", target);
+		async readPending(target) {
+			return await backend.invoke<GovernancePending>("governance_pending", target);
 		},
-		readPrincipals(target) {
-			return backend.invoke<GovernancePrincipalsList>("governance_principals_list", target);
+		async readPrincipals(target) {
+			return await backend.invoke<GovernancePrincipalsList>("governance_principals_list", target);
 		},
 		async readAccess(projectId) {
 			const status = await backend.invoke<GovernanceStatus>("governance_status_read", {
@@ -84,8 +88,8 @@ export function createGovernanceRendererContract(
 			});
 			return governanceAccessFromStatus(status);
 		},
-		commitPending(target) {
-			return backend.invoke<GovernanceCommitOutcome>("governance_commit", target);
+		async commitPending(target) {
+			return await backend.invoke<GovernanceCommitOutcome>("governance_commit", target);
 		},
 	};
 }
@@ -97,5 +101,7 @@ export function governanceAccessFromStatus(status: GovernanceStatus): Governance
 		authorities,
 		hasAdminWrite,
 		isReadOnly: !hasAdminWrite,
+		isNotConfigured: status.not_configured,
+		targetRef: status.target_ref,
 	};
 }

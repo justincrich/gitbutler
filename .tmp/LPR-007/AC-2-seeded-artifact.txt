@@ -1,0 +1,35 @@
+Seeded artifact for AC-2: serde round-trip of the new rule shape.
+
+The rule is serialized as JSON via `serde_json::to_string(&rule)` (the same
+serde shape `workspace_rules_mut().insert(rule.try_into()?)` uses to persist
+the rule), then reloaded via `serde_json::from_str::<WorkspaceRule>(&persisted)`.
+
+Round-tripped shape (the new variants survive — engine mechanism reused):
+
+  WorkspaceRule {
+      id: "test-rule-001",
+      created_at: <NaiveDateTime>,
+      enabled: true,
+      trigger: Trigger::Commit,                                  // <- new variant
+      filters: [Filter::ClaudeCodeSessionId("dev".to_owned())],
+      action: Action::RequestReview(RequestReviewAction {        // <- new variant
+          reviewer: "rev2".to_owned(),
+      }),
+  }
+
+  serde_json output (excerpt):
+    {"id":"test-rule-001","createdAt":"...","enabled":true,
+     "trigger":"commit",
+     "filters":[{"type":"claudeCodeSessionId","subject":"dev"}],
+     "action":{"type":"requestReview","subject":{"reviewer":"rev2"}}}
+
+Both new variants use the sibling serde shape
+(`#[serde(rename_all = "camelCase", tag = "type", content = "subject")]`)
+so the persisted blob round-trips mechanically — no parallel mechanism,
+no side table.
+
+Assertions proven:
+  - matches!(reloaded.trigger(), Trigger::Commit) — the commit Trigger survives
+  - the reloaded action is Action::RequestReview with reviewer="rev2"
+  - reloaded.session_id() == Some("dev") — the ClaudeCodeSessionId filter (the
+    principal axis) survives too

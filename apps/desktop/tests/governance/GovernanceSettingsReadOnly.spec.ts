@@ -16,6 +16,9 @@ test("uses backend hasAdminWrite=false to explain and disable governance control
 	await expect(component.getByTestId("governance-principals-control")).toHaveCount(0);
 	await component.getByRole("tab", { name: "Groups" }).click();
 	await expect(component.getByTestId("governance-groups-panel")).toBeVisible();
-	await expect(component.getByTestId("governance-groups-control")).toBeDisabled();
+	// Read-only must disable group creation. Target the real GroupsList controls — the
+	// legacy `governance-groups-control` placeholder was replaced by the GroupsList component.
+	await expect(component.getByTestId("groups-list-create-name")).toBeDisabled();
+	await expect(component.getByRole("button", { name: "+ Create group" })).toBeDisabled();
 	await expect(component.getByTestId("governance-read-only-message")).toBeVisible();
 });

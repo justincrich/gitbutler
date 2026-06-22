@@ -122,17 +122,17 @@ impl Denial {
             format!("held permissions: {names}")
         };
 
-        Self {
-            code: Self::PERM_DENIED_CODE,
-            message: format!(
+        Self::new(
+            Self::PERM_DENIED_CODE,
+            format!(
                 "action requires {}; authorization denied ({held_summary})",
                 missing.name()
             ),
-            remediation_hint: format!(
+            format!(
                 "request a reviewed merge or ask a maintainer to grant {}",
                 missing.name()
             ),
-        }
+        )
     }
 
     /// Build a structured denial for an unset or empty agent handle.
@@ -144,12 +144,11 @@ impl Denial {
     /// assert_eq!(denial.code, Denial::PERM_DENIED_CODE);
     /// ```
     pub fn no_handle() -> Self {
-        Self {
-            code: Self::PERM_DENIED_CODE,
-            message: "BUT_AGENT_HANDLE is required to resolve a governed principal".to_owned(),
-            remediation_hint: "set BUT_AGENT_HANDLE to a principal committed in governance config"
-                .to_owned(),
-        }
+        Self::new(
+            Self::PERM_DENIED_CODE,
+            "BUT_AGENT_HANDLE is required to resolve a governed principal".to_owned(),
+            "set BUT_AGENT_HANDLE to a principal committed in governance config".to_owned(),
+        )
     }
 
     /// Build a structured denial for a handle absent from committed config.
@@ -161,13 +160,11 @@ impl Denial {
     /// assert!(denial.message.contains("ghost"));
     /// ```
     pub fn unknown_principal(handle: &str) -> Self {
-        Self {
-            code: Self::PERM_DENIED_CODE,
-            message: format!("principal \"{handle}\" not found in committed governance config"),
-            remediation_hint:
-                "commit the principal to governance config before running governed actions"
-                    .to_owned(),
-        }
+        Self::new(
+            Self::PERM_DENIED_CODE,
+            format!("principal \"{handle}\" not found in committed governance config"),
+            "commit the principal to governance config before running governed actions".to_owned(),
+        )
     }
 }
 

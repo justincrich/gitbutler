@@ -47,5 +47,14 @@ uuid.workspace = true
 tracing.workspace = true
 tracing-subscriber = { workspace = true, features = ["env-filter"] }
 tracing-forest.workspace = true
+
+[dev-dependencies]
+but-testsupport.workspace = true
+gix.workspace = true
+serial_test = "3.2.0"
+temp-env = { version = "0.3", features = ["async_closure"] }
+tempfile.workspace = true
+tower = { version = "0.5.3", features = ["util"] }
+
 [lints]
 workspace = true

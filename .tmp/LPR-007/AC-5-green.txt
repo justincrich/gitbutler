@@ -1,0 +1,38 @@
+GREEN capture for AC-5: cargo test -p but-api auto_assignment_visible_in_review_status
+
+Command: cargo test -p but-api auto_assignment_visible_in_review_status
+Exit code: 0
+
+Output:
+---
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.43s
+     Running tests/review_requested_hook_status.rs (target/debug/deps/review_requested_hook_status-013ee1cea9b92cbc)
+
+running 1 test
+test auto_assignment_visible_in_review_status ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.12s
+---
+
+Commit->dispatch loop closed without an explicit `but review request`:
+
+  1. The LPR-007 hook is fired DIRECTLY via `but_rules::process_commit_rules`
+     (bypassing `but_api::legacy::forge::request_review`). A fixtured
+     CommitContext matching the rule's principal filter opens a pending row.
+
+  2. `but_api::legacy::forge::review_status(ctx, "refs/heads/feat")` is then
+     invoked. The auto-opened assignment MUST appear without an explicit
+     `but review request` — the test asserts both:
+
+       status.assignments.iter().any(|a|
+           a.reviewer_principal == "rev" && a.state == "pending")
+
+       status.open_assignments.iter().any(|a|
+           a.reviewer_principal == "rev" && a.state == "pending")
+
+  3. The reconciler can now read review_status to dispatch the reviewer —
+     closing the commit->dispatch loop without an explicit request verb.
+
+The fixture is a real governed repo (via but_testsupport::writable_scenario)
+with committed `.gitbutler/{permissions,gates}.toml`. Real but-db cache,
+real gix, no mocks.

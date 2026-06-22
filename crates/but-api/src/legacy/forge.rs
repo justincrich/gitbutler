@@ -1,7 +1,10 @@
 //! In place of commands.rs
 use anyhow::{Context as _, Result};
 use but_api_macros::but_api;
-use but_authz::{Authority, authorize, load_governance_config, resolve_principal_from_env};
+use but_authz::{
+    AssignmentState, Authority, AuthorizedAction, Denial, DenialClass, authorize,
+    load_governance_config, resolve_principal_from_env, serialize_authority_tokens,
+};
 use but_core::{RepositoryExt, ref_metadata::ProjectMeta};
 use but_ctx::{Context, ThreadSafeContext};
 use but_forge::{
@@ -18,14 +21,112 @@ pub struct ForgeGateError {
     pub code: &'static str,
     /// Human-readable denial message.
     pub message: String,
+    /// Steering classification — who can recover. Copied off the underlying
+    /// [`but_authz::Denial`] (or defaulted to `ActorCorrectable` for
+    /// `ConfigError`-sourced carriers) so the review CLI serializer
+    /// (STEER-005) has a real field source.
+    pub class: DenialClass,
+    /// Authority tokens the principal already holds. Serialized as a
+    /// stably-sorted array of `:`-token strings via
+    /// [`but_authz::serialize_authority_tokens`]. Copied off the
+    /// underlying [`but_authz::Denial`].
+    #[serde(serialize_with = "serialize_authority_tokens")]
+    pub held_permissions: Vec<Authority>,
+    /// Recovery verbs the consumer may offer the actor. Copied off the
+    /// underlying [`but_authz::Denial`].
+    pub authorized_actions: Vec<AuthorizedAction>,
+    /// Optional "do not" hint — verbs the actor must NOT attempt. Omitted
+    /// entirely when `None` (no `null` key). Copied off the underlying
+    /// [`but_authz::Denial`] / [`but_authz::ConfigError`].
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub do_not: Option<&'static str>,
 }
 
+/// Stable consumer-facing error code returned when an action requires the
+/// remote-mirror path but `keep_reviews_local == false` and the mirror is a
+/// NAMED SEAM ONLY (no mirroring code runs in LPR scope).
+///
+/// See `R21` in
+/// `.spec/prds/governance/enrichments/v1.5.0-local-agent-pr/03-technical-requirements-delta.md §G`:
+/// the mirror is deferred to a future sprint; while `keep_reviews_local == true`
+/// (the default) the loop is fully local, and while `false` the API must surface
+/// this stable code so callers can distinguish "preference says mirror" from
+/// other failure modes.
+pub const REMOTE_MIRROR_NOT_IMPLEMENTED_CODE: &str = "remote_mirror.not_implemented";
+
+/// Structured payload for the LPR-006 named-seam error: a project preference
+/// (`keep_reviews_local == false`) asks for the remote-mirror path, but the
+/// mirror is not yet built.
+///
+/// Surfaces through [`classify_error`] as a [`ForgeGateError`] with code
+/// [`REMOTE_MIRROR_NOT_IMPLEMENTED_CODE`]. The `Display` impl names the missing
+/// mirror verbatim — that string is the named seam.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct RemoteMirrorNotImplemented {
+    /// Stable consumer-facing code (always
+    /// [`REMOTE_MIRROR_NOT_IMPLEMENTED_CODE`]).
+    pub code: &'static str,
+    /// Human-readable explanation naming the missing mirror.
+    pub message: String,
+}
+
+impl RemoteMirrorNotImplemented {
+    /// Construct the canonical named-seam payload for `keep_reviews_local ==
+    /// false` on a forge-mirror path.
+    pub fn new() -> Self {
+        Self {
+            code: REMOTE_MIRROR_NOT_IMPLEMENTED_CODE,
+            message: "remote review mirror not yet implemented (keep_reviews_local=false) \
+                — set keep_reviews_local=true (the default) to keep agent reviews local"
+                .to_owned(),
+        }
+    }
+}
+
+impl Default for RemoteMirrorNotImplemented {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl std::fmt::Display for RemoteMirrorNotImplemented {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}: {}", self.code, self.message)
+    }
+}
+
+impl std::error::Error for RemoteMirrorNotImplemented {}
+
 /// Extract a structured forge gate payload from an error chain.
+///
+/// Copies the four steering fields (`class`, `held_permissions`,
+/// `authorized_actions`, `do_not`) off the underlying [`but_authz::Denial`]
+/// (all four) or [`but_authz::ConfigError`] (`class` + `do_not` only) so the
+/// review CLI serializer (STEER-005) has a real field source rather than a
+/// two-key `{code,message}` flatten.
 pub fn classify_error(err: &anyhow::Error) -> Option<ForgeGateError> {
     if let Some(denial) = err.downcast_ref::<but_authz::Denial>() {
         return Some(ForgeGateError {
             code: denial.code,
             message: denial.message.clone(),
+            class: denial.class,
+            held_permissions: denial.held_permissions.clone(),
+            authorized_actions: denial.authorized_actions.clone(),
+            do_not: denial.do_not,
+        });
+    }
+
+    if let Some(mirror) = err.downcast_ref::<RemoteMirrorNotImplemented>() {
+        // Named-seam error: the actor recovers by flipping
+        // `keep_reviews_local` back to true, so `ActorCorrectable` is the
+        // honest classification. No authority context applies to a named seam.
+        return Some(ForgeGateError {
+            code: mirror.code,
+            message: mirror.message.clone(),
+            class: DenialClass::ActorCorrectable,
+            held_permissions: Vec::new(),
+            authorized_actions: Vec::new(),
+            do_not: None,
         });
     }
 
@@ -33,6 +134,10 @@ pub fn classify_error(err: &anyhow::Error) -> Option<ForgeGateError> {
         .map(|error| ForgeGateError {
             code: error.code(),
             message: error.to_string(),
+            class: error.class.unwrap_or_default(),
+            held_permissions: Vec::new(),
+            authorized_actions: Vec::new(),
+            do_not: error.do_not,
         })
 }
 
@@ -99,6 +204,20 @@ pub fn remote_url(project_meta: &ProjectMeta, repo: &gix::Repository) -> Result<
 
 pub fn push_remote_url(project_meta: &ProjectMeta, repo: &gix::Repository) -> Result<String> {
     project_meta.push_remote_url(repo)
+}
+
+/// Read the per-project `keep_reviews_local` operator preference (LPR-006).
+///
+/// Returns `true` when agent reviews must stay local-only (the default via
+/// `DefaultTrue`). Returns `false` only when the operator has explicitly opted
+/// into the (deferred) remote-mirror path — see `R21` in
+/// `.spec/prds/governance/enrichments/v1.5.0-local-agent-pr/03-technical-requirements-delta.md §G`.
+/// This is a read-only convenience for the project-settings UI; the gate itself
+/// lives in [`request_review`].
+#[but_api(napi)]
+#[instrument(err(Debug))]
+pub fn get_keep_reviews_local(ctx: &Context) -> Result<bool> {
+    Ok(*ctx.legacy_project.keep_reviews_local)
 }
 
 fn review_template_content(file: FileInfo) -> Result<String> {
@@ -517,6 +636,122 @@ pub async fn publish_review(
     .await
 }
 
+/// Open a local review for a branch after enforcing `pull_requests:write`.
+///
+/// Writes the write-once `local_review_meta(target, "opener_principal", caller)`
+/// row (R23 source-of-truth for the opener principal — NOT a comment-body
+/// sentinel), and — when `reviewer` is `Some` — also seeds the first `pending`
+/// `local_review_assignments` row for that reviewer. Assignments and verdicts
+/// are separate: this verb never touches `local_review_verdicts`.
+///
+/// **LPR-006 gate:** the operator preference
+/// [`Project::keep_reviews_local`](gitbutler_project::Project::keep_reviews_local)
+/// controls where agent reviews land. When `true` (the default via `DefaultTrue`,
+/// see `R21` in
+/// `.spec/prds/governance/enrichments/v1.5.0-local-agent-pr/03-technical-requirements-delta.md §G`)
+/// the loop is fully local — this verb writes only local-cache rows and never
+/// reaches a forge. When `false`, the remote-mirror path is a NAMED SEAM ONLY:
+/// this verb returns a structured [`RemoteMirrorNotImplemented`] error BEFORE
+/// any authorization or write, so callers can distinguish "preference says
+/// mirror" from a real forge call. Mirroring code is NOT built in LPR scope.
+#[but_api(napi)]
+#[instrument(err(Debug))]
+pub async fn request_review(
+    ctx: ThreadSafeContext,
+    branch: String,
+    reviewer: Option<String>,
+) -> Result<()> {
+    // LPR-006 R21 named seam: when the operator preference asks for the
+    // remote-mirror path, surface the stable `remote_mirror.not_implemented`
+    // error BEFORE authorization or any local-cache write. This is a gate, not
+    // a path — no mirroring code runs in LPR scope. Access the public field on
+    // `ThreadSafeContext` directly so we don't consume the only handle to it.
+    if !*ctx.legacy_project.keep_reviews_local {
+        return Err(anyhow::Error::new(RemoteMirrorNotImplemented::new()));
+    }
+
+    let ctx = ctx.into_thread_local();
+    let repo = ctx.repo.get()?;
+    let opener = authorize_branch_action(&repo, &branch, Authority::PullRequestsWrite)?
+        .context("governance config is required to open a local review")?;
+
+    let mut db = ctx.db.get_cache_mut()?;
+    if let Some(reviewer) = reviewer {
+        db.local_review_assignments_mut()
+            .upsert(but_db::LocalReviewAssignment {
+                id: uuid::Uuid::new_v4().to_string(),
+                target: branch.clone(),
+                reviewer_principal: reviewer,
+                state: AssignmentState::Pending.name().to_owned(),
+                assigned_at: chrono::Utc::now().naive_utc(),
+            })?;
+    }
+    // Record the opener ONCE in the dedicated `local_review_meta` table. The
+    // composite (target, "opener_principal") key plus ON CONFLICT DO NOTHING
+    // makes this write-once — a later caller cannot overwrite the opener. LPR-005
+    // derives the agent-PR tag from this opener's declared `kind` in committed
+    // config; a comment-body sentinel would be attacker-influenceable (R20/R23).
+    db.local_review_meta_mut()
+        .upsert_if_absent(but_db::LocalReviewMeta {
+            target: branch,
+            key: "opener_principal".to_owned(),
+            value: opener.id().as_str().to_owned(),
+            created_at: chrono::Utc::now().naive_utc(),
+        })?;
+
+    Ok(())
+}
+
+/// Assign a reviewer to a branch review after enforcing `reviews:write`.
+///
+/// Enforces `reviewer != target_branch_author` BEFORE the upsert (R22 — the
+/// drive-layer mirror of the gate's `require_distinct_from_author`). The target
+/// author is the principal recorded as the opener in the write-once
+/// `local_review_meta(target, "opener_principal")` row. Self-assignment is
+/// rejected with a structured `perm.denied` Denial and NO row written.
+#[but_api(napi)]
+#[instrument(err(Debug))]
+pub async fn assign_reviewer(
+    ctx: ThreadSafeContext,
+    branch: String,
+    reviewer: String,
+) -> Result<()> {
+    let ctx = ctx.into_thread_local();
+    let repo = ctx.repo.get()?;
+    authorize_branch_action(&repo, &branch, Authority::ReviewsWrite)?
+        .context("governance config is required to assign a reviewer")?;
+
+    {
+        let db = ctx.db.get_cache()?;
+        if let Some(opener) = db.local_review_meta().get(&branch, "opener_principal")?
+            && reviewer == opener.value
+        {
+            return Err(Denial::new(
+                Denial::PERM_DENIED_CODE,
+                format!(
+                    "reviewer `{reviewer}` must be distinct from the target branch author `{}` (R22)",
+                    opener.value
+                ),
+                "assign a reviewer principal distinct from the branch's opener/author"
+                    .to_owned(),
+            )
+            .into());
+        }
+    }
+
+    let mut db = ctx.db.get_cache_mut()?;
+    db.local_review_assignments_mut()
+        .upsert(but_db::LocalReviewAssignment {
+            id: uuid::Uuid::new_v4().to_string(),
+            target: branch,
+            reviewer_principal: reviewer,
+            state: AssignmentState::Pending.name().to_owned(),
+            assigned_at: chrono::Utc::now().naive_utc(),
+        })?;
+
+    Ok(())
+}
+
 /// Approve a branch review locally after enforcing `reviews:write`.
 #[but_api(napi)]
 #[instrument(err(Debug))]
@@ -546,23 +781,41 @@ pub async fn approve_review(ctx: ThreadSafeContext, branch: String) -> Result<()
 }
 
 /// Request changes on a branch review after enforcing `reviews:write`.
+///
+/// Sets the caller's `local_review_assignments.state` to `changes_requested`
+/// via the typed `AssignmentState::ChangesRequested.name()` round-trip. The
+/// assignment row is upserted (idempotent per `(target, reviewer_principal)`)
+/// so the flip also works for a caller that has no prior pending assignment.
+/// This is a drive-state write only — it never reaches the merge gate (the
+/// gate reads `local_review_verdicts` at head, never assignment state).
 #[but_api(napi)]
 #[instrument(err(Debug))]
 pub async fn request_changes_review(
     ctx: ThreadSafeContext,
     branch: String,
-    message: Option<String>,
+    _message: Option<String>,
 ) -> Result<()> {
     let ctx = ctx.into_thread_local();
     let repo = ctx.repo.get()?;
-    authorize_branch_action(&repo, &branch, Authority::ReviewsWrite)?;
-    Err(task_contract_invalid(
-        "request_changes_review",
-        format!(
-            "branch `{branch}` with message_present={}",
-            message.is_some()
-        ),
-    ))
+    let principal = authorize_branch_action(&repo, &branch, Authority::ReviewsWrite)?
+        .context("governance config is required to request changes on a review")?;
+    let principal_id = principal.id().as_str().to_owned();
+    let changes_requested = AssignmentState::ChangesRequested.name().to_owned();
+
+    let mut db = ctx.db.get_cache_mut()?;
+    // Idempotent upsert keyed on (target, reviewer_principal): if a pending row
+    // already exists for this caller it is updated in place; otherwise the
+    // changes_requested state is recorded as the first assignment-state entry.
+    db.local_review_assignments_mut()
+        .upsert(but_db::LocalReviewAssignment {
+            id: uuid::Uuid::new_v4().to_string(),
+            target: branch,
+            reviewer_principal: principal_id,
+            state: changes_requested,
+            assigned_at: chrono::Utc::now().naive_utc(),
+        })?;
+
+    Ok(())
 }
 
 /// Comment on a branch review after enforcing `comments:write`.
@@ -581,6 +834,148 @@ pub async fn comment_review(ctx: ThreadSafeContext, branch: String, message: Str
     ))
 }
 
+/// Reserved thread id backed by [`local_review_meta`] rather than a real
+/// comment row. The opener marker (agent-tag, source) lives in the dedicated
+/// `local_review_meta` table, so a caller-supplied `__pr_meta__` thread_id is
+/// rejected to prevent a comment-body sentinel from forging the opener (R23
+/// negative control).
+///
+/// [`local_review_meta`]: but_db::LocalReviewMeta
+pub const RESERVED_PR_META_THREAD: &str = "__pr_meta__";
+
+/// Post a local review comment on a branch after enforcing `comments:write`.
+///
+/// Inserts a [`LocalReviewComment`] pinned to `resolved = false` and the current
+/// timestamp. A code comment carries `file = Some(..)` and `line = Some(..)`; a
+/// branch-level comment carries `None` for both. The reserved
+/// [`__pr_meta__`](RESERVED_PR_META_THREAD) thread id is refused up front so a
+/// comment-body sentinel cannot forge the opener marker. The comment `body` is
+/// attacker-influenceable free text and is stored raw; bounding or escaping it
+/// for downstream model consumption is an L2 harness concern (R20).
+///
+/// Modeled line-for-line on [`approve_review`]: authorize before any await, then
+/// a single local-cache write. No `DryRun` guard — this touches only the local
+/// cache, not refs / objects / oplog.
+///
+/// [`LocalReviewComment`]: but_db::LocalReviewComment
+#[but_api(napi)]
+#[instrument(err(Debug))]
+pub async fn post_comment(
+    ctx: ThreadSafeContext,
+    branch: String,
+    body: String,
+    file: Option<String>,
+    line: Option<i64>,
+    thread_id: String,
+) -> Result<()> {
+    anyhow::ensure!(
+        thread_id != RESERVED_PR_META_THREAD,
+        "thread_id `{RESERVED_PR_META_THREAD}` is reserved and cannot receive comments"
+    );
+    let ctx = ctx.into_thread_local();
+    let repo = ctx.repo.get()?;
+    let author = authorize_branch_action(&repo, &branch, Authority::CommentsWrite)?
+        .context("governance config is required to post a local review comment")?;
+    let mut db = ctx.db.get_cache_mut()?;
+    db.local_review_comments_mut()
+        .insert(but_db::LocalReviewComment {
+            id: uuid::Uuid::new_v4().to_string(),
+            target: branch,
+            author_principal: author.id().as_str().to_owned(),
+            body,
+            file,
+            line,
+            thread_id,
+            resolved: false,
+            created_at: chrono::Utc::now().naive_utc(),
+        })?;
+    Ok(())
+}
+
+/// List every comment on a branch, grouped by thread id in arrival order.
+///
+/// This is a **branch-scoped read** with no write authority: it discloses every
+/// principal's threads on the named branch (an accepted branch-scoped
+/// disclosure, F-006 — not per-principal self-scoping). The reserved
+/// [`__pr_meta__`](RESERVED_PR_META_THREAD) marker thread is filtered out: the
+/// opener lives in [`local_review_meta`], not a comment row.
+///
+/// [`local_review_meta`]: but_db::LocalReviewMeta
+#[but_api(napi)]
+#[instrument(err(Debug))]
+pub async fn list_comments(
+    ctx: ThreadSafeContext,
+    branch: String,
+) -> Result<Vec<but_db::LocalReviewComment>> {
+    let ctx = ctx.into_thread_local();
+    let db = ctx.db.get_cache()?;
+    let rows = db
+        .local_review_comments()
+        .list_by_target(&branch)?
+        .into_iter()
+        .filter(|comment| comment.thread_id != RESERVED_PR_META_THREAD)
+        .collect();
+    Ok(rows)
+}
+
+/// Flip every comment in a thread to `resolved` after enforcing
+/// `comments:write` AND a resolver-identity constraint (R22).
+///
+/// Beyond `comments:write`, the resolver must be:
+/// - the **thread author** (the `author_principal` of a comment in that thread),
+/// - the **assigned reviewer** (a `reviewer_principal` on the target in
+///   `local_review_assignments`), or
+/// - a holder of the higher `reviews:write` authority (folded from the same
+///   committed config, never a parallel check).
+///
+/// A third unrelated principal is rejected with a structured denial and no row
+/// flipped, so a single principal cannot post a `changes_requested`-style
+/// thread and self-resolve it to forge a clean "all-clear" drive signal for
+/// another party. The reserved [`__pr_meta__`](RESERVED_PR_META_THREAD) thread
+/// is refused. The merge gate never reads this state — the resolved flag is a
+/// drive signal only.
+#[but_api(napi)]
+#[instrument(err(Debug))]
+pub async fn resolve_thread(
+    ctx: ThreadSafeContext,
+    branch: String,
+    thread_id: String,
+    resolved: bool,
+) -> Result<()> {
+    anyhow::ensure!(
+        thread_id != RESERVED_PR_META_THREAD,
+        "thread_id `{RESERVED_PR_META_THREAD}` is reserved and cannot be resolved"
+    );
+    let ctx = ctx.into_thread_local();
+    let repo = ctx.repo.get()?;
+    let resolver = authorize_branch_action(&repo, &branch, Authority::CommentsWrite)?
+        .context("governance config is required to resolve a local review thread")?;
+    let resolver_id = resolver.id();
+    let holds_reviews_write = resolver.authorities().contains(Authority::ReviewsWrite);
+    let mut db = ctx.db.get_cache_mut()?;
+    let thread_authored = db
+        .local_review_comments()
+        .list_by_thread(&branch, &thread_id)?
+        .iter()
+        .any(|comment| comment.author_principal == resolver_id.as_str());
+    let assigned_reviewer = db
+        .local_review_assignments()
+        .list_by_target(&branch)?
+        .iter()
+        .any(|assignment| assignment.reviewer_principal == resolver_id.as_str());
+    if !(holds_reviews_write || thread_authored || assigned_reviewer) {
+        return Err(anyhow::Error::new(but_authz::Denial::new(
+            but_authz::Denial::PERM_DENIED_CODE,
+            "only the thread author, the assigned reviewer, or a reviews:write holder may resolve this thread (R22)".to_owned(),
+            "ask the thread author, an assigned reviewer, or a reviews:write holder to resolve the thread"
+                .to_owned(),
+        )));
+    }
+    db.local_review_comments_mut()
+        .set_resolved(&thread_id, resolved)?;
+    Ok(())
+}
+
 /// Close a branch review after enforcing `pull_requests:write`.
 #[but_api(napi)]
 #[instrument(err(Debug))]
@@ -592,6 +987,455 @@ pub async fn close_review(ctx: ThreadSafeContext, branch: String) -> Result<()> 
         "close_review",
         format!("branch `{branch}`"),
     ))
+}
+
+/// The verdict literal an approval-at-head carries. Matches the value
+/// [`approve_review`] writes and the constant `review_requirement::APPROVED`
+/// the merge gate re-derives. Kept as a crate-local const (not re-exported from
+/// the private `review_requirement` module) so the reconciler read and the gate
+/// path stay independent compilations of the same literal — the agreement is
+/// verified by `review_status_verdict_at_head_agrees_with_merge_gate`.
+const APPROVED_VERDICT: &str = "approved";
+
+/// Derived PR lifecycle view computed at query time (read-only — no mutation).
+///
+/// Mirrors `enforce_merge_gate`'s read of `local_review_verdicts` at head
+/// (`merge_gate.rs:84` → `review_requirement::evaluate`) but reads no authority,
+/// writes no row, and is never consulted by the gate. The lifecycle label is
+/// presentation-only; the merge decision still re-derives verdict-at-head
+/// itself (§E safe seam — the load-bearing invariant).
+///
+/// LPR-008 extends this payload to serve the **full reconciler drive state** in
+/// one read: [`open_assignments`](Self::open_assignments) (the dispatch
+/// trigger), [`unresolved_threads`](Self::unresolved_threads) (the remediation
+/// trigger), and [`approved`](Self::approved) (the presentation label derived
+/// from the same verdict-at-head truth `enforce_merge_gate` re-derives). Two
+/// orchestrators reading the same repo converge because the payload is
+/// deterministic — every `Vec` reuses the Handles' `ORDER BY` (`created_at ASC,
+/// id ASC`) and the thread grouping sorts by `thread_id`.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "export-schema", derive(schemars::JsonSchema))]
+pub struct ReviewStatus {
+    /// The queried target ref (`refs/heads/<branch>`).
+    pub target: String,
+    /// Reviewer assignments on the target, in arrival order — every
+    /// `local_review_assignments` row, including pending/approved/changes_requested.
+    #[cfg_attr(
+        feature = "export-schema",
+        schemars(schema_with = "local_review_assignment_schema")
+    )]
+    pub assignments: Vec<but_db::LocalReviewAssignment>,
+    /// The verdict-at-head literal (`"approved"` / `"changes_requested"`) when a
+    /// verdict row exists at the current HEAD, else `None`. The same input the
+    /// merge gate re-derives itself.
+    pub verdict_at_head: Option<String>,
+    /// Presentation label derived from verdict + assignments:
+    /// `Open` / `AwaitingReview` / `ChangesRequested` / `Approved`.
+    pub lifecycle: String,
+    /// `true` iff the opener principal's committed `permissions.toml` entry at
+    /// the target ref declares `kind = "agent"` (read at the target ref like all
+    /// governance config — never handle-resolution, never a comment body). The
+    /// tag is descriptive only; no enforcement path reads it.
+    pub agent_authored: bool,
+    /// Count of unresolved comment threads (one per distinct `thread_id` where
+    /// at least one comment has `resolved = false`).
+    pub open_threads: usize,
+
+    // ---- LPR-008 reconciler drive-state extension --------------------------
+    //
+    // The three facts an orchestrator needs to decide the next action from ONE
+    // read with no shadow state. Every Vec is built from a Handle `list_by_target`
+    // that already ORDERs deterministically (`created_at ASC, id ASC`); the
+    // thread grouping sorts by `thread_id` so two reads of the same state
+    // converge byte-identically.
+    /// Pending reviewer assignments — the **dispatch trigger**. Derived from
+    /// [`assignments`](Self::assignments) filtered to `state == "pending"`.
+    /// Reuses the `local_review_assignments.list_by_target` ordering
+    /// (`assigned_at ASC, id ASC`) so two reads converge.
+    #[cfg_attr(
+        feature = "export-schema",
+        schemars(schema_with = "local_review_assignment_schema")
+    )]
+    pub open_assignments: Vec<but_db::LocalReviewAssignment>,
+    /// Unresolved comment threads — the **remediation trigger**. One entry per
+    /// distinct `thread_id` carrying at least one `resolved = false` comment
+    /// (the reserved [`__pr_meta__`](RESERVED_PR_META_THREAD) marker thread is
+    /// excluded). Sorted by `thread_id` for two-read convergence; comments
+    /// within a thread preserve the Handle's `created_at ASC, id ASC` order.
+    pub unresolved_threads: Vec<UnresolvedThread>,
+    /// `true` iff a verdict row pinned to the current HEAD with
+    /// `verdict == "approved"` exists. This is the EXACT query the merge gate
+    /// runs (`local_review_verdicts.list_by_target(target)` filtered to
+    /// `head_oid == current_head_oid && verdict == "approved"`). The label
+    /// AGREES with [`enforce_merge_gate`](crate::legacy::merge_gate::enforce_merge_gate)
+    /// because both read the same truth — it does NOT replace the gate. The
+    /// actual land stays the gate's own re-derivation.
+    pub approved: bool,
+}
+
+/// A grouped summary of an unresolved review comment thread — the remediation
+/// trigger surface.
+///
+/// One entry per distinct `thread_id` carrying at least one comment with
+/// `resolved = false` (the reserved [`__pr_meta__`](RESERVED_PR_META_THREAD)
+/// marker thread is excluded). Comments within a thread preserve the
+/// `local_review_comments.list_by_target` ordering (`created_at ASC, id ASC`);
+/// the threads themselves are sorted by `thread_id` so two reads of the same
+/// state yield byte-identical payloads.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "export-schema", derive(schemars::JsonSchema))]
+pub struct UnresolvedThread {
+    /// The thread id this summary groups.
+    pub thread_id: String,
+    /// Every unresolved (`resolved = false`) comment in this thread, in arrival
+    /// order (`created_at ASC, id ASC`).
+    #[cfg_attr(
+        feature = "export-schema",
+        schemars(schema_with = "local_review_comment_schema")
+    )]
+    pub comments: Vec<but_db::LocalReviewComment>,
+}
+
+#[cfg(feature = "export-schema")]
+but_schemars::register_sdk_type!(ReviewStatus);
+
+#[cfg(feature = "export-schema")]
+but_schemars::register_sdk_type!(UnresolvedThread);
+
+// ---- LPR-010: SDK schema mirrors for but_db DTO fields ---------------------
+//
+// `but_db::{LocalReviewAssignment, LocalReviewComment}` surface as fields on
+// the SDK-exposed `ReviewStatus` / `UnresolvedThread` DTOs. but-db is a
+// storage layer that does NOT depend on `schemars` (and the SDK layer is a
+// but-api concern, not a domain-storage concern), so the `InternalJsonSchema`
+// impls that `pnpm build:sdk` requires live HERE at the but-api boundary.
+//
+// `#[schemars(schema_with = "...")]` on each `Vec<but_db::*>` field routes
+// schema generation through the mirror; the but-db types and the wire format
+// stay byte-identical (serde never sees schema_with — it is schemars-only).
+// `#[schemars(rename = ...)]` makes the generated TS type reuse the but-db
+// name so the SDK surface reads `LocalReviewAssignment` / `LocalReviewComment`
+// rather than `LocalReviewAssignmentSchema`.
+
+/// Schema mirror for [`but_db::LocalReviewAssignment`]. The shape mirrors
+/// the but-db row 1:1; `NaiveDateTime` round-trips as an ISO-8601 string.
+#[cfg(feature = "export-schema")]
+#[derive(schemars::JsonSchema)]
+#[schemars(rename = "LocalReviewAssignment")]
+#[allow(dead_code)]
+struct LocalReviewAssignmentSchema {
+    id: String,
+    target: String,
+    reviewer_principal: String,
+    state: String,
+    assigned_at: String,
+}
+
+#[cfg(feature = "export-schema")]
+fn local_review_assignment_schema(generate: &mut schemars::SchemaGenerator) -> schemars::Schema {
+    generate.subschema_for::<LocalReviewAssignmentSchema>()
+}
+
+#[cfg(feature = "export-schema")]
+but_schemars::register_sdk_type!(LocalReviewAssignmentSchema);
+
+/// Schema mirror for [`but_db::LocalReviewComment`]. The shape mirrors the
+/// but-db row 1:1; `NaiveDateTime` round-trips as an ISO-8601 string.
+#[cfg(feature = "export-schema")]
+#[derive(schemars::JsonSchema)]
+#[schemars(rename = "LocalReviewComment")]
+#[allow(dead_code)]
+struct LocalReviewCommentSchema {
+    id: String,
+    target: String,
+    author_principal: String,
+    body: String,
+    file: Option<String>,
+    line: Option<i64>,
+    thread_id: String,
+    resolved: bool,
+    created_at: String,
+}
+
+#[cfg(feature = "export-schema")]
+fn local_review_comment_schema(generate: &mut schemars::SchemaGenerator) -> schemars::Schema {
+    generate.subschema_for::<LocalReviewCommentSchema>()
+}
+
+#[cfg(feature = "export-schema")]
+but_schemars::register_sdk_type!(LocalReviewCommentSchema);
+
+/// Query the derived PR lifecycle for a branch — READ-ONLY, no write authority.
+///
+/// The read model is computed at query time from the same inputs the merge gate
+/// uses (verdict-at-head + open assignments + open threads), plus the opener
+/// principal's declared `kind` in committed `permissions.toml` (read at the
+/// target ref) for the `agent_authored` tag. The lifecycle derivation order:
+///
+/// - no assignments → `Open`
+/// - a `changes_requested` verdict at head → `ChangesRequested`
+/// - an `approved` verdict at head → `Approved`
+/// - otherwise (assignments, no verdict at head) → `AwaitingReview`
+///
+/// This is branch-scoped drive-metadata: any caller on the project that can
+/// name a branch sees the branch's full review surface (F-006 accepted
+/// disclosure). It is **not** the per-principal self-scoping that
+/// `governance_status_read` provides, and the merge gate **never** reads it.
+#[but_api(napi)]
+#[instrument(err(Debug))]
+pub async fn review_status(ctx: ThreadSafeContext, branch: String) -> Result<ReviewStatus> {
+    let ctx = ctx.into_thread_local();
+    let repo = ctx.repo.get()?;
+    let ref_name = branch_ref(&branch);
+
+    // Current HEAD OID at the target ref — the merge-gate's own re-derivation
+    // input. Filter the verdict rows to those pinned at this exact head.
+    let head_oid = repo
+        .find_reference(&ref_name)
+        .with_context(|| format!("resolving {ref_name} for review_status"))?
+        .peel_to_commit()
+        .with_context(|| format!("peeling {ref_name} to a commit for review_status"))?
+        .id
+        .to_string();
+
+    let db = ctx.db.get_cache()?;
+    let assignments = db
+        .local_review_assignments()
+        .list_by_target(&branch)
+        .context("listing local_review_assignments for review_status")?;
+    let verdicts = db
+        .local_review_verdicts()
+        .list_by_target(&branch)
+        .context("listing local_review_verdicts for review_status")?;
+    let comments = db
+        .local_review_comments()
+        .list_by_target(&branch)
+        .context("listing local_review_comments for review_status")?;
+
+    // verdict_at_head: any verdict row pinned to the current HEAD; the literals
+    // `approved` / `changes_requested` are the values approve_review and
+    // request_changes_review already write. `changes_requested` wins ties so a
+    // pending remediation is never hidden by an older approval at the same head.
+    let verdict_at_head = derive_verdict_at_head(&verdicts, &head_oid);
+
+    // LPR-008 approved: the EXACT query merge_gate runs — any verdict row at the
+    // current head with verdict == "approved". The label AGREES with
+    // enforce_merge_gate (same local_review_verdicts@head truth) but does NOT
+    // replace it: the gate re-derives verdict-at-head itself.
+    let approved = has_approved_verdict_at_head(&verdicts, &head_oid);
+
+    // open_threads: a thread is open if any of its comments has resolved=false.
+    // The reserved __pr_meta__ marker thread is filtered out (the opener lives
+    // in local_review_meta, not a comment row).
+    let open_threads = count_open_threads(&comments);
+
+    // LPR-008 open_assignments: the dispatch trigger. Filter to `pending`
+    // assignments (state == AssignmentState::Pending.name()). Reuses the
+    // Handle's deterministic ordering (assigned_at ASC, id ASC) — no re-sort.
+    let open_assignments = filter_open_assignments(&assignments);
+
+    // LPR-008 unresolved_threads: the remediation trigger. Group unresolved
+    // comments by thread_id, sorted by thread_id for deterministic two-read
+    // convergence. The reserved __pr_meta__ marker thread is excluded.
+    let unresolved_threads = group_unresolved_threads(&comments);
+
+    // agent_authored: derived from the opener principal's declared `kind` in the
+    // committed permissions.toml at the target ref. Read at the target ref (not
+    // the working tree), so an actor cannot self-escalate its own kind. Missing
+    // permissions.toml / missing opener / omitted kind all default to false
+    // (the conservative posture — a principal is agent only if config says so).
+    let opener_principal = db
+        .local_review_meta()
+        .get(&branch, "opener_principal")
+        .context("reading opener_principal meta for review_status")?
+        .map(|row| row.value);
+    let agent_authored = match opener_principal.as_deref() {
+        Some(opener_id) => is_agent_opener(&repo, &ref_name, opener_id)?,
+        None => false,
+    };
+
+    let lifecycle = derive_lifecycle(&assignments, verdict_at_head.as_deref());
+
+    Ok(ReviewStatus {
+        target: branch,
+        assignments,
+        verdict_at_head,
+        lifecycle,
+        agent_authored,
+        open_threads,
+        open_assignments,
+        unresolved_threads,
+        approved,
+    })
+}
+
+/// Pick the verdict-at-head literal from the rows, preferring
+/// `changes_requested` over `approved` at the same head (a pending remediation
+/// must not be hidden by a stale approval).
+fn derive_verdict_at_head(
+    verdicts: &[but_db::LocalReviewVerdict],
+    head_oid: &str,
+) -> Option<String> {
+    let at_head: Vec<&str> = verdicts
+        .iter()
+        .filter(|verdict| verdict.head_oid == head_oid)
+        .map(|verdict| verdict.verdict.as_str())
+        .collect();
+    if at_head.contains(&"changes_requested") {
+        Some("changes_requested".to_owned())
+    } else if at_head.contains(&"approved") {
+        Some("approved".to_owned())
+    } else {
+        None
+    }
+}
+
+/// Count distinct comment threads carrying at least one unresolved comment,
+/// excluding the reserved `__pr_meta__` marker thread.
+fn count_open_threads(comments: &[but_db::LocalReviewComment]) -> usize {
+    use std::collections::HashSet;
+
+    let mut open_threads: HashSet<&str> = HashSet::new();
+    for comment in comments {
+        if comment.thread_id == RESERVED_PR_META_THREAD {
+            continue;
+        }
+        if !comment.resolved {
+            open_threads.insert(comment.thread_id.as_str());
+        }
+    }
+    open_threads.len()
+}
+
+/// LPR-008 reconciler drive fact 1 — pending reviewer assignments (the
+/// **dispatch trigger**).
+///
+/// Filters `local_review_assignments` rows to `state == "pending"`, preserving
+/// the Handle's deterministic ordering (`assigned_at ASC, id ASC`). No
+/// re-sort: the input vec already carries the deterministic order two reads
+/// require. A target with no pending assignments returns an empty vec.
+fn filter_open_assignments(
+    assignments: &[but_db::LocalReviewAssignment],
+) -> Vec<but_db::LocalReviewAssignment> {
+    assignments
+        .iter()
+        .filter(|assignment| assignment.state == AssignmentState::Pending.name())
+        .cloned()
+        .collect()
+}
+
+/// LPR-008 reconciler drive fact 2 — unresolved comment threads (the
+/// **remediation trigger**).
+///
+/// Groups `local_review_comments` rows with `resolved = false` (excluding the
+/// reserved [`__pr_meta__`](RESERVED_PR_META_THREAD) marker thread) by
+/// `thread_id`. Threads are sorted by `thread_id` so two reads of the same
+/// state yield byte-identical payloads (no HashMap iteration-order leakage —
+/// the HashMap is used for lookup only, the output is a sorted `Vec`).
+/// Comments within a thread preserve the Handle's `created_at ASC, id ASC`
+/// order.
+fn group_unresolved_threads(comments: &[but_db::LocalReviewComment]) -> Vec<UnresolvedThread> {
+    use std::collections::HashMap;
+
+    // First pass: collect unresolved (non-__pr_meta__) comments keyed by thread.
+    // The input is already in `created_at ASC, id ASC` order, so the per-thread
+    // vec preserves that order without any re-sort.
+    let mut by_thread: HashMap<&str, Vec<but_db::LocalReviewComment>> = HashMap::new();
+    for comment in comments {
+        if comment.thread_id == RESERVED_PR_META_THREAD {
+            continue;
+        }
+        if !comment.resolved {
+            by_thread
+                .entry(comment.thread_id.as_str())
+                .or_default()
+                .push(comment.clone());
+        }
+    }
+
+    // Second pass: materialize threads and sort by thread_id for deterministic
+    // output order (independent of HashMap iteration order).
+    let mut threads: Vec<UnresolvedThread> = by_thread
+        .into_iter()
+        .map(|(thread_id, comments)| UnresolvedThread {
+            thread_id: thread_id.to_owned(),
+            comments,
+        })
+        .collect();
+    threads.sort_by(|a, b| a.thread_id.cmp(&b.thread_id));
+    threads
+}
+
+/// LPR-008 reconciler drive fact 3 — `true` iff an approved verdict pinned to
+/// the current HEAD exists.
+///
+/// This is the EXACT query [`enforce_merge_gate`] runs:
+/// `local_review_verdicts.list_by_target(target)` filtered to
+/// `verdict.head_oid == current_head_oid && verdict.verdict == "approved"`.
+/// The orchestrator's read and the gate's read AGREE because they read the
+/// same `local_review_verdicts@head` truth; the read does NOT replace the gate
+/// (the actual land stays the gate's own re-derivation).
+///
+/// [`enforce_merge_gate`]: crate::legacy::merge_gate::enforce_merge_gate
+fn has_approved_verdict_at_head(verdicts: &[but_db::LocalReviewVerdict], head_oid: &str) -> bool {
+    verdicts
+        .iter()
+        .any(|verdict| verdict.head_oid == head_oid && verdict.verdict == APPROVED_VERDICT)
+}
+
+/// Derive the presentation lifecycle label from the verdict-at-head and the
+/// assignment drive-state. `verdict_at_head` is sourced strictly from
+/// `local_review_verdicts` filtered by `head_oid == HEAD`; the assignment state
+/// (`pending` / `changes_requested` / `approved`) is the drive-state signal that
+/// mirrors the verdict but never reaches the gate (the safe seam — gates read
+/// verdicts only). Either signal can flip the lifecycle so an orchestrator that
+/// drives via `request_changes_review` sees `ChangesRequested` even before a
+/// reviewer posts a head-pinned verdict.
+fn derive_lifecycle(
+    assignments: &[but_db::LocalReviewAssignment],
+    verdict_at_head: Option<&str>,
+) -> String {
+    if assignments.is_empty() {
+        return "Open".to_owned();
+    }
+    // Verdict-at-head wins: a head-pinned verdict is the merge-gate input.
+    if verdict_at_head == Some("changes_requested") {
+        return "ChangesRequested".to_owned();
+    }
+    if verdict_at_head == Some("approved") {
+        return "Approved".to_owned();
+    }
+    // Fall back to the assignment drive-state (mirrors the verdict but never
+    // reaches the gate). `changes_requested` wins ties over `approved` so a
+    // pending remediation is never hidden by an earlier approval.
+    let any_assignment_changes_requested = assignments
+        .iter()
+        .any(|assignment| assignment.state == "changes_requested");
+    let any_assignment_approved = assignments
+        .iter()
+        .any(|assignment| assignment.state == "approved");
+    if any_assignment_changes_requested {
+        return "ChangesRequested".to_owned();
+    }
+    if any_assignment_approved {
+        return "Approved".to_owned();
+    }
+    "AwaitingReview".to_owned()
+}
+
+/// Read the opener principal's declared `kind` from the committed
+/// `permissions.toml` at the target ref and return `true` iff that entry
+/// declares `kind = "agent"`. Missing config / missing principal / omitted kind
+/// all default to `false` (the conservative human-default posture).
+fn is_agent_opener(repo: &gix::Repository, target_ref: &str, opener_id: &str) -> Result<bool> {
+    let permissions = but_authz::load_permissions_wire(repo, target_ref)?;
+    let is_agent = permissions
+        .principal
+        .iter()
+        .find(|principal| principal.id == opener_id)
+        .and_then(|principal| principal.kind.as_deref())
+        == Some("agent");
+    Ok(is_agent)
 }
 
 /// Merge a review on the forge.

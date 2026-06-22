@@ -1,0 +1,11 @@
+test mgmt_capability_main_scope_preserved ... ok
+test mgmt_governance_commands_registered_and_invokable ... ok
+test principal_kind_update_fleet_owner_writes_kind_without_agent_handle ... ok
+test group_revoke_removes_only_requested_group_authority ... ok
+test mgmt_fleet_owner_grants_on_bootstrap_no_committed_config ... ok
+test mgmt_unregistered_governance_command_not_invokable ... ok
+test mgmt_nonadmin_env_handle_does_not_shadow_fleet_owner ... ok
+test mgmt_config_command_resolves_fleet_owner_via_shim ... ok
+test mgmt_unauthorized_agent_config_command_denied ... ok
+test agent_env_admin_gate_denies_non_admin_kind_write_at_but_api_boundary ... ok
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.98s

@@ -63,6 +63,27 @@ pub mod pr {
             #[clap(value_name = "BRANCH")]
             branch: String,
         },
+        /// Open a local review for a branch after authorization.
+        /// Optionally assigns the first reviewer in the same call.
+        Request {
+            /// The branch to open a review for.
+            #[clap(value_name = "BRANCH")]
+            branch: String,
+            /// Reviewer principal to assign as part of opening the review.
+            /// Omit to open the review without seeding an assignment.
+            #[clap(long, value_name = "PRINCIPAL")]
+            reviewer: Option<String>,
+        },
+        /// Assign a reviewer to a branch review after authorization.
+        /// The reviewer must be distinct from the target branch author (R22).
+        Assign {
+            /// The branch whose review the reviewer is assigned to.
+            #[clap(value_name = "BRANCH")]
+            branch: String,
+            /// Reviewer principal to assign.
+            #[clap(long, value_name = "PRINCIPAL")]
+            reviewer: String,
+        },
         /// Request changes on a branch review locally after authorization.
         RequestChanges {
             /// The branch to review.
@@ -84,6 +105,18 @@ pub mod pr {
         /// Close a branch review after authorization.
         Close {
             /// The branch whose review should be closed.
+            #[clap(value_name = "BRANCH")]
+            branch: String,
+        },
+        /// Print the derived PR lifecycle status for a branch (read-only).
+        ///
+        /// Shows the branch's lifecycle (Open / AwaitingReview /
+        /// ChangesRequested / Approved), the verdict-at-head if any,
+        /// the assignment list, the open-thread count, and whether the
+        /// review is agent-authored (derived from the opener principal's
+        /// declared `kind` in committed `permissions.toml`).
+        Status {
+            /// The branch to query.
             #[clap(value_name = "BRANCH")]
             branch: String,
         },

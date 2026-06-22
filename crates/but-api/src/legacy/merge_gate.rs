@@ -2,8 +2,8 @@ use std::{collections::BTreeMap, path::Path, str};
 
 use anyhow::{Context as _, anyhow};
 use but_authz::{
-    Authority, AuthoritySet, BranchName, BranchProtection, Denial, GovConfig, Group, GroupName,
-    PrincipalId,
+    Authority, AuthoritySet, AuthorizedAction, BranchName, BranchProtection, Denial, DenialClass,
+    GovConfig, Group, GroupName, PrincipalId, serialize_authority_tokens,
 };
 use serde::{Deserialize, Serialize};
 
@@ -26,6 +26,20 @@ pub struct MergeGateError {
     pub remediation_hint: String,
     /// Requirement fragments that were not satisfied.
     pub unmet: Vec<String>,
+    /// Steering classification — who can recover. Populated by STEER-004;
+    /// STEER-001 defaults to `DenialClass::ActorCorrectable`.
+    pub class: DenialClass,
+    /// Authority tokens the principal already holds. Serialized as a
+    /// stably-sorted array of `:`-token strings via
+    /// [`but_authz::serialize_authority_tokens`].
+    #[serde(serialize_with = "serialize_authority_tokens")]
+    pub held_permissions: Vec<Authority>,
+    /// Recovery verbs the consumer may offer the actor.
+    pub authorized_actions: Vec<AuthorizedAction>,
+    /// Optional "do not" hint — verbs the actor must NOT attempt. Omitted
+    /// entirely when `None` (no `null` key).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub do_not: Option<&'static str>,
 }
 
 impl std::fmt::Display for MergeGateError {
@@ -71,6 +85,10 @@ pub fn enforce_merge_gate(ctx: &but_ctx::Context, review_id: usize) -> anyhow::R
             remediation_hint: "collect the required approvals at the current review head"
                 .to_owned(),
             unmet: undefined_groups,
+            class: DenialClass::OperatorRequired,
+            held_permissions: Vec::new(),
+            authorized_actions: Vec::new(),
+            do_not: None,
         }
         .into());
     }
@@ -103,6 +121,10 @@ pub fn enforce_merge_gate(ctx: &but_ctx::Context, review_id: usize) -> anyhow::R
                 remediation_hint: "collect the required approvals at the current review head"
                     .to_owned(),
                 unmet,
+                class: DenialClass::OperatorRequired,
+                held_permissions: Vec::new(),
+                authorized_actions: Vec::new(),
+                do_not: None,
             }
             .into())
         }
@@ -120,6 +142,10 @@ pub fn classify_error(err: &anyhow::Error) -> Option<MergeGateError> {
         message: denial.message.clone(),
         remediation_hint: denial.remediation_hint.clone(),
         unmet: Vec::new(),
+        class: denial.class,
+        held_permissions: denial.held_permissions.clone(),
+        authorized_actions: denial.authorized_actions.clone(),
+        do_not: denial.do_not,
     })
 }
 
@@ -372,6 +398,10 @@ fn config_invalid(message: String) -> MergeGateError {
         message: format!("invalid governance config: {message}"),
         remediation_hint: "fix committed .gitbutler governance config on the target ref".to_owned(),
         unmet: Vec::new(),
+        class: DenialClass::ActorCorrectable,
+        held_permissions: Vec::new(),
+        authorized_actions: Vec::new(),
+        do_not: None,
     }
 }
 

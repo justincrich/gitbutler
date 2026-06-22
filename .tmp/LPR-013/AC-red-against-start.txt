@@ -1,0 +1,24 @@
+RED: AC tests do not exist at HEAD `886f4fc71c` (after `f177f0481a` wip).
+
+The wip `f177f0481a` shipped `get_principal_kind`/`set_principal_kind` (wrong
+names per spec — spec requires `principal_kind_read`/`principal_kind_update`),
+so the spec's verify commands find zero matching tests:
+
+=== cargo test -p but-api principal_kind_update_writes_worktree_inert_until_committed ===
+running 0 tests
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 3 filtered out
+
+=== cargo test -p but-api principal_kind_update_round_trips_full_schema_lossless ===
+running 0 tests
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 3 filtered out
+
+=== cargo test -p but-api principal_kind_read_returns_committed_kinds_with_pending_signal ===
+running 0 tests
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 3 filtered out
+
+=== cargo test -p but-api principal_kind_update_non_admin_denied_writes_nothing ===
+running 0 tests
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 3 filtered out
+
+=== grep for principal_kind in mgmt_ipc_003 ===
+0   (no registration in the IPC test's GOVERNANCE_COMMANDS const)

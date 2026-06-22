@@ -1,0 +1,7 @@
+error[E0061]: this method takes 2 arguments but 3 arguments were supplied
+   --> crates/but-db/tests/db/table/local_review_assignments.rs:86:10
+    |
+--
+error[E0061]: this method takes 3 arguments but 2 arguments were supplied
+   --> crates/but-db/tests/db/table/local_review_comments.rs:112:36
+    |

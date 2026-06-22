@@ -1,0 +1,148 @@
+    Checking gix-config-value v0.18.1 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+    Checking tokio v1.50.0
+    Checking gix-features v0.48.1 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+    Checking but-error v0.0.0 (/Users/justinrich/Projects/gitbutler/crates/but-error)
+    Checking git2-hooks v0.5.0
+    Checking objc2-core-foundation v0.3.2
+    Checking gix-prompt v0.15.1 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+    Checking gix-hash v0.25.1 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+    Checking gix-fs v0.21.2 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+    Checking gix-glob v0.26.1 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+    Checking gix-credentials v0.38.1 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+    Checking gix-tempfile v23.0.1 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+    Checking gix-hashtable v0.15.1 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+    Checking gix-commitgraph v0.37.1 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+    Checking gix-attributes v0.33.1 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+    Checking gix-ignore v0.21.1 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+    Checking gix-lock v23.0.1 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+    Checking gix-object v0.61.0 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+    Checking objc2-io-kit v0.3.2
+    Checking objc2-foundation v0.3.2
+    Checking gix-shallow v0.12.1 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+    Checking gix-pathspec v0.18.1 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+    Checking sysinfo v0.37.2
+    Checking gix-revwalk v0.32.0 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+    Checking gix-ref v0.64.0 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+    Checking gix-filter v0.31.0 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+    Checking gix-pack v0.71.0 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+    Checking objc2-app-kit v0.3.2
+    Checking gix-traverse v0.58.0 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+    Checking gix-revision v0.46.0 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+    Checking gix-negotiate v0.32.0 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+    Checking gix-index v0.52.0 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+    Checking gix-refspec v0.42.0 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+    Checking gix-discover v0.52.0 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+    Checking gix-config v0.57.0 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+    Checking tokio-util v0.7.18
+    Checking tokio-rustls v0.26.4
+    Checking tower v0.5.3
+    Checking gix-odb v0.81.0 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+    Checking gix-worktree v0.53.0 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+    Checking tower-http v0.6.8
+    Checking h2 v0.4.13
+    Checking gix-diff v0.64.0 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+    Checking gix-dir v0.26.0 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+    Checking gix-worktree-state v0.31.0 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+    Checking gix-submodule v0.31.0 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+    Checking gix-merge v0.17.0 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+    Checking gix-status v0.31.0 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+    Checking hyper v1.8.1
+    Checking hyper-util v0.1.20
+    Checking hyper-rustls v0.27.7
+    Checking reqwest v0.13.4
+    Checking gix-transport v0.57.1 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+    Checking gix-protocol v0.62.0 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+    Checking gix v0.84.0 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+    Checking but-serde v0.0.0 (/Users/justinrich/Projects/gitbutler/crates/but-serde)
+    Checking but-project-handle v0.0.0 (/Users/justinrich/Projects/gitbutler/crates/but-project-handle)
+    Checking but-oxidize v0.0.0 (/Users/justinrich/Projects/gitbutler/crates/but-oxidize)
+    Checking but-utils v0.0.0 (/Users/justinrich/Projects/gitbutler/crates/but-utils)
+    Checking but-secret v0.0.0 (/Users/justinrich/Projects/gitbutler/crates/but-secret)
+    Checking git-meta-lib v0.1.10 (https://github.com/git-meta/git-meta?rev=b40c108514a992abea2f739889376334481af1a3#b40c1085)
+    Checking but-authz v0.0.0 (/Users/justinrich/Projects/gitbutler/crates/but-authz)
+    Checking but-forge-storage v0.0.0 (/Users/justinrich/Projects/gitbutler/crates/but-forge-storage)
+    Checking but-settings v0.0.0 (/Users/justinrich/Projects/gitbutler/crates/but-settings)
+    Checking but-db v0.0.0 (/Users/justinrich/Projects/gitbutler/crates/but-db)
+    Checking but-core v0.0.0 (/Users/justinrich/Projects/gitbutler/crates/but-core)
+    Checking but-gitlab v0.0.0 (/Users/justinrich/Projects/gitbutler/crates/but-gitlab)
+    Checking but-github v0.0.0 (/Users/justinrich/Projects/gitbutler/crates/but-github)
+    Checking gitbutler-reference v0.0.0 (/Users/justinrich/Projects/gitbutler/crates/gitbutler-reference)
+    Checking but-graph v0.0.0 (/Users/justinrich/Projects/gitbutler/crates/but-graph)
+    Checking gitbutler-commit v0.0.0 (/Users/justinrich/Projects/gitbutler/crates/gitbutler-commit)
+    Checking but-askpass v0.0.0 (/Users/justinrich/Projects/gitbutler/crates/but-askpass)
+    Checking but-forge v0.0.0 (/Users/justinrich/Projects/gitbutler/crates/but-forge)
+    Checking gitbutler-cherry-pick v0.0.0 (/Users/justinrich/Projects/gitbutler/crates/gitbutler-cherry-pick)
+    Checking gitbutler-branch v0.0.0 (/Users/justinrich/Projects/gitbutler/crates/gitbutler-branch)
+error[E0277]: the trait bound `DateTime<Utc>: InternalJsonSchema` is not satisfied
+   --> crates/but-forge/src/ci.rs:118:21
+    |
+118 |     pub started_at: Option<chrono::DateTime<chrono::Utc>>,
+    |                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ the trait `InternalJsonSchema` is not implemented for `DateTime<Utc>`
+    |
+    = help: the following other types implement trait `InternalJsonSchema`:
+              &'a T
+              &'a mut T
+              ()
+              (T0, T1)
+              (T0, T1, T2)
+              (T0, T1, T2, T3)
+              (T0, T1, T2, T3, T4)
+              (T0, T1, T2, T3, T4, T5)
+            and 170 others
+    = note: required for `std::option::Option<DateTime<Utc>>` to implement `InternalJsonSchema`
+
+error[E0277]: the trait bound `NaiveDateTime: InternalJsonSchema` is not satisfied
+   --> crates/but-forge/src/ci.rs:128:23
+    |
+128 |     pub last_sync_at: chrono::NaiveDateTime,
+    |                       ^^^^^^^^^^^^^^^^^^^^^ the trait `InternalJsonSchema` is not implemented for `NaiveDateTime`
+    |
+    = help: the following other types implement trait `InternalJsonSchema`:
+              &'a T
+              &'a mut T
+              ()
+              (T0, T1)
+              (T0, T1, T2)
+              (T0, T1, T2, T3)
+              (T0, T1, T2, T3, T4)
+              (T0, T1, T2, T3, T4, T5)
+            and 170 others
+
+error[E0277]: the trait bound `DateTime<Utc>: InternalJsonSchema` is not satisfied
+   --> crates/but-forge/src/ci.rs:159:23
+    |
+159 |         completed_at: Option<chrono::DateTime<chrono::Utc>>,
+    |                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ the trait `InternalJsonSchema` is not implemented for `DateTime<Utc>`
+    |
+    = help: the following other types implement trait `InternalJsonSchema`:
+              &'a T
+              &'a mut T
+              ()
+              (T0, T1)
+              (T0, T1, T2)
+              (T0, T1, T2, T3)
+              (T0, T1, T2, T3, T4)
+              (T0, T1, T2, T3, T4, T5)
+            and 170 others
+    = note: required for `std::option::Option<DateTime<Utc>>` to implement `InternalJsonSchema`
+
+error[E0277]: the trait bound `NaiveDateTime: InternalJsonSchema` is not satisfied
+   --> crates/but-forge/src/review.rs:330:23
+    |
+330 |     pub last_sync_at: chrono::NaiveDateTime,
+    |                       ^^^^^^^^^^^^^^^^^^^^^ the trait `InternalJsonSchema` is not implemented for `NaiveDateTime`
+    |
+    = help: the following other types implement trait `InternalJsonSchema`:
+              &'a T
+              &'a mut T
+              ()
+              (T0, T1)
+              (T0, T1, T2)
+              (T0, T1, T2, T3)
+              (T0, T1, T2, T3, T4)
+              (T0, T1, T2, T3, T4, T5)
+            and 170 others
+
+For more information about this error, try `rustc --explain E0277`.
+error: could not compile `but-forge` (lib) due to 4 previous errors
+warning: build failed, waiting for other jobs to finish...

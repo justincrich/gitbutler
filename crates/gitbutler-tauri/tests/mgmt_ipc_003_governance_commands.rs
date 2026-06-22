@@ -30,6 +30,8 @@ const GOVERNANCE_COMMANDS: &[&str] = &[
     "governance_principals_list",
     "governance_pending",
     "governance_commit",
+    "principal_kind_read",
+    "principal_kind_update",
 ];
 
 const MAIN_REF: &str = "refs/heads/main";
@@ -245,6 +247,7 @@ fn mgmt_capability_main_scope_preserved() {
                 || name.starts_with("allow-group_")
                 || name.starts_with("allow-branch_gates_")
                 || name.starts_with("allow-governance_")
+                || name.starts_with("allow-principal_kind_")
         })
         .collect::<Vec<_>>();
 
@@ -265,6 +268,125 @@ fn mgmt_unregistered_governance_command_not_invokable() -> anyhow::Result<()> {
         error.to_string().contains("not found"),
         "the real Tauri bus must reject an unregistered governance command, got {error:?}"
     );
+    Ok(())
+}
+
+/// AC-5 / TC-8: the desktop `principal_kind_update` bus invoke (BUT_AGENT_HANDLE
+/// unset) writes `kind="agent"` via the DesktopSessionState fleet-owner shim,
+/// WITHOUT consulting `BUT_AGENT_HANDLE` (which is unset on desktop).
+#[test]
+#[serial_test::serial]
+fn principal_kind_update_fleet_owner_writes_kind_without_agent_handle() -> anyhow::Result<()> {
+    let (repo, _tmp) = governance_api_repo(true);
+    let project_id = project_id_for(&repo)?;
+    let app = governance_app(test_desktop_session())?;
+    let webview = governance_webview(&app)?;
+
+    let response = temp_env::with_var("BUT_AGENT_HANDLE", None::<&str>, || {
+        invoke_ok(
+            &webview,
+            "principal_kind_update",
+            json!({
+                "projectId": project_id,
+                "targetRef": TARGET_REF,
+                "principal": "rust-implementer",
+                "kind": "agent"
+            }),
+        )
+    })?;
+
+    // The desktop write returns the ref-pin caveat (inert until committed).
+    assert_eq!(
+        response.get("caveat").and_then(Value::as_str),
+        Some("takes effect once committed to the target branch"),
+        "principal_kind_update must carry the ref-pin caveat: {response:?}"
+    );
+
+    // The staged kind landed in the working-tree permissions.toml for rust-implementer.
+    let staged = worktree_permissions(&repo)?;
+    let rust_implementer = principal_block(&staged, "rust-implementer")?;
+    assert!(
+        rust_implementer.contains(r#"kind = "agent""#),
+        "principal_kind_update must stage kind=\"agent\" for rust-implementer via the fleet-owner path: {rust_implementer}"
+    );
+
+    // principal_kind_read rides the but-api #[but_api(napi)]-generated module on core:default.
+    let list = temp_env::with_var("BUT_AGENT_HANDLE", None::<&str>, || {
+        invoke_ok(
+            &webview,
+            "principal_kind_read",
+            json!({ "projectId": project_id, "targetRef": TARGET_REF }),
+        )
+    })?;
+    let principals = list
+        .get("principals")
+        .and_then(Value::as_array)
+        .expect("principal_kind_read must return a principals array");
+    assert!(
+        principals
+            .iter()
+            .any(|entry| entry.get("principalId").and_then(Value::as_str)
+                == Some("rust-implementer")),
+        "principal_kind_read list must include rust-implementer: {principals:?}"
+    );
+
+    println!(
+        "principal_kind_update resolved the fleet-owner via DesktopSessionState (no BUT_AGENT_HANDLE)"
+    );
+    println!("principal_kind_update wrote kind=\"agent\" for rust-implementer to the working tree");
+    println!("principal_kind_read returned the kind list on the bus");
+    Ok(())
+}
+
+/// AC-5 / TC-8: an agent-env invoke lacking administration:write is denied
+/// `perm.denied` naming `administration:write` and writes nothing.
+///
+/// Mirrors `mgmt_unauthorized_agent_config_command_denied` for `perm_grant`.
+/// Uses `agent_perm_grant` as the proxy for the agent-env kind write — the
+/// `principal_kind_update` desktop command always resolves the fleet-owner
+/// (BUT_AGENT_HANDLE unset on desktop), so the agent-env denial path is
+/// structurally identical to the existing `perm_grant` agent-env proof: the
+/// admin gate at the but-api boundary catches it.
+#[test]
+#[serial_test::serial]
+fn agent_env_admin_gate_denies_non_admin_kind_write_at_but_api_boundary() -> anyhow::Result<()> {
+    // Prove the admin gate at the but-api boundary denies a non-admin kind write
+    // (the desktop wrapper always resolves the fleet-owner; the agent-env path
+    // reaches the but-api `principal_kind_update_with_repo` which composes
+    // `enforce_administration_write_gate`). This is the same denial shape the
+    // existing `mgmt_unauthorized_agent_config_command_denied` test exercises
+    // for `perm_grant`; the kind writer reuses the exact same guard.
+    use but_api::legacy::{
+        config_mutate::classify_error, governance::principal_kind_update_with_repo,
+    };
+
+    let (repo, _tmp) = governance_api_repo(true);
+    let before = worktree_permissions_bytes(&repo)?;
+
+    let result = temp_env::with_var("BUT_AGENT_HANDLE", Some("rust-implementer"), || {
+        principal_kind_update_with_repo(&repo, TARGET_REF, "rust-reviewer", "agent")
+    });
+
+    let error = classify_error(&result.expect_err("non-admin kind write must err"))
+        .expect("non-admin denial must classify");
+    assert_eq!(
+        error.code, "perm.denied",
+        "agent-env non-admin principal_kind_update must be denied perm.denied"
+    );
+    assert!(
+        error.message.contains("administration:write"),
+        "denial must name the missing administration:write authority"
+    );
+    assert_eq!(
+        worktree_permissions_bytes(&repo)?,
+        before,
+        "denied non-admin kind write must leave permissions.toml byte-identical"
+    );
+
+    println!(
+        "agent-env non-admin principal_kind_update denied perm.denied naming administration:write"
+    );
+    println!("working-tree permissions.toml byte-identical on the denial path");
     Ok(())
 }
 
@@ -374,6 +496,19 @@ fn governance_invocation_cases(
         InvocationCase {
             command: "governance_commit",
             payload: json!({ "projectId": project_id, "targetRef": TARGET_REF }),
+        },
+        InvocationCase {
+            command: "principal_kind_read",
+            payload: json!({ "projectId": project_id, "targetRef": TARGET_REF }),
+        },
+        InvocationCase {
+            command: "principal_kind_update",
+            payload: json!({
+                "projectId": project_id,
+                "targetRef": TARGET_REF,
+                "principal": "rust-implementer",
+                "kind": "agent"
+            }),
         },
     ]
 }
@@ -602,6 +737,14 @@ fn group_block<'a>(toml: &'a str, name: &str) -> anyhow::Result<&'a str> {
         .skip(1)
         .find(|block| block.contains(&marker))
         .ok_or_else(|| anyhow::anyhow!("expected [[group]] block with {marker}"))
+}
+
+fn principal_block<'a>(toml: &'a str, id: &str) -> anyhow::Result<&'a str> {
+    let marker = format!(r#"id = "{id}""#);
+    toml.split("[[principal]]")
+        .skip(1)
+        .find(|block| block.contains(&marker))
+        .ok_or_else(|| anyhow::anyhow!("expected [[principal]] block with {marker}"))
 }
 
 fn assert_perm_denied_with_hint(error: &Value, missing: &str) {

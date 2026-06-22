@@ -18,6 +18,18 @@ export type Project = {
 	husky_hooks_enabled: boolean;
 	omit_certificate_check: boolean | undefined;
 	use_diff_context: boolean | undefined;
+	/**
+	 * Per-project operator preference: keep agent-authored review requests on
+	 * the local review layer (no forge PR) by default. Mirrors the backend
+	 * `DefaultTrue` semantic — older project JSON without the key deserializes
+	 * to `true` (local). Treated here as `boolean | undefined` so a missing
+	 * field renders the toggle ON (the `?? true` DefaultTrue UI rule).
+	 *
+	 * R12/R21 residual: this is a trusted-desktop project-store preference,
+	 * NOT an authorization boundary. An untrusted project-store write can
+	 * flip it. The UI never presents it as a security control.
+	 */
+	keep_reviews_local: boolean | undefined;
 	// Produced just for the frontend to determine if the project is open in any window.
 	is_open: boolean;
 	forge_override: ForgeName | undefined;

@@ -1,0 +1,2 @@
+set_state_targets_one_reviewer rows=[LocalReviewAssignment { id: "a1", target: "refs/heads/feat", reviewer_principal: "rev", state: "changes_requested", assigned_at: 1970-01-12T13:46:40 }, LocalReviewAssignment { id: "a2", target: "refs/heads/feat", reviewer_principal: "rev2", state: "pending", assigned_at: 1970-01-12T13:46:41 }]
+test table::local_review_assignments::local_review_assignments_set_state_targets_one_reviewer ... ok

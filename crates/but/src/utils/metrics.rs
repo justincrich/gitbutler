@@ -152,9 +152,12 @@ impl Subcommands {
             Subcommands::Pr(forge::pr::Platform { cmd, .. }) => match cmd {
                 None | Some(forge::pr::Subcommands::New { .. }) => PrNew,
                 Some(forge::pr::Subcommands::Approve { .. }) => PrNew,
+                Some(forge::pr::Subcommands::Request { .. }) => PrNew,
+                Some(forge::pr::Subcommands::Assign { .. }) => PrNew,
                 Some(forge::pr::Subcommands::RequestChanges { .. }) => PrNew,
                 Some(forge::pr::Subcommands::Comment { .. }) => PrNew,
                 Some(forge::pr::Subcommands::Close { .. }) => PrNew,
+                Some(forge::pr::Subcommands::Status { .. }) => PrNew,
                 Some(forge::pr::Subcommands::Merge { .. }) => PrMerge,
                 Some(forge::pr::Subcommands::Template { .. }) => PrTemplate,
                 Some(forge::pr::Subcommands::AutoMerge { off, .. }) => {

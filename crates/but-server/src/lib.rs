@@ -29,6 +29,75 @@ use tokio::sync::Mutex;
 use tower::ServiceBuilder;
 use tower_http::cors::{self, CorsLayer};
 
+type SyncCommandHandler = fn(serde_json::Value) -> anyhow::Result<serde_json::Value>;
+
+const GOVERNANCE_COMMAND_ROUTES: &[(&str, SyncCommandHandler)] = &[
+    (
+        "/perm_list",
+        legacy::governance::perm_list_cmd as SyncCommandHandler,
+    ),
+    (
+        "/perm_grant",
+        legacy::governance::perm_grant_cmd as SyncCommandHandler,
+    ),
+    (
+        "/perm_revoke",
+        legacy::governance::perm_revoke_cmd as SyncCommandHandler,
+    ),
+    (
+        "/group_create",
+        legacy::governance::group_create_cmd as SyncCommandHandler,
+    ),
+    (
+        "/group_grant",
+        legacy::governance::group_grant_cmd as SyncCommandHandler,
+    ),
+    (
+        "/group_revoke",
+        legacy::governance::group_revoke_cmd as SyncCommandHandler,
+    ),
+    (
+        "/group_add_member",
+        legacy::governance::group_add_member_cmd as SyncCommandHandler,
+    ),
+    (
+        "/group_remove_member",
+        legacy::governance::group_remove_member_cmd as SyncCommandHandler,
+    ),
+    (
+        "/group_delete",
+        legacy::governance::group_delete_cmd as SyncCommandHandler,
+    ),
+    (
+        "/group_list",
+        legacy::governance::group_list_cmd as SyncCommandHandler,
+    ),
+    (
+        "/branch_gates_read",
+        legacy::governance::branch_gates_read_cmd as SyncCommandHandler,
+    ),
+    (
+        "/branch_gates_update",
+        legacy::governance::branch_gates_update_cmd as SyncCommandHandler,
+    ),
+    (
+        "/governance_status_read",
+        legacy::governance::governance_status_read_cmd as SyncCommandHandler,
+    ),
+    (
+        "/governance_principals_list",
+        legacy::governance::governance_principals_list_cmd as SyncCommandHandler,
+    ),
+    (
+        "/governance_pending",
+        legacy::governance::governance_pending_cmd as SyncCommandHandler,
+    ),
+    (
+        "/governance_commit",
+        legacy::governance::governance_commit_cmd as SyncCommandHandler,
+    ),
+];
+
 #[cfg(feature = "irc")]
 mod irc;
 #[cfg(feature = "irc")]
@@ -97,6 +166,17 @@ where
         let res = f(params).await;
         cmd_result_to_json(res)
     })
+}
+
+fn add_governance_routes<S>(router: Router<S>) -> Router<S>
+where
+    S: Clone + Send + Sync + 'static,
+{
+    GOVERNANCE_COMMAND_ROUTES
+        .iter()
+        .fold(router, |router, (path, handler)| {
+            router.route(path, but_post(*handler))
+        })
 }
 
 fn server_capabilities(_params: serde_json::Value) -> anyhow::Result<serde_json::Value> {
@@ -578,6 +658,8 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
         "/show_graph_svg",
         but_post(legacy::workspace::show_graph_svg_cmd),
     );
+
+    let app = add_governance_routes(app);
 
     let app = app
         .route(
@@ -1478,6 +1560,19 @@ fn deserialize_json<T: serde::de::DeserializeOwned>(value: serde_json::Value) ->
 mod tests {
     use super::*;
 
+    use anyhow::Context as _;
+    use axum::{
+        body::{Body, to_bytes},
+        http::{Request as HttpRequest, header::CONTENT_TYPE},
+    };
+    use serde_json::{Value, json};
+    use tower::ServiceExt as _;
+
+    const MAIN_REF: &str = "refs/heads/main";
+    const TARGET_REF: &str = "refs/remotes/origin/main";
+    const PERMISSIONS_PATH: &str = ".gitbutler/permissions.toml";
+    const GATES_PATH: &str = ".gitbutler/gates.toml";
+
     #[test]
     fn localhost_origin_accepts_valid() {
         // Basic schemes
@@ -1545,5 +1640,492 @@ mod tests {
 
         // Empty
         assert!(!is_localhost_host(b""));
+    }
+
+    #[test]
+    fn governance_routes_cover_web_command_surface() {
+        let routes = GOVERNANCE_COMMAND_ROUTES
+            .iter()
+            .map(|(route, _handler)| *route)
+            .collect::<Vec<_>>();
+        assert_eq!(
+            routes,
+            vec![
+                "/perm_list",
+                "/perm_grant",
+                "/perm_revoke",
+                "/group_create",
+                "/group_grant",
+                "/group_revoke",
+                "/group_add_member",
+                "/group_remove_member",
+                "/group_delete",
+                "/group_list",
+                "/branch_gates_read",
+                "/branch_gates_update",
+                "/governance_status_read",
+                "/governance_principals_list",
+                "/governance_pending",
+                "/governance_commit",
+            ],
+            "but-server governance route table must cover every web governance command"
+        );
+    }
+
+    #[tokio::test]
+    #[serial_test::serial]
+    async fn governance_routes_execute_real_handlers_and_enforce_authz() -> anyhow::Result<()> {
+        let (repo, _tmp) = governance_route_repo()?;
+        let project_id = project_id_for(&repo)?;
+        let router = add_governance_routes(Router::new());
+
+        let group_list = temp_env::async_with_vars([("BUT_AGENT_HANDLE", Some("admin"))], async {
+            post_json(
+                router.clone(),
+                "/group_list",
+                json!({ "projectId": &project_id }),
+            )
+            .await
+        })
+        .await?;
+        let groups = success_subject(&group_list)
+            .get("groups")
+            .and_then(Value::as_array)
+            .context("group_list success must include groups")?;
+        assert!(
+            groups
+                .iter()
+                .any(|group| group.get("name").and_then(Value::as_str) == Some("eng")),
+            "admin group_list route must return seeded governance groups: {group_list:?}"
+        );
+
+        let grant = temp_env::async_with_vars([("BUT_AGENT_HANDLE", Some("admin"))], async {
+            post_json(
+                router.clone(),
+                "/perm_grant",
+                json!({
+                    "projectId": &project_id,
+                    "targetRef": TARGET_REF,
+                    "principal": "rust-reviewer",
+                    "authorities": ["reviews:write"]
+                }),
+            )
+            .await
+        })
+        .await?;
+        assert_eq!(
+            success_subject(&grant)
+                .get("principal")
+                .and_then(Value::as_str),
+            Some("rust-reviewer"),
+            "admin perm_grant route must return the real grant outcome"
+        );
+
+        let perm_list = temp_env::async_with_vars([("BUT_AGENT_HANDLE", Some("admin"))], async {
+            post_json(
+                router.clone(),
+                "/perm_list",
+                json!({ "projectId": &project_id, "principal": "rust-reviewer" }),
+            )
+            .await
+        })
+        .await?;
+        let authorities = success_subject(&perm_list)
+            .get("authorities")
+            .and_then(Value::as_array)
+            .context("perm_list success must include authorities")?;
+        assert!(
+            authorities.iter().any(|authority| {
+                authority.get("authority").and_then(Value::as_str) == Some("reviews:write")
+                    && authority.get("marker").and_then(Value::as_str) == Some("PENDING")
+            }),
+            "admin write route must round-trip through real working-tree governance state: {perm_list:?}"
+        );
+
+        let before_self_grant = worktree_permissions_bytes(&repo)?;
+        let self_grant =
+            temp_env::async_with_vars([("BUT_AGENT_HANDLE", Some("rust-implementer"))], async {
+                post_json(
+                    router.clone(),
+                    "/perm_grant",
+                    json!({
+                        "projectId": &project_id,
+                        "targetRef": TARGET_REF,
+                        "principal": "rust-implementer",
+                        "authorities": ["administration:write"]
+                    }),
+                )
+                .await
+            })
+            .await?;
+        assert_error_code(&self_grant, "perm.denied");
+        assert_eq!(
+            worktree_permissions_bytes(&repo)?,
+            before_self_grant,
+            "server perm_grant must not use the desktop fleet-owner bypass for self-escalation"
+        );
+
+        let target_before_commit = ref_id(&repo, TARGET_REF)?;
+        let committed_permissions_before = committed_blob(&repo, PERMISSIONS_PATH)?;
+        let worktree_before_commit = worktree_permissions_bytes(&repo)?;
+        let denied_commit =
+            temp_env::async_with_vars([("BUT_AGENT_HANDLE", Some("rust-implementer"))], async {
+                post_json(
+                    router.clone(),
+                    "/governance_commit",
+                    json!({ "projectId": &project_id, "targetRef": TARGET_REF }),
+                )
+                .await
+            })
+            .await?;
+        assert_error_code(&denied_commit, "perm.denied");
+        assert_eq!(
+            ref_id(&repo, TARGET_REF)?,
+            target_before_commit,
+            "non-admin governance_commit route denial must leave target ref unmoved"
+        );
+        assert_eq!(
+            committed_blob(&repo, PERMISSIONS_PATH)?,
+            committed_permissions_before,
+            "non-admin governance_commit route denial must not commit pending governance bytes"
+        );
+        assert_eq!(
+            worktree_permissions_bytes(&repo)?,
+            worktree_before_commit,
+            "non-admin governance_commit route denial must leave worktree bytes intact"
+        );
+
+        let target_mismatch =
+            temp_env::async_with_vars([("BUT_AGENT_HANDLE", Some("admin"))], async {
+                post_json(
+                    router,
+                    "/branch_gates_read",
+                    json!({ "projectId": &project_id, "targetRef": MAIN_REF }),
+                )
+                .await
+            })
+            .await?;
+        let mismatch_error = error_subject(&target_mismatch);
+        assert!(
+            mismatch_error
+                .get("message")
+                .and_then(Value::as_str)
+                .is_some_and(|message| message.contains("does not match workspace target")),
+            "target-ref mismatch must be rejected before route logic mutates state: {target_mismatch:?}"
+        );
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    #[serial_test::serial]
+    async fn governance_routes_reads_admin() -> anyhow::Result<()> {
+        let (repo, _tmp) = governance_route_repo()?;
+        let project_id = project_id_for(&repo)?;
+        let router = add_governance_routes(Router::new());
+
+        let status = temp_env::async_with_vars([("BUT_AGENT_HANDLE", Some("admin"))], async {
+            post_json(
+                router.clone(),
+                "/governance_status_read",
+                json!({ "projectId": &project_id }),
+            )
+            .await
+        })
+        .await?;
+        let authorities = success_subject(&status)
+            .get("authorities")
+            .and_then(Value::as_array)
+            .context("governance_status_read success must include authorities")?;
+        assert!(
+            authorities
+                .iter()
+                .any(|authority| authority.as_str() == Some("administration:write")),
+            "admin status read must report administration:write through the route: {status:?}"
+        );
+
+        let gates = temp_env::async_with_vars([("BUT_AGENT_HANDLE", Some("admin"))], async {
+            post_json(
+                router,
+                "/branch_gates_read",
+                json!({ "projectId": &project_id, "targetRef": TARGET_REF }),
+            )
+            .await
+        })
+        .await?;
+        assert_branch_gate(success_subject(&gates), "main", true);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    #[serial_test::serial]
+    async fn governance_routes_write_admin_roundtrip() -> anyhow::Result<()> {
+        let (repo, _tmp) = governance_route_repo()?;
+        let project_id = project_id_for(&repo)?;
+        let router = add_governance_routes(Router::new());
+
+        let update = temp_env::async_with_vars([("BUT_AGENT_HANDLE", Some("admin"))], async {
+            post_json(
+                router.clone(),
+                "/branch_gates_update",
+                json!({
+                    "projectId": &project_id,
+                    "targetRef": TARGET_REF,
+                    "branch": "release",
+                    "protection": { "protected": true }
+                }),
+            )
+            .await
+        })
+        .await?;
+        assert_branch_gate(success_subject(&update), "release", true);
+
+        let read = temp_env::async_with_vars([("BUT_AGENT_HANDLE", Some("admin"))], async {
+            post_json(
+                router,
+                "/branch_gates_read",
+                json!({ "projectId": &project_id, "targetRef": TARGET_REF }),
+            )
+            .await
+        })
+        .await?;
+        assert_branch_gate(success_subject(&read), "release", true);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    #[serial_test::serial]
+    async fn governance_routes_write_nonadmin_denied() -> anyhow::Result<()> {
+        let (repo, _tmp) = governance_route_repo()?;
+        let project_id = project_id_for(&repo)?;
+        let router = add_governance_routes(Router::new());
+        let before = worktree_gates_bytes(&repo)?;
+
+        let denied =
+            temp_env::async_with_vars([("BUT_AGENT_HANDLE", Some("rust-implementer"))], async {
+                post_json(
+                    router,
+                    "/branch_gates_update",
+                    json!({
+                        "projectId": &project_id,
+                        "targetRef": TARGET_REF,
+                        "branch": "release",
+                        "protection": { "protected": true }
+                    }),
+                )
+                .await
+            })
+            .await?;
+        assert_error_code(&denied, "perm.denied");
+        assert_eq!(
+            worktree_gates_bytes(&repo)?,
+            before,
+            "non-admin branch_gates_update route denial must leave gates.toml byte-for-byte unchanged"
+        );
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    #[serial_test::serial]
+    async fn governance_routes_target_ref_contract() -> anyhow::Result<()> {
+        let (repo, _tmp) = governance_route_repo()?;
+        let project_id = project_id_for(&repo)?;
+        let router = add_governance_routes(Router::new());
+        let before = worktree_gates_bytes(&repo)?;
+
+        let mismatch = temp_env::async_with_vars([("BUT_AGENT_HANDLE", Some("admin"))], async {
+            post_json(
+                router,
+                "/branch_gates_update",
+                json!({
+                    "projectId": &project_id,
+                    "targetRef": MAIN_REF,
+                    "branch": "release",
+                    "protection": { "protected": true }
+                }),
+            )
+            .await
+        })
+        .await?;
+        let mismatch_error = error_subject(&mismatch);
+        assert!(
+            mismatch_error
+                .get("message")
+                .and_then(Value::as_str)
+                .is_some_and(|message| message.contains("does not match workspace target")),
+            "write target-ref mismatch must be rejected by the route contract: {mismatch:?}"
+        );
+        assert_eq!(
+            worktree_gates_bytes(&repo)?,
+            before,
+            "target-ref mismatch in branch_gates_update must leave gates.toml byte-for-byte unchanged"
+        );
+
+        Ok(())
+    }
+
+    async fn post_json(router: Router, path: &str, payload: Value) -> anyhow::Result<Value> {
+        let request = HttpRequest::builder()
+            .method("POST")
+            .uri(path)
+            .header(CONTENT_TYPE, "application/json")
+            .body(Body::from(payload.to_string()))?;
+        let response = router.oneshot(request).await?;
+        assert_eq!(
+            response.status(),
+            StatusCode::OK,
+            "governance command routes serialize command errors in the JSON body"
+        );
+        let bytes = to_bytes(response.into_body(), usize::MAX).await?;
+        Ok(serde_json::from_slice(&bytes)?)
+    }
+
+    fn success_subject(response: &Value) -> &Value {
+        assert_eq!(
+            response.get("type").and_then(Value::as_str),
+            Some("success"),
+            "expected success response, got {response:?}"
+        );
+        response
+            .get("subject")
+            .expect("success response must include subject")
+    }
+
+    fn error_subject(response: &Value) -> &Value {
+        assert_eq!(
+            response.get("type").and_then(Value::as_str),
+            Some("error"),
+            "expected error response, got {response:?}"
+        );
+        response
+            .get("subject")
+            .expect("error response must include subject")
+    }
+
+    fn assert_error_code(response: &Value, expected: &str) {
+        let error = error_subject(response);
+        assert_eq!(
+            error.get("code").and_then(Value::as_str),
+            Some(expected),
+            "error response must serialize as {expected}: {response:?}"
+        );
+    }
+
+    fn assert_branch_gate(subject: &Value, name: &str, protected: bool) {
+        let branches = subject
+            .get("branches")
+            .and_then(Value::as_array)
+            .unwrap_or_else(|| panic!("branch_gates response must include branches: {subject:?}"));
+        let branch = branches
+            .iter()
+            .find(|branch| branch.get("name").and_then(Value::as_str) == Some(name))
+            .unwrap_or_else(|| {
+                panic!("branch_gates response must include branch {name}: {subject:?}")
+            });
+        assert_eq!(
+            branch.get("protected").and_then(Value::as_bool),
+            Some(protected),
+            "branch_gates branch {name} must have protected={protected}: {subject:?}"
+        );
+    }
+
+    fn governance_route_repo() -> anyhow::Result<(gix::Repository, tempfile::TempDir)> {
+        let tmp = tempfile::TempDir::new()?;
+        but_testsupport::invoke_bash_at_dir(
+            r#"
+git init --initial-branch=main
+git config user.name "GitButler Test"
+git config user.email "gitbutler@example.com"
+echo initial >README.md
+git add README.md
+git commit -m "initial"
+mkdir -p .gitbutler
+cat >.gitbutler/permissions.toml <<'EOF'
+[[principal]]
+id = "admin"
+permissions = ["administration:write", "administration:read", "merge"]
+
+[[principal]]
+id = "rust-implementer"
+permissions = ["contents:write"]
+
+[[principal]]
+id = "rust-reviewer"
+permissions = ["contents:read"]
+
+[[group]]
+name = "eng"
+permissions = ["contents:write", "reviews:write"]
+members = ["alice", "bob"]
+EOF
+cat >.gitbutler/gates.toml <<'EOF'
+[[branch]]
+name = "main"
+protected = true
+EOF
+git add .gitbutler/permissions.toml .gitbutler/gates.toml
+git commit -m "governance route config"
+git update-ref refs/remotes/origin/main refs/heads/main
+"#,
+            tmp.path(),
+        );
+        let repo = gix::open(tmp.path())?;
+        persist_project_target(&repo)?;
+        Ok((repo, tmp))
+    }
+
+    fn persist_project_target(repo: &gix::Repository) -> anyhow::Result<()> {
+        let ctx = but_ctx::Context::from_repo(repo.clone())?.with_memory_app_cache();
+        let mut project_meta = ctx.project_meta()?;
+        project_meta.target_ref = Some(TARGET_REF.try_into()?);
+        project_meta.target_commit_id = Some(ref_id(repo, TARGET_REF)?);
+        ctx.set_project_meta(project_meta)?;
+        Ok(())
+    }
+
+    fn project_id_for(
+        repo: &gix::Repository,
+    ) -> anyhow::Result<but_ctx::ProjectHandleOrLegacyProjectId> {
+        let handle = but_ctx::ProjectHandle::from_path(repo.git_dir())?;
+        Ok(but_ctx::ProjectHandleOrLegacyProjectId::ProjectHandle(
+            handle,
+        ))
+    }
+
+    fn worktree_permissions_bytes(repo: &gix::Repository) -> anyhow::Result<Vec<u8>> {
+        let workdir = repo
+            .workdir()
+            .ok_or_else(|| anyhow::anyhow!("test repository must be non-bare"))?;
+        Ok(std::fs::read(workdir.join(PERMISSIONS_PATH))?)
+    }
+
+    fn worktree_gates_bytes(repo: &gix::Repository) -> anyhow::Result<Vec<u8>> {
+        let workdir = repo
+            .workdir()
+            .ok_or_else(|| anyhow::anyhow!("test repository must be non-bare"))?;
+        Ok(std::fs::read(workdir.join(GATES_PATH))?)
+    }
+
+    fn committed_blob(repo: &gix::Repository, path: &str) -> anyhow::Result<String> {
+        let commit = repo.find_reference(TARGET_REF)?.peel_to_commit()?;
+        let tree = commit.tree()?;
+        let entry = tree
+            .lookup_entry_by_path(std::path::Path::new(path))?
+            .ok_or_else(|| anyhow::anyhow!("{path} must exist in committed tree"))?;
+        let data = entry.object()?.into_blob().data.clone();
+        Ok(String::from_utf8(data)?)
+    }
+
+    fn ref_id(repo: &gix::Repository, ref_name: &str) -> anyhow::Result<gix::ObjectId> {
+        let mut reference = repo
+            .find_reference(ref_name)
+            .with_context(|| format!("resolving target ref {ref_name}"))?;
+        Ok(reference
+            .peel_to_commit()
+            .with_context(|| format!("peeling {ref_name} to a commit"))?
+            .id)
     }
 }

@@ -230,13 +230,13 @@ See `frontend.md` for full frontend-test detail.
 When decomposing work for subagents, map tasks to these specialists by surface
 and phase (planner → implementer → reviewer):
 
-| Surface | Planner / Implementer / Reviewer |
-|---|---|
-| Rust backend & `but` CLI/TUI (`crates/`) | `rust-planner` / `rust-implementer` / `rust-reviewer` |
-| Tauri desktop shell (`gitbutler-tauri`, capabilities/IPC) | `tauri-planner` / `tauri-implementer` / `tauri-reviewer` |
+| Surface                                                                                                                                         | Planner / Implementer / Reviewer                                     |
+| ----------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| Rust backend & `but` CLI/TUI (`crates/`)                                                                                                        | `rust-planner` / `rust-implementer` / `rust-reviewer`                |
+| Tauri desktop shell (`gitbutler-tauri`, capabilities/IPC)                                                                                       | `tauri-planner` / `tauri-implementer` / `tauri-reviewer`             |
 | SvelteKit frontends + shared Svelte UI (`apps/desktop` adapter-static, `apps/web` adapter-vercel, **`packages/ui`** — 185 `.svelte` components) | `sveltekit-planner` / `sveltekit-implementer` / `sveltekit-reviewer` |
-| Electron lite shell (`apps/lite`) | `electron-planner` / `electron-implementer` / `electron-reviewer` |
-| Distinctive UI design & implementation | `frontend-designer` |
+| Electron lite shell (`apps/lite`)                                                                                                               | `electron-planner` / `electron-implementer` / `electron-reviewer`    |
+| Distinctive UI design & implementation                                                                                                          | `frontend-designer`                                                  |
 
 Notes:
 

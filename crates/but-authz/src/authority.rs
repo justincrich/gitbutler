@@ -1,5 +1,7 @@
 use std::collections::BTreeSet;
 
+use serde::{Serialize, Serializer};
+
 /// A functional permission in the GitButler governance catalog.
 ///
 /// ```
@@ -113,6 +115,55 @@ impl std::fmt::Display for Authority {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(self.name())
     }
+}
+
+/// Serialize [`Authority`] as its stable `:`-token ([`Authority::name()`]).
+///
+/// This emits the same wire token consumers match against (e.g.
+/// `"contents:write"`) regardless of the in-memory variant name, so a
+/// serialized denial envelope is stable across refactorings of the enum.
+///
+/// ```
+/// use but_authz::Authority;
+///
+/// assert_eq!(
+///     serde_json::to_string(&Authority::ContentsWrite).unwrap(),
+///     "\"contents:write\""
+/// );
+/// ```
+impl Serialize for Authority {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_str(self.name())
+    }
+}
+
+/// Serialize a `&[Authority]` as a sorted array of `:`-token strings.
+///
+/// The output is sorted lexically by [`Authority::name()`], so set-equality
+/// assertions on the serialized payload are not order-flaky regardless of how
+/// the producer populated the slice. This is the serializer used by every
+/// denial-carrier field that exposes `held_permissions: Vec<Authority>` to
+/// serde (e.g. [`crate::Denial`]-shaped carriers in `but-api`).
+pub fn serialize_authority_tokens<S>(
+    authorities: &[Authority],
+    serializer: S,
+) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    use serde::ser::SerializeSeq as _;
+
+    let mut sorted: Vec<Authority> = authorities.to_vec();
+    sorted.sort_by_key(|authority| authority.name());
+
+    let mut seq = serializer.serialize_seq(Some(sorted.len()))?;
+    for authority in &sorted {
+        seq.serialize_element(authority)?;
+    }
+    seq.end()
 }
 
 /// A typed parse failure for authority tokens and role presets.

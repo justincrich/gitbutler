@@ -1,20 +1,20 @@
 <script lang="ts">
-	import ProjectSettingsModalContent from "$components/settings/ProjectSettingsModalContent.svelte";
+	import ProjectSettingsModalContent from "$components/views/ProjectSettingsModalContent.svelte";
 	import { BACKEND, type IBackend } from "$lib/backend";
-	import type {
-		GovernanceAccess,
-		GovernancePending,
-		GovernanceRendererContract,
-		GovernanceTarget,
-	} from "$lib/governance";
 	import {
 		UI_STATE,
 		type ProjectSettingsModalState,
 		type UiState,
 	} from "$lib/state/uiState.svelte";
 	import { USER_SERVICE, UserService } from "$lib/user/userService.svelte";
-	import type { User } from "$lib/user/user";
 	import { provide } from "@gitbutler/core/context";
+	import type {
+		GovernanceAccess,
+		GovernancePending,
+		GovernanceRendererContract,
+		GovernanceTarget,
+	} from "$lib/governance";
+	import type { User } from "$lib/user/user";
 
 	type UserRole = "admin" | "member";
 
@@ -59,7 +59,11 @@
 			globalThis.__governanceBackendCalls = backendCalls;
 
 			if (command === "governance_status_read") {
-				return { authorities: ["administration:write"] } as T;
+				return {
+					authorities: ["administration:write"],
+					not_configured: false,
+					target_ref: "refs/remotes/origin/main",
+				} as T;
 			}
 
 			if (command === "governance_pending") {
@@ -78,6 +82,8 @@
 				authorities: ["administration:write"],
 				hasAdminWrite: true,
 				isReadOnly: false,
+				isNotConfigured: false,
+				targetRef: "refs/remotes/origin/main",
 			};
 		},
 		async readPending(target: GovernanceTarget): Promise<GovernancePending> {

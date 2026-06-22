@@ -1,0 +1,23 @@
+RED capture for AC-4: cargo test -p but-rules auto_assignment_blocks_no_commit_no_merge
+
+Command: cargo test -p but-rules auto_assignment_blocks_no_commit_no_merge
+Exit code: 0 (cargo test exits 0 with no tests run — but the AC is unmet because the named test does not exist)
+
+Output:
+---
+     Running unittests src/lib.rs (target/debug/deps/but_rules-4cb0e40160f2f551)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/review_requested_hook.rs (target/debug/deps/review_requested_hook-8c701dfc6738a534)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 3 filtered out; finished in 0.00s
+---
+
+Failure mode: no drive-only proof exists. AC-4 requires a test demonstrating the
+auto-opened assignment blocks no commit and gates no merge. The wip does not implement
+this AC at all.

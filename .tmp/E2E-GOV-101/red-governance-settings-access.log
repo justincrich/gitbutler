@@ -1,0 +1,53 @@
+
+> @gitbutler/e2e@ test:e2e:playwright /Users/justinrich/Projects/gitbutler/e2e
+> pnpm exec playwright test --config ./playwright/playwright.config.ts --tsconfig ./playwright/tsconfig.json --quiet -- governance-settings-access.spec.ts --workers=1
+
+
+Running 2 tests using 2 workers
+·F
+
+  1) [webkit] › playwright/tests/governance-settings-access.spec.ts:11:1 › admin sees Permissions & Governance in the real Project Settings sidebar
+
+    Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoHaveCount[2m([22m[32mexpected[39m[2m)[22m failed
+
+    Locator:  getByTestId('project-settings-modal').locator('.settings-sidebar__links').getByRole('button', { name: 'Permissions & Governance', exact: true })
+    Expected: [32m0[39m
+    Received: [31m1[39m
+    Timeout:  15000ms
+
+    Call log:
+    [2m  - Expect "toHaveCount" with timeout 15000ms[22m
+    [2m  - waiting for getByTestId('project-settings-modal').locator('.settings-sidebar__links').getByRole('button', { name: 'Permissions & Governance', exact: true })[22m
+    [2m    19 × locator resolved to 1 element[22m
+    [2m       - unexpected value "1"[22m
+
+
+      25 | 	await expect(
+      26 | 		settingsSidebar.getByRole("button", { name: "Permissions & Governance", exact: true }),
+    > 27 | 	).toHaveCount(0);
+         | 	  ^
+      28 | 	await expect(page.getByText("Settings page governance not Found.")).toHaveCount(0);
+      29 | });
+      30 |
+        at /Users/justinrich/Projects/gitbutler/e2e/playwright/tests/governance-settings-access.spec.ts:27:4
+
+    attachment #1: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results/governance-settings-access-24107-al-Project-Settings-sidebar-webkit/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/governance-settings-access-24107-al-Project-Settings-sidebar-webkit/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/governance-settings-access-24107-al-Project-Settings-sidebar-webkit/trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace test-results/governance-settings-access-24107-al-Project-Settings-sidebar-webkit/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  1 failed
+    [webkit] › playwright/tests/governance-settings-access.spec.ts:11:1 › admin sees Permissions & Governance in the real Project Settings sidebar
+  1 passed (23.5s)
+/Users/justinrich/Projects/gitbutler/e2e:
+ ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  @gitbutler/e2e@ test:e2e:playwright: `pnpm exec playwright test --config ./playwright/playwright.config.ts --tsconfig ./playwright/tsconfig.json --quiet -- governance-settings-access.spec.ts --workers=1`
+Exit status 1

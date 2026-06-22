@@ -1,0 +1,51 @@
+SEEDED ARTIFACT: the `kind_governance_base` fixture used by AC-1..AC-4.
+
+Source: `crates/but-api/tests/principal_kind.rs::kind_governance_base`
+
+Built via `but_testsupport::writable_scenario("checkout-head-info")` (real
+git fixture) + `invoke_bash` writing a real `.gitbutler/permissions.toml` and
+`.gitbutler/gates.toml` and `git commit`-ing them at `refs/heads/main`.
+
+Seeded `permissions.toml`:
+```toml
+[[principal]]
+id = "admin"
+permissions = ["administration:write", "merge"]
+
+[[principal]]
+id = "agent-A"
+permissions = ["contents:write"]
+groups = ["reviewers"]
+
+[[principal]]
+id = "rust-implementer"
+permissions = ["contents:write"]
+kind = "human"
+
+[[group]]
+name = "reviewers"
+permissions = ["reviews:write"]
+members = ["agent-A"]
+```
+
+Seeded `gates.toml`:
+```toml
+[[branch]]
+name = "main"
+protected = true
+```
+
+The fixture mirrors the spec's REQUIREMENT-CONTRACT `kind_governance_base`
+shape: admin holds `administration:write` + `merge`; agent-A holds
+`contents:write` with NO `kind` declared (kind=None → human default) and
+`groups=["reviewers"]`; rust-implementer holds `contents:write` with
+`kind="human"`; plus `[[group]] reviewers` with `permissions=["reviews:write"]`
+and `members=["agent-A"]`. Captured `ref_id(repo, "refs/heads/main")` BEFORE
+any write drives the inert-until-committed assertion.
+
+For AC-5 the existing `governance_api_repo(true)` fixture in
+`crates/gitbutler-tauri/tests/mgmt_ipc_003_governance_commands.rs` is reused
+(committed `permissions.toml` with admin holding administration:write and
+rust-implementer holding contents:write only; `TestDesktopSession` resolves
+the fleet-owner; the real Tauri mock runtime bus invokes
+`principal_kind_update` with `BUT_AGENT_HANDLE` unset).

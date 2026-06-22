@@ -1,0 +1,27 @@
+Seeded artifact for AC-3: the filter-scoping outcome matrix.
+
+Principal-axis filter rule:
+  trigger: Trigger::Commit
+  filters: [Filter::ClaudeCodeSessionId("dev")]
+  action:  Action::RequestReview { reviewer: "rev2" }
+
+  commit_ctx              session_id      written  rows_for_target
+  -----------------------  --------------  -------  ------------------------
+  feat, dev, []            Some("dev")       1     1 (pending, rev2)
+  docs, other, []          Some("other")     0     0
+  ----------------------------------------------
+  Negative control: the unwatched commit produces ZERO rows. An every-commit
+  hook would write a row for the unwatched branch too — the test catches that.
+
+Path-axis filter rule:
+  trigger: Trigger::Commit
+  filters: [Filter::PathMatchesRegex("src/.*")]
+  action:  Action::RequestReview { reviewer: "rev2" }
+
+  commit_ctx              changed_paths       written
+  -----------------------  ------------------  -------
+  refs/heads/feat-src      ["src/foo.rs"]        1
+  refs/heads/feat-docs     ["docs/README.md"]    0
+  ----------------------------------------------
+  Proves the filter is the generic engine mechanism (not a hardcoded
+  session-id check) — the same hook codepaths scope on either axis.
