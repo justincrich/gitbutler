@@ -190,6 +190,10 @@ impl Subcommands {
             #[cfg(feature = "legacy")]
             Subcommands::Perm(_) => Unknown,
             #[cfg(feature = "legacy")]
+            Subcommands::Whoami(_) => Unknown,
+            #[cfg(feature = "legacy")]
+            Subcommands::CanI(_) => Unknown,
+            #[cfg(feature = "legacy")]
             Subcommands::Group(_) => Unknown,
             Subcommands::Completions { .. } => Completions,
             Subcommands::Help => Unknown,

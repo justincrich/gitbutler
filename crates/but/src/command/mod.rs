@@ -4,6 +4,7 @@ pub mod legacy;
 
 pub mod alias;
 pub mod branch;
+pub mod can_i;
 pub mod commit;
 pub mod completions;
 pub mod config;
@@ -19,3 +20,4 @@ pub mod perm;
 pub mod push;
 pub mod skill;
 pub mod update;
+pub mod whoami;
