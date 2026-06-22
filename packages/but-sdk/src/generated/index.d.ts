@@ -52,6 +52,17 @@ export declare function approveReview(projectId: string, branch: string): Promis
 export declare function assignHunk(projectId: string, assignments: Array<HunkAssignmentRequest>): Promise<void>
 
 /**
+ * Assign a reviewer to a branch review after enforcing `reviews:write`.
+ *
+ * Enforces `reviewer != target_branch_author` BEFORE the upsert (R22 — the
+ * drive-layer mirror of the gate's `require_distinct_from_author`). The target
+ * author is the principal recorded as the opener in the write-once
+ * `local_review_meta(target, "opener_principal")` row. Self-assignment is
+ * rejected with a structured `perm.denied` Denial and NO row written.
+ */
+export declare function assignReviewer(projectId: string, branch: string, reviewer: string): Promise<void>
+
+/**
  * Checks out an existing local branch and returns the resulting workspace state.
  *
  * This acquires exclusive worktree access from `ctx`, updates the worktree and
@@ -300,6 +311,18 @@ export declare function forgeProvider(projectId: string): Promise<ForgeName | nu
 export declare function getInitialBranchIntegration(projectId: string, branch: string, strategy: BranchIntegrationStrategy | null): Promise<InitialBranchIntegration>
 
 /**
+ * Read the per-project `keep_reviews_local` operator preference (LPR-006).
+ *
+ * Returns `true` when agent reviews must stay local-only (the default via
+ * `DefaultTrue`). Returns `false` only when the operator has explicitly opted
+ * into the (deferred) remote-mirror path — see `R21` in
+ * `.spec/prds/governance/enrichments/v1.5.0-local-agent-pr/03-technical-requirements-delta.md §G`.
+ * This is a read-only convenience for the project-settings UI; the gate itself
+ * lives in [`request_review`].
+ */
+export declare function getKeepReviewsLocal(projectId: string): Promise<boolean>
+
+/**
  * Get the snapshot that a redo operation should restore to.
  *
  * This handles multiple consecutive redos.
@@ -379,6 +402,19 @@ export declare function listBranches(projectId: string, filter: BranchListingFil
 
 export declare function listCiChecks(projectId: string, reference: string, cacheConfig: CacheConfig | null): Promise<Array<CiCheck>>
 
+/**
+ * List every comment on a branch, grouped by thread id in arrival order.
+ *
+ * This is a **branch-scoped read** with no write authority: it discloses every
+ * principal's threads on the named branch (an accepted branch-scoped
+ * disclosure, F-006 — not per-principal self-scoping). The reserved
+ * [`__pr_meta__`](RESERVED_PR_META_THREAD) marker thread is filtered out: the
+ * opener lives in [`local_review_meta`], not a comment row.
+ *
+ * [`local_review_meta`]: but_db::LocalReviewMeta
+ */
+export declare function listComments(projectId: string, branch: string): Promise<Array<LocalReviewComment>>
+
 /** List all supported editors. */
 export declare function listEditors(): Promise<Array<Editor>>
 
@@ -441,6 +477,50 @@ export declare function permList(projectId: string, principal: string | null): P
 /** Revoke governed direct permissions through the but-api boundary (`perm_revoke`). */
 export declare function permRevoke(projectId: string, targetRef: string, principal: string, authorities: Array<string>): Promise<PermWriteOutcome>
 
+/**
+ * Post a local review comment on a branch after enforcing `comments:write`.
+ *
+ * Inserts a [`LocalReviewComment`] pinned to `resolved = false` and the current
+ * timestamp. A code comment carries `file = Some(..)` and `line = Some(..)`; a
+ * branch-level comment carries `None` for both. The reserved
+ * [`__pr_meta__`](RESERVED_PR_META_THREAD) thread id is refused up front so a
+ * comment-body sentinel cannot forge the opener marker. The comment `body` is
+ * attacker-influenceable free text and is stored raw; bounding or escaping it
+ * for downstream model consumption is an L2 harness concern (R20).
+ *
+ * Modeled line-for-line on [`approve_review`]: authorize before any await, then
+ * a single local-cache write. No `DryRun` guard — this touches only the local
+ * cache, not refs / objects / oplog.
+ *
+ * [`LocalReviewComment`]: but_db::LocalReviewComment
+ */
+export declare function postComment(projectId: string, branch: string, body: string, file: string | null, line: number | null, threadId: string): Promise<void>
+
+/**
+ * Read each principal's additive `kind` descriptor (`principal_kind_read`)
+ * through the but-api boundary.
+ *
+ * A self-/branch-scoped read matching the `governance_principals_list` posture
+ * (NO administration:write authority required): it loads the committed kinds
+ * at the target ref plus a pending signal from the working-tree-vs-target-ref
+ * diff. A non-governed ref / unresolvable caller yields an empty list
+ * (read-only), not an error.
+ */
+export declare function principalKindRead(projectId: string, targetRef: string): Promise<PrincipalKindList>
+
+/**
+ * Stage a principal `kind` descriptor write (`principal_kind_update`) through
+ * the but-api boundary.
+ *
+ * Composes `enforce_administration_write_gate` (the AUTHZ-006 guard) BEFORE
+ * any write, then read-modify-writes the WORKING-TREE `permissions.toml`
+ * setting ONLY the targeted principal's `kind`. The write is inert until
+ * committed via the existing `governance_commit` path (`permissions.toml` is
+ * already a `GOVERNANCE_COMMIT_PATHS` member); the outcome carries the
+ * ref-pin caveat so the operator knows a commit is required.
+ */
+export declare function principalKindUpdate(projectId: string, targetRef: string, principal: string, kind: string): Promise<PrincipalKindOutcome>
+
 export declare function publishReview(projectId: string, params: CreateForgeReviewParams): Promise<ForgeReview>
 
 export declare function pushStack(projectId: string, stackId: string, withForce: boolean, skipForcePushProtection: boolean, branch: string, runHooks: boolean, pushOpts: Array<PushFlag>): Promise<PushResult>
@@ -456,14 +536,85 @@ export declare function pushStack(projectId: string, stackId: string, withForce:
  */
 export declare function removeBranch(projectId: string, stackId: string, branchName: string): Promise<void>
 
-/** Request changes on a branch review after enforcing `reviews:write`. */
+/**
+ * Request changes on a branch review after enforcing `reviews:write`.
+ *
+ * Sets the caller's `local_review_assignments.state` to `changes_requested`
+ * via the typed `AssignmentState::ChangesRequested.name()` round-trip. The
+ * assignment row is upserted (idempotent per `(target, reviewer_principal)`)
+ * so the flip also works for a caller that has no prior pending assignment.
+ * This is a drive-state write only — it never reaches the merge gate (the
+ * gate reads `local_review_verdicts` at head, never assignment state).
+ */
 export declare function requestChangesReview(projectId: string, branch: string, message: string | null): Promise<void>
+
+/**
+ * Open a local review for a branch after enforcing `pull_requests:write`.
+ *
+ * Writes the write-once `local_review_meta(target, "opener_principal", caller)`
+ * row (R23 source-of-truth for the opener principal — NOT a comment-body
+ * sentinel), and — when `reviewer` is `Some` — also seeds the first `pending`
+ * `local_review_assignments` row for that reviewer. Assignments and verdicts
+ * are separate: this verb never touches `local_review_verdicts`.
+ *
+ * **LPR-006 gate:** the operator preference
+ * [`Project::keep_reviews_local`](gitbutler_project::Project::keep_reviews_local)
+ * controls where agent reviews land. When `true` (the default via `DefaultTrue`,
+ * see `R21` in
+ * `.spec/prds/governance/enrichments/v1.5.0-local-agent-pr/03-technical-requirements-delta.md §G`)
+ * the loop is fully local — this verb writes only local-cache rows and never
+ * reaches a forge. When `false`, the remote-mirror path is a NAMED SEAM ONLY:
+ * this verb returns a structured [`RemoteMirrorNotImplemented`] error BEFORE
+ * any authorization or write, so callers can distinguish "preference says
+ * mirror" from a real forge call. Mirroring code is NOT built in LPR scope.
+ */
+export declare function requestReview(projectId: string, branch: string, reviewer: string | null): Promise<void>
+
+/**
+ * Flip every comment in a thread to `resolved` after enforcing
+ * `comments:write` AND a resolver-identity constraint (R22).
+ *
+ * Beyond `comments:write`, the resolver must be:
+ * - the **thread author** (the `author_principal` of a comment in that thread),
+ * - the **assigned reviewer** (a `reviewer_principal` on the target in
+ *   `local_review_assignments`), or
+ * - a holder of the higher `reviews:write` authority (folded from the same
+ *   committed config, never a parallel check).
+ *
+ * A third unrelated principal is rejected with a structured denial and no row
+ * flipped, so a single principal cannot post a `changes_requested`-style
+ * thread and self-resolve it to forge a clean "all-clear" drive signal for
+ * another party. The reserved [`__pr_meta__`](RESERVED_PR_META_THREAD) thread
+ * is refused. The merge gate never reads this state — the resolved flag is a
+ * drive signal only.
+ */
+export declare function resolveThread(projectId: string, branch: string, threadId: string, resolved: boolean): Promise<void>
 
 /**
  * Restores the project to a specific snapshot using a specific kind of restore. This operation
  * also creates a new snapshot in the oplog.
  */
 export declare function restoreSnapshotWithKind(projectId: string, restoreKind: RestoreKind, sha: string): Promise<void>
+
+/**
+ * Query the derived PR lifecycle for a branch — READ-ONLY, no write authority.
+ *
+ * The read model is computed at query time from the same inputs the merge gate
+ * uses (verdict-at-head + open assignments + open threads), plus the opener
+ * principal's declared `kind` in committed `permissions.toml` (read at the
+ * target ref) for the `agent_authored` tag. The lifecycle derivation order:
+ *
+ * - no assignments → `Open`
+ * - a `changes_requested` verdict at head → `ChangesRequested`
+ * - an `approved` verdict at head → `Approved`
+ * - otherwise (assignments, no verdict at head) → `AwaitingReview`
+ *
+ * This is branch-scoped drive-metadata: any caller on the project that can
+ * name a branch sees the branch's full review surface (F-006 accepted
+ * disclosure). It is **not** the per-principal self-scoping that
+ * `governance_status_read` provides, and the merge gate **never** reads it.
+ */
+export declare function reviewStatus(projectId: string, branch: string): Promise<ReviewStatus>
 
 /**
  * Get the review template content for the given project and relative path.
@@ -2047,6 +2198,34 @@ export type LineStats = {
 };
 
 /**
+ * Schema mirror for [`but_db::LocalReviewAssignment`]. The shape mirrors
+ * the but-db row 1:1; `NaiveDateTime` round-trips as an ISO-8601 string.
+ */
+export type LocalReviewAssignment = {
+  id: string;
+  target: string;
+  reviewer_principal: string;
+  state: string;
+  assigned_at: string;
+};
+
+/**
+ * Schema mirror for [`but_db::LocalReviewComment`]. The shape mirrors the
+ * but-db row 1:1; `NaiveDateTime` round-trips as an ISO-8601 string.
+ */
+export type LocalReviewComment = {
+  id: string;
+  target: string;
+  author_principal: string;
+  body: string;
+  file: string | null;
+  line: number | null;
+  thread_id: string;
+  resolved: boolean;
+  created_at: string;
+};
+
+/**
  * An optional full reference name accepted as a string like `refs/heads/main`,
  * for use as a parameter transport via `#[but_api(...)]`.
  *
@@ -2135,6 +2314,54 @@ export type PermWriteOutcome = {
   caveat: string;
 };
 
+/** One principal's declared `kind` plus its pending signal. */
+export type PrincipalKindEntry = {
+  /** Stable principal identifier. */
+  principalId: string;
+  /**
+   * Commit-target-ref declared `kind` (`None` = human default). Read at the
+   * target ref like all governance config (anti-self-escalation).
+   */
+  kind: string | null;
+  /**
+   * True only when the working-tree `kind` differs from the committed
+   * target-ref `kind`. The desktop renderer surfaces this so the operator
+   * knows the edit is inert until `governance_commit` lands it.
+   */
+  pending: boolean;
+};
+
+/**
+ * Renderer row for one principal's additive `kind` descriptor.
+ *
+ * `kind` is the enforcement-neutral descriptor naming the principal's kind
+ * (e.g. `"agent"` / `"human"`); it never enters `GovConfig.principals` and no
+ * gate reads it (LPR-005's invariant). See `but_authz::PrincipalWire::kind`.
+ */
+export type PrincipalKindList = {
+  /**
+   * One entry per principal present in the committed target-ref config
+   * (and any principal only present in the working-tree pending edit).
+   */
+  principals: Array<PrincipalKindEntry>;
+};
+
+/**
+ * Result of staging a principal `kind` descriptor write.
+ *
+ * Mirrors `BranchGatesOutcome`: the post-write working-tree `kind` list (so
+ * the operator sees exactly what was staged) plus the ref-pin caveat.
+ */
+export type PrincipalKindOutcome = {
+  /** Post-write working-tree `kind` entries (one per principal in the file). */
+  principals: Array<PrincipalKindEntry>;
+  /**
+   * Ref-pin caveat: the staged descriptor takes effect once committed to
+   * the target branch via the existing `governance_commit` path.
+   */
+  caveat: string;
+};
+
 /**
  * API-specific project type that can be enriched with computed/derived data
  * while preserving the original project structure for persistence.
@@ -2157,6 +2384,19 @@ export type ProjectForFrontend = {
    * for example, when updating base branch
    */
   ok_with_force_push?: boolean;
+  /**
+   * LPR-006 — per-project operator preference for whether agent reviews stay
+   * local-only (the default) or are mirrored to a remote forge. Defaults to
+   * `true` via `DefaultTrue` so older project files (and a default-constructed
+   * `Project`) deserialize to local-only — see `R21` in
+   * `.spec/prds/governance/enrichments/v1.5.0-local-agent-pr/03-technical-requirements-delta.md §G`.
+   * NOT admin-gated, NOT ref-pinned committed config: this is a trusted-desktop
+   * operator preference (the R12 fleet-owner trust model), the same class as
+   * `forge_override` / `preferred_forge_user`. The remote-mirror path is a
+   * NAMED SEAM ONLY while `false` — `request_review` returns a structured
+   * `remote_mirror.not_implemented` error rather than performing any forge work.
+   */
+  keep_reviews_local?: boolean;
   /** Force push protection uses safer force push flags instead of doing straight force pushes */
   force_push_protection?: boolean;
   /**
@@ -2385,6 +2625,82 @@ export type ReviewMergeStatus = {
 };
 
 export type ReviewState = "open" | "closed";
+
+/**
+ * Derived PR lifecycle view computed at query time (read-only — no mutation).
+ *
+ * Mirrors `enforce_merge_gate`'s read of `local_review_verdicts` at head
+ * (`merge_gate.rs:84` → `review_requirement::evaluate`) but reads no authority,
+ * writes no row, and is never consulted by the gate. The lifecycle label is
+ * presentation-only; the merge decision still re-derives verdict-at-head
+ * itself (§E safe seam — the load-bearing invariant).
+ *
+ * LPR-008 extends this payload to serve the **full reconciler drive state** in
+ * one read: [`open_assignments`](Self::open_assignments) (the dispatch
+ * trigger), [`unresolved_threads`](Self::unresolved_threads) (the remediation
+ * trigger), and [`approved`](Self::approved) (the presentation label derived
+ * from the same verdict-at-head truth `enforce_merge_gate` re-derives). Two
+ * orchestrators reading the same repo converge because the payload is
+ * deterministic — every `Vec` reuses the Handles' `ORDER BY` (`created_at ASC,
+ * id ASC`) and the thread grouping sorts by `thread_id`.
+ */
+export type ReviewStatus = {
+  /** The queried target ref (`refs/heads/<branch>`). */
+  target: string;
+  /**
+   * Reviewer assignments on the target, in arrival order — every
+   * `local_review_assignments` row, including pending/approved/changes_requested.
+   */
+  assignments: LocalReviewAssignment;
+  /**
+   * The verdict-at-head literal (`"approved"` / `"changes_requested"`) when a
+   * verdict row exists at the current HEAD, else `None`. The same input the
+   * merge gate re-derives itself.
+   */
+  verdict_at_head: string | null;
+  /**
+   * Presentation label derived from verdict + assignments:
+   * `Open` / `AwaitingReview` / `ChangesRequested` / `Approved`.
+   */
+  lifecycle: string;
+  /**
+   * `true` iff the opener principal's committed `permissions.toml` entry at
+   * the target ref declares `kind = "agent"` (read at the target ref like all
+   * governance config — never handle-resolution, never a comment body). The
+   * tag is descriptive only; no enforcement path reads it.
+   */
+  agent_authored: boolean;
+  /**
+   * Count of unresolved comment threads (one per distinct `thread_id` where
+   * at least one comment has `resolved = false`).
+   */
+  open_threads: number;
+  /**
+   * Pending reviewer assignments — the **dispatch trigger**. Derived from
+   * [`assignments`](Self::assignments) filtered to `state == "pending"`.
+   * Reuses the `local_review_assignments.list_by_target` ordering
+   * (`assigned_at ASC, id ASC`) so two reads converge.
+   */
+  open_assignments: LocalReviewAssignment;
+  /**
+   * Unresolved comment threads — the **remediation trigger**. One entry per
+   * distinct `thread_id` carrying at least one `resolved = false` comment
+   * (the reserved [`__pr_meta__`](RESERVED_PR_META_THREAD) marker thread is
+   * excluded). Sorted by `thread_id` for two-read convergence; comments
+   * within a thread preserve the Handle's `created_at ASC, id ASC` order.
+   */
+  unresolved_threads: Array<UnresolvedThread>;
+  /**
+   * `true` iff a verdict row pinned to the current HEAD with
+   * `verdict == "approved"` exists. This is the EXACT query the merge gate
+   * runs (`local_review_verdicts.list_by_target(target)` filtered to
+   * `head_oid == current_head_oid && verdict == "approved"`). The label
+   * AGREES with [`enforce_merge_gate`](crate::legacy::merge_gate::enforce_merge_gate)
+   * because both read the same truth — it does NOT replace the gate. The
+   * actual land stays the gate's own re-derivation.
+   */
+  approved: boolean;
+};
 
 /** Information about the project's review template. */
 export type ReviewTemplateInfo = {
@@ -2742,6 +3058,27 @@ export type UnifiedPatch = {
     /** The total amount of lines removed. */
     linesRemoved: number;
   };
+};
+
+/**
+ * A grouped summary of an unresolved review comment thread — the remediation
+ * trigger surface.
+ *
+ * One entry per distinct `thread_id` carrying at least one comment with
+ * `resolved = false` (the reserved [`__pr_meta__`](RESERVED_PR_META_THREAD)
+ * marker thread is excluded). Comments within a thread preserve the
+ * `local_review_comments.list_by_target` ordering (`created_at ASC, id ASC`);
+ * the threads themselves are sorted by `thread_id` so two reads of the same
+ * state yield byte-identical payloads.
+ */
+export type UnresolvedThread = {
+  /** The thread id this summary groups. */
+  thread_id: string;
+  /**
+   * Every unresolved (`resolved = false`) comment in this thread, in arrival
+   * order (`created_at ASC, id ASC`).
+   */
+  comments: LocalReviewComment;
 };
 
 /**

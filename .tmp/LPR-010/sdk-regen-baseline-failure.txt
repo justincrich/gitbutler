@@ -1,0 +1,97 @@
+
+> root@ build:sdk /Users/justinrich/Projects/gitbutler
+> turbo run --filter @gitbutler/but-sdk build --no-daemon
+
+ WARNING  --no-daemon is deprecated and will be removed in version 3.0. The daemon is no longer used for `turbo run`.
+• turbo 2.9.14
+ WARNING  the `daemon` configuration option is deprecated and will be removed in version 3.0. The daemon is no longer used for `turbo run`.
+
+   • Packages in scope: @gitbutler/but-sdk
+   • Running build in 1 packages
+   • Remote caching disabled
+
+@gitbutler/but-sdk:build: cache miss, executing 1df3aa59f080018f
+@gitbutler/but-sdk:build: 
+@gitbutler/but-sdk:build: > @gitbutler/but-sdk@0.0.1 build /Users/justinrich/Projects/gitbutler/packages/but-sdk
+@gitbutler/but-sdk:build: > pnpm build:napi && pnpm build:types
+@gitbutler/but-sdk:build: 
+@gitbutler/but-sdk:build: 
+@gitbutler/but-sdk:build: > @gitbutler/but-sdk@0.0.1 build:napi /Users/justinrich/Projects/gitbutler/packages/but-sdk
+@gitbutler/but-sdk:build: > napi build --platform --esm --manifest-path ../../crates/but-napi/Cargo.toml --js index.js --dts index.d.ts --output-dir ./src/generated/.
+@gitbutler/but-sdk:build: 
+@gitbutler/but-sdk:build:    Compiling but-authz v0.0.0 (/Users/justinrich/Projects/gitbutler/crates/but-authz)
+@gitbutler/but-sdk:build:    Compiling but-rules v0.0.0 (/Users/justinrich/Projects/gitbutler/crates/but-rules)
+@gitbutler/but-sdk:build:    Compiling gitbutler-watcher v0.0.0 (/Users/justinrich/Projects/gitbutler/crates/gitbutler-watcher)
+@gitbutler/but-sdk:build:    Compiling but-api v0.0.0 (/Users/justinrich/Projects/gitbutler/crates/but-api)
+@gitbutler/but-sdk:build: error[E0277]: the trait bound `LocalReviewAssignment: InternalJsonSchema` is not satisfied
+@gitbutler/but-sdk:build:     --> crates/but-api/src/legacy/forge.rs:1023:22
+@gitbutler/but-sdk:build:      |
+@gitbutler/but-sdk:build: 1023 |     pub assignments: Vec<but_db::LocalReviewAssignment>,
+@gitbutler/but-sdk:build:      |                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ the trait `InternalJsonSchema` is not implemented for `LocalReviewAssignment`
+@gitbutler/but-sdk:build:      |
+@gitbutler/but-sdk:build:      = help: the following other types implement trait `InternalJsonSchema`:
+@gitbutler/but-sdk:build:                &'a T
+@gitbutler/but-sdk:build:                &'a mut T
+@gitbutler/but-sdk:build:                ()
+@gitbutler/but-sdk:build:                (T0, T1)
+@gitbutler/but-sdk:build:                (T0, T1, T2)
+@gitbutler/but-sdk:build:                (T0, T1, T2, T3)
+@gitbutler/but-sdk:build:                (T0, T1, T2, T3, T4)
+@gitbutler/but-sdk:build:                (T0, T1, T2, T3, T4, T5)
+@gitbutler/but-sdk:build:              and 334 others
+@gitbutler/but-sdk:build:      = note: required for `Vec<LocalReviewAssignment>` to implement `InternalJsonSchema`
+@gitbutler/but-sdk:build: 
+@gitbutler/but-sdk:build: error[E0277]: the trait bound `LocalReviewAssignment: InternalJsonSchema` is not satisfied
+@gitbutler/but-sdk:build:     --> crates/but-api/src/legacy/forge.rs:1051:27
+@gitbutler/but-sdk:build:      |
+@gitbutler/but-sdk:build: 1051 |     pub open_assignments: Vec<but_db::LocalReviewAssignment>,
+@gitbutler/but-sdk:build:      |                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ the trait `InternalJsonSchema` is not implemented for `LocalReviewAssignment`
+@gitbutler/but-sdk:build:      |
+@gitbutler/but-sdk:build:      = help: the following other types implement trait `InternalJsonSchema`:
+@gitbutler/but-sdk:build:                &'a T
+@gitbutler/but-sdk:build:                &'a mut T
+@gitbutler/but-sdk:build:                ()
+@gitbutler/but-sdk:build:                (T0, T1)
+@gitbutler/but-sdk:build:                (T0, T1, T2)
+@gitbutler/but-sdk:build:                (T0, T1, T2, T3)
+@gitbutler/but-sdk:build:                (T0, T1, T2, T3, T4)
+@gitbutler/but-sdk:build:                (T0, T1, T2, T3, T4, T5)
+@gitbutler/but-sdk:build:              and 334 others
+@gitbutler/but-sdk:build:      = note: required for `Vec<LocalReviewAssignment>` to implement `InternalJsonSchema`
+@gitbutler/but-sdk:build: 
+@gitbutler/but-sdk:build: error[E0277]: the trait bound `LocalReviewComment: InternalJsonSchema` is not satisfied
+@gitbutler/but-sdk:build:     --> crates/but-api/src/legacy/forge.rs:1084:19
+@gitbutler/but-sdk:build:      |
+@gitbutler/but-sdk:build: 1084 |     pub comments: Vec<but_db::LocalReviewComment>,
+@gitbutler/but-sdk:build:      |                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ the trait `InternalJsonSchema` is not implemented for `LocalReviewComment`
+@gitbutler/but-sdk:build:      |
+@gitbutler/but-sdk:build:      = help: the following other types implement trait `InternalJsonSchema`:
+@gitbutler/but-sdk:build:                &'a T
+@gitbutler/but-sdk:build:                &'a mut T
+@gitbutler/but-sdk:build:                ()
+@gitbutler/but-sdk:build:                (T0, T1)
+@gitbutler/but-sdk:build:                (T0, T1, T2)
+@gitbutler/but-sdk:build:                (T0, T1, T2, T3)
+@gitbutler/but-sdk:build:                (T0, T1, T2, T3, T4)
+@gitbutler/but-sdk:build:                (T0, T1, T2, T3, T4, T5)
+@gitbutler/but-sdk:build:              and 334 others
+@gitbutler/but-sdk:build:      = note: required for `Vec<LocalReviewComment>` to implement `InternalJsonSchema`
+@gitbutler/but-sdk:build: 
+@gitbutler/but-sdk:build: For more information about this error, try `rustc --explain E0277`.
+@gitbutler/but-sdk:build: error: could not compile `but-api` (lib) due to 3 previous errors
+@gitbutler/but-sdk:build: [31m[1mInternal Error[22m[39m: Build failed with exit code 101
+@gitbutler/but-sdk:build:     at ChildProcess.<anonymous> (file:///Users/justinrich/Projects/gitbutler/node_modules/.pnpm/@napi-rs+cli@3.5.1_@emnapi+runtime@1.7.1_@types+node@22.19.15_node-addon-api@7.1.1/node_modules/@napi-rs/cli/dist/cli.js:1304:36)
+@gitbutler/but-sdk:build:     at Object.onceWrapper (node:events:623:26)
+@gitbutler/but-sdk:build:     at ChildProcess.emit (node:events:520:35)
+@gitbutler/but-sdk:build:     at ChildProcess._handle.onexit (node:internal/child_process:294:12)
+@gitbutler/but-sdk:build:  ELIFECYCLE  Command failed with exit code 1.
+@gitbutler/but-sdk:build:  ELIFECYCLE  Command failed with exit code 1.
+ ERROR  @gitbutler/but-sdk#build: command (/Users/justinrich/Projects/gitbutler/packages/but-sdk) /Users/justinrich/Library/pnpm/.tools/pnpm/10.20.0/bin/pnpm run build exited (1)
+
+ Tasks:    0 successful, 1 total
+Cached:    0 cached, 1 total
+  Time:    13.69s 
+Failed:    @gitbutler/but-sdk#build
+
+ ERROR  run failed: command  exited (1)
+ ELIFECYCLE  Command failed with exit code 1.

@@ -1,0 +1,47 @@
+=== LPR-010 AC-1 SDK regen — captured evidence ===
+
+BLOCKER (baseline, pre-fix):
+  pnpm build:sdk FAILED with:
+    error[E0277]: the trait bound `LocalReviewAssignment: InternalJsonSchema` is not satisfied
+       --> crates/but-api/src/legacy/forge.rs:1023:22 (assignments: Vec<but_db::LocalReviewAssignment>)
+       --> crates/but-api/src/legacy/forge.rs:1051:27 (open_assignments: Vec<but_db::LocalReviewAssignment>)
+    error[E0277]: the trait bound `LocalReviewComment: InternalJsonSchema` is not satisfied
+       --> crates/but-api/src/legacy/forge.rs:1084:19 (comments: Vec<but_db::LocalReviewComment>)
+  See .tmp/LPR-010/sdk-regen-baseline-failure.txt for full baseline output.
+
+FIX: schema mirrors in crates/but-api/src/legacy/forge.rs (LPR-010):
+  - LocalReviewAssignmentSchema (with #[schemars(rename = "LocalReviewAssignment")])
+  - LocalReviewCommentSchema  (with #[schemars(rename = "LocalReviewComment")])
+  Both registered via but_schemars::register_sdk_type! and routed through
+  #[cfg_attr(feature = "export-schema", schemars(schema_with = "..."))] on the
+  three Vec<but_db::*> fields. but-db types and the wire format are unchanged
+  (schema_with is schemars-only — serde never sees it).
+
+POST-FIX (TC-1): pnpm build:sdk --force && pnpm format
+  > @gitbutler/but-sdk:build: pnpm build:napi && pnpm build:types
+  > @gitbutler/but-sdk:build:napi: napi build --platform --esm ... 
+  Finished `dev` profile in 0.53s
+  > @gitbutler/but-sdk:build:types: cargo run -p but-ts -- --output ./src/generated/index.d.ts
+  Collected 192 unique type schemas
+  Written to ./src/generated/index.d.ts
+  Tasks: 1 successful, 1 total   Time: 3.381s
+
+VERBS PRESENT (TC-1 grep):
+  $ grep -rqE "reviewStatus|review_status" packages/but-sdk/src/generated && echo OK
+  OK (exit 0)
+  $ grep -rqE "postComment|post_comment" packages/but-sdk/src/generated && echo OK
+  OK (exit 0)
+  All seven LPR verbs confirmed in generated SDK:
+    requestReview / assignReviewer / requestChangesReview /
+    postComment / listComments / resolveThread / reviewStatus
+
+DESKTOP TYPE-CHECK (TC-1):
+  $ pnpm -F @gitbutler/desktop check
+  svelte-check found 0 errors and 0 warnings
+
+IDEMPOTENCY (TC-2): two consecutive regens produce identical output:
+  $ pnpm build:sdk --force  (run 1) → git diff: 339 insertions, 11 changes
+  $ pnpm build:sdk --force  (run 2) → git diff: 339 insertions, 11 changes (IDENTICAL)
+  The diff vs HEAD is the expected LPR delta (the seven verbs + two types
+  that were missing from the pre-LPR committed SDK). Re-running the regen
+  does not produce any additional diff — the source of truth is the regen.

@@ -1,0 +1,14 @@
+   Compiling but-api v0.0.0 (/Users/justinrich/Projects/gitbutler/crates/but-api)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 13.22s
+     Running tests/lpr_010_audit.rs (target/debug/deps/lpr_010_audit-b010a733023203ac)
+
+running 6 tests
+test napi_audit_lpr_verbs_route_through_gated_but_api ... ok
+test agent_tag_not_an_enforcement_key ... ok
+test agent_tag_is_descriptive_metadata_on_review_status ... ok
+test agent_tag_sourced_from_local_review_meta_not_comment_body ... ok
+test t_lpr_043_self_assignment_rejected_no_row_written ... ok
+test t_lpr_044_unauthorized_self_resolve_cannot_suppress_signal ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.75s
+

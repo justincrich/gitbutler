@@ -1020,6 +1020,10 @@ pub struct ReviewStatus {
     pub target: String,
     /// Reviewer assignments on the target, in arrival order — every
     /// `local_review_assignments` row, including pending/approved/changes_requested.
+    #[cfg_attr(
+        feature = "export-schema",
+        schemars(schema_with = "local_review_assignment_schema")
+    )]
     pub assignments: Vec<but_db::LocalReviewAssignment>,
     /// The verdict-at-head literal (`"approved"` / `"changes_requested"`) when a
     /// verdict row exists at the current HEAD, else `None`. The same input the
@@ -1048,6 +1052,10 @@ pub struct ReviewStatus {
     /// [`assignments`](Self::assignments) filtered to `state == "pending"`.
     /// Reuses the `local_review_assignments.list_by_target` ordering
     /// (`assigned_at ASC, id ASC`) so two reads converge.
+    #[cfg_attr(
+        feature = "export-schema",
+        schemars(schema_with = "local_review_assignment_schema")
+    )]
     pub open_assignments: Vec<but_db::LocalReviewAssignment>,
     /// Unresolved comment threads — the **remediation trigger**. One entry per
     /// distinct `thread_id` carrying at least one `resolved = false` comment
@@ -1081,6 +1089,10 @@ pub struct UnresolvedThread {
     pub thread_id: String,
     /// Every unresolved (`resolved = false`) comment in this thread, in arrival
     /// order (`created_at ASC, id ASC`).
+    #[cfg_attr(
+        feature = "export-schema",
+        schemars(schema_with = "local_review_comment_schema")
+    )]
     pub comments: Vec<but_db::LocalReviewComment>,
 }
 
@@ -1089,6 +1101,69 @@ but_schemars::register_sdk_type!(ReviewStatus);
 
 #[cfg(feature = "export-schema")]
 but_schemars::register_sdk_type!(UnresolvedThread);
+
+// ---- LPR-010: SDK schema mirrors for but_db DTO fields ---------------------
+//
+// `but_db::{LocalReviewAssignment, LocalReviewComment}` surface as fields on
+// the SDK-exposed `ReviewStatus` / `UnresolvedThread` DTOs. but-db is a
+// storage layer that does NOT depend on `schemars` (and the SDK layer is a
+// but-api concern, not a domain-storage concern), so the `InternalJsonSchema`
+// impls that `pnpm build:sdk` requires live HERE at the but-api boundary.
+//
+// `#[schemars(schema_with = "...")]` on each `Vec<but_db::*>` field routes
+// schema generation through the mirror; the but-db types and the wire format
+// stay byte-identical (serde never sees schema_with — it is schemars-only).
+// `#[schemars(rename = ...)]` makes the generated TS type reuse the but-db
+// name so the SDK surface reads `LocalReviewAssignment` / `LocalReviewComment`
+// rather than `LocalReviewAssignmentSchema`.
+
+/// Schema mirror for [`but_db::LocalReviewAssignment`]. The shape mirrors
+/// the but-db row 1:1; `NaiveDateTime` round-trips as an ISO-8601 string.
+#[cfg(feature = "export-schema")]
+#[derive(schemars::JsonSchema)]
+#[schemars(rename = "LocalReviewAssignment")]
+#[allow(dead_code)]
+struct LocalReviewAssignmentSchema {
+    id: String,
+    target: String,
+    reviewer_principal: String,
+    state: String,
+    assigned_at: String,
+}
+
+#[cfg(feature = "export-schema")]
+fn local_review_assignment_schema(generate: &mut schemars::SchemaGenerator) -> schemars::Schema {
+    generate.subschema_for::<LocalReviewAssignmentSchema>()
+}
+
+#[cfg(feature = "export-schema")]
+but_schemars::register_sdk_type!(LocalReviewAssignmentSchema);
+
+/// Schema mirror for [`but_db::LocalReviewComment`]. The shape mirrors the
+/// but-db row 1:1; `NaiveDateTime` round-trips as an ISO-8601 string.
+#[cfg(feature = "export-schema")]
+#[derive(schemars::JsonSchema)]
+#[schemars(rename = "LocalReviewComment")]
+#[allow(dead_code)]
+struct LocalReviewCommentSchema {
+    id: String,
+    target: String,
+    author_principal: String,
+    body: String,
+    file: Option<String>,
+    line: Option<i64>,
+    thread_id: String,
+    resolved: bool,
+    created_at: String,
+}
+
+#[cfg(feature = "export-schema")]
+fn local_review_comment_schema(generate: &mut schemars::SchemaGenerator) -> schemars::Schema {
+    generate.subschema_for::<LocalReviewCommentSchema>()
+}
+
+#[cfg(feature = "export-schema")]
+but_schemars::register_sdk_type!(LocalReviewCommentSchema);
 
 /// Query the derived PR lifecycle for a branch — READ-ONLY, no write authority.
 ///
