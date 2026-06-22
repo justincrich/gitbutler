@@ -21,7 +21,8 @@ pub use config::{
 };
 pub use denial::{AuthorizedAction, Denial, DenialClass, to_envelope};
 pub use menu::{
-    AFFORDANCE_MAP, Affordance, CATALOG, DenialPredicate, DeniedRoute, authorized_actions,
+    AFFORDANCE_MAP, Affordance, CATALOG, DISCOVERY_COMMAND, DenialPredicate, DeniedRoute,
+    authorized_actions,
 };
 pub use principal::{Group, GroupName, Principal, PrincipalId};
 pub use route::{ROUTE_AUTHORITY_TABLE, Route};

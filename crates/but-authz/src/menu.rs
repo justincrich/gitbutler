@@ -199,7 +199,13 @@ pub const CATALOG: &[AuthorizedAction] = &[
 ];
 
 /// The discovery affordance command (`but perm list`).
-const DISCOVERY_COMMAND: &str = "but perm list";
+///
+/// Public so the STEER-007 telemetry emission site in but-api can identify
+/// the discovery entry when computing `had_lateral_action` — the metric is
+/// `true` iff any menu entry is NOT this discovery affordance. Co-located
+/// with [`CATALOG`] so the discovery identifier stays the single source of
+/// truth (no string literal duplication in callers).
+pub const DISCOVERY_COMMAND: &str = "but perm list";
 
 /// Look up a catalog entry by its command string.
 ///
