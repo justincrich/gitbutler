@@ -989,7 +989,7 @@ pub async fn resolve_thread(
         )));
     }
     db.local_review_comments_mut()
-        .set_resolved(&branch, &thread_id, resolved)?;
+        .set_resolved(&thread_id, resolved)?;
     Ok(())
 }
 

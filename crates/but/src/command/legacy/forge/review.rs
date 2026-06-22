@@ -161,11 +161,12 @@ pub async fn status(
             ""
         };
         let verdict_at_head = status.verdict_at_head.as_deref().unwrap_or("none");
-        let approved_label = if status.approved { "yes" } else { "no" };
+        let approved_label = if status.verdict_at_head.as_deref() == Some("approved") { "yes" } else { "no" };
+        let pending: Vec<_> = status.assignments.iter().filter(|a| a.state == "pending").collect();
         writeln!(
             out,
-            "Review for {branch}: {} (verdict-at-head: {verdict_at_head}, open threads: {}, approved: {approved_label}){agent_marker}",
-            status.lifecycle, status.open_threads,
+            "Review for {branch}: {} (verdict-at-head: {verdict_at_head}, pending: {}, approved: {approved_label}){agent_marker}",
+            status.lifecycle, pending.len(),
         )?;
         if status.assignments.is_empty() {
             writeln!(out, "  no assignments")?;
@@ -181,34 +182,18 @@ pub async fn status(
         // LPR-008 reconciler drive state — the three facts an orchestrator
         // keys on, surfaced explicitly so the human and the agents share one
         // view of what to do next.
-        if status.open_assignments.is_empty() {
+        if pending.is_empty() {
             writeln!(out, "  dispatch: no pending assignments")?;
         } else {
-            let reviewers: Vec<&str> = status
-                .open_assignments
+            let reviewers: Vec<&str> = pending
                 .iter()
                 .map(|a| a.reviewer_principal.as_str())
                 .collect();
             writeln!(
                 out,
                 "  dispatch: {} pending assignment(s) [{}]",
-                status.open_assignments.len(),
+                pending.len(),
                 reviewers.join(", "),
-            )?;
-        }
-        if status.unresolved_threads.is_empty() {
-            writeln!(out, "  remediation: no unresolved threads")?;
-        } else {
-            let threads: Vec<&str> = status
-                .unresolved_threads
-                .iter()
-                .map(|t| t.thread_id.as_str())
-                .collect();
-            writeln!(
-                out,
-                "  remediation: {} unresolved thread(s) [{}]",
-                status.unresolved_threads.len(),
-                threads.join(", "),
             )?;
         }
     }
