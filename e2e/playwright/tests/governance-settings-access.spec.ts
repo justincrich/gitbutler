@@ -21,9 +21,9 @@ test("admin sees Permissions & Governance in the real Project Settings sidebar",
 
 	const settingsSidebar = projectSettingsSidebar(page);
 	await expect(page.getByTestId("project-settings-modal")).toBeVisible();
-	await expect(
-		settingsSidebar.getByRole("button", { name: "Project", exact: true }),
-	).toHaveCount(1);
+	await expect(settingsSidebar.getByRole("button", { name: "Project", exact: true })).toHaveCount(
+		1,
+	);
 	await expect(
 		settingsSidebar.getByRole("button", { name: "Permissions & Governance", exact: true }),
 	).toHaveCount(1);
@@ -42,9 +42,9 @@ test("member does not see Permissions & Governance in the real Project Settings 
 
 	const settingsSidebar = projectSettingsSidebar(page);
 	await expect(page.getByTestId("project-settings-modal")).toBeVisible();
-	await expect(
-		settingsSidebar.getByRole("button", { name: "Project", exact: true }),
-	).toHaveCount(1);
+	await expect(settingsSidebar.getByRole("button", { name: "Project", exact: true })).toHaveCount(
+		1,
+	);
 	await expect(
 		settingsSidebar.getByRole("button", { name: "Permissions & Governance", exact: true }),
 	).toHaveCount(0);

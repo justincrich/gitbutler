@@ -122,7 +122,9 @@ test("principal and group changes stay pending across tabs and clear after commi
 	);
 
 	await page.getByRole("tab", { name: "Principals" }).click();
-	await expect(page.getByTestId("principals-list-row-settings-agent")).toContainText("reviews:write");
+	await expect(page.getByTestId("principals-list-row-settings-agent")).toContainText(
+		"reviews:write",
+	);
 	await page.getByTestId("principals-list-row-settings-agent").click();
 	await expect(page.getByLabel("reviews:write own grant")).toBeChecked();
 	await expect(page.getByTestId("principals-list-pending-settings-agent")).toHaveCount(0);
