@@ -814,6 +814,9 @@ Blocks:     MGMT-UI-012 (build-gate tests assert no direct config write across a
       "id": "AC-3",
       "type": "acceptance_criterion",
       "primary": false,
+      "implements_design": [
+        "DESIGN-MGMT-006:AC-1"
+      ],
       "description": "GIVEN BranchGatesList mounted with seeded_empty_gates WHEN component renders; then user clicks '+ Add' THEN EmptyStatePlaceholder renders initially; clicking '+ Add' shows an add-gate form; confirming with pattern 'staging' calls branch_gates_update with a new gate entry for 'staging'",
       "verify": "pnpm test:ct:desktop -- BranchGatesListEmpty",
       "scenario": {
@@ -984,6 +987,9 @@ Blocks:     MGMT-UI-012 (build-gate tests assert no direct config write across a
       "id": "AC-6",
       "type": "acceptance_criterion",
       "primary": false,
+      "implements_design": [
+        "DESIGN-MGMT-006:AC-3"
+      ],
       "description": "GIVEN BranchGatesList mounted with seeded_gates_readonly (isReadOnly=true) WHEN user attempts to interact with any Toggle, Textbox, Select, TagInput, or write Button THEN every Toggle has aria-disabled=true or disabled attribute; every Textbox input has disabled attribute; every TagInput/Select is readonly or disabled; every write Button has disabled attribute; 0 branch_gates_update SDK spy calls fire on any interaction",
       "verify": "pnpm test:ct:desktop -- BranchGatesListReadOnly",
       "scenario": {
@@ -1035,6 +1041,9 @@ Blocks:     MGMT-UI-012 (build-gate tests assert no direct config write across a
       "id": "AC-7",
       "type": "acceptance_criterion",
       "primary": false,
+      "implements_design": [
+        "DESIGN-MGMT-004:AC-1"
+      ],
       "description": "GIVEN BranchGatesList mounted with seeded_gates_two_branches, main row expanded, seeded_write_denied configured WHEN user changes min_approvals Textbox from '2' to '3' (triggering branch_gates_update which returns perm.denied) THEN a danger InfoMessage appears with 'perm.denied'/'Permission denied' text; the min_approvals Textbox reverts to showing '2' (the control does NOT reflect the denied change)",
       "verify": "pnpm test:ct:desktop -- BranchGatesListWriteDenied",
       "scenario": {

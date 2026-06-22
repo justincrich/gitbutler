@@ -751,6 +751,9 @@ Blocks:     MGMT-UI-012 (build-gate tests verify the rules/ sole-change invarian
       "id": "AC-4",
       "type": "acceptance_criterion",
       "primary": false,
+      "implements_design": [
+        "DESIGN-MGMT-006:AC-2"
+      ],
       "description": "GIVEN RulesList mounted with principalId='agent:empty-bot', seeded_no_rules_for_principal WHEN the component renders THEN the existing empty/placeholder state renders (the same placeholder text as in the workspace-rules surface with 0 rules)",
       "verify": "pnpm test:ct:desktop -- RulesListPrincipalEmpty",
       "scenario": {
@@ -797,6 +800,9 @@ Blocks:     MGMT-UI-012 (build-gate tests verify the rules/ sole-change invarian
       "id": "AC-5",
       "type": "acceptance_criterion",
       "primary": false,
+      "implements_design": [
+        "DESIGN-MGMT-006:AC-2"
+      ],
       "description": "GIVEN GovernanceSettings mounted with the Rules tab active and no principalId selected (principalId=undefined in the Rules tab context) WHEN the Rules tab renders THEN an EmptyStatePlaceholder with title 'Select a principal to view their rules' renders; RulesList is NOT mounted (0 RulesList elements)",
       "verify": "pnpm test:ct:desktop -- GovernanceRulesTabNoPrincipal",
       "scenario": {

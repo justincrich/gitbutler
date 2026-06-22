@@ -723,6 +723,11 @@ Blocks:     MGMT-UI-012 (build-gate tests verify no +page.server.ts and no direc
       "id": "AC-1",
       "type": "acceptance_criterion",
       "primary": true,
+      "implements_design": [
+        "DESIGN-MGMT-007:AC-1",
+        "DESIGN-MGMT-007:AC-2",
+        "DESIGN-MGMT-007:AC-3"
+      ],
       "description": "GIVEN GovernanceSettings mounted and the four-tab strip rendered WHEN a keyboard user presses Tab to focus the tab strip, then Arrow keys to move between tabs, then Enter to activate THEN focus moves to the tab strip (TabList has aria-label or aria-labelledby), Arrow keys move focus between the four TabTriggers, Enter activates the focused tab and its aria-selected becomes true",
       "verify": "pnpm test:ct:desktop -- GovernanceTabsA11y",
       "scenario": {
@@ -781,6 +786,10 @@ Blocks:     MGMT-UI-012 (build-gate tests verify no +page.server.ts and no direc
       "id": "AC-2",
       "type": "acceptance_criterion",
       "primary": false,
+      "implements_design": [
+        "DESIGN-MGMT-008:AC-2",
+        "DESIGN-MGMT-008:AC-4"
+      ],
       "description": "GIVEN GovernanceSettings mounted with seeded_ipc_failure (SDK call will reject with perm.denied) WHEN a write SDK call is triggered and it returns the structured denial THEN a danger-variant InfoMessage appears with the denial/error text; a Retry button is visible; this applies to BOTH write-path perm.denied failures AND read-path transport errors",
       "verify": "pnpm test:ct:desktop -- GovernanceIPCFailureBanner",
       "scenario": {
@@ -854,6 +863,9 @@ Blocks:     MGMT-UI-012 (build-gate tests verify no +page.server.ts and no direc
       "id": "AC-3",
       "type": "acceptance_criterion",
       "primary": false,
+      "implements_design": [
+        "DESIGN-MGMT-008:AC-3"
+      ],
       "description": "GIVEN GovernanceSettings with seeded_ipc_failure and the danger InfoMessage visible with Retry WHEN user clicks Retry; then the SDK mock is configured for persistent failure (seeded_ipc_persistent_failure) and Retry is clicked again THEN first Retry re-issues the SDK call (call count increments to 2); with persistent failure the danger InfoMessage remains visible and controls stay disabled (safe read-only state)",
       "verify": "pnpm test:ct:desktop -- GovernanceIPCRetry",
       "scenario": {
@@ -904,6 +916,11 @@ Blocks:     MGMT-UI-012 (build-gate tests verify no +page.server.ts and no direc
       "id": "AC-4",
       "type": "acceptance_criterion",
       "primary": false,
+      "implements_design": [
+        "DESIGN-MGMT-004:AC-1",
+        "DESIGN-MGMT-004:AC-2",
+        "DESIGN-MGMT-004:AC-3"
+      ],
       "description": "GIVEN GovernanceSettings mounted with seeded_self_escalation_denial; administration:write Toggle starts OFF WHEN user clicks the administration:write Toggle to grant it to themselves THEN the test MUST capture aria-checked BEFORE the click and assert it remains unchanged after the denial; the governed path returns perm.denied; a danger InfoMessage with 'You cannot modify your own administration grants' is visible; the Toggle remains in the OFF state (pre-click aria-checked == post-denial aria-checked, not flipped)",
       "verify": "pnpm test:ct:desktop -- GovernanceSelfEscalationNoFlip",
       "scenario": {
@@ -964,6 +981,9 @@ Blocks:     MGMT-UI-012 (build-gate tests verify no +page.server.ts and no direc
       "id": "AC-5",
       "type": "acceptance_criterion",
       "primary": false,
+      "implements_design": [
+        "DESIGN-MGMT-006:AC-3"
+      ],
       "description": "GIVEN GovernanceSettings mounted with seeded_read_only (hasAdminWrite=false) WHEN the component renders THEN an info-variant InfoMessage mentioning 'administration:write is required' is visible; ALL Toggles have aria-disabled=true or disabled; ALL Textbox inputs have disabled; ALL TagInputs/Selects are readonly/disabled; ALL write Buttons have disabled; 0 interactive write controls exist",
       "verify": "pnpm test:ct:desktop -- GovernanceReadOnlyA11y",
       "scenario": {

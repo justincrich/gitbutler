@@ -470,6 +470,10 @@ Blocks:     MGMT-UI-011 (a11y + IPC-failure banner + Retry — must run inside a
       "id": "AC-1",
       "type": "acceptance_criterion",
       "primary": true,
+      "implements_design": [
+        "DESIGN-MGMT-008:AC-1",
+        "DESIGN-MGMT-008:AC-4"
+      ],
       "description": "GIVEN GovernanceSettings is wrapped in shared/ErrorBoundary and a governance child component throws on mount WHEN the component tree renders THEN the .boundary-error fallback div renders with a title and the settings modal container remains in the DOM",
       "verify": "pnpm test:ct:desktop -- GovernanceErrorBoundary",
       "scenario": {

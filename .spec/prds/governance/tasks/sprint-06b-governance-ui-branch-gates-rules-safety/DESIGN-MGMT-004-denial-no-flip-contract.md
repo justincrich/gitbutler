@@ -210,7 +210,11 @@ Blocks:     MGMT-UI-011 (a11y + IPC-failure danger banner + Retry — this desig
       "id": "AC-1",
       "type": "acceptance_criterion",
       "primary": true,
-      "verified_by": [],
+      "verified_by": [
+        {"task_id": "MGMT-UI-011", "ac_id": "AC-4"},
+        {"task_id": "MGMT-UI-009", "ac_id": "AC-7"},
+        {"task_id": "E2E-MGMT-UI-001", "ac_id": "AC-4"}
+      ],
       "description": "GIVEN the denial-and-no-flip contract section exists in DESIGN-ANNOTATIONS.md WHEN a reviewer inspects the denial banner specification THEN it specifies InfoMessage (packages/ui/src/lib/components/InfoMessage.svelte) style='danger' outlined=true, title='perm.denied — you cannot modify your own administration grants.', a sub-line rendering remediation_hint from the structured denial payload, no primaryLabel action button (the banner is informational, not actionable), rendered in the GovernanceSettings banner slot replacing the pending warning banner while denial is active",
       "verify": "design review — reviewer confirms InfoMessage path + style='danger' + outlined=true + verbatim title text + remediation_hint sub-line + no action button + placement in banner slot"
     },
@@ -218,7 +222,10 @@ Blocks:     MGMT-UI-011 (a11y + IPC-failure danger banner + Retry — this desig
       "id": "AC-2",
       "type": "acceptance_criterion",
       "primary": false,
-      "verified_by": [],
+      "verified_by": [
+        {"task_id": "MGMT-UI-011", "ac_id": "AC-4"},
+        {"task_id": "E2E-MGMT-UI-001", "ac_id": "AC-4"}
+      ],
       "description": "GIVEN the contract defines the toggle no-flip rule for the grant direction using a non-admin actor WHEN a reviewer inspects the self-escalation interaction rule THEN it states: (1) a principal LACKING administration:write toggles administration:write ON for themselves (attempting self-escalation) — the Toggle moves to checked in local state; (2) the governed SDK call (perm_grant) returns perm.denied — the honest rejection that only a principal lacking the permission can receive on a self-escalation attempt (an administrator already holds administration:write per CAP-AUTHZ-01); (3) the Toggle is SYNCHRONOUSLY reverted to unchecked (prior state — no optimistic flip); (4) the danger InfoMessage appears in the banner slot; the effective permission is NOT updated; the pending count does NOT increment; no chipToast; no Retry button",
       "verify": "design review — reviewer confirms the four-step sequence uses a principal LACKING administration:write as the self-grant actor (not 'admin'), the synchronous-revert rule is explicit, the no-chipToast and no-Retry rules are stated"
     },
@@ -226,8 +233,11 @@ Blocks:     MGMT-UI-011 (a11y + IPC-failure danger banner + Retry — this desig
       "id": "AC-3",
       "type": "acceptance_criterion",
       "primary": false,
-      "verified_by": [],
-      "honest_gap_note": "The revoke-direction downstream component test (MGMT-UI-011 AC-4b) does not exist yet — only the grant-direction proof (MGMT-UI-011 AC-4) exists. The revoke-direction test is to be added per red-hat H5 / Recommendation #7.",
+      "verified_by": [
+        {"task_id": "MGMT-UI-011", "ac_id": "AC-4"},
+        {"task_id": "E2E-MGMT-UI-001", "ac_id": "AC-4"}
+      ],
+      "honest_gap_note": "The revoke-direction downstream component test (MGMT-UI-011 AC-4b) does not exist yet — only the grant-direction proof (MGMT-UI-011 AC-4) exists. The revoke-direction test is to be added per red-hat H5 / Recommendation #7. The verified_by pointers above cite the grant-direction AC-4 as the closest existing proof; they do NOT claim the revoke direction is independently tested.",
       "description": "GIVEN the contract defines the symmetric toggle no-flip rule for the revoke direction WHEN a reviewer inspects the self-revoke interaction rule THEN it states: (1) an admin who holds administration:write toggles administration:write OFF for themselves (attempting self-revoke) — the Toggle moves to unchecked in local state; (2) the governed SDK call (perm_revoke) returns perm.denied — the symmetric self-modification block fires on revoke; (3) the Toggle is SYNCHRONOUSLY reverted to checked (stays ON — no optimistic flip; the admin retains the permission); (4) the danger InfoMessage appears in the banner slot; the effective permission is NOT updated; no chipToast; no Retry button. The three-state machine's denial row names BOTH entry paths: (a) a principal LACKING administration:write self-grants OR (b) an admin self-revokes",
       "verify": "design review — reviewer confirms the self-revoke sequence is present, the Toggle stays ON (aria-checked='true' unchanged), the denial row names both entry paths, and the honest_gap_note recording the missing revoke-direction downstream test is present"
     },

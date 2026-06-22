@@ -202,6 +202,10 @@ Blocks:     MGMT-UI-011 (accessibility aria + keyboard nav implementation — th
       "id": "AC-1",
       "type": "acceptance_criterion",
       "primary": true,
+      "verified_by": [
+        {"task_id": "MGMT-UI-011", "ac_id": "AC-1"},
+        {"task_id": "E2E-MGMT-UI-001", "ac_id": "AC-5"}
+      ],
       "description": "GIVEN the a11y contract section of DESIGN-ANNOTATIONS.md covers the four-tab navigation WHEN a reviewer inspects the aria attribute specification THEN it specifies: TabList element has role='tablist' and aria-label='Governance configuration tabs'; each TabTrigger element has role='tab', aria-selected='true|false', aria-controls='{panel-id}', and id='{tab-id}'; each TabContent element has role='tabpanel', aria-labelledby='{tab-id}', and id='{panel-id}'; all four IDs are listed in canonical order (principals, groups, branch-gates, rules) with the exact id/panel-id pairs",
       "verify": "design review \u2014 reviewer confirms all five aria attribute entries (tablist label, tab role, tab aria-selected, tab aria-controls, tabpanel aria-labelledby) are present with the exact attribute names and value patterns"
     },
@@ -209,6 +213,10 @@ Blocks:     MGMT-UI-011 (accessibility aria + keyboard nav implementation — th
       "id": "AC-2",
       "type": "acceptance_criterion",
       "primary": false,
+      "verified_by": [
+        {"task_id": "MGMT-UI-011", "ac_id": "AC-1"},
+        {"task_id": "E2E-MGMT-UI-001", "ac_id": "AC-5"}
+      ],
       "description": "GIVEN the contract specifies the keyboard navigation model WHEN a reviewer reads the keyboard-nav contract THEN it states the exact key-to-action mapping: (1) Tab from outside the tablist: focus moves to the currently active TabTrigger (not to the first tab); (2) Arrow Left: focus moves to the previous TabTrigger in the list (wraps from principals to rules); (3) Arrow Right: focus moves to the next TabTrigger (wraps from rules to principals); (4) Enter or Space: activates the focused tab (sets aria-selected='true', renders the panel); (5) Tab from within the tab panel: focus leaves the tabpanel into the next focusable element (does NOT return to the tablist); this is the WAI-ARIA automatic-activation model",
       "verify": "design review \u2014 reviewer confirms all five key-to-action entries are present and the automatic-activation model is named"
     },
@@ -216,6 +224,9 @@ Blocks:     MGMT-UI-011 (accessibility aria + keyboard nav implementation — th
       "id": "AC-3",
       "type": "acceptance_criterion",
       "primary": false,
+      "verified_by": [
+        {"task_id": "MGMT-UI-011", "ac_id": "AC-1"}
+      ],
       "description": "GIVEN the contract specifies the focus-visible treatment WHEN a reviewer inspects the focus-visible section THEN it states that the active-focus TabTrigger shows a visible outline using the existing var(--focus-outline) CSS variable (or the browser's native :focus-visible outline if the Tabs component delegates it); no custom focus ring is introduced; the focus-visible style must not be suppressed with outline:none without a replacement",
       "verify": "design review \u2014 reviewer confirms var(--focus-outline) or :focus-visible delegation is cited, and the no-suppress-without-replacement rule is stated"
     },

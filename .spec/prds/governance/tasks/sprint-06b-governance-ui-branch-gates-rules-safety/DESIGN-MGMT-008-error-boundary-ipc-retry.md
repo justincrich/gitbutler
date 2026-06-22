@@ -202,6 +202,9 @@ Blocks:     MGMT-UI-004 (wrap GovernanceSettings in the existing shared/ErrorBou
       "id": "AC-1",
       "type": "acceptance_criterion",
       "primary": true,
+      "verified_by": [
+        {"task_id": "MGMT-UI-004", "ac_id": "AC-1"}
+      ],
       "description": "GIVEN the error-boundary contract section of DESIGN-ANNOTATIONS.md covers the render/runtime error case WHEN a reviewer inspects the ErrorBoundary fallback content specification THEN it specifies: (1) the existing shared/ErrorBoundary.svelte (apps/desktop/src/components/shared/ErrorBoundary.svelte) is the boundary \u2014 no new component; (2) GovernanceSettings.svelte is wrapped in ErrorBoundary with title='Governance settings failed to load', compact=false; (3) the 'failed' snippet renders error.message as the sub-line if it is an Error instance; (4) no Retry button in the boundary fallback (the fallback is informational; recovery is reopening the settings modal); (5) the settings modal frame and other settings sections remain functional \u2014 the ErrorBoundary fallback renders only inside the Permissions & Governance section mount point",
       "verify": "design review \u2014 reviewer confirms all five items are present: component path, title prop, compact=false, no Retry in boundary fallback, modal survival"
     },
@@ -209,6 +212,10 @@ Blocks:     MGMT-UI-004 (wrap GovernanceSettings in the existing shared/ErrorBou
       "id": "AC-2",
       "type": "acceptance_criterion",
       "primary": false,
+      "verified_by": [
+        {"task_id": "MGMT-UI-011", "ac_id": "AC-2"},
+        {"task_id": "E2E-MGMT-UI-001", "ac_id": "AC-6"}
+      ],
       "description": "GIVEN the contract covers the IPC/transport error case WHEN a reviewer inspects the IPC-failure InfoMessage specification THEN it specifies: InfoMessage (packages/ui/src/lib/components/InfoMessage.svelte) style='danger' outlined=true; title renders the structured denial message if {code, message} is available from the SDK response, or 'Connection lost \u2014 governance service unavailable' if no structured response; a Retry Button (packages/ui/src/lib/components/Button.svelte) is the primaryLabel/primaryAction slot of the InfoMessage; the Retry button re-issues the same SDK call that failed; the banner appears in the GovernanceSettings banner slot (same slot as the denial banner from DESIGN-MGMT-004), taking highest priority",
       "verify": "design review \u2014 reviewer confirms InfoMessage path + style='danger' + outlined=true + two-case title text + Retry Button path + primaryAction slot + banner-slot placement"
     },
@@ -216,6 +223,10 @@ Blocks:     MGMT-UI-004 (wrap GovernanceSettings in the existing shared/ErrorBou
       "id": "AC-3",
       "type": "acceptance_criterion",
       "primary": false,
+      "verified_by": [
+        {"task_id": "MGMT-UI-011", "ac_id": "AC-3"},
+        {"task_id": "E2E-MGMT-UI-001", "ac_id": "AC-6"}
+      ],
       "description": "GIVEN the contract specifies the persistent IPC failure state WHEN a reviewer reads the persistent-failure section THEN it states: (1) on Retry success \u2014 the danger banner hides, the governance surface resumes normal state; (2) on Retry failure \u2014 the danger InfoMessage stays visible with an updated or unchanged message; (3) on persistent failure \u2014 the governance surface stays in a safe read-only state (isReadOnly=true equivalent: all controls inert, no writes attempted); (4) the surface does NOT unmount or trigger the ErrorBoundary on an IPC error \u2014 the IPC error is handled in-page via the banner, not via the Svelte boundary mechanism",
       "verify": "design review \u2014 reviewer confirms all four items: retry-success clears banner, retry-failure keeps banner, persistent-failure read-only, IPC error does not trigger boundary"
     },
@@ -223,6 +234,10 @@ Blocks:     MGMT-UI-004 (wrap GovernanceSettings in the existing shared/ErrorBou
       "id": "AC-4",
       "type": "acceptance_criterion",
       "primary": false,
+      "verified_by": [
+        {"task_id": "MGMT-UI-004", "ac_id": "AC-1"},
+        {"task_id": "MGMT-UI-011", "ac_id": "AC-2"}
+      ],
       "description": "GIVEN the contract covers both error categories WHEN a reviewer reads the error-category distinction section THEN it explicitly names the two categories in a side-by-side table or clear callout: {render/runtime error: caught by Svelte boundary \u2192 ErrorBoundary 'failed' snippet \u2192 title+message only, no Retry, modal survives} and {IPC/transport error: SDK call rejects \u2192 in-page danger InfoMessage + Retry \u2192 persistent failure \u2192 safe read-only, boundary NOT triggered}",
       "verify": "design review \u2014 reviewer confirms the two-category table or callout is present with the correct treatment per category and the no-boundary-for-IPC-error rule stated"
     },

@@ -189,6 +189,9 @@ Blocks:     MGMT-UI-009 (BranchGatesList — consumes the Branch Gates empty-sta
       "id": "AC-1",
       "type": "acceptance_criterion",
       "primary": true,
+      "verified_by": [
+        {"task_id": "MGMT-UI-009", "ac_id": "AC-3"}
+      ],
       "description": "GIVEN the 06b empty-state section of DESIGN-ANNOTATIONS.md covers the Branch Gates tab WHEN a reviewer inspects the Branch Gates empty-state specification THEN it specifies EmptyStatePlaceholder (packages/ui/src/lib/components/EmptyStatePlaceholder.svelte) with title='No branch gates configured.', a caption describing that gates control merge requirements, and a primary action Button (packages/ui/src/lib/components/Button.svelte) labeled '+ Add' that opens the add-gate flow; in read-only mode (isReadOnly=true) the Button receives disabled=true",
       "verify": "design review \u2014 reviewer confirms EmptyStatePlaceholder path + title text + caption text + Button primary action label + read-only disabled treatment"
     },
@@ -196,6 +199,10 @@ Blocks:     MGMT-UI-009 (BranchGatesList — consumes the Branch Gates empty-sta
       "id": "AC-2",
       "type": "acceptance_criterion",
       "primary": false,
+      "verified_by": [
+        {"task_id": "MGMT-UI-010", "ac_id": "AC-5"},
+        {"task_id": "MGMT-UI-010", "ac_id": "AC-4"}
+      ],
       "description": "GIVEN the 06b empty-state section covers the Rules tab WHEN a reviewer inspects the Rules tab empty-state specification THEN it specifies two sub-cases: (a) no principal selected \u2014 EmptyStatePlaceholder title='Select a principal to view their rules', no primary action button; (b) principal selected but RulesList has no rules \u2014 the existing RulesList component renders its own built-in empty state (no new content override required; the spec notes that the RulesList empty-state is owned by the existing component and must not be overridden)",
       "verify": "design review \u2014 reviewer confirms two sub-case entries: the no-principal-selected EmptyStatePlaceholder with exact title, and the existing-RulesList-empty-state deferral with the explanation that RulesList owns its own empty state"
     },
@@ -203,6 +210,10 @@ Blocks:     MGMT-UI-009 (BranchGatesList — consumes the Branch Gates empty-sta
       "id": "AC-3",
       "type": "acceptance_criterion",
       "primary": false,
+      "verified_by": [
+        {"task_id": "MGMT-UI-009", "ac_id": "AC-6"},
+        {"task_id": "MGMT-UI-011", "ac_id": "AC-5"}
+      ],
       "description": "GIVEN the contract specifies read-only treatment for empty-state actions WHEN a reviewer checks the disabled-in-read-only rule for each empty-state action THEN it states that every primary action Button in an empty state receives disabled=true when isReadOnly=true (derived at GovernanceSettings.svelte per DESIGN-MGMT-003); the EmptyStatePlaceholder itself remains visible (not hidden) in read-only \u2014 only the action is disabled",
       "verify": "design review \u2014 reviewer confirms the disabled-in-read-only rule is stated for Branch Gates empty state, and that the EmptyStatePlaceholder stays visible in read-only"
     },
