@@ -136,6 +136,13 @@ pub async fn close(
 /// comment threads, and the opener principal's declared `kind` in committed
 /// `permissions.toml` (read at the target ref). The lifecycle label and
 /// `agent_authored` flag are descriptive only — no enforcement path reads them.
+///
+/// LPR-008: the payload additionally carries the full reconciler drive state
+/// (open pending assignments + unresolved comment threads + the approved-at-head
+/// presentation label) so an orchestrator decides the next action from one
+/// read. The human output surfaces the drive state explicitly: the dispatch
+/// trigger (pending assignments), the remediation trigger (unresolved threads),
+/// and the approved flag.
 pub async fn status(
     ctx: &mut Context,
     branch: String,
@@ -154,9 +161,10 @@ pub async fn status(
             ""
         };
         let verdict_at_head = status.verdict_at_head.as_deref().unwrap_or("none");
+        let approved_label = if status.approved { "yes" } else { "no" };
         writeln!(
             out,
-            "Review for {branch}: {} (verdict-at-head: {verdict_at_head}, open threads: {}){agent_marker}",
+            "Review for {branch}: {} (verdict-at-head: {verdict_at_head}, open threads: {}, approved: {approved_label}){agent_marker}",
             status.lifecycle, status.open_threads,
         )?;
         if status.assignments.is_empty() {
@@ -169,6 +177,39 @@ pub async fn status(
                     assignment.reviewer_principal, assignment.state,
                 )?;
             }
+        }
+        // LPR-008 reconciler drive state — the three facts an orchestrator
+        // keys on, surfaced explicitly so the human and the agents share one
+        // view of what to do next.
+        if status.open_assignments.is_empty() {
+            writeln!(out, "  dispatch: no pending assignments")?;
+        } else {
+            let reviewers: Vec<&str> = status
+                .open_assignments
+                .iter()
+                .map(|a| a.reviewer_principal.as_str())
+                .collect();
+            writeln!(
+                out,
+                "  dispatch: {} pending assignment(s) [{}]",
+                status.open_assignments.len(),
+                reviewers.join(", "),
+            )?;
+        }
+        if status.unresolved_threads.is_empty() {
+            writeln!(out, "  remediation: no unresolved threads")?;
+        } else {
+            let threads: Vec<&str> = status
+                .unresolved_threads
+                .iter()
+                .map(|t| t.thread_id.as_str())
+                .collect();
+            writeln!(
+                out,
+                "  remediation: {} unresolved thread(s) [{}]",
+                status.unresolved_threads.len(),
+                threads.join(", "),
+            )?;
         }
     }
 

@@ -117,9 +117,16 @@ pub fn classify_error(err: &anyhow::Error) -> Option<ForgeGateError> {
     }
 
     if let Some(mirror) = err.downcast_ref::<RemoteMirrorNotImplemented>() {
+        // Named-seam error: the actor recovers by flipping
+        // `keep_reviews_local` back to true, so `ActorCorrectable` is the
+        // honest classification. No authority context applies to a named seam.
         return Some(ForgeGateError {
             code: mirror.code,
             message: mirror.message.clone(),
+            class: DenialClass::ActorCorrectable,
+            held_permissions: Vec::new(),
+            authorized_actions: Vec::new(),
+            do_not: None,
         });
     }
 
@@ -982,6 +989,14 @@ pub async fn close_review(ctx: ThreadSafeContext, branch: String) -> Result<()> 
     ))
 }
 
+/// The verdict literal an approval-at-head carries. Matches the value
+/// [`approve_review`] writes and the constant `review_requirement::APPROVED`
+/// the merge gate re-derives. Kept as a crate-local const (not re-exported from
+/// the private `review_requirement` module) so the reconciler read and the gate
+/// path stay independent compilations of the same literal — the agreement is
+/// verified by `review_status_verdict_at_head_agrees_with_merge_gate`.
+const APPROVED_VERDICT: &str = "approved";
+
 /// Derived PR lifecycle view computed at query time (read-only — no mutation).
 ///
 /// Mirrors `enforce_merge_gate`'s read of `local_review_verdicts` at head
@@ -989,6 +1004,15 @@ pub async fn close_review(ctx: ThreadSafeContext, branch: String) -> Result<()> 
 /// writes no row, and is never consulted by the gate. The lifecycle label is
 /// presentation-only; the merge decision still re-derives verdict-at-head
 /// itself (§E safe seam — the load-bearing invariant).
+///
+/// LPR-008 extends this payload to serve the **full reconciler drive state** in
+/// one read: [`open_assignments`](Self::open_assignments) (the dispatch
+/// trigger), [`unresolved_threads`](Self::unresolved_threads) (the remediation
+/// trigger), and [`approved`](Self::approved) (the presentation label derived
+/// from the same verdict-at-head truth `enforce_merge_gate` re-derives). Two
+/// orchestrators reading the same repo converge because the payload is
+/// deterministic — every `Vec` reuses the Handles' `ORDER BY` (`created_at ASC,
+/// id ASC`) and the thread grouping sorts by `thread_id`.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 #[cfg_attr(feature = "export-schema", derive(schemars::JsonSchema))]
 pub struct ReviewStatus {
@@ -1012,10 +1036,59 @@ pub struct ReviewStatus {
     /// Count of unresolved comment threads (one per distinct `thread_id` where
     /// at least one comment has `resolved = false`).
     pub open_threads: usize,
+
+    // ---- LPR-008 reconciler drive-state extension --------------------------
+    //
+    // The three facts an orchestrator needs to decide the next action from ONE
+    // read with no shadow state. Every Vec is built from a Handle `list_by_target`
+    // that already ORDERs deterministically (`created_at ASC, id ASC`); the
+    // thread grouping sorts by `thread_id` so two reads of the same state
+    // converge byte-identically.
+    /// Pending reviewer assignments — the **dispatch trigger**. Derived from
+    /// [`assignments`](Self::assignments) filtered to `state == "pending"`.
+    /// Reuses the `local_review_assignments.list_by_target` ordering
+    /// (`assigned_at ASC, id ASC`) so two reads converge.
+    pub open_assignments: Vec<but_db::LocalReviewAssignment>,
+    /// Unresolved comment threads — the **remediation trigger**. One entry per
+    /// distinct `thread_id` carrying at least one `resolved = false` comment
+    /// (the reserved [`__pr_meta__`](RESERVED_PR_META_THREAD) marker thread is
+    /// excluded). Sorted by `thread_id` for two-read convergence; comments
+    /// within a thread preserve the Handle's `created_at ASC, id ASC` order.
+    pub unresolved_threads: Vec<UnresolvedThread>,
+    /// `true` iff a verdict row pinned to the current HEAD with
+    /// `verdict == "approved"` exists. This is the EXACT query the merge gate
+    /// runs (`local_review_verdicts.list_by_target(target)` filtered to
+    /// `head_oid == current_head_oid && verdict == "approved"`). The label
+    /// AGREES with [`enforce_merge_gate`](crate::legacy::merge_gate::enforce_merge_gate)
+    /// because both read the same truth — it does NOT replace the gate. The
+    /// actual land stays the gate's own re-derivation.
+    pub approved: bool,
+}
+
+/// A grouped summary of an unresolved review comment thread — the remediation
+/// trigger surface.
+///
+/// One entry per distinct `thread_id` carrying at least one comment with
+/// `resolved = false` (the reserved [`__pr_meta__`](RESERVED_PR_META_THREAD)
+/// marker thread is excluded). Comments within a thread preserve the
+/// `local_review_comments.list_by_target` ordering (`created_at ASC, id ASC`);
+/// the threads themselves are sorted by `thread_id` so two reads of the same
+/// state yield byte-identical payloads.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "export-schema", derive(schemars::JsonSchema))]
+pub struct UnresolvedThread {
+    /// The thread id this summary groups.
+    pub thread_id: String,
+    /// Every unresolved (`resolved = false`) comment in this thread, in arrival
+    /// order (`created_at ASC, id ASC`).
+    pub comments: Vec<but_db::LocalReviewComment>,
 }
 
 #[cfg(feature = "export-schema")]
 but_schemars::register_sdk_type!(ReviewStatus);
+
+#[cfg(feature = "export-schema")]
+but_schemars::register_sdk_type!(UnresolvedThread);
 
 /// Query the derived PR lifecycle for a branch — READ-ONLY, no write authority.
 ///
@@ -1070,10 +1143,26 @@ pub async fn review_status(ctx: ThreadSafeContext, branch: String) -> Result<Rev
     // pending remediation is never hidden by an older approval at the same head.
     let verdict_at_head = derive_verdict_at_head(&verdicts, &head_oid);
 
+    // LPR-008 approved: the EXACT query merge_gate runs — any verdict row at the
+    // current head with verdict == "approved". The label AGREES with
+    // enforce_merge_gate (same local_review_verdicts@head truth) but does NOT
+    // replace it: the gate re-derives verdict-at-head itself.
+    let approved = has_approved_verdict_at_head(&verdicts, &head_oid);
+
     // open_threads: a thread is open if any of its comments has resolved=false.
     // The reserved __pr_meta__ marker thread is filtered out (the opener lives
     // in local_review_meta, not a comment row).
     let open_threads = count_open_threads(&comments);
+
+    // LPR-008 open_assignments: the dispatch trigger. Filter to `pending`
+    // assignments (state == AssignmentState::Pending.name()). Reuses the
+    // Handle's deterministic ordering (assigned_at ASC, id ASC) — no re-sort.
+    let open_assignments = filter_open_assignments(&assignments);
+
+    // LPR-008 unresolved_threads: the remediation trigger. Group unresolved
+    // comments by thread_id, sorted by thread_id for deterministic two-read
+    // convergence. The reserved __pr_meta__ marker thread is excluded.
+    let unresolved_threads = group_unresolved_threads(&comments);
 
     // agent_authored: derived from the opener principal's declared `kind` in the
     // committed permissions.toml at the target ref. Read at the target ref (not
@@ -1099,6 +1188,9 @@ pub async fn review_status(ctx: ThreadSafeContext, branch: String) -> Result<Rev
         lifecycle,
         agent_authored,
         open_threads,
+        open_assignments,
+        unresolved_threads,
+        approved,
     })
 }
 
@@ -1138,6 +1230,82 @@ fn count_open_threads(comments: &[but_db::LocalReviewComment]) -> usize {
         }
     }
     open_threads.len()
+}
+
+/// LPR-008 reconciler drive fact 1 — pending reviewer assignments (the
+/// **dispatch trigger**).
+///
+/// Filters `local_review_assignments` rows to `state == "pending"`, preserving
+/// the Handle's deterministic ordering (`assigned_at ASC, id ASC`). No
+/// re-sort: the input vec already carries the deterministic order two reads
+/// require. A target with no pending assignments returns an empty vec.
+fn filter_open_assignments(
+    assignments: &[but_db::LocalReviewAssignment],
+) -> Vec<but_db::LocalReviewAssignment> {
+    assignments
+        .iter()
+        .filter(|assignment| assignment.state == AssignmentState::Pending.name())
+        .cloned()
+        .collect()
+}
+
+/// LPR-008 reconciler drive fact 2 — unresolved comment threads (the
+/// **remediation trigger**).
+///
+/// Groups `local_review_comments` rows with `resolved = false` (excluding the
+/// reserved [`__pr_meta__`](RESERVED_PR_META_THREAD) marker thread) by
+/// `thread_id`. Threads are sorted by `thread_id` so two reads of the same
+/// state yield byte-identical payloads (no HashMap iteration-order leakage —
+/// the HashMap is used for lookup only, the output is a sorted `Vec`).
+/// Comments within a thread preserve the Handle's `created_at ASC, id ASC`
+/// order.
+fn group_unresolved_threads(comments: &[but_db::LocalReviewComment]) -> Vec<UnresolvedThread> {
+    use std::collections::HashMap;
+
+    // First pass: collect unresolved (non-__pr_meta__) comments keyed by thread.
+    // The input is already in `created_at ASC, id ASC` order, so the per-thread
+    // vec preserves that order without any re-sort.
+    let mut by_thread: HashMap<&str, Vec<but_db::LocalReviewComment>> = HashMap::new();
+    for comment in comments {
+        if comment.thread_id == RESERVED_PR_META_THREAD {
+            continue;
+        }
+        if !comment.resolved {
+            by_thread
+                .entry(comment.thread_id.as_str())
+                .or_default()
+                .push(comment.clone());
+        }
+    }
+
+    // Second pass: materialize threads and sort by thread_id for deterministic
+    // output order (independent of HashMap iteration order).
+    let mut threads: Vec<UnresolvedThread> = by_thread
+        .into_iter()
+        .map(|(thread_id, comments)| UnresolvedThread {
+            thread_id: thread_id.to_owned(),
+            comments,
+        })
+        .collect();
+    threads.sort_by(|a, b| a.thread_id.cmp(&b.thread_id));
+    threads
+}
+
+/// LPR-008 reconciler drive fact 3 — `true` iff an approved verdict pinned to
+/// the current HEAD exists.
+///
+/// This is the EXACT query [`enforce_merge_gate`] runs:
+/// `local_review_verdicts.list_by_target(target)` filtered to
+/// `verdict.head_oid == current_head_oid && verdict.verdict == "approved"`.
+/// The orchestrator's read and the gate's read AGREE because they read the
+/// same `local_review_verdicts@head` truth; the read does NOT replace the gate
+/// (the actual land stays the gate's own re-derivation).
+///
+/// [`enforce_merge_gate`]: crate::legacy::merge_gate::enforce_merge_gate
+fn has_approved_verdict_at_head(verdicts: &[but_db::LocalReviewVerdict], head_oid: &str) -> bool {
+    verdicts
+        .iter()
+        .any(|verdict| verdict.head_oid == head_oid && verdict.verdict == APPROVED_VERDICT)
 }
 
 /// Derive the presentation lifecycle label from the verdict-at-head and the
