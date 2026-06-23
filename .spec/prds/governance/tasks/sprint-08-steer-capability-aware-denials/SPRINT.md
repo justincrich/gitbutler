@@ -2,20 +2,26 @@
 sprint: 08
 sequence: 9
 timeline: Phase 5 — Capability-aware denials (v1.4.0 enrichment; appended after Sprint 06b)
-status: In Progress
+status: Backlog
 proposed_by: rust-planner
 milestone: sprint-08-steer-capability-aware-denials
 prd: ../../README.md
 enrichment: ../../enrichments/v1.4.0-capability-aware-denials/README.md
 roadmap: ../../ROADMAP.md
 generated_by: kb-sprint-tasks-plan
+reopened_at: 2026-06-23T00:30:00Z
+reopened_reason: |
+  Master HEAD (b8848c29fe) carried spec markdown + orphan Rust source files
+  (route.rs, menu.rs, whoami.rs, primer.rs) but NO compiled-in implementation.
+  Cycle-3 red-hat was spec-only; /kb-run-sprint was never executed. All 10
+  tasks reset to Backlog. See .spec/reviews/red-hat-20260623T001623Z-master-vs-sprint08.md.
 ---
 
 # Sprint 08: STEER — Capability-Aware Denials
 
 **Sequence:** 9
 **Timeline:** Phase 5 — Capability-aware denials (v1.4.0 enrichment; appended after Sprint 06b)
-**Status:** In Progress
+**Status:** Backlog (reopened 2026-06-23 — prior "In Progress" was a bookkeeping drift; no code had landed)
 **Proposed by:** rust-planner
 **Milestone:** — (`sprint-08-steer-capability-aware-denials`)
 
