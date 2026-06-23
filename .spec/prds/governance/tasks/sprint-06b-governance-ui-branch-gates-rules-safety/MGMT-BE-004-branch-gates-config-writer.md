@@ -79,10 +79,10 @@ Proven against real git: (1) an admin branch_gates_update edits a branch's gate 
 --------------------------------------------------------------------------------
 DONE WHEN
 --------------------------------------------------------------------------------
-- [ ] AC-1 [PRIMARY]: Admin branch_gates_update writes the gate edit into the working-tree gates.toml while the COMMITTED (target-ref) gate read by branch_gates_read is unchanged (inert-until-committed pair)
-- [ ] AC-2: Toggling protected OFF lands protected=false in the working tree while preserving the branch's [[gate]] requirement
-- [ ] AC-3: The writer LOSSLESSLY round-trips the full [[gate]] requirement set and every unrelated entry on a protection-only edit (no lossy drop)
-- [ ] AC-4: A non-admin branch_gates_update is denied perm.denied (names administration:write) and writes nothing; a self-escalation gate-weakening is surfaced, not applied
+- [x] AC-1 [PRIMARY]: Admin branch_gates_update writes the gate edit into the working-tree gates.toml while the COMMITTED (target-ref) gate read by branch_gates_read is unchanged (inert-until-committed pair)
+- [x] AC-2: Toggling protected OFF lands protected=false in the working tree while preserving the branch's [[gate]] requirement
+- [ ] AC-3: The writer LOSSLESSLY round-trips the full [[gate]] requirement set and every unrelated entry on a protection-only edit (no lossy drop) /* PARTIAL: lossless round-trip unverified — see REMEDIATE-06B-B */
+- [x] AC-4: A non-admin branch_gates_update is denied perm.denied (names administration:write) and writes nothing; a self-escalation gate-weakening is surfaced, not applied
 - [ ] AC-5: branch_gates_read returns the committed gate set PLUS a pending signal computed from the working-tree-vs-target-ref diff
 - [ ] AC-6: Admin branch_gates_update SETS require_distinct_from_author AND require_approval_from_group (the full editable field set lands losslessly)
 - [ ] AC-7: branch_gates_update APPENDS a new [[branch]]+[[gate]] for a branch absent from gates.toml (preserving existing entries), and creates the file against an absent/empty gates.toml

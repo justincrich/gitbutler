@@ -1,0 +1,15 @@
+{
+  "task_id": "REMEDIATE-06B-A",
+  "verification_policy": {"requires_tests": false, "requires_red_evidence": false, "requires_seeded_evidence": false, "tdd_mode": "skipped"},
+  "project_commands": {
+    "typecheck": "pnpm check",
+    "lint": "pnpm lint",
+    "test": "echo no-op"
+  },
+  "requirements": [
+    {"id": "AC-1", "verify": "grep -c '^status: In Progress$' .spec/prds/governance/tasks/sprint-06b-governance-ui-branch-gates-rules-safety/SPRINT.md && grep -c '^## Completion Status' .spec/prds/governance/tasks/sprint-06b-governance-ui-branch-gates-rules-safety/SPRINT.md"},
+    {"id": "AC-2", "verify": "grep -c '^- \\[x\\]' .spec/prds/governance/tasks/sprint-06b-governance-ui-branch-gates-rules-safety/MGMT-BE-003*.md"},
+    {"id": "AC-3", "verify": "for f in MGMT-UI-009 MGMT-UI-010 MGMT-UI-011 MGMT-UI-012; do test \"$(grep -c '^- \\[x\\]' .spec/prds/governance/tasks/sprint-06b-governance-ui-branch-gates-rules-safety/${f}-*.md)\" -eq 0; done"},
+    {"id": "AC-4", "verify": "test $(ls .spec/prds/governance/tasks/sprint-06b-governance-ui-branch-gates-rules-safety/*.md | wc -l | tr -d ' ') -eq $(grep -cE '^- [A-Z0-9_-]+.*\\.md$' .spec/prds/governance/tasks/sprint-06b-governance-ui-branch-gates-rules-safety/SPRINT.md)"}
+  ]
+}

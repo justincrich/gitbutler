@@ -61,7 +61,7 @@ A sveltekit-implementer reading this contract knows exactly which aria attribute
 --------------------------------------------------------------------------------
 DONE WHEN
 --------------------------------------------------------------------------------
-- [ ] AC-1 [PRIMARY]: Aria attribute specification for tab roles [PRIMARY]
+- [x] AC-1 [PRIMARY]: Aria attribute specification for tab roles [PRIMARY]
 - [ ] AC-2: Keyboard navigation model
 - [ ] AC-3: Focus-visible treatment
 - [ ] AC-4: Tabs component audit note
