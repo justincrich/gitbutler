@@ -166,15 +166,15 @@ test("PrincipalEditorSelfEscalation", async ({ mount }) => {
 		},
 	});
 
+	// Clicking the self-escalation toggle triggers the server call directly —
+	// NO optimistic state is applied (the load-bearing UC-MGMT-06 invariant).
 	await component.getByTestId("principal-editor-toggle-administration-write").click();
-	await expect(component.getByTestId("principal-editor-toggle-administration-write")).toBeChecked();
-
-	await component.getByTestId("principal-editor-save").click();
 
 	await expect(
 		component.getByTestId("principal-editor-toggle-administration-write"),
 	).not.toBeChecked();
 	await expect(component.getByTestId("principal-editor-denial")).toContainText("perm.denied");
+
 	expect(calls).toEqual([
 		{
 			name: "permGrant",
