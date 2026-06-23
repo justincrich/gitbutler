@@ -182,7 +182,15 @@ test("GovernanceReadOnlyA11y: missing administration:write explains and disables
 	await expect(component.getByTestId("governance-branch-gates-control")).toBeDisabled();
 
 	await component.getByRole("tab", { name: "Rules" }).click();
-	await expect(component.getByTestId("governance-rules-control")).toBeDisabled();
+	// MGMT-UI-010 replaced the placeholder governance-rules-control button with the
+	// real RulesList, which only mounts once a principal is selected. With no
+	// principal selected the Rules tab body exposes no write affordance at all, so
+	// the read-only invariant holds by absence. Mirror the Principals assertion
+	// above: the real panel rendered, the no-principal placeholder is shown, and
+	// the legacy placeholder write control is gone.
+	await expect(component.getByTestId("governance-rules-panel")).toBeVisible();
+	await expect(component.getByTestId("governance-rules-no-principal")).toBeVisible();
+	await expect(component.getByTestId("governance-rules-control")).toHaveCount(0);
 });
 
 type ServiceCall = {
