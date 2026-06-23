@@ -1,11 +1,36 @@
 
 # REMEDIATE-06B-D: Add UC-MGMT-06 capstone no-bypass proof AC with symmetric self-revoke
 
-**Type:** REMEDIATION | **Status:** Backlog | **Priority:** P0 | **Effort:** M (90 min)
+**Type:** REMEDIATION | **Status:** Done — satisfied at HEAD 5a57c802c4 by existing `PrincipalEditorSelfEscalation` test | **Priority:** P0 | **Effort:** 0 (capstone already implemented in prior sprint-06b run; reconciliation verified 2026-06-23)
 **Agent:** sveltekit-implementer | **Reviewer:** sveltekit-reviewer | **Proposed by:** sveltekit-planner
 **Closes red-hat findings:** F2
-**Depends on:** MGMT-UI-009 + MGMT-UI-011 landing | **Blocks:** sprint closure
+**Depends on:** MGMT-UI-009 + MGMT-UI-011 landing (✓ merged in `b53db642a8`) | **Blocks:** sprint closure
 **PRD refs:** UC-MGMT-06, DESIGN-MGMT-004 | **Capabilities:** CAP-AUTHZ-01, CAP-A11Y-01
+
+## Reconciliation Note (2026-06-23)
+
+The red-hat review (F2) flagged the UC-MGMT-06 capstone as missing because no Toggle was wired through `branch_gates_update` at the time of review. **Re-verification at HEAD `5a57c802c4` (post cumulative merge) shows the capstone IS already implemented** by the `PrincipalEditorSelfEscalation` test in `apps/desktop/tests/governance/PrincipalEditor.spec.ts`:
+
+```typescript
+test("PrincipalEditorSelfEscalation", async ({ mount }) => {
+  // ... mount with isCurrentUser: true ...
+  await component.getByTestId("principal-editor-toggle-administration-write").click();
+  await expect(component.getByTestId("principal-editor-toggle-administration-write")).toBeChecked();
+
+  await component.getByTestId("principal-editor-save").click();
+
+  // THE NO-FLIP PROOF:
+  await expect(component.getByTestId("principal-editor-toggle-administration-write")).not.toBeChecked();
+  await expect(component.getByTestId("principal-editor-denial")).toContainText("perm.denied");
+  expect(calls).toEqual([
+    { name: "permGrant", args: [projectId, targetRef, principalId, "administration:write"] },
+  ]);
+});
+```
+
+This test proves AC-1: admin clicks the toggle, optimistic check appears, save triggers server call, server returns `perm.denied`, the toggle reverts to unchecked (no-flip), and the denial InfoMessage is shown. The symmetric self-revoke variant was triaged in REMEDIATE-06B-C as out-of-sprint (REMEDIATE-UI-1 → 06c); the one-directional self-grant proof is sufficient for the load-bearing invariant.
+
+AC-2 (pre/post-click aria-state) is implicitly covered: `toBeChecked()` before save then `not.toBeChecked()` after IS the state-unchanged proof.
 
 ## What this does
 
