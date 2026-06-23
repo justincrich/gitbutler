@@ -1,0 +1,261 @@
+   Compiling but-api v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-BE-004-implementation-1/crates/but-api)
+error[E0560]: struct `BranchProtectionInput` has no field named `min_approvals`
+  --> crates/but-api/tests/branch_gates.rs:24:17
+   |
+24 |                 min_approvals: Some(3),
+   |                 ^^^^^^^^^^^^^ `BranchProtectionInput` does not have this field
+   |
+   = note: all struct fields are already assigned
+
+error[E0560]: struct `BranchProtectionInput` has no field named `require_distinct_from_author`
+  --> crates/but-api/tests/branch_gates.rs:25:17
+   |
+25 |                 require_distinct_from_author: Some(true),
+   |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `BranchProtectionInput` does not have this field
+   |
+   = note: all struct fields are already assigned
+
+error[E0560]: struct `BranchProtectionInput` has no field named `require_approval_from_group`
+  --> crates/but-api/tests/branch_gates.rs:26:17
+   |
+26 |                 require_approval_from_group: Some(vec![
+   |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^ `BranchProtectionInput` does not have this field
+   |
+   = note: all struct fields are already assigned
+
+error[E0609]: no field `caveat` on type `BranchGatesOutcome`
+  --> crates/but-api/tests/branch_gates.rs:35:16
+   |
+35 |         update.caveat.contains(REF_PIN_CAVEAT),
+   |                ^^^^^^ unknown field
+   |
+   = note: available field is: `branches`
+
+error[E0609]: no field `min_approvals` on type `&BranchGateEntry`
+  --> crates/but-api/tests/branch_gates.rs:54:14
+   |
+54 |         main.min_approvals, 2,
+   |              ^^^^^^^^^^^^^ unknown field
+   |
+   = note: available fields are: `name`, `protected`
+
+error[E0609]: no field `pending` on type `&BranchGateEntry`
+  --> crates/but-api/tests/branch_gates.rs:58:14
+   |
+58 |         main.pending,
+   |              ^^^^^^^ unknown field
+   |
+   = note: available fields are: `name`, `protected`
+
+error[E0560]: struct `BranchProtectionInput` has no field named `min_approvals`
+  --> crates/but-api/tests/branch_gates.rs:76:17
+   |
+76 |                 min_approvals: None,
+   |                 ^^^^^^^^^^^^^ `BranchProtectionInput` does not have this field
+   |
+   = note: all struct fields are already assigned
+
+error[E0560]: struct `BranchProtectionInput` has no field named `require_distinct_from_author`
+  --> crates/but-api/tests/branch_gates.rs:77:17
+   |
+77 |                 require_distinct_from_author: None,
+   |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `BranchProtectionInput` does not have this field
+   |
+   = note: all struct fields are already assigned
+
+error[E0560]: struct `BranchProtectionInput` has no field named `require_approval_from_group`
+  --> crates/but-api/tests/branch_gates.rs:78:17
+   |
+78 |                 require_approval_from_group: None,
+   |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^ `BranchProtectionInput` does not have this field
+   |
+   = note: all struct fields are already assigned
+
+error[E0560]: struct `BranchProtectionInput` has no field named `min_approvals`
+   --> crates/but-api/tests/branch_gates.rs:104:17
+    |
+104 |                 min_approvals: None,
+    |                 ^^^^^^^^^^^^^ `BranchProtectionInput` does not have this field
+    |
+    = note: all struct fields are already assigned
+
+error[E0560]: struct `BranchProtectionInput` has no field named `require_distinct_from_author`
+   --> crates/but-api/tests/branch_gates.rs:105:17
+    |
+105 |                 require_distinct_from_author: None,
+    |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `BranchProtectionInput` does not have this field
+    |
+    = note: all struct fields are already assigned
+
+error[E0560]: struct `BranchProtectionInput` has no field named `require_approval_from_group`
+   --> crates/but-api/tests/branch_gates.rs:106:17
+    |
+106 |                 require_approval_from_group: None,
+    |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^ `BranchProtectionInput` does not have this field
+    |
+    = note: all struct fields are already assigned
+
+error[E0560]: struct `BranchProtectionInput` has no field named `min_approvals`
+   --> crates/but-api/tests/branch_gates.rs:149:17
+    |
+149 |                 min_approvals: Some(0),
+    |                 ^^^^^^^^^^^^^ `BranchProtectionInput` does not have this field
+    |
+    = note: all struct fields are already assigned
+
+error[E0560]: struct `BranchProtectionInput` has no field named `require_distinct_from_author`
+   --> crates/but-api/tests/branch_gates.rs:150:17
+    |
+150 |                 require_distinct_from_author: Some(false),
+    |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `BranchProtectionInput` does not have this field
+    |
+    = note: all struct fields are already assigned
+
+error[E0560]: struct `BranchProtectionInput` has no field named `require_approval_from_group`
+   --> crates/but-api/tests/branch_gates.rs:151:17
+    |
+151 |                 require_approval_from_group: Some(Vec::new()),
+    |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^ `BranchProtectionInput` does not have this field
+    |
+    = note: all struct fields are already assigned
+
+error[E0609]: no field `min_approvals` on type `&BranchGateEntry`
+   --> crates/but-api/tests/branch_gates.rs:182:20
+    |
+182 |         clean_main.min_approvals, 2,
+    |                    ^^^^^^^^^^^^^ unknown field
+    |
+    = note: available fields are: `name`, `protected`
+
+error[E0609]: no field `pending` on type `&BranchGateEntry`
+   --> crates/but-api/tests/branch_gates.rs:186:21
+    |
+186 |         !clean_main.pending,
+    |                     ^^^^^^^ unknown field
+    |
+    = note: available fields are: `name`, `protected`
+
+error[E0560]: struct `BranchProtectionInput` has no field named `min_approvals`
+   --> crates/but-api/tests/branch_gates.rs:197:17
+    |
+197 |                 min_approvals: Some(3),
+    |                 ^^^^^^^^^^^^^ `BranchProtectionInput` does not have this field
+    |
+    = note: all struct fields are already assigned
+
+error[E0560]: struct `BranchProtectionInput` has no field named `require_distinct_from_author`
+   --> crates/but-api/tests/branch_gates.rs:198:17
+    |
+198 |                 require_distinct_from_author: None,
+    |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `BranchProtectionInput` does not have this field
+    |
+    = note: all struct fields are already assigned
+
+error[E0560]: struct `BranchProtectionInput` has no field named `require_approval_from_group`
+   --> crates/but-api/tests/branch_gates.rs:199:17
+    |
+199 |                 require_approval_from_group: None,
+    |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^ `BranchProtectionInput` does not have this field
+    |
+    = note: all struct fields are already assigned
+
+error[E0609]: no field `min_approvals` on type `&BranchGateEntry`
+   --> crates/but-api/tests/branch_gates.rs:209:22
+    |
+209 |         pending_main.min_approvals, 2,
+    |                      ^^^^^^^^^^^^^ unknown field
+    |
+    = note: available fields are: `name`, `protected`
+
+error[E0609]: no field `pending` on type `&BranchGateEntry`
+   --> crates/but-api/tests/branch_gates.rs:213:22
+    |
+213 |         pending_main.pending,
+    |                      ^^^^^^^ unknown field
+    |
+    = note: available fields are: `name`, `protected`
+
+error[E0560]: struct `BranchProtectionInput` has no field named `min_approvals`
+   --> crates/but-api/tests/branch_gates.rs:231:17
+    |
+231 |                 min_approvals: Some(2),
+    |                 ^^^^^^^^^^^^^ `BranchProtectionInput` does not have this field
+    |
+    = note: all struct fields are already assigned
+
+error[E0560]: struct `BranchProtectionInput` has no field named `require_distinct_from_author`
+   --> crates/but-api/tests/branch_gates.rs:232:17
+    |
+232 |                 require_distinct_from_author: Some(true),
+    |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `BranchProtectionInput` does not have this field
+    |
+    = note: all struct fields are already assigned
+
+error[E0560]: struct `BranchProtectionInput` has no field named `require_approval_from_group`
+   --> crates/but-api/tests/branch_gates.rs:233:17
+    |
+233 |                 require_approval_from_group: Some(vec![
+    |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^ `BranchProtectionInput` does not have this field
+    |
+    = note: all struct fields are already assigned
+
+error[E0560]: struct `BranchProtectionInput` has no field named `min_approvals`
+   --> crates/but-api/tests/branch_gates.rs:267:17
+    |
+267 |                 min_approvals: Some(1),
+    |                 ^^^^^^^^^^^^^ `BranchProtectionInput` does not have this field
+    |
+    = note: all struct fields are already assigned
+
+error[E0560]: struct `BranchProtectionInput` has no field named `require_distinct_from_author`
+   --> crates/but-api/tests/branch_gates.rs:268:17
+    |
+268 |                 require_distinct_from_author: Some(false),
+    |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `BranchProtectionInput` does not have this field
+    |
+    = note: all struct fields are already assigned
+
+error[E0560]: struct `BranchProtectionInput` has no field named `require_approval_from_group`
+   --> crates/but-api/tests/branch_gates.rs:269:17
+    |
+269 |                 require_approval_from_group: Some(vec!["maintainers".to_owned()]),
+    |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^ `BranchProtectionInput` does not have this field
+    |
+    = note: all struct fields are already assigned
+
+error[E0560]: struct `BranchProtectionInput` has no field named `min_approvals`
+   --> crates/but-api/tests/branch_gates.rs:294:17
+    |
+294 |                 min_approvals: Some(1),
+    |                 ^^^^^^^^^^^^^ `BranchProtectionInput` does not have this field
+    |
+    = note: all struct fields are already assigned
+
+error[E0560]: struct `BranchProtectionInput` has no field named `require_distinct_from_author`
+   --> crates/but-api/tests/branch_gates.rs:295:17
+    |
+295 |                 require_distinct_from_author: Some(false),
+    |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `BranchProtectionInput` does not have this field
+    |
+    = note: all struct fields are already assigned
+
+error[E0560]: struct `BranchProtectionInput` has no field named `require_approval_from_group`
+   --> crates/but-api/tests/branch_gates.rs:296:17
+    |
+296 |                 require_approval_from_group: Some(vec!["maintainers".to_owned()]),
+    |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^ `BranchProtectionInput` does not have this field
+    |
+    = note: all struct fields are already assigned
+
+error[E0609]: no field `min_approvals` on type `&BranchGateEntry`
+   --> crates/but-api/tests/branch_gates.rs:324:32
+    |
+324 |         branch(&admin, "main").min_approvals,
+    |                                ^^^^^^^^^^^^^ unknown field
+    |
+    = note: available fields are: `name`, `protected`
+
+Some errors have detailed explanations: E0560, E0609.
+For more information about an error, try `rustc --explain E0560`.
+error: could not compile `but-api` (test "branch_gates") due to 32 previous errors
+warning: build failed, waiting for other jobs to finish...

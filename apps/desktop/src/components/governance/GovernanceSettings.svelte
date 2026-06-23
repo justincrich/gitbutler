@@ -1,6 +1,7 @@
 <script lang="ts">
 	import GroupsList from "$components/governance/GroupsList.svelte";
 	import PrincipalsList from "$components/governance/PrincipalsList.svelte";
+	import RulesList from "$components/rules/RulesList.svelte";
 	import TabContent from "$components/shared/TabContent.svelte";
 	import TabList from "$components/shared/TabList.svelte";
 	import TabTrigger from "$components/shared/TabTrigger.svelte";
@@ -28,6 +29,7 @@
 		service?: GovernanceRendererContract;
 		initialGroups?: GroupListEntry[];
 		initialPendingGroups?: string[];
+		rulesPrincipalId?: string;
 	};
 
 	const {
@@ -36,6 +38,7 @@
 		service: providedService,
 		initialGroups,
 		initialPendingGroups = [],
+		rulesPrincipalId,
 	}: Props = $props();
 
 	const backend = injectOptional(BACKEND, undefined);
@@ -131,21 +134,23 @@
 		</div>
 	{:else}
 		{#if pendingStore?.error}
-			<div data-testid="GovernanceErrorMessage">
-				<InfoMessage
-					style="danger"
-					error={pendingStore.error}
-					primaryLabel="Retry"
-					primaryAction={refreshGovernance}
-					primaryTestId="governance-retry-button"
-				>
-					{#snippet title()}Couldn't load governance settings{/snippet}
-					{#snippet content()}
-						The governance config couldn't be read from the target branch. Retry, or see the setup
-						guide if governance hasn't been configured.
-					{/snippet}
-				</InfoMessage>
-			</div>
+			{@const readFailure = pendingStore.error}
+			<InfoMessage testId="governance-read-failure" style="danger" outlined>
+				{#snippet title()}{readFailure.code}{/snippet}
+				{#snippet content()}
+					{readFailure.message}
+					{#if readFailure.remediationHint}
+						{readFailure.remediationHint}
+					{/if}
+					<button
+						class="governance-button governance-button--retry"
+						type="button"
+						onclick={refreshGovernance}
+					>
+						Retry
+					</button>
+				{/snippet}
+			</InfoMessage>
 		{/if}
 
 		{#if isReadOnly}
@@ -180,7 +185,7 @@
 		{/if}
 
 		<Tabs defaultSelected="principals">
-			<TabList>
+			<TabList ariaLabel="Governance sections">
 				<TabTrigger value="principals">Principals</TabTrigger>
 				<TabTrigger value="groups">Groups</TabTrigger>
 				<TabTrigger value="branch-gates">Branch Gates</TabTrigger>
@@ -236,16 +241,22 @@
 			</TabContent>
 
 			<TabContent value="rules">
-				<section class="governance-panel" data-testid="governance-rules-panel">
+				<section
+					class="governance-panel governance-panel--rules"
+					data-testid="governance-rules-panel"
+				>
 					<h3>Rules</h3>
-					<button
-						type="button"
-						class="governance-button"
-						disabled={isReadOnly}
-						data-testid="governance-rules-control"
-					>
-						Add rule
-					</button>
+					{#if rulesPrincipalId}
+						<div class="governance-rules-list" data-testid="governance-rules-list">
+							<RulesList {projectId} principalId={rulesPrincipalId} />
+						</div>
+					{:else}
+						<div data-testid="governance-rules-no-principal">
+							<EmptyStatePlaceholder gap={12} topBottomPadding={24}>
+								{#snippet title()}Select a principal to view their rules{/snippet}
+							</EmptyStatePlaceholder>
+						</div>
+					{/if}
 				</section>
 			</TabContent>
 		</Tabs>
@@ -292,6 +303,10 @@
 		color: var(--clr-white);
 	}
 
+	.governance-button--retry {
+		margin-left: var(--clr-space-6);
+	}
+
 	.governance-button:disabled {
 		cursor: not-allowed;
 		opacity: 0.5;
@@ -307,7 +322,12 @@
 	}
 
 	.governance-panel--principals,
-	.governance-panel--groups {
+	.governance-panel--groups,
+	.governance-panel--rules {
 		flex-direction: column;
+	}
+
+	.governance-rules-list {
+		width: 100%;
 	}
 </style>

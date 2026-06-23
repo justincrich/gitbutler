@@ -16,7 +16,7 @@ pub use authorize::{
 };
 pub use config::{
     BranchName, BranchProtection, ConfigError, GovConfig, GroupWire, PermissionsWire,
-    PrincipalWire, governance_present, load_governance_config, load_permissions_wire,
+    PrincipalWire, gates_path, governance_present, load_governance_config, load_permissions_wire,
     permissions_path,
 };
 pub use denial::{AuthorizedAction, Denial, DenialClass, steer_envelope_from_parts, to_envelope};

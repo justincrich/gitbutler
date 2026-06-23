@@ -1,0 +1,2 @@
+GREEN command: cargo test -p but-api branch_gates -- --nocapture
+AC-4 seeded: denial_code=perm.denied; message_contains_administration_write=true; gates_unchanged=true

@@ -18,6 +18,15 @@ pub fn permissions_path() -> &'static str {
     PERMISSIONS_PATH
 }
 
+/// Return the repository-relative governance gates path.
+///
+/// ```
+/// assert_eq!(but_authz::gates_path(), ".gitbutler/gates.toml");
+/// ```
+pub fn gates_path() -> &'static str {
+    GATES_PATH
+}
+
 /// Load committed governance config from the supplied target ref.
 ///
 /// The loader reads `.gitbutler/permissions.toml` and `.gitbutler/gates.toml`
@@ -533,6 +542,9 @@ pub struct GroupWire {
 struct GatesWire {
     #[serde(default)]
     branch: Vec<BranchWire>,
+    #[allow(dead_code)]
+    #[serde(default)]
+    gate: Vec<toml::Value>,
 }
 
 #[derive(Debug, Deserialize)]
