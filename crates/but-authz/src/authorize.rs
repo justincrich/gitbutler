@@ -1,6 +1,6 @@
 use std::{env, ffi::OsString};
 
-use crate::{Authority, AuthoritySet, Denial, GovConfig, Principal, PrincipalId};
+use crate::{Authority, AuthoritySet, Denial, DenialClass, GovConfig, Principal, PrincipalId};
 
 const BUT_AGENT_HANDLE: &str = "BUT_AGENT_HANDLE";
 
@@ -144,11 +144,16 @@ impl Denial {
     /// assert_eq!(denial.code, Denial::PERM_DENIED_CODE);
     /// ```
     pub fn no_handle() -> Self {
-        Self::new(
-            Self::PERM_DENIED_CODE,
-            "BUT_AGENT_HANDLE is required to resolve a governed principal".to_owned(),
-            "set BUT_AGENT_HANDLE to a principal committed in governance config".to_owned(),
-        )
+        Self {
+            // STEER-004: no handle → operator must provision the principal in
+            // committed governance config before the actor can recover.
+            class: DenialClass::OperatorRequired,
+            ..Self::new(
+                Self::PERM_DENIED_CODE,
+                "BUT_AGENT_HANDLE is required to resolve a governed principal".to_owned(),
+                "set BUT_AGENT_HANDLE to a principal committed in governance config".to_owned(),
+            )
+        }
     }
 
     /// Build a structured denial for a handle absent from committed config.
@@ -160,11 +165,17 @@ impl Denial {
     /// assert!(denial.message.contains("ghost"));
     /// ```
     pub fn unknown_principal(handle: &str) -> Self {
-        Self::new(
-            Self::PERM_DENIED_CODE,
-            format!("principal \"{handle}\" not found in committed governance config"),
-            "commit the principal to governance config before running governed actions".to_owned(),
-        )
+        Self {
+            // STEER-004: unknown principal → operator must commit the
+            // principal to governance config before the actor can recover.
+            class: DenialClass::OperatorRequired,
+            ..Self::new(
+                Self::PERM_DENIED_CODE,
+                format!("principal \"{handle}\" not found in committed governance config"),
+                "commit the principal to governance config before running governed actions"
+                    .to_owned(),
+            )
+        }
     }
 }
 
