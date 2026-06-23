@@ -15,6 +15,23 @@ This file is a pure dependency-ordering record for `/kb-run-sprint`. It does not
 
 The red-hat review found all four UI tasks not started and noted that the namesake `BranchGatesList.svelte` blocks the rest of the surface. A meta task keeps the ordering constraint explicit in the sprint contract so `/kb-run-sprint` does not attempt to run the build-gate suite before the components it asserts against exist.
 
+## Execution Plan
+
+> Written by `/kb-run-sprint` invocation on 2026-06-23 (red-hat reconciliation pass).
+> AC-2 stays `[ ]` until all four tasks land at HEAD; this section records the dependency order only — it is not a completion marker.
+
+1. **MGMT-UI-009** (`MGMT-UI-009-branch-gates-list.md`) — must land first. It creates `BranchGatesList.svelte` (the namesake component), the ExpandableSection-per-branch pattern, and the SDK call shape that MGMT-UI-010 mirrors. The Branch Gates tab is unusable until this exists, and Human Testing Gate step 1 cannot be exercised without it. Backend producer MGMT-BE-004 is already landed at HEAD (per red-hat L21), so the SDK surface is available — no upstream blocker.
+
+2. **MGMT-UI-010** (`MGMT-UI-010-ruleslist-principalid.md`) — lands next, parallel-safe with 011. Adds the optional `principalId` prop to `RulesList.svelte`; when set, the query narrows via the already-landed MGMT-BE-003 (`list_workspace_rules_scoped`). The Rules tab body is otherwise a stub at HEAD; this task is the sole change to the `rules/` components. Backward compatibility (unset ≡ today) is mandatory — Human Testing Gate step 2 (select principal A vs B) requires this.
+
+3. **MGMT-UI-011** (`MGMT-UI-011-accessibility-ipc-retry.md`) — lands next, parallel-safe with 010. Fixes the still-live inverted `tabindex` bug in `TabTrigger.svelte:25` (the exact bug this task was created to fix per red-hat finding 3), adds `role="tablist"` / `role="tabpanel"` + aria-labels, wires the IPC-failure danger InfoMessage + Retry behind the existing ErrorBoundary, and proves the persistent-failure keeps the UI read-only. The self-escalation denial no-flip AC (AC-4) is the load-bearing UC-MGMT-06 consumer-side no-bypass proof — keep it.
+
+4. **MGMT-UI-012** (`MGMT-UI-012-build-gate-tests.md`) — lands LAST, after 009/010/011 are all in. The four structural gates assert against the merged governance surface: (1) no direct `.gitbutler/*.toml` write from governance components, (2) no `+page.server.ts` under `apps/desktop/src`, (3) SDK type-check, (4) human fleet-owner shim present + `resolve_principal_from_env` absent. Running 012 before the components it asserts against exist would produce a misleadingly-green gate.
+
+**Capstone gate:** [REMEDIATE-06B-D](REMEDIATE-06B-D-add-uc-mgmt-06-capstone-no-bypass-proof-ac.md) runs after MGMT-UI-009 + MGMT-UI-011 land. It wires at least one Toggle through `branch_gates_update` to deliver the UC-MGMT-06 consumer-side no-bypass proof: when an admin attempts to self-grant `administration:write`, the server returns `perm.denied`, the UI surfaces a structured denial InfoMessage, and the toggle **does not** flip. This is the load-bearing no-bypass demonstration — without it, the sprint's central invariant is asserted in prose only. **The sprint cannot close PASS until REMEDIATE-06B-D lands.**
+
+> Note (2026-06-23 reconciliation): prior implementation for all 4 UI tasks exists in worktree branches (UI-012 is cumulative — contains 009/010/011 as ancestors). The merge path is documented in `.spec/prds/governance/reviews/verification-20260623T0546Z-sprint-06b-reconciliation.md`. After `kb-verify-06b-merge` lands on `design/lpr-ui-design-contracts`, all 4 tasks flip to Done simultaneously; REMEDIATE-06B-D should be re-verified against the merged HEAD rather than re-implemented (UI-011's history contains `461c06dd36 Fix self-escalation governance denial path` which is plausibly the capstone proof).
+
 <details>
 <summary>▸ Full agent specification (TASK-TEMPLATE v5.2 — required reading for implementer + reviewer)</summary>
 
