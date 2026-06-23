@@ -2,8 +2,8 @@
 use anyhow::{Context as _, Result};
 use but_api_macros::but_api;
 use but_authz::{
-    AssignmentState, Authority, AuthorizedAction, Denial, DenialClass, authorize,
-    load_governance_config, resolve_principal_from_env, serialize_authority_tokens,
+    AssignmentState, Authority, AuthorizedAction, Denial, DenialClass, load_governance_config,
+    resolve_principal_from_env, serialize_authority_tokens,
 };
 use but_core::{RepositoryExt, ref_metadata::ProjectMeta};
 use but_ctx::{Context, ThreadSafeContext};
@@ -162,12 +162,16 @@ fn authorize_branch_action(
     let cfg = load_forge_governance_config(repo, &ref_name)?;
     let principal = resolve_principal_from_env(&cfg)?;
     match authority {
-        Authority::ReviewsWrite => authorize(&principal, Authority::ReviewsWrite, &cfg)?,
-        Authority::CommentsWrite => authorize(&principal, Authority::CommentsWrite, &cfg)?,
-        Authority::PullRequestsWrite => {
-            authorize(&principal, Authority::PullRequestsWrite, &cfg)?;
+        Authority::ReviewsWrite => {
+            but_authz::authorize(&principal, but_authz::Authority::ReviewsWrite, &cfg)?
         }
-        other => authorize(&principal, other, &cfg)?,
+        Authority::CommentsWrite => {
+            but_authz::authorize(&principal, but_authz::Authority::CommentsWrite, &cfg)?
+        }
+        Authority::PullRequestsWrite => {
+            but_authz::authorize(&principal, but_authz::Authority::PullRequestsWrite, &cfg)?;
+        }
+        other => but_authz::authorize(&principal, other, &cfg)?,
     }
     Ok(Some(principal))
 }

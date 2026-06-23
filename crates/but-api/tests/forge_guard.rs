@@ -341,3 +341,70 @@ git checkout main
 fn ref_id(repo: &gix::Repository, ref_name: &str) -> anyhow::Result<gix::ObjectId> {
     Ok(repo.find_reference(ref_name)?.peel_to_id()?.detach())
 }
+
+/// Sprint-02 red-hat G-5: a forge-boundary action hitting a malformed
+/// governance config must surface `config.invalid` -- NOT `perm.denied`. Proves
+/// the forge path runs `governance_present` -> `load_forge_governance_config`
+/// -> `resolve_principal_from_env` -> `authorize` in that order, mirroring
+/// AUTHZ-004 AC-2's deterministic fail-closed ordering for the merge gate.
+#[test]
+#[serial_test::serial]
+fn forge_guard_malformed_config_is_config_invalid() -> anyhow::Result<()> {
+    let (repo, _tmp) = malformed_review_repo();
+    let ctx = but_ctx::Context::from_repo(repo)?.with_memory_app_cache();
+    let runtime = tokio::runtime::Runtime::new()?;
+
+    let raw_error = match approve_feat_as(&runtime, &ctx, "dev") {
+        Ok(()) => anyhow::bail!("malformed governance config must not permit any action"),
+        Err(err) => err,
+    };
+    // The forge path classifies malformed-config load failures into a
+    // structured ForgeGateError carrying the `config.invalid` code.
+    let gate_error = but_api::legacy::forge::classify_error(&raw_error)
+        .context("malformed forge governance config should classify as a structured gate error")?;
+    assert_eq!(
+        gate_error.code, "config.invalid",
+        "malformed forge governance config must surface config.invalid (config-load-first); got: {gate_error:?}"
+    );
+    assert_ne!(
+        gate_error.code, "perm.denied",
+        "perm.denied must not be surfaced when config is malformed"
+    );
+
+    println!(
+        "malformed forge config returned `config.invalid` (config-load-first): {}",
+        gate_error.message
+    );
+    Ok(())
+}
+
+fn malformed_review_repo() -> (gix::Repository, tempfile::TempDir) {
+    let (repo, tmp) = but_testsupport::writable_scenario("checkout-head-info");
+    but_testsupport::invoke_bash(
+        r#"
+rm -rf .gitbutler
+mkdir -p .gitbutler
+cat >.gitbutler/permissions.toml <<'EOF'
+[[principal]
+id = "dev"
+permissions = nope
+EOF
+
+cat >.gitbutler/gates.toml <<'EOF'
+[[branch]]
+name = "feat"
+protected = true
+EOF
+
+git add .gitbutler/permissions.toml .gitbutler/gates.toml
+git commit -m "malformed governance config"
+git checkout -b feat
+echo feat-base >feat-base.txt
+git add feat-base.txt
+git commit -m "feat base"
+git checkout main
+"#,
+        &repo,
+    );
+    (repo, tmp)
+}

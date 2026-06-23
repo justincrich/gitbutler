@@ -59,7 +59,7 @@ pub fn enforce_merge_gate(ctx: &but_ctx::Context, review_id: usize) -> anyhow::R
     let config = load_merge_governance_config(&repo, &target_ref)?;
 
     let principal = but_authz::resolve_principal_from_env(&config.gov)?;
-    but_authz::authorize(&principal, Authority::Merge, &config.gov)?;
+    but_authz::authorize(&principal, but_authz::Authority::Merge, &config.gov)?;
 
     if !config
         .gov

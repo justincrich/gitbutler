@@ -173,3 +173,38 @@ fn committed_blob_text(repo: &gix::Repository, path: &str) -> anyhow::Result<Str
     let blob = repo.find_object(entry.id())?.try_into_blob()?;
     Ok(String::from_utf8(blob.data.to_vec())?)
 }
+
+/// Sprint-02 red-hat G-4: a ghost caller (handle not in committed config) hitting
+/// a malformed governance config must surface `config.invalid` -- NOT
+/// `perm.denied`. Proves the admin-write guard runs config-load BEFORE
+/// authorize (deterministic fail-closed ordering), mirroring AUTHZ-004 AC-2's
+/// coverage of the merge-gate path.
+#[test]
+#[serial_test::serial]
+fn admin_write_guard_malformed_config_invalid_for_ghost_caller() -> anyhow::Result<()> {
+    let (repo, _tmp) = admin_write_malformed();
+
+    // BUT_AGENT_HANDLE names a principal that does NOT exist in the
+    // (malformed) committed config. If authorize ran before config-load,
+    // this would surface `perm.denied` for the unknown principal.
+    let error = temp_env::with_var(
+        "BUT_AGENT_HANDLE",
+        Some("ghost-not-in-config"),
+        || -> anyhow::Result<_> {
+            classified_error(enforce_administration_write_gate(&repo, MAIN_REF))
+        },
+    )?;
+
+    assert_eq!(
+        error.code, "config.invalid",
+        "malformed committed config must surface config.invalid even for an unknown caller -- \
+         config-load must run BEFORE authorize (deterministic fail-closed ordering)"
+    );
+    assert_ne!(
+        error.code, "perm.denied",
+        "an unknown principal must NOT be blamed when the config itself is malformed"
+    );
+
+    println!("ghost caller + malformed config returned `config.invalid` (config-load-first)");
+    Ok(())
+}

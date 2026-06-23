@@ -30,7 +30,7 @@ const ENFORCEMENT_PATHS: &[&str] = &[
     GOVERNANCE,
     FORGE_GUARD,
 ];
-const SPRINT_02_ENFORCEMENT_PATHS: &[&str] = &[MERGE_GATE, CONFIG_MUTATE];
+const SPRINT_02_ENFORCEMENT_PATHS: &[&str] = &[MERGE_GATE, CONFIG_MUTATE, FORGE_GUARD];
 
 #[test]
 fn invariant_build_gates() -> anyhow::Result<()> {
@@ -80,6 +80,12 @@ fn invariant_build_gates() -> anyhow::Result<()> {
         &workspace_root,
         AUTHORITY_POSITIVE_PATTERN,
         &[GOVERNANCE],
+    )?;
+    assert_grep_has_matches(
+        "forge boundary must use the but-authz Authority axis",
+        &workspace_root,
+        AUTHORITY_POSITIVE_PATTERN,
+        &[FORGE_GUARD],
     )?;
     assert_grep_has_no_matches(
         "commit gate must not use GitButler Permission as authz carrier",
