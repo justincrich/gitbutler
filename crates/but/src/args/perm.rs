@@ -17,7 +17,7 @@ pub enum Subcommands {
     /// Grant direct permissions to a principal in the working-tree governance config.
     Grant {
         /// Principal to grant.
-        #[clap(long)]
+        #[clap(long, required = true)]
         principal: String,
         /// Functional permission tokens to grant.
         #[clap(required = true)]
@@ -26,7 +26,7 @@ pub enum Subcommands {
     /// Revoke direct permissions from a principal in the working-tree governance config.
     Revoke {
         /// Principal to revoke from.
-        #[clap(long)]
+        #[clap(long, required = true)]
         principal: String,
         /// Functional permission tokens to revoke.
         #[clap(required = true)]

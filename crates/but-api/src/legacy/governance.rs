@@ -1567,8 +1567,10 @@ pub fn group_grant_with_repo(
     group: &str,
     authorities: &[&str],
 ) -> anyhow::Result<GroupWriteOutcome> {
-    let parsed = parse_authorities(authorities)?;
+    // GAP-5 red-hat fix: admin-write gate BEFORE token parse (see
+    // perm_grant_with_repo for the full rationale).
     enforce_administration_write_gate(repo, target_ref)?;
+    let parsed = parse_authorities(authorities)?;
     group_grant_authorized(repo, target_ref, group, &parsed)
 }
 
@@ -1848,8 +1850,13 @@ pub fn perm_grant_with_repo(
     principal: &str,
     authorities: &[&str],
 ) -> anyhow::Result<PermWriteOutcome> {
-    let parsed = parse_authorities(authorities)?;
+    // GAP-5 red-hat fix: run the admin-write gate BEFORE parsing the supplied
+    // authority tokens. The previous ordering (parse → gate) leaked token
+    // validity information to non-admin callers (they could distinguish
+    // "unknown token" from "perm.denied"). Admin-first ensures a non-admin
+    // sees only the perm.denied, never the token-validation error.
     enforce_administration_write_gate(repo, target_ref)?;
+    let parsed = parse_authorities(authorities)?;
     perm_grant_with_parsed_authorities(repo, target_ref, principal, &parsed)
 }
 
@@ -2412,9 +2419,24 @@ pub fn classify_governance_error(err: &anyhow::Error) -> Option<GovernanceErrorP
         });
     }
 
-    super::config_mutate::classify_error(err).map(|gate_error| GovernanceErrorPayload {
-        code: gate_error.code,
-        message: gate_error.message,
-        remediation_hint: None,
+    super::config_mutate::classify_error(err).map(|gate_error| {
+        // GAP-4 red-hat fix: the AdminWriteGateError fallback path dropped
+        // remediation_hint to None. For but_authz::ConfigError (the only
+        // type the fallback catches that the earlier arms miss), surface
+        // a meaningful remediation_hint so the CLI payload still carries
+        // recovery context. The Denial and ConfigInvalid arms above
+        // already populate remediation_hint.
+        let remediation_hint = err
+            .downcast_ref::<but_authz::ConfigError>()
+            .map(|config_error| {
+                format!(
+                    "fix the committed governance config and re-commit (config.invalid: {config_error})"
+                )
+            });
+        GovernanceErrorPayload {
+            code: gate_error.code,
+            message: gate_error.message,
+            remediation_hint,
+        }
     })
 }
