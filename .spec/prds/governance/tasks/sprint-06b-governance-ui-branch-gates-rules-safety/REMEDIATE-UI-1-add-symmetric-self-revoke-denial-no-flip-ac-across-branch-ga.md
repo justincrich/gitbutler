@@ -1,8 +1,10 @@
 # REMEDIATE-UI-1: Add symmetric self-revoke denial no-flip AC across Branch Gates and Governance E2E
 
-**Type:** REMEDIATION | **Status:** Backlog | **Priority:** P0 | **Effort:** M (150 min)
+**Type:** REMEDIATION | **Status:** Cancelled | **Priority:** P0 | **Effort:** M (150 min)
 **Agent:** sveltekit-implementer | **Reviewer:** sveltekit-reviewer | **Proposed by:** sveltekit-planner
 **Closes red-hat findings:** H5
+**Superseded by:** REMEDIATE-06B-D (symmetric self-revoke no-flip is covered by REMEDIATE-06B-D AC-3)
+**Reason:** Superseded by REMEDIATE-06B-D AC-3; no independent work required.
 **Depends on:** MGMT-UI-009, E2E-MGMT-UI-001, DESIGN-MGMT-004, REMEDIATE-UI-4 | **Blocks:** (none)
 **PRD refs:** UC-MGMT-03, UC-MGMT-04, DESIGN-MGMT-004 | **Capabilities:** CAP-AUTHZ-01, CAP-A11Y-01
 
