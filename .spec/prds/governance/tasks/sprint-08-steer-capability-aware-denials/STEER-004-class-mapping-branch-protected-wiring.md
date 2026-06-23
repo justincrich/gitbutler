@@ -57,7 +57,7 @@ Each denial carries the correct class per (code, resolution); operator_required 
 - [MUST] MUST populate `held_permissions` + `authorized_actions` + `class=ActorCorrectable` on `missing_permission(missing, held)` (authorize.rs:113) — `held` is already passed in; derive the menu via STEER-003's authorized_actions with the cfg in scope.
 - [MUST] MUST set `no_handle()` (authorize.rs:146) and `unknown_principal()` (authorize.rs:163) to `class=OperatorRequired`, empty `held_permissions`, empty `authorized_actions`, and `do_not = Some("register the principal / set BUT_AGENT_HANDLE; do not retry as-is")` (security HIGH #2 — such a caller cannot self-correct in-system, so an empty menu + do-not-retry is correct, not actor_correctable).
 - [MUST] MUST set `config.invalid` on BOTH carriers — `ConfigError` (config.rs) and `MergeGateError::config_invalid()` (merge_gate.rs:369) — to `class=OperatorRequired`, empty menu, and `do_not = Some("do not retry — an operator must fix the committed .gitbutler config")` (D5). ConfigError carries class+do_not only.
-- [MUST] MUST change `branch_protected(principal, branch_name)` (gate.rs:159) → `branch_protected(principal, &cfg, branch_name)` and re-call `effective_authority(principal, &cfg)` to build a gate-state-aware menu (the held set is dropped on authorize's Ok path today, gate.rs:67; the cfg is in scope at the call site, gate.rs:69-74) — the menu offers a feature-branch commit + review, never the protected-ref commit (D3/C5).
+- [MUST] MUST change `branch_protected(principal, branch_name)` (gate.rs:257) → `branch_protected(principal, &cfg, branch_name)` and re-call `effective_authority(principal, &cfg)` to build a gate-state-aware menu (the held set is dropped on authorize's Ok path today, gate.rs:67; the cfg is in scope at the call site, gate.rs:69-74) — the menu offers a feature-branch commit + review, never the protected-ref commit (D3/C5).
 - [NEVER] NEVER add a defaulted/catch-all (`_ =>`) arm to the `match cause` over `DenialCause` — exhaustiveness IS the security property (a removed or unhandled variant must fail to compile).
 - [NEVER] NEVER classify no-handle/unknown-principal as actor_correctable (they would loop the agent retrying actions it has no authority for — security HIGH #2).
 - [NEVER] NEVER populate held_permissions on the unresolved-principal or config.invalid paths — it is structurally empty there (UC-STEER-01 AC-3).
@@ -92,10 +92,10 @@ AC-1: class is correct per (code, principal-resolution) [PRIMARY]
 AC-2: operator_required → empty menu + do-not-retry do_not
   GIVEN: a malformed committed gates.toml at the target ref and an unset/unknown principal
   WHEN:  a gated action runs
-  THEN:  the denial is config.invalid (or unresolved-principal perm.denied) with `authorized_actions == []` and a `do_not` that says do-not-retry / requires an operator
+  THEN:  the denial is config.invalid (or unresolved-principal perm.denied) with `authorized_actions == []`, `held_permissions` empty or absent, and a `do_not` that says do-not-retry / requires an operator
   TEST_TIER: integration   VERIFICATION_SERVICE: but-api
   VERIFY: cargo test -p but-api steer_operator_required_empty_menu_do_not && cargo test -p but governed_loop_steer_config_invalid_operator
-  SCENARIO: would fail if config.invalid carries a non-empty menu (offers actions for an operator-only fault); do_not is None on operator_required; the menu derivation runs on a config it could not load (panic) | must observe: `code:"config.invalid"`; `authorized_actions` == `[]`; `do_not` containing `do not retry` | must NOT observe: a non-empty `authorized_actions` on config.invalid; `do_not` absent / null; an `actor_correctable` class
+  SCENARIO: would fail if config.invalid carries a non-empty menu (offers actions for an operator-only fault); do_not is None on operator_required; held_permissions leaks authority fragments to an unresolved caller; the menu derivation runs on a config it could not load (panic) | must observe: `code:"config.invalid"`; `authorized_actions` == `[]`; `held_permissions` is empty or absent; `do_not` containing `do not retry` | must NOT observe: a non-empty `authorized_actions` on config.invalid; a non-empty `held_permissions` on an operator_required unresolved-principal/config.invalid denial; `do_not` absent / null; an `actor_correctable` class
 
 AC-3: branch_protected threads &cfg and produces a gate-state-aware menu (feature-branch commit + review, no protected-ref commit)
   GIVEN: the signature change `branch_protected(principal, &cfg, branch_name)` re-calling effective_authority
@@ -157,7 +157,7 @@ CAPABILITY BOUNDARY
 --------------------------------------------------------------------------------
 touches: CAP-STEER-01
 provides: a `DenialCause` enum { MissingAuthorityResolved, BranchProtected, ReviewRequired, UnresolvedPrincipal, ConfigInvalid } + an exhaustive non-defaulted `match cause -> DenialClass` (no `_ =>` arm — omitting a variant is a compile error); missing_permission populating held+menu+class=ActorCorrectable; no_handle()/unknown_principal() → class=OperatorRequired + empty held + empty menu + do-not-retry do_not; config.invalid (ConfigError + MergeGateError::config_invalid) → OperatorRequired + empty menu + do_not; branch_protected(principal, &cfg, branch_name) signature change re-calling effective_authority for the gate-state-aware menu
-consumes: but_authz::authorized_actions derivation (STEER-003); Denial + DenialClass + AuthorizedAction (STEER-001); effective_authority (authorize.rs:51); missing_permission :113 / no_handle :146 / unknown_principal :163; ConfigError (config.rs:241); MergeGateError::config_invalid (merge_gate.rs:369); commit gate authorize + branch_protected (gate.rs:67-74,159)
+consumes: but_authz::authorized_actions derivation (STEER-003); Denial + DenialClass + AuthorizedAction (STEER-001); effective_authority (authorize.rs:51); missing_permission :113 / no_handle :146 / unknown_principal :163; ConfigError (config.rs:241); MergeGateError::config_invalid (merge_gate.rs:369); commit gate authorize + branch_protected (gate.rs:67-74,257)
 boundary_contracts:
   - CAP-STEER-01: class is determined by an EXHAUSTIVE, non-defaulted match over (code, principal-resolution); a resolved principal lacking authority + branch.protected + gate.review_required → actor_correctable; no-handle/unknown-principal (perm.denied code) + config.invalid → operator_required with empty menu + do-not-retry do_not. The branch.protected menu derives from the same cfg the gate loaded at the target ref (branch_protected receives &cfg). DryRun carries the full payload while persisting nothing.
 
@@ -184,7 +184,7 @@ writeProhibited:
 READING LIST
 --------------------------------------------------------------------------------
   - crates/but-authz/src/authorize.rs (lines 24-31, 51-58, 104-172): authorize :24 (drops held on Ok); effective_authority :51; missing_permission(missing, held) :113 (already has held -> populate menu); no_handle :146 / unknown_principal :163 (resolve no principal -> operator_required + empty + do_not). Site the `DenialCause` enum here so the `match cause -> DenialClass` is non-defaulted and exhaustive.
-  - crates/but-api/src/commit/gate.rs (lines 55-94, 159-170): enforce_commit_gate_for_target :55, authorize(p, ContentsWrite) :67, the branch-protection predicate :69-74 (cfg in scope), branch_protected :159 (the signature to change to (principal, &cfg, branch_name)), classify_error :81.
+  - crates/but-api/src/commit/gate.rs (lines 55-94, 257-292): enforce_commit_gate_for_target :55, authorize(p, ContentsWrite) :67, the branch-protection predicate :69-74 (cfg in scope), branch_protected :257 (the signature to change to (principal, &cfg, branch_name)), classify_error :81.
   - crates/but-authz/src/config.rs (lines 239-265): ConfigError :241 + code() :255 → set class=OperatorRequired + do_not.
   - crates/but-api/src/legacy/merge_gate.rs (lines 365-376): config_invalid() :369 → set class=OperatorRequired + empty menu + do_not (the merge-path config.invalid carrier).
   - crates/but-api/tests/commit_gate.rs (lines 61-98, 163-251): commit_gate_readonly_and_bad_handle_denied + commit_gate_malformed_partial_and_dryrun — the (handle, label) matrix and the DryRun-no-mutation assertions to extend with class/payload checks.
@@ -223,7 +223,7 @@ CODING STANDARDS: crates/AGENTS.md, crates/but/AGENTS.md, crates/WORKSPACE_MODEL
     {
       "id": "AC-2",
       "type": "acceptance_criterion",
-      "description": "GIVEN an operator_required cause WHEN denied THEN authorized_actions == [] and do_not says do-not-retry",
+      "description": "GIVEN an operator_required cause WHEN denied THEN authorized_actions == [], held_permissions is empty or absent, and do_not says do-not-retry",
       "verify": "cargo test -p but-api steer_operator_required_empty_menu_do_not && cargo test -p but governed_loop_steer_config_invalid_operator"
     },
     {

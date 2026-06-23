@@ -6,7 +6,7 @@ Prove the menu never lies: extend governed_loop so every offered `authorized_act
 
 ## Why
 
-Sprint 08 (STEER — Capability-Aware Denials) · PRD UC-STEER-06 · Capability CAP-STEER-01. For a branch.protected denial against a feature-branch-commit + review menu, replaying the feature-branch commit advances the feature ref (exit 0) and replaying the review action succeeds, while neither reproduces the original branch.protected; a config advance between denial and replay yields a clean re-denial (exit 1, valid JSON, no panic); a forced serialization fault still emits code/message/remediation_hint + exit 1; no whole-object-equality assert_eq! on Denial/MergeGateError survives, and positive assertions confirm the new fields.
+Sprint 08 (STEER — Capability-Aware Denials) · PRD UC-STEER-06 · Capability CAP-STEER-01. For a branch.protected denial against a feature-branch-commit + review menu, replaying the feature-branch commit advances the feature ref (exit 0) and replaying the review action succeeds, while neither reproduces the original branch.protected; a config advance between denial and replay yields a clean re-denial (exit 1, valid JSON, no panic); a forced serialization fault still emits code/message/remediation_hint + exit 1; no whole-object-equality assert_eq! on Denial/MergeGateError survives, and positive assertions confirm the new fields. The no-lying-menu proof covers all four menu-bearing denial types.
 
 ## How to verify
 
@@ -37,18 +37,18 @@ PRD_REFS:   UC-STEER-06
 CAPABILITIES: CAP-STEER-01
 
 RUNTIME_COMMANDS:
-  test:  cargo test -p but governed_loop_no_lying_menu_replay governed_loop_review_required_menu_replay governed_loop_perm_denied_menu_replay   |   cargo test -p but governed_loop_concurrent_ref_advance_clean_redenial governed_loop_serialization_fault_failclosed   |   cargo test -p but governed_loop_dryrun_serialization_fault_failclosed   |   cargo test -p but governed_loop && cargo test -p but-api commit_gate merge_gate
+  test:  cargo test -p but governed_loop_no_lying_menu_replay governed_loop_review_required_menu_replay governed_loop_perm_denied_menu_replay governed_loop_admin_write_menu_replay  |   cargo test -p but governed_loop_concurrent_ref_advance_clean_redenial governed_loop_serialization_fault_failclosed   |   cargo test -p but governed_loop_dryrun_serialization_fault_failclosed   |   cargo test -p but governed_loop && cargo test -p but-api commit_gate merge_gate
   lint:  cargo clippy -p but -p but-api --all-targets
 
 --------------------------------------------------------------------------------
 OUTCOME
 --------------------------------------------------------------------------------
-For a branch.protected denial against a feature-branch-commit + review menu, replaying the feature-branch commit advances the feature ref (exit 0) and replaying the review action succeeds, while neither reproduces the original branch.protected; a config advance between denial and replay yields a clean re-denial (exit 1, valid JSON, no panic); a forced serialization fault still emits code/message/remediation_hint + exit 1; no whole-object-equality assert_eq! on Denial/MergeGateError survives, and positive assertions confirm the new fields.
+For a branch.protected denial against a feature-branch-commit + review menu, replaying the feature-branch commit advances the feature ref (exit 0) and replaying the review action succeeds, while neither reproduces the original branch.protected; a config advance between denial and replay yields a clean re-denial (exit 1, valid JSON, no panic); a forced serialization fault still emits code/message/remediation_hint + exit 1; no whole-object-equality assert_eq! on Denial/MergeGateError survives, and positive assertions confirm the new fields. This is proven across all four menu-bearing denial types (branch.protected, gate.review_required, perm.denied, and admin-write/governance).
 
 --------------------------------------------------------------------------------
 🚫 CRITICAL CONSTRAINTS (Never tier — read before acting)
 --------------------------------------------------------------------------------
-- [MUST] MUST EXTEND the existing `crates/but/tests/but/command/governed_loop.rs` harness — reuse its `governed_loop_env` fixture builder, the `CliErrorEnvelope` reader (extend it to also read `class`/`held_permissions`/`authorized_actions`/`do_not`), and the assert_denial style. For EACH of the THREE menu-bearing denial types — `branch.protected` (commit gate), `gate.review_required` (merge gate via `pr merge`), and `perm.denied`/missing-authority (commit gate) — parse `authorized_actions[i].command` from the serialized JSON and REPLAY each command in its stated context against a real subsequent `but` run, asserting exit 0 OR its own legitimate non-`perm.denied`/non-`gate.review_required` gate (never reproducing the ORIGINAL denial's code/predicate at the denied ref). T-STEER-024 requires every denial type's menu replayed, not branch.protected alone.
+- [MUST] MUST EXTEND the existing `crates/but/tests/but/command/governed_loop.rs` harness — reuse its `governed_loop_env` fixture builder, the `CliErrorEnvelope` reader (extend it to also read `class`/`held_permissions`/`authorized_actions`/`do_not`), and the assert_denial style. For EACH of the FOUR menu-bearing denial types — `branch.protected` (commit gate), `gate.review_required` (merge gate via `pr merge`), `perm.denied`/missing-authority (commit gate), AND `administration:write`/admin-write (governance CLI via `but perm grant/revoke`) — parse `authorized_actions[i].command` from the serialized JSON and REPLAY each command in its stated context against a real subsequent `but` run, asserting exit 0 OR its own legitimate non-`perm.denied`/non-`gate.review_required` gate (never reproducing the ORIGINAL denial's code/predicate at the denied ref). T-STEER-024 requires every denial type's menu replayed, not branch.protected alone.
 - [MUST] MUST add a `gate.review_required` (merge-gate) menu-replay case: `maintainer` (group maintainers -> merge) attempts `pr merge 77` with zero distinct approvals so the merge gate denies `gate.review_required` (a `MergeGateError`); replay each of that menu's review-status/hand-off/discovery affordances and assert exit 0 OR a legitimate non-`gate.review_required` gate (e.g. the forge boundary), never reproducing `gate.review_required` at the merge target.
 - [MUST] MUST add a `perm.denied` (missing-authority) commit-gate menu-replay case: `reviewer` (reviews:write, NO contents:write) attempts a commit so the commit gate denies `perm.denied` (a resolved principal lacking authority — a `Denial`); replay each of that menu's review/discovery affordances and assert exit 0 OR a legitimate non-`perm.denied` gate, never reproducing `perm.denied` at the denied commit ref.
 - [MUST] MUST add a concurrent-ref-advance case: produce a denial (capturing its menu) on a ref pinned at OID X, then advance the target-ref governance config via invoke_bash (a new commit at the target ref) BETWEEN denial and replay, then replay an offered command — asserting a CLEAN re-denial (exit 1, parseable JSON error envelope, refs unchanged on the denied side, NO panic, NO inconsistent state) rather than a success or a crash (security MED #4 — the ref-pin temporal window).
@@ -70,6 +70,7 @@ DONE WHEN
 - [ ] AC-5: Serialization fault (BUT_STEER_FORCE_SERIALIZATION_FAULT) on the new fields still denies with existing fields + exit 1
 - [ ] AC-6: DryRun under a serialization fault still fails closed (exit 1, existing fields, zero mutations)
 - [ ] AC-7: Whole-object-equality assertions audited/updated + positive new-field assertions added
+- [ ] AC-8: Every offered command on an admin-write (governance, `but perm grant` or equivalent admin mutator) menu succeeds in its stated context or hits a legitimate non-`perm.denied` gate; none reproduces the original `perm.denied` at the denied admin ref
 - [ ] All verification gates pass; only write_allowed files modified
 
 --------------------------------------------------------------------------------
@@ -132,6 +133,14 @@ AC-7: Whole-object-equality assertions audited/updated + positive new-field asse
   VERIFY: cargo test -p but governed_loop && cargo test -p but-api commit_gate merge_gate
   SCENARIO: would fail if a left-over full-object assert_eq! on Denial/MergeGateError fails to compile/run against the new fields; stub; static | must observe: `cargo test` exit `0` for `governed_loop`, `commit_gate`, and `merge_gate` against the new fields; at least `1` positive assertion that `class` `== "actor_correctable"` and `authorized_actions` is non-empty on an actor-correctable denial | must NOT observe: a compile/run failure from a surviving whole-object equality on Denial/MergeGateError (a `removed`-field break); the new fields untested (`no` positive assertion present) (and no such entry/value present — the empty/start state must be excluded)
 
+AC-8: Every offered command on an admin-write (governance) menu succeeds in its stated context
+  GIVEN: the committed `governed_loop_branch_protected` fixture; a resolved principal lacking `administration:write` attempts an admin mutating action (e.g. `but perm grant`) so `governance_cli_error` denies `perm.denied` with an `authorized_actions` menu carrying the §5 admin-write affordance row (read/inspect configuration, request-config-change, discovery)
+  WHEN:  each `authorized_actions[i].command` is parsed from the serialized governance denial JSON and REPLAYED in its stated context against a real subsequent `but` run
+  THEN:  every offered command exits 0 (e.g. an inspect/list command without mutation when the principal can read governance state) OR hits its own legitimate non-`perm.denied` gate; NO offered command reproduces the ORIGINAL `perm.denied` at the denied admin ref — proving the admin-write actor-correctable menu is also non-lying
+  TEST_TIER: integration   VERIFICATION_SERVICE: governed_loop
+  VERIFY: cargo test -p but governed_loop_admin_write_menu_replay
+  SCENARIO: would fail if lying-menu; stub; empty; static | must observe: at least `2` offered commands replayed off the admin-write menu (read/inspect or request-config-change + discovery, a non-degenerate menu); each offered command exits `0` or hits a non-governance/non-`perm.denied` gate | must NOT observe: any offered command reproducing the original `perm.denied` code at the denied admin ref (`0` such); an `empty` authorized_actions for the actor-correctable admin-write denial
+
 --------------------------------------------------------------------------------
 TEST CRITERIA (boolean; maps to ACs)
 --------------------------------------------------------------------------------
@@ -151,15 +160,17 @@ TEST CRITERIA (boolean; maps to ACs)
     VERIFY: cargo test -p but governed_loop_dryrun_serialization_fault_failclosed
 - TC-8 (-> AC-7, structural): No whole-object-equality assert_eq! on Denial/MergeGateError survives the audit; governed_loop + commit_gate + merge_gate all pass with positive new-field assertions
     VERIFY: cargo test -p but governed_loop && cargo test -p but-api commit_gate merge_gate
+- TC-9 (-> AC-8, happy_path): Every authorized_actions[i].command on an admin-write (governance) menu replayed in its stated context exits 0 or hits its own legitimate non-perm.denied gate; none reproduces the original perm.denied at the denied admin ref
+    VERIFY: cargo test -p but governed_loop_admin_write_menu_replay
 
 --------------------------------------------------------------------------------
 CAPABILITY BOUNDARY
 --------------------------------------------------------------------------------
 touches: CAP-STEER-01
-provides: the extended governed_loop no-lying-menu proof across ALL THREE menu-bearing denial types: every authorized_actions[i].command replayed in its stated context succeeds (or hits its own legitimate non-perm.denied/non-gate.review_required gate) for branch.protected (commit gate), gate.review_required (merge gate), and perm.denied/missing-authority (commit gate); a concurrent-ref-advance regression case (clean re-denial); a serialization-fault regression case via STEER-005's BUT_STEER_FORCE_SERIALIZATION_FAULT seam (exit 1 with existing fields); a DryRun-under-serialization-fault fail-closed case (exit 1 + existing fields + 0 mutations); an audited test suite free of whole-object-equality assertions on Denial/MergeGateError, with positive field assertions for the new steering fields
+provides: the extended governed_loop no-lying-menu proof across ALL FOUR menu-bearing denial types: every authorized_actions[i].command replayed in its stated context succeeds (or hits its own legitimate non-perm.denied/non-gate.review_required gate) for branch.protected (commit gate), gate.review_required (merge gate), perm.denied/missing-authority (commit gate), and administration:write/admin-write (governance CLI via governance_cli_error); a concurrent-ref-advance regression case (clean re-denial); a serialization-fault regression case via STEER-005's BUT_STEER_FORCE_SERIALIZATION_FAULT seam (exit 1 with existing fields); a DryRun-under-serialization-fault fail-closed case (exit 1 + existing fields + 0 mutations); an audited test suite free of whole-object-equality assertions on Denial/MergeGateError, with positive field assertions for the new steering fields
 consumes: STEER-003 gate-state-aware derivation (the menu being replayed); STEER-005 CLI serializers (the serialized authorized_actions[i].command strings the test reads + replays); the governed_loop fixture + CliErrorEnvelope reader (crates/but/tests/but/command/governed_loop.rs); but_testsupport invoke_bash/invoke_git for the concurrent-ref-advance; STEER-005 `BUT_STEER_FORCE_SERIALIZATION_FAULT` test/debug-gated best-effort-serialization fault seam (the EXACT seam STEER-009's serialization-fault + DryRun-fault cases activate)
 boundary_contracts:
-  - CAP-STEER-01: every offered command, replayed in its stated context against a REAL subsequent run, succeeds for that caller (or hits its own legitimate non-perm.denied/non-gate.review_required gate) — proven across all three menu-bearing denial types (branch.protected via the commit gate, gate.review_required via the merge gate, perm.denied/missing-authority via the commit gate), not branch.protected alone. A concurrent ref advance between denial and replay yields a CLEAN re-denial (exit 1, valid JSON, no panic/inconsistent state). A serialization fault on the new fields (activated via STEER-005's BUT_STEER_FORCE_SERIALIZATION_FAULT seam) still denies with code/message/remediation_hint + exit 1 (fail-closed), including under --dry-run (which persists 0 objects/refs even under the fault).
+  - CAP-STEER-01: every offered command, replayed in its stated context against a REAL subsequent run, succeeds for that caller (or hits its own legitimate non-perm.denied/non-gate.review_required/non-admin-write-perm.denied gate) — proven across all four menu-bearing denial types (branch.protected via the commit gate, gate.review_required via the merge gate, perm.denied/missing-authority via the commit gate, and administration:write/admin-write via the governance CLI), not branch.protected alone. A concurrent ref advance between denial and replay yields a CLEAN re-denial (exit 1, valid JSON, no panic/inconsistent state). A serialization fault on the new fields (activated via STEER-005's BUT_STEER_FORCE_SERIALIZATION_FAULT seam) still denies with code/message/remediation_hint + exit 1 (fail-closed), including under --dry-run (which persists 0 objects/refs even under the fault).
 
 --------------------------------------------------------------------------------
 SCOPE (file-level write permissions)
@@ -196,7 +207,7 @@ references: 02-uc-steer.md UC-STEER-06 AC-1; 04-e2e-testing-criteria.md T-STEER-
 interaction_notes:
   - replays the menu STEER-003 derives + STEER-005 serializes through the real CLI
   - the serialization-fault + DryRun-fault cases consume STEER-005's BUT_STEER_FORCE_SERIALIZATION_FAULT test/debug seam — a real exercised seam, not an improvised fault; if absent, FLAG as a dependency gap rather than stubbing
-  - replays all three menu-bearing denial types (branch.protected commit-gate, gate.review_required merge-gate, perm.denied/missing-authority commit-gate) — T-STEER-024 requires every denial type's menu replayed
+  - replays all four menu-bearing denial types (branch.protected commit-gate, gate.review_required merge-gate, perm.denied/missing-authority commit-gate, and administration:write/admin-write governance via `governance_cli_error`) — T-STEER-024 requires every denial type's menu replayed
 
 --------------------------------------------------------------------------------
 DEPENDENCIES
@@ -256,6 +267,12 @@ CODING STANDARDS: crates/AGENTS.md, crates/but/AGENTS.md, RULES.md
       "verify": "cargo test -p but governed_loop && cargo test -p but-api commit_gate merge_gate"
     },
     {
+      "id": "AC-8",
+      "type": "acceptance_criterion",
+      "description": "GIVEN an admin-write (governance) denial menu (administration:write missing, e.g. `but perm grant`), WHEN each offered command is replayed in its stated context, THEN every command succeeds or hits its own legitimate non-perm.denied gate and none reproduces the original perm.denied at the denied admin ref",
+      "verify": "cargo test -p but governed_loop_admin_write_menu_replay"
+    },
+    {
       "id": "TC-1",
       "type": "test_criterion",
       "description": "Every authorized_actions[i].command on a branch.protected menu replayed in its stated context exits 0 or hits its own legitimate non-perm.denied gate; none repr",
@@ -310,6 +327,13 @@ CODING STANDARDS: crates/AGENTS.md, crates/but/AGENTS.md, RULES.md
       "description": "No whole-object-equality assert_eq! on Denial/MergeGateError survives the audit; governed_loop + commit_gate + merge_gate all pass with positive new-field asser",
       "maps_to_ac": "AC-7",
       "verify": "cargo test -p but governed_loop && cargo test -p but-api commit_gate merge_gate"
+    },
+    {
+      "id": "TC-9",
+      "type": "test_criterion",
+      "description": "Every authorized_actions[i].command on an admin-write (governance) menu replayed in its stated context exits 0 or hits its own legitimate non-perm.denied gate; none reproduces the original perm.denied at the denied admin ref",
+      "maps_to_ac": "AC-8",
+      "verify": "cargo test -p but governed_loop_admin_write_menu_replay"
     }
   ]
 }

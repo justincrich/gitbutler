@@ -122,10 +122,10 @@ AC-5: whoami/can-i does not list other members of the caller's groups
 AC-6: Discovery is not a principal-existence oracle (unknown-target indistinguishable from insufficient-authority)
   GIVEN: the committed `reviewers_group_with_members` fixture; caller `rev` is a resolved, non-admin principal (NOT administration:read); a target principal id `ghost-9f3a` that does NOT exist in `.gitbutler/permissions.toml`
   WHEN:  `but can-i --principal ghost-9f3a merge` runs (an unknown target) with BUT_AGENT_HANDLE=rev, compared against `but can-i --principal maint merge` (an existing target rev cannot recon)
-  THEN:  BOTH cross-principal calls return exit 1 with the SAME `perm.denied` code AND a `message` that does NOT distinguish "unknown principal" from "insufficient authority" — the unknown-target path leaks no token revealing whether `ghost-9f3a` exists (no "unknown principal"/"not found"/"no such principal" wording), so the endpoint cannot be used to enumerate principal ids
+  THEN:  BOTH cross-principal calls return exit 1 with the SAME `perm.denied` code, the SAME `class` (`actor_correctable`/`operator_required` — a `class` divergence would itself be an existence oracle), the SAME canonical denial `message` (or a message that differs ONLY by the target principal id, which is not an existence-revealing distinction), and the SAME `authorized_actions`/`held_permissions`/`do_not` envelope shape. The message contains no existence-revealing token distinguishing "unknown principal" from "insufficient authority" (no "unknown principal"/"not found"/"no such principal" wording), so the endpoint cannot be used to enumerate principal ids
   TEST_TIER: integration   VERIFICATION_SERVICE: but-cli
   VERIFY: cargo test -p but steer_discovery_not_a_principal_oracle
-  SCENARIO: would fail if disconnect; stub; static | must observe: `error.code` `== "perm.denied"` on the unknown-target call with exit `1`; `error.code` `== "perm.denied"` on the existing-target call with exit `1` (the `1` codes are identical across both targets) | must NOT observe: the unknown-target `message` containing `"unknown principal"`, `"not found"`, or `"no such principal"` (`0` existence-revealing tokens); an `empty` / differing code that distinguishes the unknown target from the existing target (the two paths must be indistinguishable)
+  SCENARIO: would fail if disconnect; stub; static; oracle-leak via wording, length, or shape | must observe: `error.code` `== "perm.denied"` on the unknown-target call with exit `1`; `error.code` `== "perm.denied"` on the existing-target call with exit `1` (the codes are identical); `error.class` on the unknown-target call `==` `error.class` on the existing-target call (a `class` divergence is itself existence-revealing); normalizing the target id in the message, the two messages are identical (or any difference is confined to the target-id substring); `authorized_actions` length on the unknown-target call `==` `authorized_actions` length on the existing-target call; `held_permissions` length on the unknown-target call `==` `held_permissions` length on the existing-target call | must NOT observe: the unknown-target `message` containing `"unknown principal"`, `"not found"`, or `"no such principal"` (`0` existence-revealing tokens); an `empty` / differing code that distinguishes the unknown target from the existing target; a differing `class` between the two paths; a difference in `message` beyond the substituted target principal id; a difference in the number, values, or shape of steering fields (`authorized_actions`, `held_permissions`, `do_not`) between the two denials; timing/channel side-channels being asserted as a substitute for equality
 
 --------------------------------------------------------------------------------
 TEST CRITERIA (boolean; maps to ACs)
@@ -142,7 +142,7 @@ TEST CRITERIA (boolean; maps to ACs)
     VERIFY: cargo test -p but steer_discovery_cross_principal_denied
 - TC-6 (-> AC-5, edge): but whoami as rev shows membership reviewers but never lists the other member rev2
     VERIFY: cargo test -p but steer_whoami_hides_other_group_members
-- TC-7 (-> AC-6, edge): but can-i --principal <unknown> by rev returns the same perm.denied code + a non-existence-revealing message as --principal <existing> — no principal-id enumeration oracle
+- TC-7 (-> AC-6, edge): `but can-i --principal <unknown>` by rev returns the same `perm.denied` code, the same `class`, AND, after normalizing the target principal id, the same canonical message and the same authorized_actions/held_permissions/do_not envelope shape as `--principal <existing>` — no principal-id enumeration oracle
     VERIFY: cargo test -p but steer_discovery_not_a_principal_oracle
 
 --------------------------------------------------------------------------------
@@ -285,13 +285,13 @@ CODING STANDARDS: crates/AGENTS.md, crates/but/AGENTS.md, RULES.md
     {
       "id": "AC-6",
       "type": "acceptance_criterion",
-      "description": "GIVEN resolved non-admin rev and an unknown target id, WHEN but can-i targets it, THEN the same perm.denied code + a non-existence-revealing message as an existing target (no enumeration oracle)",
+      "description": "GIVEN resolved non-admin rev and an unknown target id, WHEN but can-i targets it vs. an existing target, THEN both return the same perm.denied code, the same class, the same canonical message (after normalizing the target id), and the same authorized_actions/held_permissions/do_not envelope shape — no enumeration oracle",
       "verify": "cargo test -p but steer_discovery_not_a_principal_oracle"
     },
     {
       "id": "TC-7",
       "type": "test_criterion",
-      "description": "unknown-target can-i is code/message-indistinguishable from existing-target can-i (no oracle)",
+      "description": "unknown-target can-i has identical code, identical class, identical normalized message, and identical steering envelope shape to existing-target can-i (no oracle)",
       "maps_to_ac": "AC-6",
       "verify": "cargo test -p but steer_discovery_not_a_principal_oracle"
     }

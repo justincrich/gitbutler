@@ -17,7 +17,7 @@ PRIMARY **AC-1** — `cargo test -p but governed_loop_steer_commit_cli_serialize
 - crates/but/src/command/legacy/commit2.rs (MODIFY — commit_gate_cli_error emits the 4 steering fields + remediation_hint via to_envelope)
 - crates/but/src/command/legacy/forge/review.rs (MODIFY — review_gate_cli_error + merge_gate_cli_error emit the 4 steering fields)
 - crates/but/src/command/perm.rs (MODIFY — governance_cli_error :118 emits the 4 steering fields + remediation_hint for admin-write AdminWriteGateError; RR-2)
-- crates/but-authz/src/lib.rs or but-api serializer module (MODIFY — add the `#[cfg(debug_assertions)]`/`cfg(test)`-gated BUT_STEER_FORCE_SERIALIZATION_FAULT fault seam on the to_envelope()/serializer path; SA-1/RR-4)
+- crates/but-authz/src/lib.rs or but-api serializer module (MODIFY — add a `cfg(test)` or `[dev-dependencies]`-only feature-flag-gated `BUT_STEER_FORCE_SERIALIZATION_FAULT` fault seam on the to_envelope()/serializer path; never bare `#[cfg(debug_assertions)]`; SA-1/RR-4)
 - crates/but-api/src/json.rs (MODIFY — co-land steering fields in Error IFF MGMT-IPC-002 is being co-landed; otherwise leave and record the explicit deferral note; SA-8)
 - crates/but/tests/but/command/governed_loop.rs (MODIFY — add the four serializer-shape cases + the class-token case + the serialization-fault case; do NOT weaken existing assertions)
 - crates/but/tests/but/command/steer_cli_serializers.rs (NEW — if a separate module is preferred)
@@ -53,17 +53,17 @@ Each of the four CLI serializers emits the four steering fields alongside its ex
 --------------------------------------------------------------------------------
 🚫 CRITICAL CONSTRAINTS (Never tier — read before acting)
 --------------------------------------------------------------------------------
-- [MUST] MUST add the four steering fields to ALL FOUR hand-rolled CLI serializers: `commit_gate_cli_error` (commit2.rs:679, emits `{code,message}` today — also ADD the long-missing `remediation_hint`), `review_gate_cli_error` (forge/review.rs:89, reads `ForgeGateError` which now carries the four copied fields from STEER-001 RR-1 — also ADD `remediation_hint`), `merge_gate_cli_error` (forge/review.rs:246, already emits `{code,message,remediation_hint,unmet}`), AND `governance_cli_error` (perm.rs:118, emits `{code,message}` today, reads `AdminWriteGateError` which now carries the four copied fields from STEER-001 RR-2 — also ADD `remediation_hint`) — preferably by rendering through the shared `to_envelope()` (STEER-001).
+- [MUST] MUST add the four steering fields to ALL FOUR hand-rolled CLI serializers: `commit_gate_cli_error` (commit2.rs:679, emits `{code,message}` today — also ADD the long-missing `remediation_hint`), `review_gate_cli_error` (forge/review.rs:213, reads `ForgeGateError` which now carries the four copied fields from STEER-001 RR-1 — also ADD `remediation_hint`), `merge_gate_cli_error` (forge/review.rs:246, already emits `{code,message,remediation_hint,unmet}`), AND `governance_cli_error` (perm.rs:121, emits `{code,message}` today, reads `AdminWriteGateError` which now carries the four copied fields from STEER-001 RR-2 — also ADD `remediation_hint`) — preferably by rendering through the shared `to_envelope()` (STEER-001).
 - [MUST] MUST cover the admin-write actor-correctable case (RR-2): a resolved principal lacking `administration:write` is `actor_correctable` (§2), so `but perm grant/revoke` denials serialized by `governance_cli_error` MUST carry `class`/`held_permissions`/`authorized_actions`/`do_not` and surface the §5 admin-write affordance row (`read/inspect`, `request-config-change`, `discovery`) — without this the admin route's uniform-shape (UC-STEER-01 AC-1) is violated. (The admin route is already in STEER-002's ROUTE_AUTHORITY_TABLE and STEER-003's AFFORDANCE_MAP per §5.)
 - [MUST] MUST keep each serializer's EXISTING keys + exit code 1 unchanged RELATIVE TO ITS CURRENT OUTPUT: the commit/review/governance sites ADD the missing `remediation_hint` (an improvement, not a regression — UC-STEER-01 AC-2 / C2-fix); `unmet` is asserted ONLY on the merge site (it is a MergeGateError field, not on the commit/review/governance carriers).
 - [MUST] MUST render the serialized denial envelope's `class` as a STABLE enum STRING token — exactly `"actor_correctable"` or `"operator_required"` — so an orchestrator can branch on `class` as a stable enum on the SERIALIZED denial JSON WITHOUT parsing `message` (RR-3 / T-STEER-016 / UC-STEER-03 AC-5). The token MUST match the DenialClass serialization chosen in STEER-001/004.
-- [MUST] MUST add a TEST-ONLY serialization-fault-injection seam on the best-effort `to_envelope()`/serializer path, activated by the environment variable `BUT_STEER_FORCE_SERIALIZATION_FAULT` (this exact name — STEER-009 consumes it), gated so it exists ONLY in test/debug builds (`#[cfg(debug_assertions)]` or a `cfg(test)`/feature flag) and is COMPILED OUT of release builds — never a production bypass (SA-1/RR-4). AC-6 activates the fault via that env var.
+- [MUST] MUST add a TEST-ONLY serialization-fault-injection seam on the best-effort `to_envelope()`/serializer path, activated by the environment variable `BUT_STEER_FORCE_SERIALIZATION_FAULT` (this exact name — STEER-009 consumes it), gated so it exists ONLY in test builds (`cfg(test)` OR a dedicated `[dev-dependencies]`-only feature flag — NOT bare `#[cfg(debug_assertions)]`, because a debug-profile non-test binary also has `debug_assertions`) and is COMPILED OUT of release builds — never a production bypass (SA-1/RR-4). AC-6 activates the fault via that env var.
 - [MUST] MUST make serialization BEST-EFFORT FAIL-CLOSED (invariant §9.5 / security MED #6): if deriving OR serializing the steering payload faults (incl. via the fault seam), the serializer STILL emits `code`/`message`/`remediation_hint` (where available) + exit 1, NEVER drops an existing field, and NEVER turns a deny into an allow. Existing fields render independently of the new ones.
 - [MUST] MUST COORDINATE the Tauri/MGMT desktop surface — `but-api/src/json.rs` `Error` (json.rs:258, emits `code`+`message`) — with Sprint 06a `MGMT-IPC-002` (which adds `remediation_hint` there): EITHER co-land the steering fields in `json.rs` Error OR record a TRACKING note/task documenting the desktop steering-field gap + its MGMT-IPC-002 dependency (an explicit, verifiable recorded decision — never a silent gap; 03 §7 / D6 / SA-8).
 - [MUST] MUST drive every behavioral AC through the REAL `but` CLI against the real governed gix fixture, asserting on the structured JSON denial on stderr + exit 1 (the assertion style of governed_loop.rs, not insta snapshots).
 - [NEVER] NEVER let a serialization fault drop an existing field or turn a deny into an allow (fail-closed at serialization — the cardinal regression this task guards).
-- [NEVER] NEVER ship the `BUT_STEER_FORCE_SERIALIZATION_FAULT` fault seam in a release build — it MUST be `#[cfg(debug_assertions)]`/`cfg(test)`/feature-gated and compiled out of release; it is a test-only fault injector, never a production bypass (SA-1/RR-4).
-- [NEVER] NEVER omit `governance_cli_error` (perm.rs:118) — an admin-write actor-correctable denial without the steering payload violates the §5 admin-write affordance row + UC-STEER-01 AC-1 uniform shape (RR-2).
+- [NEVER] NEVER ship the `BUT_STEER_FORCE_SERIALIZATION_FAULT` fault seam in a release build — it MUST be gated by `cfg(test)` OR a `[dev-dependencies]`-only feature flag and compiled out of release; it is a test-only fault injector, never a production bypass (SA-1/RR-4). It MUST NOT be guarded solely by bare `#[cfg(debug_assertions)]`.
+- [NEVER] NEVER omit `governance_cli_error` (perm.rs:121) — an admin-write actor-correctable denial without the steering payload violates the §5 admin-write affordance row + UC-STEER-01 AC-1 uniform shape (RR-2).
 - [NEVER] NEVER regress the merge site's existing `remediation_hint`/`unmet` keys, nor the exit-1 behavior of any site.
 - [NEVER] NEVER claim the Tauri surface covered if it is deferred — record the deferral as an explicit tracked decision/note in the completion report and a tracking artifact (SA-8).
 - [NEVER] NEVER change a denial code, message, or the deny/allow decision.
@@ -81,6 +81,7 @@ DONE WHEN
 - [ ] AC-5: Serialized `class` is a stable enum STRING token branchable without parsing `message`
 - [ ] AC-6: Best-effort fail-closed via the BUT_STEER_FORCE_SERIALIZATION_FAULT seam: a forced steering-payload serialization fault still denies with code/message/remediation_hint + exit 1
 - [ ] AC-7: The Tauri/N-API json::Error steering-field decision is an explicit, verifiable recorded outcome (co-land or tracked deferral)
+- [ ] AC-8: The `BUT_STEER_FORCE_SERIALIZATION_FAULT` seam is gated by `cfg(test)` or a `[dev-dependencies]`-only feature flag, never bare `#[cfg(debug_assertions)]`
 - [ ] All verification gates pass; only write_allowed files modified
 
 --------------------------------------------------------------------------------
@@ -113,11 +114,11 @@ AC-3: merge_gate_cli_error adds the four steering fields while preserving remedi
 
 AC-4: governance_cli_error (admin-write) emits the four steering fields + remediation_hint + the admin-write affordance row, exit 1 unchanged
   GIVEN: a real admin-write denial through the `but perm grant` CLI path by a resolved principal lacking `administration:write` (actor_correctable per §2)
-  WHEN:  governance_cli_error (perm.rs:118) serializes the AdminWriteGateError denial
+  WHEN:  governance_cli_error (perm.rs:121) serializes the AdminWriteGateError denial
   THEN:  the JSON carries `class`=`"actor_correctable"`/`held_permissions`/`authorized_actions`/`do_not` (when Some) PLUS `code`/`message` AND the newly-added `remediation_hint`; `authorized_actions` surfaces the §5 admin-write affordance row (read/inspect, request-config-change, discovery); exit code 1 unchanged
   TEST_TIER: integration   VERIFICATION_SERVICE: but-cli
   VERIFY: cargo test -p but governed_loop_steer_governance_cli_serializer
-  SCENARIO: would fail if governance_cli_error still emits only `{code,message}` (the pre-STEER perm.rs:118 flatten — no steering payload for admin-write); the admin-write denial carries an empty authorized_actions (no admin-write affordance row surfaced); exit code is not 1 | must observe: stderr JSON contains `"class":"actor_correctable"`; stderr JSON contains `authorized_actions`; stderr JSON contains `remediation_hint`; exit code == 1 | must NOT observe: a two-key `{"error":{"code":..,"message":..}}` governance envelope (the pre-STEER perm.rs:118 flatten); an empty `authorized_actions` on the admin-write actor-correctable denial
+  SCENARIO: would fail if governance_cli_error still emits only `{code,message}` (the pre-STEER perm.rs:121 flatten — no steering payload for admin-write); the admin-write denial carries an empty authorized_actions (no admin-write affordance row surfaced); exit code is not 1 | must observe: stderr JSON contains `"class":"actor_correctable"`; stderr JSON contains `authorized_actions`; stderr JSON contains `remediation_hint`; exit code == 1 | must NOT observe: a two-key `{"error":{"code":..,"message":..}}` governance envelope (the pre-STEER perm.rs:121 flatten); an empty `authorized_actions` on the admin-write actor-correctable denial
 
 AC-5: Serialized `class` is a stable enum STRING token branchable without parsing `message`
   GIVEN: two real CLI denials of different classes — an actor_correctable commit denial and an operator_required config.invalid denial — serialized to stderr JSON
@@ -142,6 +143,14 @@ AC-7: The Tauri/N-API json::Error steering-field decision is an explicit, verifi
   TEST_TIER: integration   VERIFICATION_SERVICE: but-api
   VERIFY: cargo test -p but-api steer_json_error_decision_recorded
   SCENARIO: would fail if the Tauri json::Error surface is left unchanged with no recorded decision (a silent steering-field gap); the completion report claims the desktop surface covered while json::Error still emits only `{code,message}`; the deferral exists only as inline guardrail prose with no verifiable test/tracked artifact | must observe: either json::Error JSON contains `"class"` (co-landed) OR a tracked deferral note referencing `MGMT-IPC-002` is present; the recorded decision is asserted by the test (exit `0`) | must NOT observe: json::Error silently unchanged with NO recorded decision (a silent desktop steering gap); a completion claim of desktop coverage with json::Error still a two-key `{code,message}` object
+
+AC-8: The `BUT_STEER_FORCE_SERIALIZATION_FAULT` seam is gated by `cfg(test)` or a `[dev-dependencies]`-only feature flag, never bare `#[cfg(debug_assertions)]`
+  GIVEN: the source site of the `BUT_STEER_FORCE_SERIALIZATION_FAULT` fault seam
+  WHEN:  it is inspected for cfg gating
+  THEN:  the seam is active ONLY under `cfg(test)` OR a dedicated `[dev-dependencies]`-only feature flag; it is NOT gated solely by `#[cfg(debug_assertions)]` (which also compiles into debug-profile non-test release binaries)
+  TEST_TIER: build-gate   VERIFICATION_SERVICE: but-authz
+  VERIFY: cargo test -p but-authz --test invariant_build_gates steer_fault_seam_not_bare_debug_assertions
+  SCENARIO: would fail if the seam is gated only by `#[cfg(debug_assertions)]` (a debug-profile non-test release binary would include the fault injector); the seam is ungated entirely; a `cargo build --release` includes the seam | must observe: the seam is behind `#[cfg(test)]` or a dev-only feature flag; `cargo build --release` excludes the seam site (the symbol is absent or the branch is dead) | must NOT observe: a bare `#[cfg(debug_assertions)]` guard on the fault seam; the seam active in a non-test release build
 
 --------------------------------------------------------------------------------
 TEST CRITERIA (boolean; maps to ACs)
@@ -168,15 +177,17 @@ TEST CRITERIA (boolean; maps to ACs)
     VERIFY: cargo test -p but steer_cli_serialization_fault_fail_closed
 - TC-11 (-> AC-7, edge_case): The Tauri json::Error steering-field decision is recorded (json::Error carries `class`, OR a tracked MGMT-IPC-002 deferral note exists and is asserted)
     VERIFY: cargo test -p but-api steer_json_error_decision_recorded
+- TC-12 (-> AC-8, structural): The `BUT_STEER_FORCE_SERIALIZATION_FAULT` seam is gated by `cfg(test)` or a `[dev-dependencies]`-only feature flag, not bare `#[cfg(debug_assertions)]`
+    VERIFY: cargo test -p but-authz --test invariant_build_gates steer_fault_seam_not_bare_debug_assertions
 
 --------------------------------------------------------------------------------
 CAPABILITY BOUNDARY
 --------------------------------------------------------------------------------
 touches: CAP-STEER-01
-provides: commit_gate_cli_error emitting the 4 steering fields + the long-missing remediation_hint; review_gate_cli_error emitting the 4 steering fields (its field source is ForgeGateError's copied fields from STEER-001) + the long-missing remediation_hint; merge_gate_cli_error emitting the 4 steering fields (already has remediation_hint + unmet); governance_cli_error (perm.rs:118) emitting the 4 steering fields for admin-write AdminWriteGateError denials (the FOURTH CLI serializer — RR-2); a TEST-ONLY serialization-fault-injection seam on the to_envelope()/serializer path, gated to debug/test builds only, activated by the env var `BUT_STEER_FORCE_SERIALIZATION_FAULT` (consumed by STEER-009) — NEVER present in release builds (SA-1/RR-4); the serialized denial envelope's `class` rendered as a stable enum STRING token (`actor_correctable`/`operator_required`) branchable without parsing `message` (RR-3); best-effort fail-closed serialization (a derivation/serialization fault still emits code/message/remediation_hint + exit 1); an explicitly RECORDED decision for the Tauri json::Error surface — co-land via MGMT-IPC-002 or a tracked deferral note documenting the desktop steering-field gap + its MGMT-IPC-002 dependency (SA-8)
-consumes: but_api::commit::create::gate::classify_error -> CommitGateError (commit/gate.rs:81, fields from STEER-001/004); but_api::legacy::forge::classify_error -> ForgeGateError (forge.rs:24, NOW carrying the four copied fields from STEER-001 RR-1); but_api::legacy::merge_gate::classify_error -> MergeGateError (merge_gate.rs:113); but_api::legacy::config_mutate::classify_error -> AdminWriteGateError (config_mutate.rs:31, NOW carrying the four copied fields from STEER-001 RR-2); to_envelope() (STEER-001); commit_gate_cli_error (commit2.rs:679); review_gate_cli_error (forge/review.rs:89); merge_gate_cli_error (forge/review.rs:246); governance_cli_error (perm.rs:118 — serializes AdminWriteGateError for `but perm grant/revoke`); but-api/src/json.rs Error (json.rs:258)
+provides: commit_gate_cli_error emitting the 4 steering fields + the long-missing remediation_hint; review_gate_cli_error emitting the 4 steering fields (its field source is ForgeGateError's copied fields from STEER-001) + the long-missing remediation_hint; merge_gate_cli_error emitting the 4 steering fields (already has remediation_hint + unmet); governance_cli_error (perm.rs:121) emitting the 4 steering fields for admin-write AdminWriteGateError denials (the FOURTH CLI serializer — RR-2); a TEST-ONLY serialization-fault-injection seam on the to_envelope()/serializer path, gated to `cfg(test)` OR a `[dev-dependencies]`-only feature flag (never bare `#[cfg(debug_assertions)]`), activated by the env var `BUT_STEER_FORCE_SERIALIZATION_FAULT` (consumed by STEER-009) — NEVER present in non-test/release builds (SA-1/RR-4); the serialized denial envelope's `class` rendered as a stable enum STRING token (`actor_correctable`/`operator_required`) branchable without parsing `message` (RR-3); best-effort fail-closed serialization (a derivation/serialization fault still emits code/message/remediation_hint + exit 1); an explicitly RECORDED decision for the Tauri json::Error surface — co-land via MGMT-IPC-002 or a tracked deferral note documenting the desktop steering-field gap + its MGMT-IPC-002 dependency (SA-8)
+consumes: but_api::commit::create::gate::classify_error -> CommitGateError (commit/gate.rs:81, fields from STEER-001/004); but_api::legacy::forge::classify_error -> ForgeGateError (forge.rs:24, NOW carrying the four copied fields from STEER-001 RR-1); but_api::legacy::merge_gate::classify_error -> MergeGateError (merge_gate.rs:113); but_api::legacy::config_mutate::classify_error -> AdminWriteGateError (config_mutate.rs:31, NOW carrying the four copied fields from STEER-001 RR-2); to_envelope() (STEER-001); commit_gate_cli_error (commit2.rs:679); review_gate_cli_error (forge/review.rs:213); merge_gate_cli_error (forge/review.rs:246); governance_cli_error (perm.rs:121 — serializes AdminWriteGateError for `but perm grant/revoke`); but-api/src/json.rs Error (json.rs:258)
 boundary_contracts:
-  - CAP-STEER-01 (serialization site): all FOUR hand-rolled CLI serializers — commit_gate_cli_error, review_gate_cli_error, merge_gate_cli_error, governance_cli_error (admin-write) — emit the four steering fields alongside their existing keys; existing keys + exit 1 are preserved relative to EACH site's current output (commit/review/governance sites additionally gain the long-missing remediation_hint — an improvement); the serialized `class` is a stable enum STRING token (`actor_correctable`/`operator_required`) branchable without reading `message`; a TEST-ONLY fault seam (`BUT_STEER_FORCE_SERIALIZATION_FAULT`, debug-only) proves a fault deriving OR serializing the steering payload still emits code/message/remediation_hint + exit 1 and never turns deny->allow (invariant §9.5); the Tauri json::Error surface decision is explicitly recorded (co-land via MGMT-IPC-002 or a tracked deferral note).
+  - CAP-STEER-01 (serialization site): all FOUR hand-rolled CLI serializers — commit_gate_cli_error, review_gate_cli_error, merge_gate_cli_error, governance_cli_error (admin-write) — emit the four steering fields alongside their existing keys; existing keys + exit 1 are preserved relative to EACH site's current output (commit/review/governance sites additionally gain the long-missing remediation_hint — an improvement); the serialized `class` is a stable enum STRING token (`actor_correctable`/`operator_required`) branchable without reading `message`; a TEST-ONLY fault seam (`BUT_STEER_FORCE_SERIALIZATION_FAULT`, gated by `cfg(test)` or a `[dev-dependencies]`-only feature flag, never bare `#[cfg(debug_assertions)]`) proves a fault deriving OR serializing the steering payload still emits code/message/remediation_hint + exit 1 and never turns deny->allow (invariant §9.5); the Tauri json::Error surface decision is explicitly recorded (co-land via MGMT-IPC-002 or a tracked deferral note).
 
 --------------------------------------------------------------------------------
 SCOPE (file-level write permissions)
@@ -185,7 +196,7 @@ writeAllowed:
   - crates/but/src/command/legacy/commit2.rs (MODIFY — commit_gate_cli_error emits the 4 steering fields + remediation_hint via to_envelope)
   - crates/but/src/command/legacy/forge/review.rs (MODIFY — review_gate_cli_error + merge_gate_cli_error emit the 4 steering fields)
   - crates/but/src/command/perm.rs (MODIFY — governance_cli_error :118 emits the 4 steering fields + remediation_hint for admin-write AdminWriteGateError; RR-2)
-  - crates/but-authz/src/lib.rs or but-api serializer module (MODIFY — add the `#[cfg(debug_assertions)]`/`cfg(test)`-gated BUT_STEER_FORCE_SERIALIZATION_FAULT fault seam on the to_envelope()/serializer path; SA-1/RR-4)
+  - crates/but-authz/src/lib.rs or but-api serializer module (MODIFY — add the `cfg(test)` OR dev-feature-gated `BUT_STEER_FORCE_SERIALIZATION_FAULT` fault seam on the to_envelope()/serializer path; NEVER bare `#[cfg(debug_assertions)]`; SA-1/RR-4)
   - crates/but-api/src/json.rs (MODIFY — co-land steering fields in Error IFF MGMT-IPC-002 is being co-landed; otherwise leave and record the explicit deferral note; SA-8)
   - crates/but/tests/but/command/governed_loop.rs (MODIFY — add the four serializer-shape cases + the class-token case + the serialization-fault case; do NOT weaken existing assertions)
   - crates/but/tests/but/command/steer_cli_serializers.rs (NEW — if a separate module is preferred)
@@ -213,8 +224,8 @@ READING LIST
 --------------------------------------------------------------------------------
 CODE PATTERN
 --------------------------------------------------------------------------------
-pattern: Render the classified carrier through the shared to_envelope() into a serde_json::Value, wrapping in `{"error": ...}` on stderr with exit 1, at all FOUR sites (commit/review/merge/governance); `class` serializes as a snake-case enum string token (`serde(rename_all="snake_case")` or an explicit DenialClass Serialize); a `#[cfg(debug_assertions)]`/`cfg(test)`-gated fault hook keyed on `BUT_STEER_FORCE_SERIALIZATION_FAULT` forces a fault; a best-effort path where, if to_envelope/serialization faults, the serializer falls back to a minimal `{code, message, remediation_hint}` envelope (still exit 1) rather than panicking or succeeding.
-pattern_source: crates/but/src/command/legacy/forge/review.rs:246 (merge_gate_cli_error already emits {code,message,remediation_hint,unmet} via serde_json::json! — extend this shape to all four sites); crates/but/src/command/perm.rs:118 (governance_cli_error — the fourth site, currently a two-key flatten); crates/but/tests/but/command/governed_loop.rs:474-491 (parse_cli_error_envelope_opt reads the stderr envelope).
+pattern: Render the classified carrier through the shared to_envelope() into a serde_json::Value, wrapping in `{"error": ...}` on stderr with exit 1, at all FOUR sites (commit/review/merge/governance); `class` serializes as a snake-case enum string token (`serde(rename_all="snake_case")` or an explicit DenialClass Serialize); a `cfg(test)` OR `[dev-dependencies]`-only feature-flag-gated fault hook (never bare `#[cfg(debug_assertions)]`) keyed on `BUT_STEER_FORCE_SERIALIZATION_FAULT` forces a fault; a best-effort path where, if to_envelope/serialization faults, the serializer falls back to a minimal `{code, message, remediation_hint}` envelope (still exit 1) rather than panicking or succeeding.
+pattern_source: crates/but/src/command/legacy/forge/review.rs:246 (merge_gate_cli_error already emits {code,message,remediation_hint,unmet} via serde_json::json! — extend this shape to all four sites); crates/but/src/command/perm.rs:121 (governance_cli_error — the fourth site, currently a two-key flatten); crates/but/tests/but/command/governed_loop.rs:474-491 (parse_cli_error_envelope_opt reads the stderr envelope).
 anti_pattern: Four divergent hand-rolled json! blocks that drift; a serializer that `unwrap()`s the steering payload (a fault panics or aborts instead of degrading); dropping `unmet` on the merge site when adding the steering fields; shipping BUT_STEER_FORCE_SERIALIZATION_FAULT un-gated in release; rendering `class` as a Debug/PascalCase form an orchestrator can't branch on; silently leaving the Tauri surface ungapped without recording the decision.
 references: 03-technical-requirements-delta.md §1 (serialization sites) + §2 (admin-write actor_correctable row) + §5 (admin-write affordance row) + §7 (caller coverage); 05-delta-replan.md D6; 02-uc-steer.md UC-STEER-01 AC-1/AC-2 + UC-STEER-03 AC-5 + UC-STEER-06 AC-4; invariant §9.5 (best-effort fail-closed)
 interaction_notes:
@@ -255,7 +266,7 @@ CODING STANDARDS: crates/AGENTS.md, crates/but/AGENTS.md, crates/WORKSPACE_MODEL
     {
       "id": "AC-4",
       "type": "acceptance_criterion",
-      "description": "GIVEN a forced steering-payload serialization fault WHEN a denial is serialized THEN it still denies with code/message/remediation_hint + exit 1 and never flips deny\u2192allow",
+      "description": "GIVEN a CLI admin-write (governance) denial WHEN governance_cli_error serializes THEN the four steering fields + remediation_hint + the admin-write affordance row appear and exit 1 is unchanged",
       "verify": "cargo test -p but governed_loop_steer_governance_cli_serializer"
     },
     {
@@ -275,6 +286,12 @@ CODING STANDARDS: crates/AGENTS.md, crates/but/AGENTS.md, crates/WORKSPACE_MODEL
       "type": "acceptance_criterion",
       "description": "GIVEN the Tauri/MGMT desktop surface rides `but-api/src/json.rs` Error (json.rs:258, emits code+message) and Sprint 06a MGMT-IPC-002 owns its remediation_hint WHEN the STEER serialization work completes and the desktop steering-field coverage is assessed THEN EITHER the four steering fields co-land in `but-api/src/json.rs` Error (a test asserts json::Error carries `class`) OR a tracking note/task is recorded in the completion report + a tracked artifact documenting the desktop steering-field gap and its MGMT-IPC-002 dependency \u2014 an explicit recorded decision, not a silent gap (SA-8)",
       "verify": "cargo test -p but-api steer_json_error_decision_recorded"
+    },
+    {
+      "id": "AC-8",
+      "type": "acceptance_criterion",
+      "description": "GIVEN the BUT_STEER_FORCE_SERIALIZATION_FAULT seam source WHEN inspected THEN it is gated by cfg(test) or a [dev-dependencies]-only feature flag, never bare #[cfg(debug_assertions)]",
+      "verify": "cargo test -p but-authz --test invariant_build_gates steer_fault_seam_not_bare_debug_assertions"
     },
     {
       "id": "TC-1",
@@ -307,14 +324,14 @@ CODING STANDARDS: crates/AGENTS.md, crates/but/AGENTS.md, crates/WORKSPACE_MODEL
     {
       "id": "TC-5",
       "type": "test_criterion",
-      "description": "serialization fault still emits legacy fields + exit 1",
+      "description": "governance (admin-write) CLI denial JSON contains class=actor_correctable, authorized_actions, and remediation_hint",
       "maps_to_ac": "AC-4",
       "verify": "cargo test -p but governed_loop_steer_governance_cli_serializer"
     },
     {
       "id": "TC-6",
       "type": "test_criterion",
-      "description": "serialization fault never exits 0",
+      "description": "governance (admin-write) CLI denial surfaces the §5 admin-write affordance row (read/inspect, request-config-change, discovery) and exits 1",
       "maps_to_ac": "AC-4",
       "verify": "cargo test -p but governed_loop_steer_governance_cli_serializer"
     },
@@ -352,6 +369,13 @@ CODING STANDARDS: crates/AGENTS.md, crates/but/AGENTS.md, crates/WORKSPACE_MODEL
       "description": "The Tauri json::Error steering-field decision is recorded (json::Error carries `class`, OR a tracked MGMT-IPC-002 deferral note exists and is asserted)",
       "maps_to_ac": "AC-7",
       "verify": "cargo test -p but-api steer_json_error_decision_recorded"
+    },
+    {
+      "id": "TC-12",
+      "type": "test_criterion",
+      "description": "BUT_STEER_FORCE_SERIALIZATION_FAULT seam is gated by cfg(test) or a [dev-dependencies]-only feature flag, not bare #[cfg(debug_assertions)]",
+      "maps_to_ac": "AC-8",
+      "verify": "cargo test -p but-authz --test invariant_build_gates steer_fault_seam_not_bare_debug_assertions"
     }
   ]
 }

@@ -1,12 +1,12 @@
-# STEER-003: Gate-state-aware authorized_actions derivation: effective_set ∩ table minus the failed (route,predicate,ref), intent-scoped via the curated AFFORDANCE_MAP, self-approve excluded on own branch, all command/effect text from a closed &'static str CATALOG + appended discovery affordance
+# STEER-003: Gate-state-aware authorized_actions derivation: effective_set ∩ table minus the failed (route,predicate,ref), intent-scoped via the curated AFFORDANCE_MAP, self-approve excluded from commit-path denials, all command/effect text from a closed &'static str CATALOG + appended discovery affordance
 
 ## What this does
 
-Implement the gate-state-aware authorized_actions derivation: intersect the caller's effective set with the ROUTE_AUTHORITY_TABLE, intent-scope it via the curated AFFORDANCE_MAP, subtract the (route, predicate, ref) that actually fired (so a branch.protected denial offers a feature-branch commit + review, not the protected-ref commit), exclude self-approve on own-branch denials, render every entry from a closed &'static str CATALOG, and append the degradable discovery affordance.
+Implement the gate-state-aware authorized_actions derivation: intersect the caller's effective set with the ROUTE_AUTHORITY_TABLE, intent-scope it via the curated AFFORDANCE_MAP, subtract the (route, predicate, ref) that actually fired (so a branch.protected denial offers a feature-branch commit + review, not the protected-ref commit), exclude self-approve from all `Route::Commit` (commit-path) denials — including the caller's own branch — render every entry from a closed &'static str CATALOG, and append the degradable discovery affordance.
 
 ## Why
 
-Sprint 08 (STEER — Capability-Aware Denials) · PRD UC-STEER-02, UC-STEER-06 · Capability CAP-STEER-01. For any actor-correctable denial, authorized_actions ⊆ {routes the caller is authorized to run}, is scoped to the denied intent, lists each entry as a {command, effect} catalog pair, never reproduces the failed (route,predicate,ref), and never includes `but review approve` on an own-branch denial; a reviewer denied a commit sees runnable `but review request-changes`/`comment`; all text is catalog-sourced; cargo test -p but-authz + -p but green; clippy clean.
+Sprint 08 (STEER — Capability-Aware Denials) · PRD UC-STEER-02, UC-STEER-06 · Capability CAP-STEER-01. For any actor-correctable denial, authorized_actions ⊆ {routes the caller is authorized to run}, is scoped to the denied intent, lists each entry as a {command, effect} catalog pair, never reproduces the failed (route,predicate,ref), and never includes `but review approve` on a commit-path denial; a reviewer denied a commit sees runnable `but review request-changes`/`comment`; all text is catalog-sourced; cargo test -p but-authz + -p but green; clippy clean.
 
 ## How to verify
 
@@ -25,7 +25,7 @@ PRIMARY **AC-1** — `cargo test -p but-authz steer_menu_subset_of_effective_set
 
 ```
 ================================================================================
-TASK: STEER-003 - Gate-state-aware authorized_actions derivation: effective_set ∩ table minus the failed (route,predicate,ref), intent-scoped via the curated AFFORDANCE_MAP, self-approve excluded on own branch, all command/effect text from a closed &'static str CATALOG + appended discovery affordance
+TASK: STEER-003 - Gate-state-aware authorized_actions derivation: effective_set ∩ table minus the failed (route,predicate,ref), intent-scoped via the curated AFFORDANCE_MAP, self-approve excluded from commit-path denials, all command/effect text from a closed &'static str CATALOG + appended discovery affordance
 ================================================================================
 
 TASK_TYPE:  FEATURE
@@ -45,18 +45,18 @@ RUNTIME_COMMANDS:
 --------------------------------------------------------------------------------
 OUTCOME
 --------------------------------------------------------------------------------
-For any actor-correctable denial, authorized_actions ⊆ {routes the caller is authorized to run}, is scoped to the denied intent, lists each entry as a {command, effect} catalog pair, never reproduces the failed (route,predicate,ref), and never includes `but review approve` on an own-branch denial; a reviewer denied a commit sees runnable `but review request-changes`/`comment`; all text is catalog-sourced; cargo test -p but-authz + -p but green; clippy clean.
+For any actor-correctable denial, authorized_actions ⊆ {routes the caller is authorized to run}, is scoped to the denied intent, lists each entry as a {command, effect} catalog pair, never reproduces the failed (route,predicate,ref), and never includes `but review approve` on a commit-path denial; a reviewer denied a commit sees runnable `but review request-changes`/`comment`; all text is catalog-sourced; cargo test -p but-authz + -p but green; clippy clean.
 
 --------------------------------------------------------------------------------
 🚫 CRITICAL CONSTRAINTS (Never tier — read before acting)
 --------------------------------------------------------------------------------
 - [MUST] MUST derive the menu per 03 §3: `held = effective_authority(principal,&cfg)` (the cfg PASSED IN by the gate, never re-loaded); `usable = {r ∈ ROUTE_AUTHORITY_TABLE | r.required_authority ⊆ held}`; `cands = AFFORDANCE_MAP[denied]`; `scoped = {c ∈ cands | c.route ∈ usable AND c does NOT reproduce (route_d, predicate_d) at ref_d}` — the C5 subtraction; render via CATALOG and append `CATALOG[discovery]`.
 - [MUST] MUST be gate-state-aware: for a `branch.protected` denial, the affordance is a commit to a DIFFERENT, unprotected FEATURE ref + review — NEVER the protected-ref commit that just failed (the C5 subtraction). A pure `required_authority ⊆ held` is unsound here because branch protection is `authority ∧ ¬protected` and the caller still holds `contents:write`.
-- [MUST] MUST EXCLUDE `but review approve` from authorized_actions when the denial targets the CALLER'S OWN BRANCH (the L1 self-approve exclusion, security HIGH #3) — yield `but review request-changes` + `comment` instead; this is a code contract, never deferred to the L2 primer.
+- [MUST] MUST EXCLUDE `but review approve` from authorized_actions for ALL COMMIT-PATH denials (the L1 self-approve exclusion, security HIGH #3) — yield `but review request-changes` + `comment` instead; the exclusion is unconditional on the commit path because the denied action is the caller's own proposed commit, regardless of nominal branch-ownership determination. This is a code contract, never deferred to the L2 primer.
 - [MUST] MUST draw EVERY command and effect string from a CLOSED, code-owned `&'static str` CATALOG — never `format!`, interpolated, config-sourced, principal-supplied, or model-generated (invariant §9.2). The curated `AFFORDANCE_MAP` (~7 gated routes, each naming a route in a SUCCEEDING context) is the one curated piece, sited beside the table.
 - [MUST] MUST keep the menu INTENT-SCOPED: `AFFORDANCE_MAP[denied]` yields only categories relevant to the denied intent (a denied protected-commit surfaces landing/review affordances + discovery, NOT the whole command catalog).
 - [NEVER] NEVER offer an action that is itself denied for this caller at this ref (no lying menu, invariant §9.1) — the subtraction of the (route,predicate,ref) that fired is the mechanism.
-- [NEVER] NEVER surface `but review approve` on a denial targeting the caller's own branch (self-approval path).
+- [NEVER] NEVER surface `but review approve` on any `Route::Commit` denial (commit-path self-approve exclusion), including the caller's own branch.
 - [NEVER] NEVER construct any menu `command`/`effect`/`do_not` text via `format!`/interpolation/config values (invariant §9.2) — only CATALOG constants and already-typed identifiers.
 - [NEVER] NEVER re-load cfg inside the derivation — use the cfg the gate already loaded at the target ref (the same-cfg/ref-by-construction property, M2).
 - [NEVER] NEVER edit any frozen Sprint 01a–06b task file.
@@ -64,16 +64,18 @@ For any actor-correctable denial, authorized_actions ⊆ {routes the caller is a
 - [STRICTLY] STRICTLY make the discovery affordance DEGRADABLE: append `CATALOG[discovery]` (the `but perm list` self-scoped command from Sprint 05) only when that verb exists; if no discovery verb is available, OMIT it rather than emit a phantom command (preserving no-lying-menu, C3/D8).
 - [STRICTLY] STRICTLY keep AFFORDANCE_MAP and CATALOG sited in but-authz beside ROUTE_AUTHORITY_TABLE so STEER-010's coverage grep (every table route has an AFFORDANCE_MAP entry not naming the denied route) and closed-catalog grep can target them.
 - [STRICTLY] STRICTLY map the SPRINT.md gate step 2 cleanly: a reviewer committing to protected main produces `perm.denied` (missing `contents:write`), not `branch.protected` (authority is checked before the protection predicate) — AC-3's reviewer-denied-commit menu is exactly this case (request-changes/comment, no approve).
+- [STRICTLY] STRICTLY exclude `but review approve` from the `authorized_actions` menu for any denial whose denied route is `Route::Commit` (commit path), unconditionally and without consulting a "caller owns this branch" predicate. A reviewer may still run the explicit `but review approve` verb; the menu must not advertise it from a commit-denial context (M4).
 
 --------------------------------------------------------------------------------
 DONE WHEN
 --------------------------------------------------------------------------------
 - [ ] AC-1 [PRIMARY]: Menu ⊆ effective set ∩ table; no entry requires an unheld authority
 - [ ] AC-2: Gate-state-aware: branch.protected offers a feature-branch commit + review, NOT the protected-ref commit just denied
-- [ ] AC-3: Reviewer denied a commit sees runnable review actions, and following one returns exit 0; self-approve excluded on own branch
+- [ ] AC-3: Reviewer denied a commit sees runnable review actions, and following one returns exit 0; self-approve excluded from commit-path denials
 - [ ] AC-4: Each entry is {command, effect}; menu is intent-scoped, not the whole catalog
 - [ ] AC-5: All command/effect text comes from the closed catalog (no format!/interpolation/config-sourced)
 - [ ] AC-6: Discovery affordance appended and degradable
+- [ ] AC-7: `but review approve` is unconditionally excluded from commit-path denial menus (branch.protected and perm.denied commit) regardless of nominal branch ownership
 - [ ] All verification gates pass; only write_allowed files modified
 
 --------------------------------------------------------------------------------
@@ -96,10 +98,10 @@ AC-2: Gate-state-aware: branch.protected offers a feature-branch commit + review
   VERIFY: cargo test -p but-api steer_branch_protected_menu_feature_not_protected && cargo test -p but governed_loop_steer_protected_menu
   SCENARIO: would fail if a pure `required_authority ⊆ held` offers the protected-ref commit the caller still holds contents:write for (lying menu); the subtraction is a no-op so the failed route reappears; the menu lists the same `commit main` route that just denied | must observe: an `authorized_actions` entry whose `command` commits to an unprotected feature ref (e.g. `but commit` on `feat`); an `authorized_actions` entry with `command` `but review request-changes` | must NOT observe: a commit-to-protected-`main` affordance (no feature-ref scoping); the route that just produced branch.protected
 
-AC-3: Reviewer denied a commit sees runnable review actions, and following one returns exit 0; self-approve excluded on own branch
+AC-3: Reviewer denied a commit sees runnable review actions, and following one returns exit 0; self-approve excluded from commit-path denials
   GIVEN: principal `rev`/`reviewer` (reviews:write, no contents:write) attempts a commit on its OWN branch
   WHEN:  the commit is denied and authorized_actions is derived
-  THEN:  the menu includes `but review request-changes` and `comment` (runnable for this caller), following one returns exit 0, and `but review approve` is ABSENT (own-branch self-approve exclusion)
+  THEN:  the menu includes `but review request-changes` and `comment` (runnable for this caller), following one returns exit 0, and `but review approve` is ABSENT (commit-path self-approve exclusion)
   TEST_TIER: integration   VERIFICATION_SERVICE: but-cli
   VERIFY: cargo test -p but governed_loop_steer_reviewer_menu_runnable_no_self_approve
   SCENARIO: would fail if `but review approve` appears for the caller's own branch (self-approval path); a listed `but review request-changes` is itself denied when run (lying menu); the menu is empty so nothing can be followed | must observe: `but review request-changes` present in authorized_actions; `but review comment` present; the followed `request-changes` command exits 0 (governed action succeeds) | must NOT observe: `but review approve` in authorized_actions; the followed command re-denied with perm.denied; an empty authorized_actions array
@@ -129,6 +131,14 @@ AC-6: Discovery affordance appended and degradable
   VERIFY: cargo test -p but governed_loop_steer_menu_includes_discovery
   SCENARIO: would fail if the discovery affordance is hardcoded even when the verb is absent (phantom command — lying menu); the appended entry is not `but perm list` (the shipped Sprint 05 verb); discovery is never appended | must observe: `but perm list` present in authorized_actions | must NOT observe: a discovery command that is not a real `but` verb (a placeholder/phantom command); the discovery entry absent on an actor-correctable denial
 
+AC-7: `but review approve` is unconditionally excluded from commit-path denial menus
+  GIVEN: any actor-correctable commit-path denial (branch.protected or perm.denied for Route::Commit), regardless of which ref or nominal branch ownership
+  WHEN:  authorized_actions is derived for the denied `Route::Commit`
+  THEN:  `but review approve` is ABSENT from the menu in all commit-path cases; only `but review request-changes`, `comment`, and discovery (when held) are offered
+  TEST_TIER: integration   VERIFICATION_SERVICE: but-authz
+  VERIFY: cargo test -p but-authz steer_self_approve_unconditional_commit_path_exclusion && cargo test -p but governed_loop_steer_reviewer_menu_runnable_no_self_approve
+  SCENARIO: would fail if the exclusion is conditional on an "own-branch" check that an implementer guesses wrong; a commit-path denial for a non-own branch still lists `but review approve`; the exclusion is deferred to the L2 primer | must observe: `but review approve` absent from `authorized_actions` for every commit-path denial case tested; `but review request-changes` and `comment` present when reviews:write is held | must NOT observe: `but review approve` in any commit-path denial's authorized_actions; an empty menu while review actions are held
+
 --------------------------------------------------------------------------------
 TEST CRITERIA (boolean; maps to ACs)
 --------------------------------------------------------------------------------
@@ -140,7 +150,7 @@ TEST CRITERIA (boolean; maps to ACs)
     VERIFY: cargo test -p but-api steer_branch_protected_menu_feature_not_protected
 - TC-4 (-> AC-3, happy_path): A reviewer-denied-commit menu lists `but review request-changes` and following it returns exit 0
     VERIFY: cargo test -p but governed_loop_steer_reviewer_menu_runnable_no_self_approve
-- TC-5 (-> AC-3, error_case): A reviewer-denied-commit menu on the caller's own branch does NOT contain `but review approve`
+- TC-5 (-> AC-3, error_case): A reviewer-denied-commit menu does NOT contain `but review approve`
     VERIFY: cargo test -p but governed_loop_steer_reviewer_menu_runnable_no_self_approve
 - TC-6 (-> AC-4, happy_path): Each authorized_actions entry has a `but `-prefixed command and a non-empty effect
     VERIFY: cargo test -p but-authz steer_menu_intent_scoped_entries_well_formed
@@ -152,15 +162,17 @@ TEST CRITERIA (boolean; maps to ACs)
     VERIFY: cargo test -p but governed_loop_steer_menu_includes_discovery
 - TC-10 (-> AC-3, edge_case): A reviewer committing to protected main is denied `perm.denied` (missing contents:write), not `branch.protected`, and its menu still lists `but review request-changes`/`comment` and excludes `but review approve` (RR-5 gate-step map)
     VERIFY: cargo test -p but governed_loop_steer_reviewer_menu_runnable_no_self_approve
+- TC-11 (-> AC-7, structural): `but review approve` is absent from every commit-path denial's authorized_actions regardless of nominal branch ownership
+    VERIFY: cargo test -p but-authz steer_self_approve_unconditional_commit_path_exclusion && cargo test -p but governed_loop_steer_reviewer_menu_runnable_no_self_approve
 
 --------------------------------------------------------------------------------
 CAPABILITY BOUNDARY
 --------------------------------------------------------------------------------
 touches: CAP-STEER-01
-provides: but_authz::authorized_actions(principal, denied={route_d,predicate_d,ref_d}, cfg) -> Vec<AuthorizedAction>; but_authz::AFFORDANCE_MAP (curated, ~7 gated routes); but_authz::CATALOG (closed &'static str command/effect entries incl. discovery); the C5 subtraction (menu never reproduces the failed route/predicate at the failed ref); the L1 self-approve exclusion on own-branch denials
+provides: but_authz::authorized_actions(principal, denied={route_d,predicate_d,ref_d}, cfg) -> Vec<AuthorizedAction>; but_authz::AFFORDANCE_MAP (curated, ~7 gated routes); but_authz::CATALOG (closed &'static str command/effect entries incl. discovery); the C5 subtraction (menu never reproduces the failed route/predicate at the failed ref); the L1 self-approve exclusion from all `Route::Commit` denials
 consumes: but_authz::ROUTE_AUTHORITY_TABLE + Route (STEER-002); but_authz::AuthorizedAction (STEER-001); but_authz::effective_authority(principal, &cfg) (authorize.rs:51); but_authz::AuthoritySet::contains (authority.rs:280); but_authz::GovConfig (config.rs:84)
 boundary_contracts:
-  - CAP-STEER-01 (producer): authorized_actions is the intersection of the caller's effective set and the table, intent-scoped via AFFORDANCE_MAP, with the failed (route,predicate,ref) subtracted and self-approve excluded on own-branch; every entry's command/effect is a closed-catalog &'static str; the discovery affordance is appended (degradable). Same cfg/ref the gate judged against is supplied by STEER-004 — proven at runtime by STEER-009, not here.
+  - CAP-STEER-01 (producer): authorized_actions is the intersection of the caller's effective set and the table, intent-scoped via AFFORDANCE_MAP, with the failed (route,predicate,ref) subtracted and self-approve excluded from all `Route::Commit` denials (including the caller's own branch); every entry's command/effect is a closed-catalog &'static str; the discovery affordance is appended (degradable). Same cfg/ref the gate judged against is supplied by STEER-004 — proven at runtime by STEER-009, not here.
 
 --------------------------------------------------------------------------------
 SCOPE (file-level write permissions)
@@ -190,13 +202,13 @@ READING LIST
 --------------------------------------------------------------------------------
 CODE PATTERN
 --------------------------------------------------------------------------------
-pattern: A pure derivation fn `authorized_actions(principal, denied, cfg) -> Vec<AuthorizedAction>` that intersects effective_authority with ROUTE_AUTHORITY_TABLE, looks up AFFORDANCE_MAP[denied] for intent categories (each naming a route in a SUCCEEDING context), filters out the (route_d,predicate_d,ref_d) that fired and the self-approve own-branch case, maps to CATALOG &'static str entries, and appends CATALOG[discovery] when available.
+pattern: A pure derivation fn `authorized_actions(principal, denied, cfg) -> Vec<AuthorizedAction>` that intersects effective_authority with ROUTE_AUTHORITY_TABLE, looks up AFFORDANCE_MAP[denied] for intent categories (each naming a route in a SUCCEEDING context), filters out the (route_d,predicate_d,ref_d) that fired and the self-approve Route::Commit case, maps to CATALOG &'static str entries, and appends CATALOG[discovery] when available.
 pattern_source: crates/but-authz/src/authorize.rs:113 (missing_permission already computes a held summary by mapping Authority::name over held — the same effective-set source the menu intersects); crates/but-authz/src/authority.rs:46 (Authority::ALL static-slice pattern for AFFORDANCE_MAP/CATALOG).
 anti_pattern: A pure `required_authority ⊆ held` with NO subtraction (offers the branch.protected commit the caller still holds contents:write for — the C5 lying menu); building effect strings with `format!("commit to {branch}")` (closed-catalog violation + injection surface); emitting the whole CATALOG ignoring AFFORDANCE_MAP (menu bloat / irrelevant-advice failure).
 references: 03-technical-requirements-delta.md §3 + §5; 02-uc-steer.md UC-STEER-02 (AC-1..7) + UC-STEER-06 AC-3; 05-delta-replan.md UC-STEER-02/06 C5
 interaction_notes:
   - STEER-004 supplies the cfg/ref and the (route_d, predicate_d, ref_d) tuple and calls authorized_actions from the constructors/gates; STEER-009 proves at runtime that every offered action succeeds in its stated context; STEER-010 adds the closed-catalog + AFFORDANCE_MAP-coverage greps.
-  - RR-5 gate-step map: SPRINT.md human-gate step 2 ('reviewer commits to protected main') resolves to a `perm.denied` (the reviewer lacks `contents:write`), NOT `branch.protected` — the commit gate's authority check fails BEFORE the branch-protection predicate is reached. Its menu therefore still surfaces `but review request-changes`/`comment` (reviews:write held) and excludes `but review approve` (own-branch self-approve exclusion). AC-3 already proves this shape; this note maps the gate step to the right denial code (no structural change).
+  - RR-5 gate-step map: SPRINT.md human-gate step 2 ('reviewer commits to protected main') resolves to a `perm.denied` (the reviewer lacks `contents:write`), NOT `branch.protected` — the commit gate's authority check fails BEFORE the branch-protection predicate is reached. Its menu therefore still surfaces `but review request-changes`/`comment` (reviews:write held) and excludes `but review approve` (commit-path self-approve exclusion). AC-3 already proves this shape; this note maps the gate step to the right denial code (no structural change).
   - SA-7 R15 out-of-scope: bounding/sanitizing the config-derived strings interpolated into `message`/`unmet[]` is the NAMED accepted-leak R15 (enrichment §9.3) and is NOT owned by this sprint — the closed-catalog invariant guarantees only the NEW fields are catalog-sourced; R15 mitigation is named and deferred, not silently gapped.
 
 --------------------------------------------------------------------------------
@@ -250,6 +262,12 @@ CODING STANDARDS: crates/AGENTS.md, crates/but/AGENTS.md, crates/WORKSPACE_MODEL
       "verify": "cargo test -p but governed_loop_steer_menu_includes_discovery"
     },
     {
+      "id": "AC-7",
+      "type": "acceptance_criterion",
+      "description": "GIVEN any commit-path denial (Route::Commit) WHEN the menu is derived THEN `but review approve` is unconditionally excluded regardless of nominal branch ownership",
+      "verify": "cargo test -p but-authz steer_self_approve_unconditional_commit_path_exclusion && cargo test -p but governed_loop_steer_reviewer_menu_runnable_no_self_approve"
+    },
+    {
       "id": "TC-1",
       "type": "test_criterion",
       "description": "Menu entry authority \u2286 held",
@@ -280,7 +298,7 @@ CODING STANDARDS: crates/AGENTS.md, crates/but/AGENTS.md, crates/WORKSPACE_MODEL
     {
       "id": "TC-5",
       "type": "test_criterion",
-      "description": "reviewer own-branch menu excludes `but review approve`",
+      "description": "reviewer commit-path menu excludes `but review approve`",
       "maps_to_ac": "AC-3",
       "verify": "cargo test -p but governed_loop_steer_reviewer_menu_runnable_no_self_approve"
     },
@@ -318,6 +336,13 @@ CODING STANDARDS: crates/AGENTS.md, crates/but/AGENTS.md, crates/WORKSPACE_MODEL
       "description": "A reviewer committing to protected main is denied `perm.denied` (missing contents:write), not `branch.protected`, and its menu still lists `but review request-changes`/`comment` and excludes `but review approve` (RR-5 gate-step map)",
       "maps_to_ac": "AC-3",
       "verify": "cargo test -p but governed_loop_steer_reviewer_menu_runnable_no_self_approve"
+    },
+    {
+      "id": "TC-11",
+      "type": "test_criterion",
+      "description": "`but review approve` is absent from every commit-path denial's authorized_actions regardless of nominal branch ownership",
+      "maps_to_ac": "AC-7",
+      "verify": "cargo test -p but-authz steer_self_approve_unconditional_commit_path_exclusion && cargo test -p but governed_loop_steer_reviewer_menu_runnable_no_self_approve"
     }
   ]
 }
