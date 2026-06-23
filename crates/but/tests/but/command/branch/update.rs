@@ -514,3 +514,86 @@ Error: Branch 'refs/heads/A' has no tracking branch
 
     Ok(())
 }
+
+/// Sprint-04 red-hat G5: `but branch integrate` (the CLI surface of
+/// `apply_branch_integration`) must be gated by the commit gate. A read-only
+/// principal on a governed workspace must be denied `perm.denied` naming
+/// `contents:write`; the workspace ref must not advance.
+#[test]
+#[serial_test::serial]
+fn integrate_readonly_denied() -> anyhow::Result<()> {
+    let env = governed_integrate_env()?;
+    let repo = env.open_repo()?;
+    let workspace_before = ref_id(&repo, "refs/heads/gitbutler/workspace")?;
+
+    let output = env
+        .but("branch update A")
+        .env("BUT_AGENT_HANDLE", "ro")
+        .output()?;
+    assert_eq!(
+        output.status.code(),
+        Some(1),
+        "read-only integrate must exit 1; stdout: {}; stderr: {}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains(r#""code":"perm.denied""#) || stderr.contains("contents:write"),
+        "read-only integrate must surface perm.denied naming contents:write; stderr: {stderr}"
+    );
+    assert_eq!(
+        ref_id(&repo, "refs/heads/gitbutler/workspace")?,
+        workspace_before,
+        "denied integrate must leave the workspace ref unchanged"
+    );
+
+    println!("read-only integrate denied by commit gate; workspace ref unchanged");
+    Ok(())
+}
+
+fn governed_integrate_env() -> anyhow::Result<Sandbox> {
+    let env = Sandbox::init_scenario_with_target_and_default_settings("branch-integrate-diverged")?;
+    env.invoke_bash(
+        r#"
+write_governance_commit() {
+    target_ref="$1"
+    base=$(git rev-parse "$target_ref")
+    index=$(mktemp)
+    export GIT_INDEX_FILE="$index"
+    git read-tree "$base"
+    permissions_blob=$(git hash-object -w --stdin <<'EOF'
+[[principal]]
+id = "dev"
+permissions = ["contents:write"]
+
+[[principal]]
+id = "ro"
+permissions = ["contents:read"]
+EOF
+)
+    gates_blob=$(git hash-object -w --stdin <<'EOF'
+[[branch]]
+name = "main"
+protected = true
+EOF
+)
+    git update-index --add --cacheinfo 100644 "$permissions_blob" .gitbutler/permissions.toml
+    git update-index --add --cacheinfo 100644 "$gates_blob" .gitbutler/gates.toml
+    tree=$(git write-tree)
+    commit=$(printf 'governance config\n' | git commit-tree "$tree" -p "$base")
+    git update-ref "$target_ref" "$commit"
+    rm "$index"
+    unset GIT_INDEX_FILE
+}
+
+write_governance_commit refs/heads/main
+write_governance_commit refs/remotes/origin/main
+"#,
+    );
+    Ok(env)
+}
+
+fn ref_id(repo: &gix::Repository, ref_name: &str) -> anyhow::Result<gix::ObjectId> {
+    Ok(repo.find_reference(ref_name)?.peel_to_id()?.detach())
+}

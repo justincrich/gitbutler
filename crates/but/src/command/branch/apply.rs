@@ -7,11 +7,14 @@ use crate::utils::OutputChannel;
 pub fn apply(mut ctx: Context, branch_name: &str, out: &mut OutputChannel) -> anyhow::Result<()> {
     {
         let repo = ctx.repo.get()?;
-        let project_meta = ctx.project_meta()?;
-        if let Ok(target_ref) = project_meta.target_ref_or_err() {
+        // Use the SAME governance-aware resolver as the library path
+        // (but_api::branch::workspace_config_ref). This closes the G3 asymmetry:
+        // a governed repo without target_ref but with committed .gitbutler/*.toml
+        // on some branch is still gated from the CLI.
+        if let Some(config_ref) = but_api::branch::workspace_config_ref(&ctx, &repo)? {
             but_api::commit::create::gate::enforce_commit_gate_for_target(
                 &repo,
-                &but_api::commit::create::gate::CommitGateTarget::config_only(target_ref.clone()),
+                &but_api::commit::create::gate::CommitGateTarget::config_only(config_ref),
             )
             .map_err(commit_gate_cli_error)?;
         }

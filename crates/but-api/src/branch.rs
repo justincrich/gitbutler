@@ -658,7 +658,16 @@ pub fn apply(
     apply_with_perm(ctx, existing_branch, guard.write_permission())
 }
 
-fn workspace_config_ref(
+/// Resolve the config ref to use for commit-gate enforcement.
+///
+/// Public so the CLI pre-check gate (`but branch apply`, `but branch integrate`)
+/// can use the SAME governance-aware resolver as the library path. Returns
+/// `Ok(Some(target_ref))` when target_ref is set; otherwise falls back to
+/// `first_governed_ref` (the first ref with committed `.gitbutler/*.toml`),
+/// so a governed repo without target_ref is still gated on the CLI path.
+/// Returns `Ok(None)` when neither target_ref nor any governed ref exists
+/// (the action proceeds ungated — opt-in by presence).
+pub fn workspace_config_ref(
     ctx: &Context,
     repo: &gix::Repository,
 ) -> anyhow::Result<Option<gix::refs::FullName>> {
