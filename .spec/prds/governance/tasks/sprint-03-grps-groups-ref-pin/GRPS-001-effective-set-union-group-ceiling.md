@@ -213,8 +213,14 @@ Blocks:     GRPS-002, Sprint 04, Sprint 05
   "proposed_by": "rust-planner",
   "verification_policy": {
     "requires_tests": true,
-    "requires_red_evidence": true,
-    "requires_seeded_evidence": true
+    "requires_red_evidence": false,
+    "requires_seeded_evidence": true,
+    "red_evidence_waiver": {
+      "reason": "behavior-neutral simplification over pre-existing AUTHZ-002 load-time fold; behavioral RED genuinely impossible (all four AC tests pass on any post-AUTHZ-002 baseline — empirically proven in .tmp/GRPS-001/red-evidence-impossibility.md)",
+      "falsifiability_substitute": ".tmp/GRPS-001/mutation-evidence.md",
+      "waived_on": "2026-06-22",
+      "waived_by": "Sprint-03 red-hat remediation cycle"
+    }
   },
   "fixtures": {
     "group_union_base": {

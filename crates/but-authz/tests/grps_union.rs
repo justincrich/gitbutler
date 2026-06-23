@@ -146,8 +146,19 @@ fn claims_do_not_widen_union_even_with_group_backing() -> anyhow::Result<()> {
 }
 
 fn governed_repo() -> (gix::Repository, impl std::fmt::Debug) {
+    governed_repo_with(std::env::var_os("AUTHZ_EMPTY_START").is_some())
+}
+
+/// Build the GRPS-001 governed scenario. When `empty_start` is true, returns
+/// the bare `governance-base` scenario with NO committed `.gitbutler/*.toml`
+/// so the loader's empty-start fail-closed path can be exercised in-process
+/// without env mutation. When false (the default for the four grps_union
+/// tests), commits the full `reviewer-only` + `reviewer-byref` + `ro` +
+/// `config-admins`/`delegate` permissions + gates config used by the existing
+/// tests.
+fn governed_repo_with(empty_start: bool) -> (gix::Repository, impl std::fmt::Debug) {
     let (repo, tmp) = but_testsupport::writable_scenario("governance-base");
-    if std::env::var_os("AUTHZ_EMPTY_START").is_some() {
+    if empty_start {
         return (repo, tmp);
     }
 
@@ -186,6 +197,23 @@ git commit -m "group union config"
         &repo,
     );
     (repo, tmp)
+}
+
+/// FIX-GRPS-001-EMPTY-START-CONTROL AC-1: the AUTHZ_EMPTY_START fail-closed
+/// control runs in-process. The bare `governance-base` scenario has NO
+/// committed `.gitbutler/*.toml`; `load_governance_config` must fail closed
+/// with `code() == "config.invalid"` rather than silently returning a
+/// permissive empty `GovConfig`.
+#[test]
+fn empty_start_fails_closed_config_invalid() {
+    let (repo, _tmp) = governed_repo_with(true);
+    let error = load_governance_config(&repo, "refs/heads/main")
+        .expect_err("empty start must fail closed with config.invalid");
+    assert_eq!(
+        error.code(),
+        "config.invalid",
+        "bare scenario (no committed .gitbutler/*.toml) must fail closed as config.invalid"
+    );
 }
 
 fn bare_principal(id: &str) -> Principal {

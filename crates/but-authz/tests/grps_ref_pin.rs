@@ -125,10 +125,14 @@ permissions = ["contents:write", "administration:write"]
 EOF
 git add .gitbutler/permissions.toml
 git commit -m "self grant administration write on feature head"
-git checkout main
 "#,
         &repo,
     );
+    // FIX-GRPS-002-AC3-TEETH: leave HEAD on feat-admin so the negative control
+    // has teeth. A HEAD-peel mutation in load_governance_config would read the
+    // feat-admin tree (which carries the self-grant) and authorize when it
+    // should deny. Only the target-ref peel (`refs/heads/main`) reads the
+    // pre-grant config and correctly denies.
     (repo, tmp)
 }
 
@@ -184,6 +188,7 @@ git commit -m "feature head self adds maintainers membership"
 fn land_admin_write(repo: &gix::Repository) {
     but_testsupport::invoke_bash(
         r#"
+git checkout main
 cat >.gitbutler/permissions.toml <<'EOF'
 [[principal]]
 id = "feat-author"

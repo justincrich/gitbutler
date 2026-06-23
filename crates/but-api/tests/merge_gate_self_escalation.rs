@@ -94,6 +94,7 @@ fn self_escalation_repo() -> (gix::Repository, tempfile::TempDir) {
     let (repo, tmp) = but_testsupport::writable_scenario("checkout-head-info");
     but_testsupport::invoke_bash(
         r#"
+git remote remove origin 2>/dev/null || true
 git remote add origin https://github.com/gitbutler/merge-gate-fixture.git
 mkdir -p .gitbutler
 cat >.gitbutler/permissions.toml <<'EOF'

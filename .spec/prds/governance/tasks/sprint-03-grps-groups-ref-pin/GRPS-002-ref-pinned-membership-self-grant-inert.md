@@ -226,8 +226,14 @@ Blocks:     Sprint 04, Sprint 05
   "proposed_by": "rust-planner",
   "verification_policy": {
     "requires_tests": true,
-    "requires_red_evidence": true,
-    "requires_seeded_evidence": true
+    "requires_red_evidence": false,
+    "requires_seeded_evidence": true,
+    "red_evidence_waiver": {
+      "reason": "capstone over pre-existing AUTHZ-002 ref-pinned loader + Sprint 01b merge gate; behavioral RED genuinely impossible without rolling back the underlying contract",
+      "falsifiability_substitute": ".tmp/GRPS-002/mutation-evidence.md",
+      "waived_on": "2026-06-22",
+      "waived_by": "Sprint-03 red-hat remediation cycle"
+    }
   },
   "fixtures": {
     "self_escalation_merge_base": {
