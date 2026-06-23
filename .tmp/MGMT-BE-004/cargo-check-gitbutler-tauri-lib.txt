@@ -1,0 +1,4 @@
+    Checking but-authz v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-BE-004-implementation-1/crates/but-authz)
+    Checking but-api v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-BE-004-implementation-1/crates/but-api)
+    Checking gitbutler-tauri v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-BE-004-implementation-1/crates/gitbutler-tauri)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 5.43s

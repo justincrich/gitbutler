@@ -22,8 +22,9 @@
 <button
 	type="button"
 	role="tab"
-	tabindex={isActive ? -1 : 0}
+	tabindex={isActive ? 0 : -1}
 	aria-selected={isActive}
+	aria-controls={`${value}-panel`}
 	id={value}
 	{value}
 	{disabled}

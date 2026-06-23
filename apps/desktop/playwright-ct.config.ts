@@ -22,6 +22,7 @@ export default defineConfig({
 					"$env/static/public": resolve("./tests/mocks/env-static-public.ts"),
 					$components: resolve("./src/components"),
 					$lib: resolve("./src/lib"),
+					$tests: resolve("./tests"),
 				},
 			},
 		},

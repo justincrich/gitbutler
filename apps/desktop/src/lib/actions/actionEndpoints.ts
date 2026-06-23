@@ -42,7 +42,7 @@ export function buildActionEndpoints(build: BackendEndpointBuilder) {
 		}),
 		listWorkspaceRules: build.query<
 			EntityState<WorkspaceRule, WorkspaceRuleId>,
-			{ projectId: string }
+			{ projectId: string; principalId?: string }
 		>({
 			extraOptions: { command: "list_workspace_rules" },
 			query: (args) => args,

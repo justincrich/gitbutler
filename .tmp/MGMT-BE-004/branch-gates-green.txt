@@ -1,0 +1,108 @@
+   Compiling but-api v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-BE-004-implementation-1/crates/but-api)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.65s
+     Running unittests src/lib.rs (target/debug/deps/but_api-b39b2d81e53be874)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 32 filtered out; finished in 0.00s
+
+     Running tests/admin_write_guard.rs (target/debug/deps/admin_write_guard-c678a85d6ea277c7)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 2 filtered out; finished in 0.00s
+
+     Running tests/api/main.rs (target/debug/deps/api-d8e5b7608d4ddca4)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 2 filtered out; finished in 0.00s
+
+     Running tests/branch_gates.rs (target/debug/deps/branch_gates-b301b2a3cdce1c99)
+
+running 8 tests
+AC-7 seeded: populated_branch_len=3; populated_gate_len=3; feature_groups=["maintainers"]; created_branch_len=1; created_gate_len=1
+test branch_gates_update_appends_new_branch_and_creates_absent_file ... ok
+AC-2 seeded: main protected=false; min_approvals=2; distinct=true; groups=["code-reviewers", "maintainers"]
+test branch_gates_update_unprotect_preserves_gate_requirement ... ok
+AC-3 seeded: branch_len=2; gate_len=2; main_min=2; release_min=1; release_groups=["maintainers"]
+test branch_gates_update_round_trips_full_gate_schema_lossless ... ok
+AC-1 seeded: working main min_approvals=3; committed main min_approvals=2; pending=true; ref_unchanged=true; caveat=takes effect once committed to the target branch
+test branch_gates_update_writes_worktree_inert_until_committed ... ok
+AC-4 seeded: denial_code=perm.denied; message_contains_administration_write=true; gates_unchanged=true
+test branch_gates_update_non_admin_denied_writes_nothing ... ok
+AC-8 seeded: admin_main_min=2; denial_code=perm.denied; message_contains_administration_read=true
+test branch_gates_read_requires_administration_read ... ok
+AC-5 seeded: clean_min=2; clean_pending=false; pending_min=2; pending_flag=true
+test branch_gates_read_returns_committed_set_with_pending_signal ... ok
+AC-6 seeded: release distinct=true; groups=["maintainers", "code-reviewers"]
+test branch_gates_update_sets_distinct_and_required_groups ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.40s
+
+     Running tests/branch_gates_governance.rs (target/debug/deps/branch_gates_governance-291077d3c98d43cb)
+
+running 4 tests
+branch_gates_read returned 2 entries under administration:read
+test branch_gates_read_returns_working_tree_gates_under_admin_read ... ok
+branch_gates_update upserted existing and inserted new entries
+test branch_gates_update_upserts_under_admin_write ... ok
+test branch_gates_update_non_admin_denied_writes_nothing ... ok
+test branch_gates_read_non_admin_denied ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.17s
+
+     Running tests/commit_gate.rs (target/debug/deps/commit_gate-b8643f2d47fcfee4)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 13 filtered out; finished in 0.00s
+
+     Running tests/confinement.rs (target/debug/deps/confinement-7eaf4816e3d8361a)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 2 filtered out; finished in 0.00s
+
+     Running tests/forge_guard.rs (target/debug/deps/forge_guard-957b48013fabacec)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 4 filtered out; finished in 0.00s
+
+     Running tests/governance_api.rs (target/debug/deps/governance_api-c65881f20ac9bc4d)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 10 filtered out; finished in 0.00s
+
+     Running tests/group_governance.rs (target/debug/deps/group_governance-4c2b554b81227445)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 14 filtered out; finished in 0.00s
+
+     Running tests/merge_gate.rs (target/debug/deps/merge_gate-a9a7eef08cb3c05c)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 14 filtered out; finished in 0.00s
+
+     Running tests/merge_gate_self_escalation.rs (target/debug/deps/merge_gate_self_escalation-9d28f44a80d77c31)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 2 filtered out; finished in 0.00s
+
+     Running tests/perm_governance.rs (target/debug/deps/perm_governance-42c85dcfae8ecb29)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 12 filtered out; finished in 0.00s
+
+     Running tests/rules_scoped.rs (target/debug/deps/rules_scoped-5dc7716c74bb1a32)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 4 filtered out; finished in 0.00s
+

@@ -17,8 +17,8 @@ export function parseError(error: unknown): NormalizedError {
 		error instanceof PromiseRejectionEvent &&
 		isNormalizedError(error.reason)
 	) {
-		const { name, message, code } = error.reason;
-		return { origin: "ipc", name, message, code };
+		const { name, message, code, remediation_hint } = error.reason;
+		return { origin: "ipc", name, message, code, remediation_hint };
 	}
 
 	if (isPromiseRejection(error)) {
@@ -30,11 +30,11 @@ export function parseError(error: unknown): NormalizedError {
 	}
 
 	if (isNormalizedError(error)) {
-		const { name, message, code, origin } = error;
+		const { name, message, code, origin, remediation_hint } = error;
 		// Keep the producer-set origin if present (e.g. IpcError sets
 		// "ipc"); fall back to "ipc" since RTK's tauriBaseQuery is by
 		// far the most common producer of this shape.
-		return { origin: origin ?? "ipc", name, message, code };
+		return { origin: origin ?? "ipc", name, message, code, remediation_hint };
 	}
 
 	if (isReduxActionError(error)) {
