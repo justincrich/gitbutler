@@ -1,6 +1,6 @@
 # REMEDIATE-RUST-1: Widen but-authz GatesWire to accept the full [[gate]] schema and expose gates_path()
 
-**Type:** FEATURE | **Status:** Backlog | **Priority:** P0 | **Effort:** S (45 min)
+**Type:** FEATURE | **Status:** Done - satisfied at HEAD b3449afbb2 (per REMEDIATE-06B-C triage) | **Priority:** P0 | **Effort:** S (45 min)
 **Agent:** rust-implementer | **Reviewer:** rust-reviewer | **Proposed by:** rust-planner
 **Closes red-hat findings:** H1
 **Depends on:** (none) | **Blocks:** MGMT-BE-004A

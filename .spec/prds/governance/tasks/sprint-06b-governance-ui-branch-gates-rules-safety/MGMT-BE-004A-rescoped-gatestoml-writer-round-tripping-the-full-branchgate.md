@@ -1,10 +1,11 @@
 # MGMT-BE-004A: Rescoped gates.toml writer round-tripping the full branch+gate schema (successor to MGMT-BE-004)
 
-**Type:** FEATURE | **Status:** Backlog | **Priority:** P0 | **Effort:** L (240 min)
+**Type:** FEATURE | **Status:** Done - superseded by MGMT-BE-004 at HEAD b3449afbb2 (per REMEDIATE-06B-C triage) | **Priority:** P0 | **Effort:** L (240 min)
 **Agent:** rust-implementer | **Reviewer:** rust-reviewer | **Proposed by:** rust-planner
 **Closes red-hat findings:** H1, M4, M5
 
 **Supersedes:** MGMT-BE-004 (per `red-hat-20260622T145305Z.md` — original scope was unimplementable / false premise)
+**Superseded by:** MGMT-BE-004 (lossless full-schema round-trip is already satisfied at HEAD b3449afbb2)
 **Depends on:** REMEDIATE-RUST-1 | **Blocks:** MGMT-UI-009
 **PRD refs:** UC-MGMT-04, UC-MGMT-06 | **Capabilities:** CAP-AUTHZ-01, CAP-CONFIG-01
 

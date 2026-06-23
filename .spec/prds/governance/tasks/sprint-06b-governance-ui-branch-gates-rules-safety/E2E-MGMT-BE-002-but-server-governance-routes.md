@@ -1,5 +1,8 @@
 # E2E-MGMT-BE-002: Route governed governance commands through but-server (web-target HTTP surface)
 
+**Status:** Cancelled — superseded by E2E-MGMT-BE-002A (per REMEDIATE-06B-C triage)
+**Reason:** The original premise "but-server routes zero governance commands" is false at HEAD b3449afbb2; 16 governance routes are already registered in `crates/but-server/src/lib.rs:34-99`.
+
 ## What this does
 
 Registers 13 `but-server` HTTP routes (`POST /{command}`) in the `Router::new()` table — one per governed governance command — each binding the GOVERNED `legacy::governance::<cmd>_cmd` wrapper via `but_post`, mirroring the existing workspace-rules routes (lib.rs:822-837). Today `but-server` routes **zero** governance commands, so the web-target UI (`webInvoke → POST ${getApiBaseUrl()}/${command}`) cannot reach governance at all. This closes that gap so the capstone Playwright suite can drive the real governance UI against a real backend — with the real `but-authz` gate enforcing `perm.denied` for non-admins.
