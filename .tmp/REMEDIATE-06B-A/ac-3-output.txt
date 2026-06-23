@@ -1,0 +1,10 @@
+========== AC-3: NOT-STARTED UI tasks retain zero [x] ==========
+
+VERIFY: grep -c '^- \[x\]' on each of MGMT-UI-009/010/011/012
+
+MGMT-UI-009-*.md: 0 (must be 0)
+MGMT-UI-010-*.md: 0 (must be 0)
+MGMT-UI-011-*.md: 0 (must be 0)
+MGMT-UI-012-*.md: 0 (must be 0)
+
+Result: ALL FOUR return 0 — PASS

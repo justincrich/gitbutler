@@ -62,7 +62,7 @@ A sveltekit-implementer reading this contract knows (a) exactly which InfoMessag
 --------------------------------------------------------------------------------
 DONE WHEN
 --------------------------------------------------------------------------------
-- [ ] AC-1 [PRIMARY]: Denial banner prop specification [PRIMARY]
+- [x] AC-1 [PRIMARY]: Denial banner prop specification [PRIMARY]
 - [ ] AC-2: Toggle no-flip interaction rule
 - [ ] AC-3: Three-state machine table
 - [ ] AC-4: No new design-system tokens

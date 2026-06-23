@@ -1,0 +1,63 @@
+{
+  "task_id": "REMEDIATE-06B-A",
+  "task_type": "REMEDIATION",
+  "agent": "sveltekit-implementer",
+  "head_sha": "4b3d506ee7",
+  "evidence_base": "f7a1589c6c",
+  "red_hat_review": ".spec/prds/governance/reviews/red-hat-20260623T031824Z-sprint-06b.md",
+  "ac_results": {
+    "AC-1": {
+      "result": "pass",
+      "description": "SPRINT.md status field reads 'In Progress' and a 'Completion Status' section lists every task with its real HEAD state",
+      "verify_commands": [
+        "grep -c '^status: In Progress$' SPRINT.md -> 1",
+        "grep -c '^## Completion Status' SPRINT.md -> 1"
+      ],
+      "evidence": "SPRINT.md frontmatter status changed from Planned to In Progress; Completion Status (HEAD 4b3d506ee7) table added after Human Testing Gate with 11 task rows citing red-hat file:line evidence; prose Status field also updated"
+    },
+    "AC-2": {
+      "result": "pass",
+      "description": "Every PASS-evidenced AC in MGMT-BE-003, MGMT-BE-004 (except AC-3), MGMT-UI-004 (AC-2 only), and DESIGN-MGMT-004/006/007/008 is [x]",
+      "per_task_counts": {
+        "MGMT-BE-003": { "checked": 5, "threshold": 5, "pass": true, "acs_checked": ["AC-1", "AC-2", "AC-3", "AC-4", "AC-5"] },
+        "MGMT-BE-004": { "checked": 3, "threshold": 3, "pass": true, "acs_checked": ["AC-1", "AC-2", "AC-4"], "partial": { "AC-3": "lossless round-trip unverified — see REMEDIATE-06B-B" } },
+        "MGMT-UI-004": { "checked": 1, "threshold": 1, "pass": true, "acs_checked": ["AC-2"], "partial": { "AC-1": "wrap in place but no CT evidence — see REMEDIATE-06B-B", "AC-3": "wrap in place but no CT evidence — see REMEDIATE-06B-B" } },
+        "DESIGN-MGMT-004": { "checked": 1, "threshold": 1, "pass": true, "acs_checked": ["AC-1"] },
+        "DESIGN-MGMT-006": { "checked": 1, "threshold": 1, "pass": true, "acs_checked": ["AC-1"] },
+        "DESIGN-MGMT-007": { "checked": 1, "threshold": 1, "pass": true, "acs_checked": ["AC-1"] },
+        "DESIGN-MGMT-008": { "checked": 1, "threshold": 1, "pass": true, "acs_checked": ["AC-1"] }
+      }
+    },
+    "AC-3": {
+      "result": "pass",
+      "description": "The 4 NOT-STARTED UI task files retain all [ ] (zero [x]) across all four",
+      "verify_results": {
+        "MGMT-UI-009": 0,
+        "MGMT-UI-010": 0,
+        "MGMT-UI-011": 0,
+        "MGMT-UI-012": 0
+      }
+    },
+    "AC-4": {
+      "result": "pass",
+      "description": "The 'Task Detail Files' section enumerates all .md files returned by ls *.md | wc -l",
+      "file_count": 32,
+      "bullet_count": 32,
+      "test_command": "test $(ls *.md | wc -l | tr -d ' ') -eq $(grep -cE '^- [A-Z0-9_-]+.*\\.md$' SPRINT.md)",
+      "test_result": "PASS (32 == 32)"
+    }
+  },
+  "overall": "pass",
+  "files_modified": [
+    "SPRINT.md",
+    "MGMT-BE-003-principal-scoped-rules-query.md",
+    "MGMT-BE-004-branch-gates-config-writer.md",
+    "MGMT-UI-004-error-boundary-wrap.md",
+    "DESIGN-MGMT-004-denial-no-flip-contract.md",
+    "DESIGN-MGMT-006-empty-states.md",
+    "DESIGN-MGMT-007-four-tab-a11y-contract.md",
+    "DESIGN-MGMT-008-error-boundary-ipc-retry.md"
+  ],
+  "closes_findings": ["F6", "F7-partial"],
+  "source_code_changes": "none"
+}

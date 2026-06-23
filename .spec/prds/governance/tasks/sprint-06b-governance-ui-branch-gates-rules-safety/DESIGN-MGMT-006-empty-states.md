@@ -61,7 +61,7 @@ A sveltekit-implementer reading this contract knows the exact EmptyStatePlacehol
 --------------------------------------------------------------------------------
 DONE WHEN
 --------------------------------------------------------------------------------
-- [ ] AC-1 [PRIMARY]: Branch Gates empty state [PRIMARY]
+- [x] AC-1 [PRIMARY]: Branch Gates empty state [PRIMARY]
 - [ ] AC-2: Rules tab empty states (no principal / no rules)
 - [ ] AC-3: Read-only disabled treatment for empty-state actions
 - [ ] AC-4: No new design-system tokens
