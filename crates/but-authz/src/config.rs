@@ -316,11 +316,8 @@ impl ConfigError {
         Self {
             message: source.to_string(),
             source,
-            // STEER-004: malformed committed governance config can only be
-            // fixed by a maintainer re-committing valid `.gitbutler/*.toml`;
-            // the actor has no path to self-correct.
             class: Some(DenialClass::OperatorRequired),
-            do_not: None,
+            do_not: Some("do not retry — an operator must fix the committed .gitbutler config"),
         }
     }
 }

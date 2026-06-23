@@ -1,9 +1,54 @@
 use bstr::ByteSlice as _;
-use but_authz::{Authority, serialize_authority_tokens};
-use but_authz::{AuthorizedAction, Denial, DenialClass, Principal, load_governance_config};
+use but_authz::{
+    Authority, AuthorizedAction, Denial, DenialCause, DenialClass, DenialPredicate, DeniedRoute,
+    Principal, Route, authorized_actions, effective_authority, load_governance_config,
+    serialize_authority_tokens,
+};
 use but_rebase::graph_rebase::mutate::RelativeTo;
 use gix::refs::FullName;
 use serde::Serialize;
+
+// ---------------------------------------------------------------------------
+// STEER-007 — denial-steering telemetry (observation-only)
+// ---------------------------------------------------------------------------
+
+/// Emit a structured denial-steering telemetry event on the existing
+/// `tracing` path, carrying the four aggregate metrics operators use to
+/// measure whether steering reduces hard-quits and loops:
+///
+/// - `code` — the stable denial code string (e.g. `branch.protected`).
+/// - `class` — the [`DenialClass`] rendered as its stable snake_case token
+///   (`actor_correctable` / `operator_required`).
+/// - `had_lateral_action` — `true` iff `authorized_actions` carries at least
+///   one entry that is NOT the always-appended discovery affordance
+///   (`but perm list`). This is deliberately NOT `menu_length > 0`: a menu
+///   consisting of only the discovery entry offers no lateral move.
+/// - `menu_length` — `authorized_actions.len()`.
+///
+/// Observation-only: never alters the deny/allow decision, the exit code, or
+/// any existing denial field. Fired exactly once per denial at the
+/// payload-build boundary shared by the carriers (commit/merge/forge gates).
+///
+/// No principal-supplied or config-derived free text is logged — only the
+/// stable code/class tokens and the two numeric/bool metrics (R15
+/// injection-surface avoidance).
+pub(crate) fn emit_denial_steering_event(
+    code: &str,
+    class: DenialClass,
+    authorized_actions: &[AuthorizedAction],
+) {
+    let menu_length = authorized_actions.len();
+    let had_lateral_action = authorized_actions
+        .iter()
+        .any(|action| action.command != but_authz::DISCOVERY_COMMAND);
+    tracing::info!(
+        code,
+        class = class.name(),
+        had_lateral_action,
+        menu_length,
+        "denial steering telemetry"
+    );
+}
 
 /// Structured commit-gate error payload for CLI and API callers.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -76,17 +121,47 @@ pub fn enforce_commit_gate_for_target(
         return Ok(());
     }
 
-    let cfg = load_governance_config(repo, full_name)?;
+    let cfg = load_governance_config(repo, full_name).map_err(|config_error| {
+        // STEER-007: operator_required config.invalid denial — fire the
+        // observation-only telemetry event before propagating. The
+        // authorized_actions menu is empty on this path.
+        emit_denial_steering_event(
+            config_error.code(),
+            config_error.class.unwrap_or(DenialClass::OperatorRequired),
+            &[],
+        );
+        anyhow::Error::from(config_error)
+    })?;
     let principal = but_authz::resolve_principal_from_env(&cfg)?;
 
-    but_authz::authorize(&principal, but_authz::Authority::ContentsWrite, &cfg)?;
+    // STEER-002: Route::Commit row in ROUTE_AUTHORITY_TABLE supplies the
+    // required Authority for this gate; the literal `but_authz::authorize`
+    // call is preserved so the AUTHORITY_POSITIVE_PATTERN honesty grep
+    // keeps matching. The branch-protection predicate below stays composed
+    // AROUND the table — it is NOT folded in.
+    let required = but_authz::Route::Commit.required_authority();
+    // STEER-004: enrich the authorize denial with a route-scoped menu
+    // (ActorCorrectable path). The deny/allow decision is unchanged —
+    // only the authorized_actions payload is additive.
+    but_authz::authorize(&principal, required, &cfg).map_err(|denial| {
+        let denial = denial.with_authorized_actions(
+            &principal,
+            &DeniedRoute::new(Route::Commit, DenialPredicate::Authority),
+            &cfg,
+        );
+        // STEER-007: observation-only telemetry on the perm.denied path
+        // (one event per denial). The event reads the enriched menu so
+        // `had_lateral_action`/`menu_length` reflect the real payload.
+        emit_denial_steering_event(denial.code, denial.class, &denial.authorized_actions);
+        denial
+    })?;
 
     if let Some(branch_name) = &target.protected_branch
         && cfg
             .branch(branch_name)
             .is_some_and(|branch| branch.protected())
     {
-        return Err(branch_protected(&principal, branch_name).into());
+        return Err(branch_protected(&principal, &cfg, branch_name).into());
     }
 
     Ok(())
@@ -179,13 +254,39 @@ fn find_branch_ref_for_commit(
         })
 }
 
-fn branch_protected(principal: &Principal, branch_name: &str) -> Denial {
-    Denial::new(
-        "branch.protected",
-        format!(
+fn branch_protected(
+    principal: &Principal,
+    cfg: &but_authz::GovConfig,
+    branch_name: &str,
+) -> Denial {
+    // STEER-004: re-derive the effective authority set from the same cfg
+    // the gate loaded (never re-loaded — same-cfg/ref by construction, M2).
+    // The held set is dropped on authorize's Ok path today; re-deriving here
+    // populates held_permissions on the branch.protected denial.
+    let held = effective_authority(principal, cfg);
+
+    // STEER-004/STEER-003: derive a gate-state-aware menu via
+    // authorized_actions with the BranchProtected predicate (C5 subtraction:
+    // the menu offers a feature-branch commit, NOT the protected-ref commit).
+    let denied = DeniedRoute::new(Route::Commit, DenialPredicate::BranchProtected);
+    let actions = authorized_actions(principal, &denied, cfg);
+
+    let denial = Denial {
+        code: "branch.protected",
+        message: format!(
             "direct commits to protected branch \"{branch_name}\" are denied for principal \"{}\"; land changes through a reviewed merge",
             principal.id().as_str()
         ),
-        format!("open a reviewed merge into {branch_name} instead of committing directly"),
-    )
+        remediation_hint: format!(
+            "open a reviewed merge into {branch_name} instead of committing directly"
+        ),
+        class: DenialCause::BranchProtected.class(),
+        held_permissions: held.iter().collect(),
+        authorized_actions: actions,
+        do_not: None,
+    };
+    // STEER-007: observation-only telemetry on the branch.protected path
+    // (one event per denial). Fired once at the payload-build boundary.
+    emit_denial_steering_event(denial.code, denial.class, &denial.authorized_actions);
+    denial
 }

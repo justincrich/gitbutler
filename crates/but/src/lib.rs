@@ -500,6 +500,37 @@ async fn match_subcommand(
                 .emit_metrics(metrics_ctx)
         }
         #[cfg(feature = "legacy")]
+        Subcommands::Whoami(args::whoami::Platform { principal }) => {
+            let mut ctx = setup::init_ctx(
+                &args,
+                InitCtxOptions {
+                    background_sync: BackgroundSync::Disabled,
+                    ..Default::default()
+                },
+                out,
+            )?;
+            command::whoami::exec(&mut ctx, out, principal)
+                .await
+                .emit_metrics(metrics_ctx)
+        }
+        #[cfg(feature = "legacy")]
+        Subcommands::CanI(args::can_i::Platform {
+            authority,
+            principal,
+        }) => {
+            let mut ctx = setup::init_ctx(
+                &args,
+                InitCtxOptions {
+                    background_sync: BackgroundSync::Disabled,
+                    ..Default::default()
+                },
+                out,
+            )?;
+            command::can_i::exec(&mut ctx, out, authority, principal)
+                .await
+                .emit_metrics(metrics_ctx)
+        }
+        #[cfg(feature = "legacy")]
         Subcommands::Group(args::group::Platform { cmd }) => {
             let mut ctx = setup::init_ctx(
                 &args,

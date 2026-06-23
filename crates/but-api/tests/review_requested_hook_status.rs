@@ -77,11 +77,11 @@ async fn auto_assignment_visible_in_review_status() -> anyhow::Result<()> {
     );
     assert!(
         status
-            .open_assignments
+            .assignments
             .iter()
             .any(|a| a.reviewer_principal == "rev" && a.state == "pending"),
-        "the auto-opened pending assignment for `rev` must also surface in review_status.open_assignments (the reconciler dispatch trigger) — got {:?}",
-        status.open_assignments
+        "the auto-opened pending assignment for `rev` must also surface in review_status.assignments (the reconciler dispatch trigger) — got {:?}",
+        status.assignments
     );
 
     Ok(())

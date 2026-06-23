@@ -161,11 +161,21 @@ pub async fn status(
             ""
         };
         let verdict_at_head = status.verdict_at_head.as_deref().unwrap_or("none");
-        let approved_label = if status.approved { "yes" } else { "no" };
+        let approved_label = if status.verdict_at_head.as_deref() == Some("approved") {
+            "yes"
+        } else {
+            "no"
+        };
+        let pending: Vec<_> = status
+            .assignments
+            .iter()
+            .filter(|a| a.state == "pending")
+            .collect();
         writeln!(
             out,
-            "Review for {branch}: {} (verdict-at-head: {verdict_at_head}, open threads: {}, approved: {approved_label}){agent_marker}",
-            status.lifecycle, status.open_threads,
+            "Review for {branch}: {} (verdict-at-head: {verdict_at_head}, pending: {}, approved: {approved_label}){agent_marker}",
+            status.lifecycle,
+            pending.len(),
         )?;
         if status.assignments.is_empty() {
             writeln!(out, "  no assignments")?;
@@ -181,34 +191,18 @@ pub async fn status(
         // LPR-008 reconciler drive state — the three facts an orchestrator
         // keys on, surfaced explicitly so the human and the agents share one
         // view of what to do next.
-        if status.open_assignments.is_empty() {
+        if pending.is_empty() {
             writeln!(out, "  dispatch: no pending assignments")?;
         } else {
-            let reviewers: Vec<&str> = status
-                .open_assignments
+            let reviewers: Vec<&str> = pending
                 .iter()
                 .map(|a| a.reviewer_principal.as_str())
                 .collect();
             writeln!(
                 out,
                 "  dispatch: {} pending assignment(s) [{}]",
-                status.open_assignments.len(),
+                pending.len(),
                 reviewers.join(", "),
-            )?;
-        }
-        if status.unresolved_threads.is_empty() {
-            writeln!(out, "  remediation: no unresolved threads")?;
-        } else {
-            let threads: Vec<&str> = status
-                .unresolved_threads
-                .iter()
-                .map(|t| t.thread_id.as_str())
-                .collect();
-            writeln!(
-                out,
-                "  remediation: {} unresolved thread(s) [{}]",
-                status.unresolved_threads.len(),
-                threads.join(", "),
             )?;
         }
     }
@@ -218,16 +212,22 @@ pub async fn status(
 
 fn review_gate_cli_error(err: anyhow::Error) -> CliError {
     if let Some(gate_error) = but_api::legacy::forge::classify_error(&err) {
-        return anyhow::anyhow!(
-            "{}",
-            serde_json::json!({
-                "error": {
-                    "code": gate_error.code,
-                    "message": gate_error.message,
-                }
-            })
-        )
-        .into();
+        // STEER-005: render the full steering envelope (class,
+        // held_permissions, authorized_actions, do_not) PLUS the
+        // long-missing remediation_hint through steer_envelope_from_parts().
+        let remediation_hint = err
+            .downcast_ref::<but_authz::Denial>()
+            .map(|denial| denial.remediation_hint.as_str());
+        let envelope = but_authz::steer_envelope_from_parts(
+            gate_error.code,
+            &gate_error.message,
+            remediation_hint,
+            gate_error.class,
+            &gate_error.held_permissions,
+            &gate_error.authorized_actions,
+            gate_error.do_not,
+        );
+        return anyhow::anyhow!("{}", serde_json::json!({ "error": envelope })).into();
     }
 
     err.into()
@@ -375,17 +375,35 @@ fn resolve_single_review_id(
 
 fn merge_gate_cli_error(err: anyhow::Error) -> anyhow::Error {
     if let Some(gate_error) = but_api::legacy::merge_gate::classify_error(&err) {
-        return anyhow::anyhow!(
-            "{}",
-            serde_json::json!({
-                "error": {
-                    "code": gate_error.code,
-                    "message": gate_error.message,
-                    "remediation_hint": gate_error.remediation_hint,
-                    "unmet": gate_error.unmet,
-                }
-            })
+        // STEER-005: render the full steering envelope (class,
+        // held_permissions, authorized_actions, do_not) through
+        // steer_envelope_from_parts(), then preserve the merge-site-only
+        // `unmet` key. Best-effort: a serialization fault still emits
+        // code/message/remediation_hint + exit 1 (invariant §9.5).
+        let mut envelope = but_authz::steer_envelope_from_parts(
+            gate_error.code,
+            &gate_error.message,
+            Some(&gate_error.remediation_hint),
+            gate_error.class,
+            &gate_error.held_permissions,
+            &gate_error.authorized_actions,
+            gate_error.do_not,
         );
+        // Preserve the merge-site-only `unmet` requirement fragments.
+        if let Some(obj) = envelope.as_object_mut() {
+            obj.insert(
+                "unmet".to_owned(),
+                serde_json::Value::Array(
+                    gate_error
+                        .unmet
+                        .iter()
+                        .cloned()
+                        .map(serde_json::Value::String)
+                        .collect(),
+                ),
+            );
+        }
+        return anyhow::anyhow!("{}", serde_json::json!({ "error": envelope }));
     }
 
     err

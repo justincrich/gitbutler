@@ -3,9 +3,15 @@ use std::{collections::BTreeMap, path::Path, str};
 use anyhow::{Context as _, anyhow};
 use but_authz::{
     Authority, AuthoritySet, AuthorizedAction, BranchName, BranchProtection, Denial, DenialClass,
-    GovConfig, Group, GroupName, PrincipalId, serialize_authority_tokens,
+    DenialPredicate, DeniedRoute, GovConfig, Group, GroupName, PrincipalId, Route,
+    authorized_actions, effective_authority, serialize_authority_tokens,
 };
 use serde::{Deserialize, Serialize};
+
+// STEER-007: shared denial-steering telemetry helper (observation-only).
+// `gate` is mounted as `commit::create::gate` via the `#[path = "gate.rs"]`
+// attribute in `commit/create.rs`.
+use crate::commit::create::gate::emit_denial_steering_event;
 
 #[path = "review_requirement.rs"]
 mod review_requirement;
@@ -59,7 +65,25 @@ pub fn enforce_merge_gate(ctx: &but_ctx::Context, review_id: usize) -> anyhow::R
     let config = load_merge_governance_config(&repo, &target_ref)?;
 
     let principal = but_authz::resolve_principal_from_env(&config.gov)?;
-    but_authz::authorize(&principal, but_authz::Authority::Merge, &config.gov)?;
+    // STEER-002: Route::Merge row in ROUTE_AUTHORITY_TABLE supplies the
+    // required Authority for this gate; the literal `but_authz::authorize`
+    // call is preserved so the AUTHORITY_POSITIVE_PATTERN honesty grep
+    // keeps matching. The review-requirement predicate below stays composed
+    // AROUND the table — it is NOT folded in.
+    let required = but_authz::Route::Merge.required_authority();
+    // STEER-004: enrich the authorize denial with a route-scoped menu
+    // (ActorCorrectable path). The deny/allow decision is unchanged.
+    but_authz::authorize(&principal, required, &config.gov).map_err(|denial| {
+        let denial = denial.with_authorized_actions(
+            &principal,
+            &DeniedRoute::new(Route::Merge, DenialPredicate::Authority),
+            &config.gov,
+        );
+        // STEER-007: observation-only telemetry on the merge perm.denied
+        // path (one event per denial).
+        emit_denial_steering_event(denial.code, denial.class, &denial.authorized_actions);
+        denial
+    })?;
 
     if !config
         .gov
@@ -75,7 +99,7 @@ pub fn enforce_merge_gate(ctx: &but_ctx::Context, review_id: usize) -> anyhow::R
 
     let undefined_groups = undefined_required_groups(requirement, &config.gov);
     if !undefined_groups.is_empty() {
-        return Err(MergeGateError {
+        let error = MergeGateError {
             code: REVIEW_REQUIRED_CODE,
             message: format!(
                 "review requirement for {} is not satisfied: {}",
@@ -89,8 +113,11 @@ pub fn enforce_merge_gate(ctx: &but_ctx::Context, review_id: usize) -> anyhow::R
             held_permissions: Vec::new(),
             authorized_actions: Vec::new(),
             do_not: None,
-        }
-        .into());
+        };
+        // STEER-007: operator_required telemetry — undefined required groups
+        // yields an empty menu (operator must define the missing groups).
+        emit_denial_steering_event(error.code, error.class, &error.authorized_actions);
+        return Err(error.into());
     }
 
     let current_head_oid = current_head_oid(&repo, &source_ref)?;
@@ -111,7 +138,14 @@ pub fn enforce_merge_gate(ctx: &but_ctx::Context, review_id: usize) -> anyhow::R
         Ok(()) => Ok(()),
         Err(unmet) => {
             let unmet = unmet.into_entries();
-            Err(MergeGateError {
+            // STEER-004: gate.review_required → ActorCorrectable. The caller
+            // HOLDS the merge authority (otherwise `authorize` above would
+            // have denied first). Derive the gate-state-aware menu via the
+            // STEER-003 ReviewRequired predicate.
+            let held = effective_authority(&principal, &config.gov);
+            let denied = DeniedRoute::new(Route::Merge, DenialPredicate::ReviewRequired);
+            let actions = authorized_actions(&principal, &denied, &config.gov);
+            let error = MergeGateError {
                 code: REVIEW_REQUIRED_CODE,
                 message: format!(
                     "review requirement for {} is not satisfied: {}",
@@ -121,12 +155,15 @@ pub fn enforce_merge_gate(ctx: &but_ctx::Context, review_id: usize) -> anyhow::R
                 remediation_hint: "collect the required approvals at the current review head"
                     .to_owned(),
                 unmet,
-                class: DenialClass::OperatorRequired,
-                held_permissions: Vec::new(),
-                authorized_actions: Vec::new(),
+                class: DenialClass::ActorCorrectable,
+                held_permissions: held.iter().collect(),
+                authorized_actions: actions,
                 do_not: None,
-            }
-            .into())
+            };
+            // STEER-007: observation-only telemetry on the
+            // gate.review_required path (one event per denial).
+            emit_denial_steering_event(error.code, error.class, &error.authorized_actions);
+            Err(error.into())
         }
     }
 }
@@ -393,16 +430,20 @@ fn config_error(err: anyhow::Error) -> MergeGateError {
 }
 
 fn config_invalid(message: String) -> MergeGateError {
-    MergeGateError {
+    let error = MergeGateError {
         code: CONFIG_INVALID_CODE,
         message: format!("invalid governance config: {message}"),
         remediation_hint: "fix committed .gitbutler governance config on the target ref".to_owned(),
         unmet: Vec::new(),
-        class: DenialClass::ActorCorrectable,
+        class: DenialClass::OperatorRequired,
         held_permissions: Vec::new(),
         authorized_actions: Vec::new(),
-        do_not: None,
-    }
+        do_not: Some("do not retry — an operator must fix the committed .gitbutler config"),
+    };
+    // STEER-007: operator_required config.invalid telemetry — fires once at
+    // the payload-build boundary. Empty menu (operator must fix config).
+    emit_denial_steering_event(error.code, error.class, &error.authorized_actions);
+    error
 }
 
 #[derive(Debug, Deserialize)]

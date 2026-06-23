@@ -44,7 +44,12 @@ pub fn enforce_administration_write_gate(
     let cfg = load_governance_config(repo, target_ref)?;
     let principal = but_authz::resolve_principal_from_env(&cfg)?;
 
-    but_authz::authorize(&principal, but_authz::Authority::AdministrationWrite, &cfg)?;
+    // STEER-002: Route::Admin row in ROUTE_AUTHORITY_TABLE supplies the
+    // required Authority for this gate; the literal `but_authz::authorize`
+    // call is preserved so the AUTHORITY_POSITIVE_PATTERN honesty grep
+    // keeps matching.
+    let required = but_authz::Route::Admin.required_authority();
+    but_authz::authorize(&principal, required, &cfg)?;
 
     Ok(())
 }

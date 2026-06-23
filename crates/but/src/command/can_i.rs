@@ -1,24 +1,29 @@
-//! Command implementation for `but whoami` self-scoped discovery.
+//! Command implementation for `but can-i` authority-hold check.
 
 use anyhow::Context as _;
-use but_api::legacy::governance::WhoamiOutcome;
+use but_api::legacy::governance::CanIOutcome;
 use but_ctx::Context;
 
 use crate::{CliError, utils::OutputChannel};
 
-/// Execute `but whoami`.
+/// Execute `but can-i <authority>`.
 pub async fn exec(
     ctx: &mut Context,
     out: &mut OutputChannel,
+    authority: String,
     principal: Option<String>,
 ) -> Result<(), CliError> {
     let target_ref = resolve_target_ref(ctx).map_err(CliError::from)?;
     let repo = ctx.repo.get().map_err(CliError::from)?;
 
-    let outcome =
-        but_api::legacy::governance::whoami_with_repo(&repo, &target_ref, principal.as_deref())
-            .map_err(governance_cli_error)?;
-    write_whoami(out, &outcome).map_err(CliError::from)
+    let outcome = but_api::legacy::governance::can_i_with_repo(
+        &repo,
+        &target_ref,
+        &authority,
+        principal.as_deref(),
+    )
+    .map_err(governance_cli_error)?;
+    write_can_i(out, &outcome).map_err(CliError::from)
 }
 
 fn resolve_target_ref(ctx: &mut Context) -> anyhow::Result<String> {
@@ -49,20 +54,16 @@ fn target_ref_candidates(target: &gitbutler_branch_actions::BaseBranch) -> Vec<S
     candidates
 }
 
-fn write_whoami(out: &mut OutputChannel, outcome: &WhoamiOutcome) -> anyhow::Result<()> {
+fn write_can_i(out: &mut OutputChannel, outcome: &CanIOutcome) -> anyhow::Result<()> {
     if let Some(out) = out.for_human_or_shell() {
-        writeln!(out, "{}:", outcome.principal)?;
-        for authority in &outcome.authorities {
-            writeln!(out, "  {authority}")?;
-        }
-        writeln!(out, "groups:")?;
-        for group in &outcome.groups {
-            writeln!(out, "  {group}")?;
-        }
-        writeln!(out, "authorized actions:")?;
-        for action in &outcome.authorized_actions {
-            writeln!(out, "  {} — {}", action.command, action.effect)?;
-        }
+        let answer = if outcome.held { "yes" } else { "no" };
+        writeln!(
+            out,
+            "{answer} — {} {} {}",
+            outcome.principal,
+            if outcome.held { "holds" } else { "lacks" },
+            outcome.authority
+        )?;
     } else if let Some(out) = out.for_json() {
         out.write_value(outcome)?;
     }

@@ -1843,6 +1843,212 @@ pub fn perm_list_with_repo(
     })
 }
 
+// ---------------------------------------------------------------------------
+// STEER-006 — self-scoped discovery: whoami / can_i
+// ---------------------------------------------------------------------------
+
+/// Self-scoped discovery picture returned by [`whoami_with_repo`].
+///
+/// Discloses the caller's (or an authorized target's) effective authority set,
+/// its OWN group memberships (group names only — never the other members of
+/// those groups), and its authorized-action set (the `but …` verbs the
+/// principal can run, drawn from the closed [`but_authz::CATALOG`]).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct WhoamiOutcome {
+    /// Principal whose self picture is disclosed.
+    pub principal: String,
+    /// Effective functional authority tokens (direct ∪ group, sorted lexically).
+    pub authorities: Vec<String>,
+    /// The principal's OWN group memberships (group names, not other members).
+    pub groups: Vec<String>,
+    /// Authorized `but …` verbs the principal can run, from the closed CATALOG.
+    pub authorized_actions: Vec<but_authz::AuthorizedAction>,
+}
+
+/// Self-scoped authority-hold answer returned by [`can_i_with_repo`].
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct CanIOutcome {
+    /// Principal whose authority set was queried.
+    pub principal: String,
+    /// Functional authority token that was checked.
+    pub authority: String,
+    /// Whether the principal effectively holds the authority.
+    pub held: bool,
+}
+
+/// Route → catalog command mapping for the self-discovery authorized-action set.
+/// Each command string MUST exist in [`but_authz::CATALOG`]; if one were removed
+/// from CATALOG, the lookup omits it rather than emitting a phantom command.
+const AUTHORIZED_ROUTE_COMMANDS: &[(but_authz::Route, &str)] = &[
+    (but_authz::Route::Commit, "but commit"),
+    (but_authz::Route::Merge, "but review merge"),
+    (
+        but_authz::Route::ForgeReviewsWrite,
+        "but review request-changes",
+    ),
+    (but_authz::Route::ForgeCommentsWrite, "but review comment"),
+    (but_authz::Route::ForgePullRequestsWrite, "but review new"),
+];
+
+/// The discovery affordance command — degradable (omitted if absent from
+/// CATALOG, never a phantom/lying command).
+const DISCOVERY_COMMAND: &str = "but perm list";
+
+/// Derive the authorized-action set for a principal from the closed CATALOG.
+///
+/// For each route whose required authority the principal holds, the
+/// corresponding CATALOG command is surfaced. The discovery affordance
+/// (`but perm list`) is appended (degradable — omitted if not in CATALOG).
+fn self_authorized_actions(held: &but_authz::AuthoritySet) -> Vec<but_authz::AuthorizedAction> {
+    let catalog_lookup = |command: &str| -> Option<but_authz::AuthorizedAction> {
+        but_authz::CATALOG
+            .iter()
+            .find(|action| action.command == command)
+            .cloned()
+    };
+
+    let mut actions = Vec::new();
+    for (route, command) in AUTHORIZED_ROUTE_COMMANDS {
+        if held.contains(route.required_authority())
+            && let Some(action) = catalog_lookup(command)
+        {
+            actions.push(action);
+        }
+    }
+    // Degradable discovery affordance — omitted (not phantom) if not in CATALOG.
+    if let Some(discovery) = catalog_lookup(DISCOVERY_COMMAND) {
+        actions.push(discovery);
+    }
+    actions
+}
+
+/// Resolve a target principal from the governance config by id.
+///
+/// Returns a principal with an empty authority set and no groups when the id
+/// is absent from the config — never panics, never reveals existence to a
+/// cross-principal caller (the scope check in the caller denies first).
+fn resolve_target_principal(
+    target_id: &PrincipalId,
+    config: &but_authz::GovConfig,
+) -> but_authz::Principal {
+    let authorities = config
+        .principal_authorities(target_id)
+        .cloned()
+        .unwrap_or_else(AuthoritySet::empty);
+    let groups = config
+        .groups()
+        .values()
+        .filter(|group| group.members().contains(target_id))
+        .map(|group| group.name().clone())
+        .collect::<Vec<_>>();
+    but_authz::Principal::new(target_id.clone(), authorities, groups)
+}
+
+/// Return the self-scoped discovery picture for a principal (`whoami`).
+///
+/// Reuses the SAME self-or-admin-read scope predicate as [`perm_list_with_repo`]:
+/// a caller may inspect itself unconditionally, or another principal only when
+/// it holds `administration:read` / `administration:write`. Cross-principal
+/// recon by a non-admin caller is denied `perm.denied` leaking nothing about
+/// the target.
+///
+/// The disclosure is self-scoped: it surfaces the target's effective authority
+/// set, its OWN group memberships (group names only — never the other members
+/// of those groups), and its authorized-action set from the closed CATALOG.
+pub fn whoami_with_repo(
+    repo: &gix::Repository,
+    target_ref: &str,
+    principal: Option<&str>,
+) -> anyhow::Result<WhoamiOutcome> {
+    let config = load_governance_config(repo, target_ref)?;
+    let caller = but_authz::resolve_principal_from_env(&config)?;
+    let target = principal.unwrap_or_else(|| caller.id().as_str());
+    let target_id = PrincipalId::new(target);
+
+    if caller.id() != &target_id {
+        let held = but_authz::effective_authority(&caller, &config);
+        if !held.contains(but_authz::Authority::AdministrationRead)
+            && !held.contains(but_authz::Authority::AdministrationWrite)
+        {
+            return Err(Denial::missing_permission(
+                but_authz::Authority::AdministrationRead,
+                &held,
+            )
+            .into());
+        }
+    }
+
+    let target_principal = resolve_target_principal(&target_id, &config);
+    let effective = but_authz::effective_authority(&target_principal, &config);
+    let authorities = effective
+        .iter()
+        .map(|authority| authority.name().to_owned())
+        .collect::<Vec<_>>();
+    let groups = target_principal
+        .groups()
+        .iter()
+        .map(|group| group.as_str().to_owned())
+        .collect::<Vec<_>>();
+    let authorized_actions = self_authorized_actions(&effective);
+
+    Ok(WhoamiOutcome {
+        principal: target.to_owned(),
+        authorities,
+        groups,
+        authorized_actions,
+    })
+}
+
+/// Check whether a principal effectively holds an authority (`can-i`).
+///
+/// Reuses the SAME self-or-admin-read scope predicate as [`perm_list_with_repo`].
+/// Returns [`CanIOutcome`] with `held = true/false` — never denies for an
+/// unheld authority (that is a factual answer, not an error). Cross-principal
+/// recon by a non-admin caller is denied `perm.denied` before the target is
+/// resolved, so the endpoint cannot be used as a principal-existence oracle.
+pub fn can_i_with_repo(
+    repo: &gix::Repository,
+    target_ref: &str,
+    authority_token: &str,
+    principal: Option<&str>,
+) -> anyhow::Result<CanIOutcome> {
+    let config = load_governance_config(repo, target_ref)?;
+    let caller = but_authz::resolve_principal_from_env(&config)?;
+    let target = principal.unwrap_or_else(|| caller.id().as_str());
+    let target_id = PrincipalId::new(target);
+
+    if caller.id() != &target_id {
+        let held = but_authz::effective_authority(&caller, &config);
+        if !held.contains(but_authz::Authority::AdministrationRead)
+            && !held.contains(but_authz::Authority::AdministrationWrite)
+        {
+            return Err(Denial::missing_permission(
+                but_authz::Authority::AdministrationRead,
+                &held,
+            )
+            .into());
+        }
+    }
+
+    let authority = Authority::parse(authority_token).map_err(|error| {
+        config_invalid(format!(
+            "unknown authority token {}: {}",
+            authority_token,
+            error.token()
+        ))
+    })?;
+
+    let target_principal = resolve_target_principal(&target_id, &config);
+    let effective = but_authz::effective_authority(&target_principal, &config);
+    let held = effective.contains(authority);
+
+    Ok(CanIOutcome {
+        principal: target.to_owned(),
+        authority: authority_token.to_owned(),
+        held,
+    })
+}
+
 /// Grant direct functional permissions in the working-tree governance config.
 pub fn perm_grant_with_repo(
     repo: &gix::Repository,

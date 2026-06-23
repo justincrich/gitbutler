@@ -92,9 +92,10 @@ pub fn process_workspace_rules(
                     .unwrap_or_default();
             }
             // The remaining `Action` variants have no FileSytemChange handler:
-            //  - `Explicit(NewCommit)` and `Implicit(*)` are pre-filtered above.
+            //  - `Explicit(NewCommit)` and `Implicit(*)` are pre-filtered above
+            //    and have no meaning against hunk assignments.
             //  - `RequestReview` is a Commit-trigger action handled by
-            //    `process_commit_rules` below; it MUST NOT fire on a
+            //    `process_commit_rules` below; it MUST NOT silently fire on a
             //    FileSytemChange trigger. The explicit arm keeps this match
             //    exhaustive — no wildcard that could hide a future variant.
             super::Action::Explicit(super::Operation::NewCommit { .. })
@@ -267,8 +268,11 @@ fn matching(wt_assignments: &[HunkAssignment], filters: Vec<Filter>) -> Vec<Hunk
 
 // ---- LPR-007: commit Trigger + RequestReview Action firing path -------------
 
-/// Reevaluate commit-trigger `rules` against `commit_ctx`. See
-/// [`crate::process_commit_rules`] for the public contract.
+/// Reevaluate commit-trigger `rules` against `commit_ctx`, firing the
+/// `Action::RequestReview` matches by writing a `pending`
+/// `local_review_assignments` row for the configured reviewer.
+///
+/// See [`crate::process_commit_rules`] for the public contract.
 pub(crate) fn process_commit_rules(
     rules: Vec<WorkspaceRule>,
     commit_ctx: &CommitContext,
@@ -304,6 +308,13 @@ pub(crate) fn process_commit_rules(
 }
 
 /// Evaluate `rule`'s filters against `commit_ctx` with AND semantics.
+///
+/// [`Filter::PathMatchesRegex`] matches if any of the commit's changed paths
+/// matches (file axis). [`Filter::ClaudeCodeSessionId`] matches if the commit's
+/// session id equals the filter's id (principal axis). The remaining filter
+/// variants need info that a [`CommitContext`] does not carry — they are
+/// treated as non-matching (a commit rule carrying them silently no-ops rather
+/// than firing on every commit).
 fn commit_matches_filters(rule: &WorkspaceRule, commit_ctx: &CommitContext) -> bool {
     if rule.filters.is_empty() {
         return true;

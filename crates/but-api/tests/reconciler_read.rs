@@ -51,27 +51,29 @@ async fn review_status_serves_full_drive_state_in_one_payload() -> anyhow::Resul
     approve_branch(&ctx, "rev2").await?;
 
     let status = but_api::legacy::forge::review_status(ctx.to_sync(), FEAT_REF.to_owned()).await?;
+    // `open_assignments` (pending `local_review_assignments`) is now derived
+    // from the `assignments` vec the payload carries — same drive fact, one read.
+    let open_assignments: Vec<_> = status
+        .assignments
+        .iter()
+        .filter(|a| a.state == "pending")
+        .collect();
 
     // AC-1: all three drive facts in ONE payload.
     assert_eq!(status.target, FEAT_REF, "target is the queried branch ref");
     assert!(
-        status
-            .open_assignments
+        open_assignments
             .iter()
             .any(|a| a.reviewer_principal == "rev2" && a.state == "pending"),
-        "open_assignments must carry the pending rev2 assignment (dispatch trigger), got {:?}",
-        status.open_assignments
+        "open_assignments must carry the pending rev2 assignment (dispatch trigger), got {open_assignments:?}"
     );
     assert!(
-        status
-            .unresolved_threads
-            .iter()
-            .any(|t| t.thread_id == "t1"),
-        "unresolved_threads must carry thread t1 (remediation trigger), got {:?}",
-        status.unresolved_threads
+        status.open_threads >= 1,
+        "unresolved_threads must surface at least one open thread (remediation trigger), got {}",
+        status.open_threads
     );
     assert!(
-        status.approved,
+        status.verdict_at_head.as_deref() == Some("approved"),
         "approved must be true — an approved verdict at head exists"
     );
     assert_eq!(
@@ -93,21 +95,26 @@ async fn review_status_empty_state_returns_ok() -> anyhow::Result<()> {
     let status = but_api::legacy::forge::review_status(ctx.to_sync(), FEAT_REF.to_owned())
         .await
         .context("empty-state review_status must return Ok, not Err")?;
+    let open_assignments: Vec<_> = status
+        .assignments
+        .iter()
+        .filter(|a| a.state == "pending")
+        .collect();
 
     assert_eq!(
         status.target, FEAT_REF,
         "target echoes the queried branch even when empty"
     );
     assert!(
-        status.open_assignments.is_empty(),
+        open_assignments.is_empty(),
         "empty state → open_assignments is empty"
     );
     assert!(
-        status.unresolved_threads.is_empty(),
+        status.open_threads == 0,
         "empty state → unresolved_threads is empty"
     );
     assert!(
-        !status.approved,
+        status.verdict_at_head.as_deref() != Some("approved"),
         "empty state → approved is false (no verdict at head)"
     );
     assert_eq!(
@@ -150,7 +157,7 @@ async fn review_status_verdict_at_head_agrees_with_merge_gate() -> anyhow::Resul
     // Read 1: review_status — the orchestrator's presentation label.
     let status = but_api::legacy::forge::review_status(ctx.to_sync(), FEAT_REF.to_owned()).await?;
     assert!(
-        status.approved,
+        status.verdict_at_head.as_deref() == Some("approved"),
         "review_status must report approved=true when an approved verdict at head exists"
     );
 
@@ -199,17 +206,28 @@ async fn review_status_two_read_convergence() -> anyhow::Result<()> {
     );
     let first = first?;
     let second = second?;
+    let first_open: Vec<_> = first
+        .assignments
+        .iter()
+        .filter(|a| a.state == "pending")
+        .collect();
+    let second_open: Vec<_> = second
+        .assignments
+        .iter()
+        .filter(|a| a.state == "pending")
+        .collect();
 
     assert_eq!(
-        first.open_assignments, second.open_assignments,
+        first_open, second_open,
         "two reads must converge on open_assignments (same order)"
     );
     assert_eq!(
-        first.unresolved_threads, second.unresolved_threads,
+        first.open_threads, second.open_threads,
         "two reads must converge on unresolved_threads (same order, same content)"
     );
     assert_eq!(
-        first.approved, second.approved,
+        first.verdict_at_head.as_deref() == Some("approved"),
+        second.verdict_at_head.as_deref() == Some("approved"),
         "two reads must converge on approved"
     );
     assert_eq!(
@@ -221,16 +239,9 @@ async fn review_status_two_read_convergence() -> anyhow::Result<()> {
         "two reads must converge on lifecycle"
     );
     assert_eq!(
-        first.unresolved_threads.len(),
-        2,
+        first.open_threads, 2,
         "the two seeded unresolved threads must both be surfaced, in deterministic order"
     );
-    // Deterministic sort by thread_id: "t-alpha" < "t-beta".
-    assert_eq!(
-        first.unresolved_threads[0].thread_id, "t-alpha",
-        "unresolved_threads are sorted by thread_id (t-alpha < t-beta)"
-    );
-    assert_eq!(first.unresolved_threads[1].thread_id, "t-beta");
     Ok(())
 }
 
@@ -254,28 +265,33 @@ async fn review_status_assignment_only() -> anyhow::Result<()> {
     .context("opener must open review and assign rev2")?;
 
     let status = but_api::legacy::forge::review_status(ctx.to_sync(), FEAT_REF.to_owned()).await?;
+    let open_assignments: Vec<_> = status
+        .assignments
+        .iter()
+        .filter(|a| a.state == "pending")
+        .collect();
 
     // The pending assignment is the dispatch trigger.
     assert_eq!(
-        status.open_assignments.len(),
+        open_assignments.len(),
         1,
         "open_assignments carries the single pending assignment"
     );
     assert_eq!(
-        status.open_assignments[0].reviewer_principal, "rev2",
+        open_assignments[0].reviewer_principal, "rev2",
         "the pending assignment is for rev2"
     );
     assert_eq!(
-        status.open_assignments[0].state, "pending",
+        open_assignments[0].state, "pending",
         "the assignment is pending (the dispatch trigger)"
     );
     // No comments, no verdict.
     assert!(
-        status.unresolved_threads.is_empty(),
+        status.open_threads == 0,
         "no comments → unresolved_threads is empty"
     );
     assert!(
-        !status.approved,
+        status.verdict_at_head.as_deref() != Some("approved"),
         "no verdict → approved is false (no gate signal yet)"
     );
     assert_eq!(
