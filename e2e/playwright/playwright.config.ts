@@ -17,6 +17,7 @@ const AMOUNT_OF_WORKERS = process.env.CI ? 2 : 4;
  */
 export default defineConfig({
 	testDir: "./tests",
+	testIgnore: ["**/governance-fixture/**"],
 	/* Run tests in files in parallel */
 	fullyParallel: true, // FullyParallel has some issues - for now we just parallelize by file.
 	/* Fail the build on CI if you accidentally left test.only in the source code. */
