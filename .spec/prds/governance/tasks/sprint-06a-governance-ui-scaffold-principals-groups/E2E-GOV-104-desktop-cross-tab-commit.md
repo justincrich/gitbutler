@@ -32,7 +32,8 @@ pnpm --filter @gitbutler/e2e run test:e2e:governance-fixture:headed --grep "clea
 ```
 TASK: E2E-GOV-104 - Desktop E2E pending persists across tabs and clears after commit
 TASK_TYPE: FEATURE
-STATUS: Backlog
+STATUS: Done
+STATUS_NOTE: Realized by e2e/playwright/tests/governance-settings-commit-flow.spec.ts (real desktop + but-server e2e, merged on master). Re-verify: PLAYWRIGHT_UI=1 pnpm test:e2e:playwright -- governance-settings-commit-flow.spec.ts
 PRIORITY: P0
 EFFORT: M
 AGENT: implementer=sveltekit-implementer | reviewer=sveltekit-reviewer

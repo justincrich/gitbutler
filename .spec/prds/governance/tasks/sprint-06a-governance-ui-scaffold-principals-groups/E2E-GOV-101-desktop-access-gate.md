@@ -30,7 +30,8 @@ pnpm --filter @gitbutler/desktop test:ct:desktop -- ProjectSettingsModalContentG
 ```
 TASK: E2E-GOV-101 - Desktop E2E governance sidebar access gate
 TASK_TYPE: FEATURE
-STATUS: Backlog
+STATUS: Done
+STATUS_NOTE: Realized by e2e/playwright/tests/governance-settings-access.spec.ts (real desktop + but-server e2e, merged on master). Re-verify: PLAYWRIGHT_UI=1 pnpm test:e2e:playwright -- governance-settings-access.spec.ts
 PRIORITY: P0
 EFFORT: S
 AGENT: implementer=sveltekit-implementer | reviewer=sveltekit-reviewer

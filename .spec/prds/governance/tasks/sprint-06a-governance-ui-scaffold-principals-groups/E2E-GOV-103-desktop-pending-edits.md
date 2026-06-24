@@ -32,7 +32,8 @@ pnpm --filter @gitbutler/desktop test:ct:desktop -- GroupsListRevokeToggle
 ```
 TASK: E2E-GOV-103 - Desktop E2E principal own-grant and group grant pending state
 TASK_TYPE: FEATURE
-STATUS: Backlog
+STATUS: Done
+STATUS_NOTE: Realized by e2e/playwright/tests/governance-settings-pending-edits.spec.ts (real desktop + but-server e2e, merged on master). Re-verify: PLAYWRIGHT_UI=1 pnpm test:e2e:playwright -- governance-settings-pending-edits.spec.ts
 PRIORITY: P0
 EFFORT: M
 AGENT: implementer=sveltekit-implementer | reviewer=sveltekit-reviewer

@@ -3,6 +3,7 @@
 mod assignment_state;
 mod authority;
 mod authorize;
+mod commit_gate;
 mod config;
 mod denial;
 mod menu;
@@ -10,6 +11,7 @@ mod principal;
 mod route;
 
 pub use assignment_state::{AssignmentState, AssignmentStateParseError};
+pub use commit_gate::{CommitGateTarget, emit_denial_steering_event, enforce_commit_gate_for_target};
 pub use authority::{Authority, AuthoritySet, ParseAuthorityError, serialize_authority_tokens};
 pub use authorize::{
     DenialCause, authorize, effective_authority, resolve_principal, resolve_principal_from_env,

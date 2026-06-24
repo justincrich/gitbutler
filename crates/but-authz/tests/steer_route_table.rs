@@ -48,9 +48,8 @@ fn steer_route_table_covers_every_gated_route() {
     for (_, authority, _, _) in ROUTE_AUTHORITY_TABLE {
         assert!(
             seen.insert(*authority),
-            "duplicate Authority {:?} across ROUTE_AUTHORITY_TABLE rows — \
-             each route must map 1:1 to a distinct required Authority",
-            authority
+            "duplicate Authority {authority:?} across ROUTE_AUTHORITY_TABLE rows — \
+             each route must map 1:1 to a distinct required Authority"
         );
     }
 
@@ -136,9 +135,7 @@ fn steer_route_required_authority_is_total() {
         // Every route's looked-up authority is part of the Authority catalog.
         assert!(
             Authority::ALL.contains(&authority),
-            "Route {:?} resolved to {:?}, which is not in Authority::ALL",
-            route,
-            authority
+            "Route {route:?} resolved to {authority:?}, which is not in Authority::ALL"
         );
     }
 
@@ -188,13 +185,11 @@ fn steer_route_table_is_a_single_but_authz_symbol() {
     for (route, _, command, effect) in ROUTE_AUTHORITY_TABLE {
         assert!(
             !command.is_empty(),
-            "Route {:?} has an empty command string — every row must name the literal `but` command",
-            route
+            "Route {route:?} has an empty command string — every row must name the literal `but` command"
         );
         assert!(
             !effect.is_empty(),
-            "Route {:?} has an empty effect string — every row must describe its effect in one line",
-            route
+            "Route {route:?} has an empty effect string — every row must describe its effect in one line"
         );
     }
 }

@@ -114,6 +114,18 @@ pub(crate) fn handle_changes(
         let full_ref_name: gix::refs::FullName =
             format!("refs/heads/{stack_branch_name}").try_into()?;
 
+        // GATES AC-5 (mechanism-agnostic commit gate): the autonomous handler is
+        // a commit-producing mechanism, so it must clear the same ref-aware gate
+        // as the `but-api`/CLI commit paths before reaching the engine waist —
+        // otherwise a dispatched agent could commit to a protected branch
+        // ungoverned. No-op on repos without committed governance config; on a
+        // governed repo it requires `contents:write` and rejects protected-branch
+        // commits with the structured denial (fail-closed on a missing handle).
+        but_authz::enforce_commit_gate_for_target(
+            repo,
+            &but_authz::CommitGateTarget::direct_ref(full_ref_name.clone()),
+        )?;
+
         let editor = Editor::create(ws, meta, repo)?;
         let outcome = but_workspace::commit::commit_create(
             editor,

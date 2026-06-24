@@ -31,7 +31,8 @@ pnpm --filter @gitbutler/desktop test:ct:desktop -- GovernanceSettingsAdminRoleN
 ```
 TASK: E2E-GOV-102 - Desktop E2E read-only admin and four governance tabs
 TASK_TYPE: FEATURE
-STATUS: Backlog
+STATUS: Done
+STATUS_NOTE: Realized by e2e/playwright/tests/governance-settings-tabs-readonly.spec.ts (real desktop + but-server e2e, merged on master). Re-verify: PLAYWRIGHT_UI=1 pnpm test:e2e:playwright -- governance-settings-tabs-readonly.spec.ts
 PRIORITY: P0
 EFFORT: S
 AGENT: implementer=sveltekit-implementer | reviewer=sveltekit-reviewer

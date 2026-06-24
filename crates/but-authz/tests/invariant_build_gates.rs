@@ -10,13 +10,18 @@ use but_testsupport::gix_testtools::tempfile::TempDir;
 const ROLE_BRANCH_PATTERN: &str = r#"== *"(read|triage|write|maintain|admin)"|"(read|triage|write|maintain|admin)" *=>|match[^;]*\brole\b|\bfrom_role\("#;
 const HUMAN_OR_LABEL_BRANCH_PATTERN: &str = r#"is_human|is_ai|== *"(human|implementer|reviewer|maintainer)"|"(human|implementer|reviewer|maintainer)" *=>"#;
 const AUTHORITY_POSITIVE_PATTERN: &str =
-    r#"but_authz::authorize|Authority::contains|but_authz::Authority"#;
+    r#"but_authz::authorize|crate::authorize|Authority::contains|but_authz::Authority"#;
 const PERMISSION_CARRIER_PATTERN: &str =
     r#"write_permission\(|RepoExclusive|\bPermissions?\b *[:.][^=]"#;
 
 const AUTHZ_AUTHORIZE: &str = "crates/but-authz/src/authorize.rs";
 const AUTHZ_CONFIG: &str = "crates/but-authz/src/config.rs";
 const COMMIT_GATE: &str = "crates/but-api/src/commit/gate.rs";
+// The ref-aware commit-gate enforcement primitive (the `authorize` call site)
+// now lives in but-authz so lower-level commit producers can share it; the
+// `but-api` commit/gate.rs above keeps only the Context-aware resolver + the
+// CommitGateError payload. Both files are honesty-scanned.
+const BUT_AUTHZ_COMMIT_GATE: &str = "crates/but-authz/src/commit_gate.rs";
 const MERGE_GATE: &str = "crates/but-api/src/legacy/merge_gate.rs";
 const CONFIG_MUTATE: &str = "crates/but-api/src/legacy/config_mutate.rs";
 const GOVERNANCE: &str = "crates/but-api/src/legacy/governance.rs";
@@ -25,6 +30,7 @@ const ENFORCEMENT_PATHS: &[&str] = &[
     AUTHZ_AUTHORIZE,
     AUTHZ_CONFIG,
     COMMIT_GATE,
+    BUT_AUTHZ_COMMIT_GATE,
     MERGE_GATE,
     CONFIG_MUTATE,
     GOVERNANCE,
@@ -61,6 +67,7 @@ const ROUTE_SRC: &str = "crates/but-authz/src/route.rs";
 /// Gate sites that consume the route table (excludes authz internals).
 const GATE_SITE_PATHS: &[&str] = &[
     COMMIT_GATE,
+    BUT_AUTHZ_COMMIT_GATE,
     MERGE_GATE,
     CONFIG_MUTATE,
     GOVERNANCE,
@@ -112,7 +119,7 @@ fn invariant_build_gates() -> anyhow::Result<()> {
         "commit gate must use the but-authz Authority axis",
         &workspace_root,
         AUTHORITY_POSITIVE_PATTERN,
-        &[COMMIT_GATE],
+        &[BUT_AUTHZ_COMMIT_GATE],
     )?;
     assert_grep_has_matches(
         "merge gate must use the but-authz Authority axis",
