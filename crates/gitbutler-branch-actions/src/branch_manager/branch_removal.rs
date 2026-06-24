@@ -46,6 +46,9 @@ impl BranchManager<'_> {
             let mut meta = self.ctx.meta()?;
             let (repo, mut ws, _) = self.ctx.workspace_mut_and_db_with_perm(perm)?;
             let editor = Editor::create(&mut ws, &mut meta, &repo)?;
+            // GATE-EXEMPT: internal "WIP Assignments" commit during branch
+            // removal cleanup — a lifecycle bookkeeping operation, not a
+            // user/agent commit mechanism (GATES AC-5 mechanism-agnostic allowlist).
             let outcome = but_workspace::commit::commit_create(
                 editor,
                 assigned_diffspec,

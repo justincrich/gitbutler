@@ -298,6 +298,9 @@ pub fn stash_into_branch(
         let mut meta = ctx.meta()?;
         let (repo, mut ws, _) = ctx.workspace_mut_and_db_with_perm(perm)?;
         let editor = Editor::create(&mut ws, &mut meta, &repo)?;
+        // GATE-EXEMPT: internal "Mo-Stashed changes" commit during a workspace
+        // stash operation — a lifecycle bookkeeping operation, not a user/agent
+        // commit mechanism (GATES AC-5 mechanism-agnostic allowlist).
         let but_workspace::commit::CommitCreateOutcome {
             rebase,
             commit_selector,

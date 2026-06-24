@@ -2232,6 +2232,14 @@ impl App {
             return Ok(());
         };
 
+        // GATES AC-5 (mechanism-agnostic commit gate): the TUI is a
+        // commit-producing mechanism that 04-uc-authz.md / 01-scope.md name as a
+        // caller that must route through the gate. Enforce the ref-aware gate
+        // before building/committing so a TUI commit to a protected branch is
+        // denied with the same structured `branch.protected`/`perm.denied`
+        // contract as the CLI/API paths. No-op on repos without governance.
+        but_api::commit::create::gate::enforce_commit_gate(ctx, &insert_commit_relative_to)?;
+
         let changes_to_commit = {
             let context_lines = ctx.settings.context_lines;
             let guard = ctx.shared_worktree_access();

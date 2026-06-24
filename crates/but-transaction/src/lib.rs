@@ -487,6 +487,12 @@ where
                 RelativeTo::Reference(full_name) => RelativeTo::Reference(full_name),
             };
 
+            // GATE-EXEMPT: transaction plumbing. Commit authorization is
+            // enforced by callers at their entry point — the CLI `but commit`
+            // path (command/legacy/commit2.rs) and the TUI commit-confirm
+            // handler both run the ref-aware commit gate before driving a
+            // transaction, since they hold the Context needed to resolve the
+            // target ref (GATES AC-5 mechanism-agnostic allowlist).
             let but_workspace::commit::CommitCreateOutcome {
                 rebase,
                 commit_selector,
