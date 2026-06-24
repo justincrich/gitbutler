@@ -122,7 +122,7 @@ under it, NOT to hand-authoring `allow-*.toml` files. Do NOT create per-command 
 
 - `crates/but-api/src/legacy/governance.rs` (MODIFY heavily) — rename 8 wrappers to bare; rename 8 underlying
   fns to `_with_repo`; add `group_delete` + `group_delete_with_repo`; add `branch_gates_read`/`branch_gates_update`
-  + their `_with_repo` impls + their Serialize/Deserialize outcome/input types.
+  - their `_with_repo` impls + their Serialize/Deserialize outcome/input types.
 - `crates/but-api/tests/*.rs` (MODIFY) — update all call sites from `*_cmd`/bare-old to the new bare wrapper
   names + `_with_repo` underlying names. Tests that called `perm_grant_cmd(ctx,…)` now call `perm_grant(ctx,…)`;
   tests that called the underlying `perm_grant(repo,…)` now call `perm_grant_with_repo(repo,…)`.

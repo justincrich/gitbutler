@@ -14,7 +14,7 @@ PRIMARY **AC-1** — `design review — reviewer confirms all five aria attribut
 
 ## Scope
 
-  - apps/desktop/src/components/governance/DESIGN-ANNOTATIONS.md (MODIFY — extend with Sprint 06b a11y/keyboard-nav section)
+- apps/desktop/src/components/governance/DESIGN-ANNOTATIONS.md (MODIFY — extend with Sprint 06b a11y/keyboard-nav section)
 
 <details>
 <summary>▸ Full agent specification (TASK-TEMPLATE v5.2 — required reading for implementer + reviewer)</summary>
@@ -183,6 +183,7 @@ DEPENDENCIES
 Depends on: DESIGN-MGMT-001 (four-tab IA annotation Sprint 06a — AC-2 specifies the Tabs.svelte component and four tab IDs; this task adds the a11y layer on top)
 Blocks:     MGMT-UI-011 (accessibility aria + keyboard nav implementation — this design contract is the direct input for all aria attribute and keyboard-nav implementation decisions)
 ```
+
 </details>
 
 <!-- REQUIREMENT-CONTRACT v1 -->

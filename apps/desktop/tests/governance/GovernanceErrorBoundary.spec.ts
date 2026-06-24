@@ -27,7 +27,7 @@ test.describe("GovernanceErrorBoundary", () => {
 		expect(matches).toHaveLength(0);
 	});
 
-	test("renders normal governance settings with no boundary fallback and exactly four tabs", async ({
+	test("renders normal governance settings with no boundary fallback and exactly five tabs", async ({
 		mount,
 	}) => {
 		const component = await mount(GovernanceBoundaryHarness, {
@@ -35,10 +35,11 @@ test.describe("GovernanceErrorBoundary", () => {
 		});
 
 		await expect(component.locator(".boundary-error")).toHaveCount(0);
-		await expect(component.getByRole("tab")).toHaveCount(4);
+		await expect(component.getByRole("tab")).toHaveCount(5);
 		await expect(component.getByRole("tab", { name: "Principals" })).toBeVisible();
 		await expect(component.getByRole("tab", { name: "Groups" })).toBeVisible();
 		await expect(component.getByRole("tab", { name: "Branch Gates" })).toBeVisible();
 		await expect(component.getByRole("tab", { name: "Rules" })).toBeVisible();
+		await expect(component.getByRole("tab", { name: "Local Review" })).toBeVisible();
 	});
 });

@@ -1,4 +1,3 @@
-
 # REMEDIATE-06B-A: Reconcile sprint bookkeeping and AC ledger at HEAD
 
 **Type:** REMEDIATION | **Status:** Backlog | **Priority:** P0 | **Effort:** S (45 min)
@@ -469,4 +468,3 @@ This is bookkeeping only — no source code changes. The red-hat review evidence
   ]
 }
 -->
-

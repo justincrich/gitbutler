@@ -11,17 +11,17 @@ prd_version: 1.0.0
 > A required-check is **a second deterministic review whose verdict is produced
 > by a local runner instead of a human.** The gate that already blocks a merge
 > on a human review verdict blocks it on a runner verdict the same way; the only
-> new part is the local producer that *runs a check and records pass/fail at the
-> head OID*.
+> new part is the local producer that _runs a check and records pass/fail at the
+> head OID_.
 
 ## §1 — Producer / consumer split
 
 Check Runner is two cleanly separated halves bonded by one table:
 
-| Half | What it is | Where it lives | Property |
-|------|-----------|----------------|----------|
-| **Producer** | The local runner: materialize a clean checkout at the head OID, run the configured command, derive a conclusion from the **real exit code**, append a `CheckResult` row. | `but-checks` (runner + config loader + recorder) | Side-effectful, but **never** trusted by the gate beyond the row it writes. |
-| **Consumer** | The required-checks merge-gate clause: read the required set + the recorded results, block unless every required check is `Success` **at the current head OID**. | extended `crates/but-api/src/legacy/merge_gate.rs` | **Read-only.** Never runs a check, never trusts a claim, no caller-supplied conclusion. |
+| Half         | What it is                                                                                                                                                               | Where it lives                                     | Property                                                                                |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| **Producer** | The local runner: materialize a clean checkout at the head OID, run the configured command, derive a conclusion from the **real exit code**, append a `CheckResult` row. | `but-checks` (runner + config loader + recorder)   | Side-effectful, but **never** trusted by the gate beyond the row it writes.             |
+| **Consumer** | The required-checks merge-gate clause: read the required set + the recorded results, block unless every required check is `Success` **at the current head OID**.         | extended `crates/but-api/src/legacy/merge_gate.rs` | **Read-only.** Never runs a check, never trusts a claim, no caller-supplied conclusion. |
 
 The producer and consumer share **only** the `check_results` table (03) and the
 ref-pinned config (`.gitbutler/checks/*.toml` + `[[required_check]]`). They do
@@ -39,7 +39,7 @@ GitButler already has command-running code in
 `post_commit` at `:121`, `commit_msg` at `:56`). **Hooks cannot be the trusted
 producer:**
 
-- They run **inside the agent's own `but commit`** — the agent *is* the caller,
+- They run **inside the agent's own `but commit`** — the agent _is_ the caller,
   so a hook conclusion is an agent-produced claim, not an independent one.
 - They are **`--no-hooks`-bypassable** at the commit boundary — the agent can
   simply not run them.
@@ -47,7 +47,7 @@ producer:**
   checkout of the head OID the gate will match.
 
 So the runner is a distinct `but-checks` entry point (`but check run`,
-04 §3) — adjacent to hooks as prior art for *how to spawn a command*, but
+04 §3) — adjacent to hooks as prior art for _how to spawn a command_, but
 deliberately not the same trust path.
 
 ## §3 — Why reproducibility is the security basis (not cryptography)
@@ -61,19 +61,20 @@ The honest path must be cheaper than cheating. We achieve that with
 - Therefore a **forged green is detectable by re-running**, and the honest path —
   letting the runner run the check — is cheap.
 
-  **The *merge-time* guarantee is narrow** — a `success`-concluded row
+  **The _merge-time_ guarantee is narrow** — a `success`-concluded row
   **exists** and is **head-OID-matched** — NOT that no forgery occurred.
   Reproducibility makes a forged green **detectable by a later re-run**, which
   happens **after** the merge has landed; pre-merge, the gate cannot distinguish
   a forged row from a genuine one. Post-merge detection requires an active
   re-run policy that is **out of scope** for v1.
+
 - The "honest path is cheap" deterrent holds for checks whose honest-run time is
   short — **fast, deterministic** checks. For a **slow** check (e.g. a long
   `cargo test`) or a **flaky** check, the honest run can cost more than forging a
   row, and the deterrent then rests on the **structural locks** (the small
   gate-read→merge-commit window, the bootstrap-invariant, the no-caller-conclusion
   negative space) rather than on cost alone.
-- This is the real contrast with governance's `local_review_verdicts`: a *human*
+- This is the real contrast with governance's `local_review_verdicts`: a _human_
   review is **not reproducible** (you cannot re-derive a human's opinion). A
   check **is** reproducible. That makes `check_results` **safer in one
   dimension** — reproducibility enables post-merge lie-detection — but **weaker
@@ -85,7 +86,7 @@ The honest path must be cheaper than cheating. We achieve that with
   also why the merge-time guarantee is stated narrowly above.
 
 Governance accepts `local_review_verdicts` as forgeable-by-direct-DB-write (its
-R6) and still ships it as a plain table. A check is a *reproducible* second
+R6) and still ships it as a plain table. A check is a _reproducible_ second
 review — forgery of it is **detectable** (post-merge), where forgery of a human
 verdict is not. By consistency, `check_results` is correctly a **plain `but-db`
 table** (03 §1): it is no worse-protected than the review store governance
@@ -94,7 +95,7 @@ already ships, and on the detectability axis it is better.
 We therefore **drop**, as v1 security mechanisms: signing / HMAC /
 Ed25519, producer signing keys / `but-secret` key storage, agent-unwritable
 hardening, and OS-sandbox-as-security. (See 06 — zero new crypto deps; 08
-R-FORGERY — the forgery risks are *deliberately not closed* under this threat
+R-FORGERY — the forgery risks are _deliberately not closed_ under this threat
 model, not owed debt.)
 
 ## §4 — SHA-binding: current head only
@@ -142,7 +143,7 @@ direct-DB-write stops being the cheap attack.
 
 ## §6 — Fail-closed
 
-Every ambiguity resolves to *block the merge*:
+Every ambiguity resolves to _block the merge_:
 
 - Malformed `.gitbutler/checks/*.toml` or an unsatisfiable `[[required_check]]`
   (naming a check that does not exist) → `config_invalid`, denial returned
@@ -191,7 +192,7 @@ weakens a `[[required_check]]` (or a `[[check]]` it depends on) is itself a code
 change to a governed target, and must therefore clear the **currently-required**
 checks before it can land. Ref-pinning the config (reading it from the committed
 target tree, never the working tree) is **necessary but not sufficient**: the
-gate must evaluate the required set that is in force *before* the weakening
+gate must evaluate the required set that is in force _before_ the weakening
 commit, not the set the weakening commit proposes. (08 R-BOOTSTRAP; UC-DEFN-05,
 UC-GATE-05.)
 
@@ -219,7 +220,7 @@ the local forge cache (`review_for_id`, merge_gate.rs:148), derives
 `review.source_branch` (merge_gate.rs:78). Its only non-test callers are the
 forge PR-merge path (`crates/but-api/src/legacy/forge.rs:607/637/650). **A
 purely-local virtual-branch / worktree / plain-git merge with no PR has no
-`review_id` and cannot reach the clause at all** — which would silently void the
+`review_id` and cannot reach the clause at all\*\* — which would silently void the
 mechanism-agnostic local-gating thesis.
 
 **v1 requirement (R-ENTRY, Blocking, 08; specified in 04):** a
@@ -234,16 +235,15 @@ shipped `enforce_merge_gate` is forge-`review_id`-only today.
 authorization precondition the forge path enforces.** The shipped
 `enforce_merge_gate` authorizes **before** any review/checks clause and **before**
 the `protected` early-return: it resolves the principal
-(`resolve_principal_from_env`, merge_gate.rs:47) and calls
+(`resolve_principal_from_env`, merge*gate.rs:47) and calls
 `but_authz::authorize(&principal, Authority::Merge, &config.gov)?`
 (**merge_gate.rs:48** — the single `Merge`-authority call site, verified against
 live source). The new `enforce_merge_gate_for_refs(ctx, source_ref, target_ref)`
 local-merge entry MUST run that identical authority clause (plus the same review +
 required-checks clauses) on the config it loads from the **target ref**.
 Generalizing the entry to caller-supplied refs MUST NOT skip the
-`authorize(_, Authority::Merge, _)` precondition the forge path enforces — a
-refs-resolving caller that resolves `(source_ref, target_ref)` but bypasses the
-`Merge` authorization would open an **authz bypass**, not merely a checks bypass.
+`authorize(*, Authority::Merge, \_)`precondition the forge path enforces — a
+refs-resolving caller that resolves`(source_ref, target_ref)`but bypasses the`Merge` authorization would open an **authz bypass**, not merely a checks bypass.
 
 ## §10 — What the gate proves (the narrow, honest line)
 
@@ -258,13 +258,13 @@ over-trusting the result.
 
 ## Trust boundaries
 
-| Boundary | Trusted? | Enforcement |
-|----------|----------|-------------|
-| Ref-pinned config (`.gitbutler/checks/*.toml`, `[[required_check]]`) read from the **committed target tree** | Trusted | `read_config_blob` (merge_gate.rs:211); working tree never consulted |
-| The runner's recorded `conclusion` | Trusted *as a reproducible claim* | Derived from a real `ExitStatus`; re-runnable; no caller-supplied conclusion (04 §4) |
-| The agent's live/dirty shared worktree | **Not** the check surface | The runner checks out the head OID into an **isolated** materialization (07); never runs against the shared tree |
-| `signature` column | **Ignored in v1** | Nullable forward-compat seam (§5) |
-| Forge / push path | Out of scope (Accepted) | Inherits governance's forge/raw-push merge-bypass posture (08 R11/R14); the local gate binds the governed local merge only |
+| Boundary                                                                                                     | Trusted?                          | Enforcement                                                                                                                |
+| ------------------------------------------------------------------------------------------------------------ | --------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| Ref-pinned config (`.gitbutler/checks/*.toml`, `[[required_check]]`) read from the **committed target tree** | Trusted                           | `read_config_blob` (merge_gate.rs:211); working tree never consulted                                                       |
+| The runner's recorded `conclusion`                                                                           | Trusted _as a reproducible claim_ | Derived from a real `ExitStatus`; re-runnable; no caller-supplied conclusion (04 §4)                                       |
+| The agent's live/dirty shared worktree                                                                       | **Not** the check surface         | The runner checks out the head OID into an **isolated** materialization (07); never runs against the shared tree           |
+| `signature` column                                                                                           | **Ignored in v1**                 | Nullable forward-compat seam (§5)                                                                                          |
+| Forge / push path                                                                                            | Out of scope (Accepted)           | Inherits governance's forge/raw-push merge-bypass posture (08 R11/R14); the local gate binds the governed local merge only |
 
 ## Cross-references
 

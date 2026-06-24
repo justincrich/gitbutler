@@ -5,7 +5,6 @@
 > Reviewer: deferred — RECONCILER-USAGE.md authored at spec-mandated path; all 4 AC greps pass
 > Updated: 2026-06-22T18:50:15Z
 
-
 ## What this does
 
 Write the **reconciler usage-model** document + the **`but-*` skill contract** for the LPR slice: a single `.spec` doc (`RECONCILER-USAGE.md`) that (1) documents how an orchestrator drives the implement→review→merge loop as a **reconciler over `but` review state** — every decision a projection of `but`'s own state read from `review_status` (open `pending` assignment → dispatch a reviewer; unresolved comment thread → dispatch remediation; approved verdict-at-head → attempt the merge through the unchanged gate); (2) states the `but-*` skill contract — _"on governed-project init, if unset, set `keep_reviews_local = true`"_ — a **skill-side default** (belt-and-suspenders, since the field already defaults `true` via `DefaultTrue`), explicitly **NOT** a governance enforcement; and (3) names **R18/R19/R20** (and the sibling R21/R22/R23) as **accepted residuals, never closed**. **The skill _implementation_ (the `but-*` orchestration skills themselves) is OUT of scope** — this task writes the documented contract only.

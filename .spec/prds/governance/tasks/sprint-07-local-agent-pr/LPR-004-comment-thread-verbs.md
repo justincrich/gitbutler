@@ -5,7 +5,6 @@
 > Reviewer: deferred to PHASE 4.5 red-hat closeout — committed prior session; post_comment/list_comments/resolve_thread + CLI
 > Updated: 2026-06-22T18:07:12Z
 
-
 ## What this does
 
 Add the three `#[but_api(napi)]` verbs that give the local review layer a review-comment thread — `post_comment` (writes a `local_review_comments` row on `CommentsWrite`), `resolve_thread` (flips a whole thread's `resolved` flag on `CommentsWrite` **+ a resolver-identity constraint: the resolver must be the thread author, the assigned reviewer, or a `reviews:write` holder** — R22), and `list_comments` (a branch-scoped READ, no write authority — it returns the whole branch's review surface, not just the caller's) — modeled exactly on the shipped `approve_review` (authorize-before-await, local-cache write, no DryRun guard). Plus the CLI: extend the existing `but review comment` verb with `--file`/`--line`/`--thread` (→ `post_comment`), and add `but review comments` (→ `list_comments`) and `but review resolve <thread_id>` (→ `resolve_thread`), all routed through `review_gate_cli_error`. **No new `Authority` variant.**

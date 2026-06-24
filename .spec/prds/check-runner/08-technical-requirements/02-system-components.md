@@ -8,20 +8,20 @@ prd_version: 1.0.0
 
 ## §1 — New vs extended vs reused
 
-| Component | Status | Location |
-|-----------|--------|----------|
-| `but-checks` crate (runner + config loader + plain recorder + pure required-checks evaluator) | **NEW** | `crates/but-checks/` |
-| `check_results` table | **NEW** | `crates/but-db/src/table/check_results.rs` |
-| Required-checks merge-gate **clause** | **EXTEND** | `crates/but-api/src/legacy/merge_gate.rs` |
-| `but check {define,list,run,results,required}` CLI verbs | **NEW** | `crates/but/src/args/check.rs` + `crates/but/src/command/check.rs` |
-| `MergeGateError` (today: `code`/`message`/`remediation_hint`/`unmet` only, merge_gate.rs:19-29) | **REUSE** | `crates/but-api/src/legacy/merge_gate.rs:19` |
-| `MergeGateError` STEER fields (`class`/`held_permissions`/`authorized_actions`/`do_not`) + `to_envelope()` | **EXTENDS — depends on governance STEER-001** (sprint-07, `STATUS: Backlog`, NOT yet merged; the fields + `to_envelope()` do not exist in `crates/` yet) | governance `sprint-07-steer-capability-aware-denials/STEER-001` |
-| `read_config_blob` ref-pin read | **REUSE** | `crates/but-api/src/legacy/merge_gate.rs:211` |
-| `governance_present` opt-in discriminator | **REUSE** | `crates/but-authz/src/config.rs:53` |
-| `Editor::commit_mappings` (SHA-reset basis) | **REUSE** | `crates/but-rebase/src/graph_rebase/mod.rs:479` |
-| `gix` (OID resolve, tree read, worktree) | **REUSE** | workspace dep |
-| `std::process` / `tokio` process facility | **REUSE** | std / existing `tokio` |
-| `toml` + `serde` (config parse) | **REUSE** | workspace deps |
+| Component                                                                                                  | Status                                                                                                                                                   | Location                                                           |
+| ---------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| `but-checks` crate (runner + config loader + plain recorder + pure required-checks evaluator)              | **NEW**                                                                                                                                                  | `crates/but-checks/`                                               |
+| `check_results` table                                                                                      | **NEW**                                                                                                                                                  | `crates/but-db/src/table/check_results.rs`                         |
+| Required-checks merge-gate **clause**                                                                      | **EXTEND**                                                                                                                                               | `crates/but-api/src/legacy/merge_gate.rs`                          |
+| `but check {define,list,run,results,required}` CLI verbs                                                   | **NEW**                                                                                                                                                  | `crates/but/src/args/check.rs` + `crates/but/src/command/check.rs` |
+| `MergeGateError` (today: `code`/`message`/`remediation_hint`/`unmet` only, merge_gate.rs:19-29)            | **REUSE**                                                                                                                                                | `crates/but-api/src/legacy/merge_gate.rs:19`                       |
+| `MergeGateError` STEER fields (`class`/`held_permissions`/`authorized_actions`/`do_not`) + `to_envelope()` | **EXTENDS — depends on governance STEER-001** (sprint-07, `STATUS: Backlog`, NOT yet merged; the fields + `to_envelope()` do not exist in `crates/` yet) | governance `sprint-07-steer-capability-aware-denials/STEER-001`    |
+| `read_config_blob` ref-pin read                                                                            | **REUSE**                                                                                                                                                | `crates/but-api/src/legacy/merge_gate.rs:211`                      |
+| `governance_present` opt-in discriminator                                                                  | **REUSE**                                                                                                                                                | `crates/but-authz/src/config.rs:53`                                |
+| `Editor::commit_mappings` (SHA-reset basis)                                                                | **REUSE**                                                                                                                                                | `crates/but-rebase/src/graph_rebase/mod.rs:479`                    |
+| `gix` (OID resolve, tree read, worktree)                                                                   | **REUSE**                                                                                                                                                | workspace dep                                                      |
+| `std::process` / `tokio` process facility                                                                  | **REUSE**                                                                                                                                                | std / existing `tokio`                                             |
+| `toml` + `serde` (config parse)                                                                            | **REUSE**                                                                                                                                                | workspace deps                                                     |
 
 ## §2 — `but-checks` crate (module map)
 
@@ -47,12 +47,12 @@ crates/but-checks/src/
 
 ### The four responsibilities (deliberately split, like the gate's design)
 
-| Module | Responsibility | Deterministic? | Mirrors |
-|--------|---------------|----------------|---------|
-| `config.rs` | Parse ref-pinned `.gitbutler/checks/*.toml` + `[[required_check]]` | Pure (given blobs) | `normalize_gates` (merge_gate.rs:308) |
-| `checkout.rs` | Materialize the head OID into an isolated tree | Side-effectful, isolated | new (07) |
-| `runner.rs` | Run the command, derive conclusion from real exit | Side-effectful (the producer) | `hooks.rs` spawn pattern (prior art only) |
-| `evaluator.rs` | Decide pass/fail of the required set at the head | **Pure** | `review_requirement::evaluate` (merge_gate.rs:86) |
+| Module         | Responsibility                                                     | Deterministic?                | Mirrors                                           |
+| -------------- | ------------------------------------------------------------------ | ----------------------------- | ------------------------------------------------- |
+| `config.rs`    | Parse ref-pinned `.gitbutler/checks/*.toml` + `[[required_check]]` | Pure (given blobs)            | `normalize_gates` (merge_gate.rs:308)             |
+| `checkout.rs`  | Materialize the head OID into an isolated tree                     | Side-effectful, isolated      | new (07)                                          |
+| `runner.rs`    | Run the command, derive conclusion from real exit                  | Side-effectful (the producer) | `hooks.rs` spawn pattern (prior art only)         |
+| `evaluator.rs` | Decide pass/fail of the required set at the head                   | **Pure**                      | `review_requirement::evaluate` (merge_gate.rs:86) |
 
 `evaluator.rs` is the analog of the review-requirement evaluator: a pure function
 the read-only gate calls. It takes the required set, the recorded results, and
@@ -64,7 +64,7 @@ spawns a process and **never** reads git — keeping the gate deterministic.
 
 `but-checks` is a lower-level crate: it may depend on `but-db`, `gix`, `toml`,
 `serde`, `std::process`/`tokio`. It must **not** depend on `but-api`. The gate
-clause lives **in** `but-api` (`merge_gate.rs`) and calls *up into* nothing — it
+clause lives **in** `but-api` (`merge_gate.rs`) and calls _up into_ nothing — it
 calls `but_checks::load_check_defs` + `but_checks::evaluate_required_checks` (the
 pure evaluator) the same way `merge_gate.rs` calls `review_requirement::evaluate`
 today.
@@ -112,13 +112,13 @@ each a `pub enum Subcommands`; both verified present, though the governance CLI 
 still in progress in sprint-05/06), with a handler in
 `crates/but/src/command/check.rs`.
 
-| Verb | Purpose | UC |
-|------|---------|----|
-| `but check define` | Scaffold / validate a `[[check]]` in `.gitbutler/checks/*.toml` | UC-DEFN-01..03 |
-| `but check list` | List defined checks (+ which are required) at the target ref | UC-DEFN-04 |
-| `but check run <name> [--head <oid>]` | **The producer**: materialize, run, record at the head OID | UC-RUN-01..04 |
-| `but check results [<name>] [--head <oid>]` | Show recorded results (dual-audience: human table + `--json`) | UC-RUN-05 |
-| `but check required` | Show the `[[required_check]]` set for the target | UC-GATE-01 |
+| Verb                                        | Purpose                                                         | UC             |
+| ------------------------------------------- | --------------------------------------------------------------- | -------------- |
+| `but check define`                          | Scaffold / validate a `[[check]]` in `.gitbutler/checks/*.toml` | UC-DEFN-01..03 |
+| `but check list`                            | List defined checks (+ which are required) at the target ref    | UC-DEFN-04     |
+| `but check run <name> [--head <oid>]`       | **The producer**: materialize, run, record at the head OID      | UC-RUN-01..04  |
+| `but check results [<name>] [--head <oid>]` | Show recorded results (dual-audience: human table + `--json`)   | UC-RUN-05      |
+| `but check required`                        | Show the `[[required_check]]` set for the target                | UC-GATE-01     |
 
 All verbs are **dual-audience**: human text by default, `--json` for the
 machine/agent path (mirroring `governance_cli_error`'s `{error:{code,message}}`
@@ -147,12 +147,12 @@ the `check_results` ledger** — it is a disposable, ref-keyed cache
 ci_checks.rs:147-188); the v1 local producer writes `check_results`, not
 `ci_checks`.
 
-| | `ci_checks` (existing) | `check_results` (new) |
-|---|---|---|
-| Producer | Upstream forge (GitHub/GitLab) | Local butler runner |
-| Keyed by | `reference` (ref name) | `(name, head_oid)` |
-| Lifecycle | Disposable cache (delete+reinsert per ref) | Append-only verdict store |
-| Consulted by the merge gate? | No (read-only UI cache) | **Yes** (the required-checks clause) |
+|                              | `ci_checks` (existing)                     | `check_results` (new)                |
+| ---------------------------- | ------------------------------------------ | ------------------------------------ |
+| Producer                     | Upstream forge (GitHub/GitLab)             | Local butler runner                  |
+| Keyed by                     | `reference` (ref name)                     | `(name, head_oid)`                   |
+| Lifecycle                    | Disposable cache (delete+reinsert per ref) | Append-only verdict store            |
+| Consulted by the merge gate? | No (read-only UI cache)                    | **Yes** (the required-checks clause) |
 
 ## §7 — Disambiguation from `butler_actions` (unrelated)
 

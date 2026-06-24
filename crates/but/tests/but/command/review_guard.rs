@@ -145,24 +145,41 @@ fn review_guard_comment_comments_write() -> anyhow::Result<()> {
         "comment denial must not be wired to reviews:write, got: {ro_stderr}"
     );
 
-    let reviewer = env
-        .but("--format json review comment feat -m note")
+    let comments_before = local_review_comments(&env, "feat")?.len();
+    assert_eq!(
+        comments_before, 0,
+        "no comment rows should exist before the reviewer comments"
+    );
+
+    env.but("--format json review comment feat -m note")
         .allow_json()
         .env("BUT_AGENT_HANDLE", "reviewer")
-        .output()?;
-    let reviewer_stderr = String::from_utf8_lossy(&reviewer.stderr);
-    println!("AC-3 reviewer comment stderr: {reviewer_stderr}");
-    assert!(
-        !reviewer.status.success(),
-        "reviewer holds comments:write but comment must not report success without behavior"
+        .assert()
+        .success();
+
+    let comments = local_review_comments(&env, "feat")?;
+    assert_eq!(
+        comments.len(),
+        1,
+        "authorized comment must write exactly one local_review_comments row"
     );
+    let [comment] = comments.as_slice() else {
+        unreachable!("len asserted as one, so first comment exists");
+    };
+    assert_eq!(comment.author_principal, "reviewer");
+    assert_eq!(comment.body, "note");
+    assert_eq!(comment.target, "feat");
     assert!(
-        !reviewer_stderr.contains(r#""code":"perm.denied""#),
-        "reviewer holds comments:write and must not be denied by the comment guard, got: {reviewer_stderr}"
+        !comment.resolved,
+        "a freshly posted comment must be unresolved"
     );
-    assert!(
-        reviewer_stderr.contains("comment_review cannot report success"),
-        "authorized comment should expose the missing downstream behavior, got: {reviewer_stderr}"
+    assert_ne!(
+        comment.thread_id, "__pr_meta__",
+        "thread id must never be the reserved opener marker"
+    );
+    println!(
+        "AC-3 reviewer comment row: author={}, body={}, thread={}",
+        comment.author_principal, comment.body, comment.thread_id
     );
 
     Ok(())
@@ -221,4 +238,13 @@ fn local_review_verdicts(
     let ctx = env.context()?;
     let db = ctx.db.get_cache()?;
     Ok(db.local_review_verdicts().list_by_target(target)?)
+}
+
+fn local_review_comments(
+    env: &Sandbox,
+    target: &str,
+) -> anyhow::Result<Vec<but_db::LocalReviewComment>> {
+    let ctx = env.context()?;
+    let db = ctx.db.get_cache()?;
+    Ok(db.local_review_comments().list_by_target(target)?)
 }

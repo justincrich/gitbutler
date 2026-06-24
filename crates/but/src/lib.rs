@@ -1386,8 +1386,30 @@ async fn match_subcommand(
                         .await
                         .emit_metrics(metrics_ctx)
                 }
-                Some(forge::pr::Subcommands::Comment { branch, message }) => {
-                    command::legacy::forge::review::comment(&mut ctx, branch, message, out)
+                Some(forge::pr::Subcommands::Comment {
+                    branch,
+                    message,
+                    file,
+                    line,
+                    thread,
+                }) => command::legacy::forge::review::comment(
+                    &mut ctx,
+                    branch,
+                    message,
+                    file,
+                    line.map(|l| l as i64),
+                    thread,
+                    out,
+                )
+                .await
+                .emit_metrics(metrics_ctx),
+                Some(forge::pr::Subcommands::Comments { branch }) => {
+                    command::legacy::forge::review::comments(&mut ctx, branch, out)
+                        .await
+                        .emit_metrics(metrics_ctx)
+                }
+                Some(forge::pr::Subcommands::Resolve { branch, thread }) => {
+                    command::legacy::forge::review::resolve(&mut ctx, branch, thread, out)
                         .await
                         .emit_metrics(metrics_ctx)
                 }

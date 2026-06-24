@@ -8,9 +8,9 @@ prd_version: 1.0.0
 
 **This is the headline engineering content of Check Runner and the #1 technical
 risk (08 R-CHECKOUT).** Everything else in the runner is a thin shell around one
-hard problem: *get the exact current head OID materialized somewhere the check
+hard problem: _get the exact current head OID materialized somewhere the check
 can run, identically across GitButler virtual branches, worktrees, and plain
-git, without disturbing the agent's live shared worktree.*
+git, without disturbing the agent's live shared worktree._
 
 ## §1 — Why "just run the command in the repo dir" is wrong
 
@@ -22,7 +22,7 @@ worktree**:
   be **dirty**.
 - It is a **workspace projection of several virtual branches** — not a clean
   checkout of any one branch's head OID. (See `crates/WORKSPACE_MODEL.md`:
-  `but_graph::Workspace` is a *lossy presentation view*; the working tree is not
+  `but_graph::Workspace` is a _lossy presentation view_; the working tree is not
   a faithful single-branch tree.)
 - The head OID the gate will match (`current_head_oid`, merge_gate.rs:78) is a
   **commit object**, not "whatever is currently on disk."
@@ -39,7 +39,7 @@ correctness hole this section closes.
    be the tree of `current_head_oid`, byte-for-byte — not the working tree, not a
    feature-branch head, not a workspace projection.
 2. **Never mutate or contend on the agent's shared worktree.** A check run is a
-   read-side operation triggered by a *merge attempt* (and optionally on-commit).
+   read-side operation triggered by a _merge attempt_ (and optionally on-commit).
    It must not touch the shared index, must not take the shared
    worktree-exclusive lock for its own working tree, and must not leave the
    shared tree in a different state than it found it.
@@ -99,10 +99,10 @@ need to execute compiled code.
   warm worktree is **checks-owned** and **never** the agent's shared tree (so
   reuse never violates constraint 2).
 
-| Check kind | Default option |
-|------------|----------------|
+| Check kind                                                             | Default option                                      |
+| ---------------------------------------------------------------------- | --------------------------------------------------- |
 | Needs to execute code (`cargo test`, `pnpm check`, a build `./script`) | A (warm-reused → C when the latency budget demands) |
-| Inspects Git data only (file presence, tree shape, no exec) | B (object-DB-only) |
+| Inspects Git data only (file presence, tree shape, no exec)            | B (object-DB-only)                                  |
 
 ## §4 — Latency budget (these run synchronously before a merge)
 
@@ -110,31 +110,31 @@ A required check runs on **`on-merge-attempt`** — synchronously, in the
 pre-merge step (04 §2), before the gate is consulted. So checkout cost is on the
 critical path of a human/agent merge.
 
-| Phase | Budget (soft) | Mitigation |
-|-------|---------------|------------|
-| Resolve head OID + read config | < 50 ms | Pure `gix` ref/tree reads (the merge gate already pays this). |
-| Materialize checkout (Option A cold) | seconds | Shared object DB (no clone); Option C warm worktree reuses the tree + build cache; tmpfs cuts I/O. |
-| Run the check command | check-defined; capped by `timeout_seconds` (03 §2) | Hard timeout kills the process → `timed_out` conclusion (fail-closed). |
-| Record + consume | < 50 ms | Single append + a `(name, head_oid)` indexed read (03 §1). |
+| Phase                                | Budget (soft)                                      | Mitigation                                                                                         |
+| ------------------------------------ | -------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| Resolve head OID + read config       | < 50 ms                                            | Pure `gix` ref/tree reads (the merge gate already pays this).                                      |
+| Materialize checkout (Option A cold) | seconds                                            | Shared object DB (no clone); Option C warm worktree reuses the tree + build cache; tmpfs cuts I/O. |
+| Run the check command                | check-defined; capped by `timeout_seconds` (03 §2) | Hard timeout kills the process → `timed_out` conclusion (fail-closed).                             |
+| Record + consume                     | < 50 ms                                            | Single append + a `(name, head_oid)` indexed read (03 §1).                                         |
 
 **Design rule:** the gate **never runs the check inline**. The check runs in the
 pre-merge orchestration step and **records** a result; the gate only **reads**
 (04 §2). This keeps the read-only consumer fast and deterministic and lets the
 expensive checkout happen out of the gate's critical section. A merge attempt
 that finds a missing/stale required result is **blocked with a remediation hint**
-to run the check — it does not block *waiting* for a synchronous run inside the
+to run the check — it does not block _waiting_ for a synchronous run inside the
 gate.
 
 ## §5 — Interaction with the shared index and locks
 
-crates/AGENTS.md mandates: *acquire repository/worktree locks at top-level
+crates/AGENTS.md mandates: _acquire repository/worktree locks at top-level
 API/command boundaries; do not call permission-acquiring helpers while holding a
-guard; debug deadlocks with `BUT_WS_LOCK_DEBUG=1`.*
+guard; debug deadlocks with `BUT_WS_LOCK_DEBUG=1`._
 
 - The runner takes **its own** worktree (Option A/C) — it does **not** acquire
   the shared `ctx.exclusive_worktree_access()` guard that mutating operations
   take. A check run is not a workspace mutation; it must not contend for that
-  lock. (Contrast the commit gate, which is designed to run *before* the guard at
+  lock. (Contrast the commit gate, which is designed to run _before_ the guard at
   `crates/but-api/src/commit/gate.rs` and the apply/integrate seams — the commit
   gate is designed to run pre-guard (**GATES-007, in progress**:
   `STATUS: Backlog` with open `GATES-REM-001..007` remediation tasks); the gate
@@ -171,9 +171,9 @@ Because the runner materializes **the head OID** (a commit object) rather than
   ref tip; Option A/B/C are unchanged.
 
 This is the mechanism-agnostic property the governance commit gate is **designed**
-to achieve for *authorization* (**GATES-007, in progress** — `STATUS: Backlog`
+to achieve for _authorization_ (**GATES-007, in progress** — `STATUS: Backlog`
 with open `GATES-REM-001..007`: one decision helper fired at every ref-mutating
-seam). Check Runner achieves the analogous property for *execution*: one checkout
+seam). Check Runner achieves the analogous property for _execution_: one checkout
 strategy that binds to the OID, not the mechanism.
 
 ## Cross-references

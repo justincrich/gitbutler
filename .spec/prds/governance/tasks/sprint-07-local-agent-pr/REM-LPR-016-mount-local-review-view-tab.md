@@ -17,7 +17,7 @@ The component itself (LPR-016), its children (`LocalReviewAssignments.svelte`, `
 
 ## Why
 
-Sprint 07 red-hat review findings C3 + M3. The original LPR-016 task spec said *"mounts in GovernanceSettings as the Local Review tab or panel"* — that mount step was skipped, and the task status flag incorrectly claims Completed. SPRINT.md corroborates (*"the MGMT desktop render of the local PR is deferred"*). Additionally, DESIGN-LPR-003 Section 1 specifies a PR-header with `sha, author, created_at, title` fields, but the backend `ReviewStatus` payload lacks them. The component was written presciently against the design contract; the backend never caught up. This remediation closes both gaps.
+Sprint 07 red-hat review findings C3 + M3. The original LPR-016 task spec said _"mounts in GovernanceSettings as the Local Review tab or panel"_ — that mount step was skipped, and the task status flag incorrectly claims Completed. SPRINT.md corroborates (_"the MGMT desktop render of the local PR is deferred"_). Additionally, DESIGN-LPR-003 Section 1 specifies a PR-header with `sha, author, created_at, title` fields, but the backend `ReviewStatus` payload lacks them. The component was written presciently against the design contract; the backend never caught up. This remediation closes both gaps.
 
 ## How to verify
 

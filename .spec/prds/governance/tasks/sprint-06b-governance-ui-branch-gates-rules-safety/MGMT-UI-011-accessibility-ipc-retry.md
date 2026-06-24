@@ -6,7 +6,7 @@ Add aria + keyboard nav to the four-tab strip, surface IPC failures as a danger 
 
 ## Why
 
-Sprint 06b · PRD UC-MGMT-07, UC-MGMT-06 · capability CAP-AUTHZ-01. CT asserts: (a) tab strip has aria-label and Tab/Arrow/Enter keyboard navigation works; (b) mocked IPC failure renders a danger InfoMessage with {code,message,remediation_hint} text and a Retry button; (c) Retry re-issues the SDK call; (d) 
+Sprint 06b · PRD UC-MGMT-07, UC-MGMT-06 · capability CAP-AUTHZ-01. CT asserts: (a) tab strip has aria-label and Tab/Arrow/Enter keyboard navigation works; (b) mocked IPC failure renders a danger InfoMessage with {code,message,remediation_hint} text and a Retry button; (c) Retry re-issues the SDK call; (d)
 
 ## How to verify
 
@@ -14,12 +14,12 @@ PRIMARY **AC-1** — `pnpm test:ct:desktop -- GovernanceTabsA11y`: Tab navigatio
 
 ## Scope
 
-  - apps/desktop/src/components/settings/GovernanceSettings.svelte (MODIFY — add IPC-failure state, danger InfoMessage, Retry; read-only info InfoMessage; aria props passed to Tabs)
-  - apps/desktop/src/components/shared/TabList.svelte (MODIFY — add role='tablist' on <ul>, add aria-label prop, add ArrowLeft/ArrowRight/Home/End keydown handler for roving tabindex keyboard nav — CONFIRMED MISSING in live code)
-  - apps/desktop/src/components/shared/TabTrigger.svelte (MODIFY — FIX inverted tabindex: change tabindex={isActive ? -1 : 0} to tabindex={isActive ? 0 : -1}; active tab MUST be tabindex=0 — CONFIRMED WRONG in live code)
-  - apps/desktop/src/components/shared/TabContent.svelte (MODIFY — add role='tabpanel' and aria-labelledby={value} pointing to corresponding TabTrigger id — CONFIRMED MISSING in live code)
-  - apps/desktop/src/components/shared/Tabs.svelte (MODIFY — add keyboard nav context if needed for focus management)
-  - apps/desktop/tests/governance/GovernanceA11yIPC.spec.ts (NEW — CT specs for all ACs)
+- apps/desktop/src/components/settings/GovernanceSettings.svelte (MODIFY — add IPC-failure state, danger InfoMessage, Retry; read-only info InfoMessage; aria props passed to Tabs)
+- apps/desktop/src/components/shared/TabList.svelte (MODIFY — add role='tablist' on <ul>, add aria-label prop, add ArrowLeft/ArrowRight/Home/End keydown handler for roving tabindex keyboard nav — CONFIRMED MISSING in live code)
+- apps/desktop/src/components/shared/TabTrigger.svelte (MODIFY — FIX inverted tabindex: change tabindex={isActive ? -1 : 0} to tabindex={isActive ? 0 : -1}; active tab MUST be tabindex=0 — CONFIRMED WRONG in live code)
+- apps/desktop/src/components/shared/TabContent.svelte (MODIFY — add role='tabpanel' and aria-labelledby={value} pointing to corresponding TabTrigger id — CONFIRMED MISSING in live code)
+- apps/desktop/src/components/shared/Tabs.svelte (MODIFY — add keyboard nav context if needed for focus management)
+- apps/desktop/tests/governance/GovernanceA11yIPC.spec.ts (NEW — CT specs for all ACs)
 
 <details>
 <summary>▸ Full agent specification (TASK-TEMPLATE v5.2 — required reading for implementer + reviewer)</summary>
@@ -142,7 +142,7 @@ provides:
   - t
   - a
   - b
-  -  
+  -
   - n
   - a
   - v
@@ -153,12 +153,12 @@ provides:
   - i
   - o
   - n
-  -  
+  -
   - w
   - i
   - t
   - h
-  -  
+  -
   - a
   - r
   - i
@@ -185,11 +185,11 @@ provides:
   - d
   - b
   - y
-  -  
+  -
   - a
   - n
   - d
-  -  
+  -
   - k
   - e
   - y
@@ -198,11 +198,11 @@ provides:
   - a
   - r
   - d
-  -  
+  -
   - n
   - a
   - v
-  -  
+  -
   - (
   - T
   - a
@@ -221,7 +221,7 @@ provides:
   - w
   - )
   - ;
-  -  
+  -
   - I
   - P
   - C
@@ -233,14 +233,14 @@ provides:
   - u
   - r
   - e
-  -  
+  -
   - d
   - a
   - n
   - g
   - e
   - r
-  -  
+  -
   - I
   - n
   - f
@@ -252,30 +252,30 @@ provides:
   - a
   - g
   - e
-  -  
+  -
   - w
   - i
   - t
   - h
-  -  
+  -
   - R
   - e
   - t
   - r
   - y
-  -  
+  -
   - b
   - u
   - t
   - t
   - o
   - n
-  -  
+  -
   - t
   - h
   - a
   - t
-  -  
+  -
   - r
   - e
   - -
@@ -285,26 +285,26 @@ provides:
   - u
   - e
   - s
-  -  
+  -
   - t
   - h
   - e
-  -  
+  -
   - s
   - a
   - m
   - e
-  -  
+  -
   - S
   - D
   - K
-  -  
+  -
   - c
   - a
   - l
   - l
   - ;
-  -  
+  -
   - p
   - e
   - r
@@ -315,7 +315,7 @@ provides:
   - e
   - n
   - t
-  -  
+  -
   - f
   - a
   - i
@@ -323,28 +323,28 @@ provides:
   - u
   - r
   - e
-  -  
+  -
   - k
   - e
   - e
   - p
   - s
-  -  
+  -
   - t
   - h
   - e
-  -  
+  -
   - U
   - I
-  -  
+  -
   - i
   - n
-  -  
+  -
   - s
   - a
   - f
   - e
-  -  
+  -
   - r
   - e
   - a
@@ -354,14 +354,14 @@ provides:
   - n
   - l
   - y
-  -  
+  -
   - s
   - t
   - a
   - t
   - e
   - ;
-  -  
+  -
   - s
   - e
   - l
@@ -377,14 +377,14 @@ provides:
   - i
   - o
   - n
-  -  
+  -
   - d
   - e
   - n
   - i
   - a
   - l
-  -  
+  -
   - s
   - u
   - r
@@ -393,17 +393,17 @@ provides:
   - c
   - e
   - d
-  -  
+  -
   - a
   - s
-  -  
+  -
   - d
   - a
   - n
   - g
   - e
   - r
-  -  
+  -
   - I
   - n
   - f
@@ -415,7 +415,7 @@ provides:
   - a
   - g
   - e
-  -  
+  -
   - w
   - i
   - t
@@ -423,7 +423,7 @@ provides:
   - o
   - u
   - t
-  -  
+  -
   - f
   - l
   - i
@@ -432,11 +432,11 @@ provides:
   - i
   - n
   - g
-  -  
+  -
   - t
   - h
   - e
-  -  
+  -
   - c
   - o
   - n
@@ -444,7 +444,7 @@ provides:
   - r
   - o
   - l
-  -  
+  -
   - (
   - c
   - o
@@ -459,16 +459,16 @@ provides:
   - i
   - d
   - e
-  -  
+  -
   - p
   - r
   - o
   - o
   - f
-  -  
+  -
   - o
   - f
-  -  
+  -
   - C
   - A
   - P
@@ -481,7 +481,7 @@ provides:
   - -
   - 0
   - 1
-  -  
+  -
   - n
   - o
   - -
@@ -493,7 +493,7 @@ provides:
   - s
   - )
   - ;
-  -  
+  -
   - r
   - e
   - a
@@ -503,13 +503,13 @@ provides:
   - n
   - l
   - y
-  -  
+  -
   - s
   - t
   - a
   - t
   - e
-  -  
+  -
   - s
   - u
   - r
@@ -518,16 +518,16 @@ provides:
   - c
   - e
   - s
-  -  
+  -
   - t
   - h
   - e
-  -  
+  -
   - i
   - n
   - f
   - o
-  -  
+  -
   - I
   - n
   - f
@@ -539,13 +539,13 @@ provides:
   - a
   - g
   - e
-  -  
+  -
   - u
   - n
   - d
   - e
   - r
-  -  
+  -
   - m
   - i
   - s
@@ -553,7 +553,7 @@ provides:
   - i
   - n
   - g
-  -  
+  -
   - a
   - d
   - m
@@ -665,6 +665,7 @@ DEPENDENCIES
 Depends on: MGMT-UI-004 (GovernanceSettings wrapped in ErrorBoundary — a11y + IPC additions must be inside the boundary); MGMT-UI-001 (desktop CT harness; from Sprint 06a); MGMT-IPC-002 (structured denial shape {code,message,remediation_hint}; from Sprint 06a); DESIGN-MGMT-004 (structured-denial banner + self-escalation no-flip visual contract); DESIGN-MGMT-007 (four-tab aria + keyboard-nav contract); DESIGN-MGMT-008 (IPC-failure/retry pattern)
 Blocks:     MGMT-UI-012 (build-gate tests verify no +page.server.ts and no direct config write across all governance components including those modified here)
 ```
+
 </details>
 
 <!-- REQUIREMENT-CONTRACT v1 -->

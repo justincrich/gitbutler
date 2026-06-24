@@ -10,35 +10,35 @@ The register is **re-ranked from the actions PRD** under the
 cheapest-honest-path threat model. The headline change: the mechanism-agnostic
 head-OID checkout is promoted to **#1 Blocking**, above the cryptographic
 forgery risks — which are **dissolved/downgraded** (deliberately not closed under
-the threat model, *not* owed debt).
+the threat model, _not_ owed debt).
 
-| ID | Risk | Severity | Status |
-|----|------|----------|--------|
-| **R-CHECKOUT** | Mechanism-agnostic clean checkout at the head OID | **Blocking** | #1 — the headline engineering problem (07) |
-| **R-ENTRY** | Shipped gate entry is forge-review-keyed; no local-merge entry point exists | **Blocking** | A mechanism-agnostic entry must be built (04 §1a) |
-| **R-FAILOPEN** | Required-checks fail-open via the `protected` early-return | **Blocking** | Control-flow correctness |
-| **R-SHARESET** | SHA-reset: stale result satisfies the gate after the head moves | **Blocking** | Match `(name, head_oid==current)` only |
-| **R-FAILCLOSED** | A failure mode silently allows instead of blocking | **Blocking** | Fail-closed posture |
-| **R-BOOTSTRAP** | Config-bootstrap self-escalation (weaken the required set to merge the weakening) | High | Self-protecting required set |
-| **R-LYING** | Caller-supplied conclusion / lying producer API | Medium | Negative-space (type + behavioral test) |
-| **R-CONCLENUM** | Stringly-typed conclusion | Low | Typed enum, parse-or-fail |
-| **R-FORGERY** | Direct-DB-write fabricates a green | **Deliberately not closed** | Reproducibility absorbs it |
-| **R-FORGE-BYPASS** (governance **R11**) | Forge-side / raw-push merge bypasses the local gate | Accepted | Inherited from governance R11 |
-| **R-NAPI-BYPASS** (governance **R14**) | Ungoverned N-API caller bypasses the gate | Accepted | Inherited from governance R14 |
+| ID                                      | Risk                                                                              | Severity                    | Status                                            |
+| --------------------------------------- | --------------------------------------------------------------------------------- | --------------------------- | ------------------------------------------------- |
+| **R-CHECKOUT**                          | Mechanism-agnostic clean checkout at the head OID                                 | **Blocking**                | #1 — the headline engineering problem (07)        |
+| **R-ENTRY**                             | Shipped gate entry is forge-review-keyed; no local-merge entry point exists       | **Blocking**                | A mechanism-agnostic entry must be built (04 §1a) |
+| **R-FAILOPEN**                          | Required-checks fail-open via the `protected` early-return                        | **Blocking**                | Control-flow correctness                          |
+| **R-SHARESET**                          | SHA-reset: stale result satisfies the gate after the head moves                   | **Blocking**                | Match `(name, head_oid==current)` only            |
+| **R-FAILCLOSED**                        | A failure mode silently allows instead of blocking                                | **Blocking**                | Fail-closed posture                               |
+| **R-BOOTSTRAP**                         | Config-bootstrap self-escalation (weaken the required set to merge the weakening) | High                        | Self-protecting required set                      |
+| **R-LYING**                             | Caller-supplied conclusion / lying producer API                                   | Medium                      | Negative-space (type + behavioral test)           |
+| **R-CONCLENUM**                         | Stringly-typed conclusion                                                         | Low                         | Typed enum, parse-or-fail                         |
+| **R-FORGERY**                           | Direct-DB-write fabricates a green                                                | **Deliberately not closed** | Reproducibility absorbs it                        |
+| **R-FORGE-BYPASS** (governance **R11**) | Forge-side / raw-push merge bypasses the local gate                               | Accepted                    | Inherited from governance R11                     |
+| **R-NAPI-BYPASS** (governance **R14**)  | Ungoverned N-API caller bypasses the gate                                         | Accepted                    | Inherited from governance R14                     |
 
 ---
 
 ## R-CHECKOUT — mechanism-agnostic clean checkout at the head OID (Blocking, #1)
 
 - **Why it matters:** GitButler is virtual-branches-over-one-worktree. The shared
-  tree is dirty and is a projection of several virtual branches — *not* a clean
+  tree is dirty and is a projection of several virtual branches — _not_ a clean
   checkout of one branch's head OID. Running the check in the repo dir runs it
   against that live projection and **silently breaks the head-OID binding** the
   whole gate depends on: a "green" no longer means "passed at OID A." This is the
   correctness foundation of the product.
 - **Mitigation (this slice):** the runner materializes the **exact head OID** into
   a checks-owned **isolated** location — a throwaway `git worktree add --detach
-  <oid>`, an object-DB-only `gix` read for working-tree-free checks, or a
+<oid>`, an object-DB-only `gix` read for working-tree-free checks, or a
   warm-reused worktree on tmpfs (07 §3). The agent's shared worktree is
   **observably identical** before and after; the run does **not** take the shared
   `exclusive_worktree_access()` guard (07 §5). A latency budget governs the
@@ -58,27 +58,26 @@ the threat model, *not* owed debt).
   `source_branch`/`target_branch` from it, and resolves `current_head_oid` from
   `review.source_branch` (merge_gate.rs:78). Its only non-test callers are the
   forge PR-merge path (`crates/but-api/src/legacy/forge.rs:607/637/650). **A
-  purely-local virtual-branch / worktree / plain-git `but merge` with no PR has no
-  `review_id` and cannot reach the required-checks clause at all** — directly
-  contradicting the "gate a local `but` merge, mechanism-agnostic across virtual
+purely-local virtual-branch / worktree / plain-git `but merge`with no PR has no`review_id`and cannot reach the required-checks clause at all** — directly
+contradicting the "gate a local`but` merge, mechanism-agnostic across virtual
   branches AND worktrees" thesis.
 - **Mitigation (this slice):** build a **mechanism-agnostic gate entry point**
   (04 §1a) — `enforce_merge_gate_for_refs(ctx, source_ref, target_ref)` — that
   runs the required-checks evaluation on a resolved `(source_ref, target_ref)`
-  pair with the head OID peeled via the `gix` ref-peel (merge_gate.rs:172-179),
+  pair with the head OID peeled via the `gix` ref-peel (merge*gate.rs:172-179),
   **not** from a `ForgeReview`. The local `but merge` path calls it directly; the
   existing forge path becomes one caller that resolves the refs from its
   `ForgeReview` and delegates. The shipped forge entry remains, but is no longer
-  the *only* way in.
+  the \_only* way in.
 - **Auth invariant (MUST NOT regress, 01 §9a):** the new refs-keyed entry MUST sit
   behind the **same `Merge` authorization precondition** the forge path enforces.
   The shipped `enforce_merge_gate` resolves the principal
-  (`resolve_principal_from_env`, merge_gate.rs:47) and calls
+  (`resolve_principal_from_env`, merge*gate.rs:47) and calls
   `but_authz::authorize(&principal, Authority::Merge, &config.gov)?`
   (**merge_gate.rs:48** — the single `Merge`-authority call site) **before** any
   review/checks clause and **before** the `protected` early-return. A
   refs-resolving caller that resolves `(source_ref, target_ref)` but skips this
-  `authorize(_, Authority::Merge, _)` clause would be an **authz bypass**, not
+  `authorize(*, Authority::Merge, \_)` clause would be an **authz bypass**, not
   merely a checks bypass. Generalizing the entry to caller-supplied refs runs the
   identical authority + review + required-checks clauses.
 - **Proof:** integration test — a local `but merge` of source → target carrying a
@@ -134,10 +133,10 @@ the threat model, *not* owed debt).
 
 ## R-FAILCLOSED — silent allow on a failure mode (Blocking)
 
-- **Why it matters:** any ambiguity that resolves to *allow* is a hole.
+- **Why it matters:** any ambiguity that resolves to _allow_ is a hole.
 - **Mitigation (fail-closed everywhere, 01 §6):** malformed/unsatisfiable config →
   `config_invalid` denial; missing result → `check_missing`; non-`Success`
-  (including `Neutral`/`Skipped` on a *required* check) → `check_failed`;
+  (including `Neutral`/`Skipped` on a _required_ check) → `check_failed`;
   unresolvable target ref → treated as governed so the loader classifies the fault
   (parity with `governance_present` returning governed on an unresolvable ref,
   `config.rs:53-67`).
@@ -162,7 +161,7 @@ the threat model, *not* owed debt).
   **necessary but not sufficient**: the gate evaluates the set **in force before**
   the weakening commit, not the set the weakening commit proposes.
 - **Proof:** integration test — a commit that deletes a `[[required_check]]` is
-  blocked until the *currently-required* checks pass; ref-pin alone (without the
+  blocked until the _currently-required_ checks pass; ref-pin alone (without the
   before-state evaluation) is the negative control.
 
 ## R-LYING — caller-supplied conclusion / lying producer (Medium)
@@ -189,7 +188,7 @@ the threat model, *not* owed debt).
   **reproducible**: anyone can re-run the ref-pinned check at the OID and catch a
   forged result, and the honest path is cheap. **Consistency argument:** governance
   already gates merges on `local_review_verdicts`, which it accepts as
-  forgeable-by-direct-DB-write (its R6); a check is a *reproducible* second review
+  forgeable-by-direct-DB-write (its R6); a check is a _reproducible_ second review
   — safer in detectability (forgery detectable post-merge), **not** strictly safer
   (no principal identity) — so `check_results` needs **no more protection** than the
   review store: a plain table is correct (01 §3, 03 §1).

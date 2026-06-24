@@ -1,4 +1,3 @@
-
 # REMEDIATE-06B-B: Verify backend lossless round-trip and CT harness liveness
 
 **Type:** REMEDIATION | **Status:** Backlog | **Priority:** P0 | **Effort:** S (60 min)
@@ -477,4 +476,3 @@ If `cargo test -p but-api branch_gates` does not compile or has no matching test
   ]
 }
 -->
-

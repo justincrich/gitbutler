@@ -1,4 +1,3 @@
-
 # REMEDIATE-06B-C: Triage 14 Backlog follow-up tasks
 
 **Type:** REMEDIATION | **Status:** Backlog | **Priority:** P0 | **Effort:** M (90 min)
@@ -510,4 +509,3 @@ The triage decisions are recorded in the task body so they survive the file. If 
   ]
 }
 -->
-

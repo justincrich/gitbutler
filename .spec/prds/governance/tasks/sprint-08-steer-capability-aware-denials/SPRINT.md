@@ -27,37 +27,46 @@ reopened_reason: |
 
 ## Overview
 
-The **STEER** group is the v1.4.0 *capability-aware-denials* enrichment — the **tuning step** that turns
-GitButler's already-strong *informative* denials into optimal *steering* ones. Sprints 01a–06b built and
+The **STEER** group is the v1.4.0 _capability-aware-denials_ enrichment — the **tuning step** that turns
+GitButler's already-strong _informative_ denials into optimal _steering_ ones. Sprints 01a–06b built and
 hardened the enforcement core: the `but-authz` `Denial`/`AuthoritySet`/`authorize()` primitive, the commit +
 merge gates, fail-closed identity confinement, ref-pinned grouping, the `but perm`/`but group` CLI write
 verbs, and the Governance UI. Every one of those denials is honest and well-formed — but it mostly points
-**up and out** (*"ask a maintainer to grant `merge`"*), an out-of-band action the agent cannot perform
+**up and out** (_"ask a maintainer to grant `merge`"_), an out-of-band action the agent cannot perform
 itself. That is where a goal-directed agent **pools and overflows**: it hard-quits ("I'm blocked"), retry-loops
 the same denied call, or defects to a destructive bypass (raw `git`, `--no-verify`).
 
-STEER makes every **actor-correctable** denial point **down and across** — *"with what you hold, here is what
-you can do right now"* — so the water always finds a channel. It is **net-additive**: it changes **no** gate
-decision, **no** denial `code`, and **no** fail-closed posture. It adds four fields to the denial *payload*:
+STEER makes every **actor-correctable** denial point **down and across** — _"with what you hold, here is what
+you can do right now"_ — so the water always finds a channel. It is **net-additive**: it changes **no** gate
+decision, **no** denial `code`, and **no** fail-closed posture. It adds four fields to the denial _payload_:
 
 ```jsonc
-{"error":{
-  "code":"branch.protected",                 // existing, stable machine code — UNCHANGED
-  "class":"actor_correctable",               // NEW — actor_correctable | operator_required (gates retry vs escalate)
-  "message":"direct commits to protected 'main' are denied for principal 'rev'",   // existing prose — UNCHANGED
-  "remediation_hint":"land 'main' via a reviewed merge",   // existing — vertical path to the ORIGINAL intent
-  "held_permissions":["reviews:write","comments:write"],   // NEW — caller's EFFECTIVE set (own ∪ groups), self-scoped
-  "authorized_actions":[                       // NEW — lateral menu, derived + intent-scoped (no self-approve, no lying menu)
-    {"command":"but review request-changes","effect":"reject this change with line comments"},
-    {"command":"but perm list","effect":"see full permissions, groups, and authorized actions"}
-  ],
-  "do_not":"do not commit directly or bypass with raw git — protected refs only move via reviewed merge"  // NEW — anti-pool prohibition
-}}
+{
+	"error": {
+		"code": "branch.protected", // existing, stable machine code — UNCHANGED
+		"class": "actor_correctable", // NEW — actor_correctable | operator_required (gates retry vs escalate)
+		"message": "direct commits to protected 'main' are denied for principal 'rev'", // existing prose — UNCHANGED
+		"remediation_hint": "land 'main' via a reviewed merge", // existing — vertical path to the ORIGINAL intent
+		"held_permissions": ["reviews:write", "comments:write"], // NEW — caller's EFFECTIVE set (own ∪ groups), self-scoped
+		"authorized_actions": [
+			// NEW — lateral menu, derived + intent-scoped (no self-approve, no lying menu)
+			{
+				"command": "but review request-changes",
+				"effect": "reject this change with line comments",
+			},
+			{
+				"command": "but perm list",
+				"effect": "see full permissions, groups, and authorized actions",
+			},
+		],
+		"do_not": "do not commit directly or bypass with raw git — protected refs only move via reviewed merge", // NEW — anti-pool prohibition
+	},
+}
 ```
 
-`remediation_hint` (the **vertical** channel — keep the *original goal* flowing toward landing) and
-`authorized_actions` (the **lateral** channel — stop the agent *pooling*) are deliberately distinct and both
-retained. This is HATEOAS-for-authz: each rejection carries the state-transitions available to *this* principal.
+`remediation_hint` (the **vertical** channel — keep the _original goal_ flowing toward landing) and
+`authorized_actions` (the **lateral** channel — stop the agent _pooling_) are deliberately distinct and both
+retained. This is HATEOAS-for-authz: each rejection carries the state-transitions available to _this_ principal.
 
 > **Re-grounded against the shipped tree (rust red-hat pass).** The early "it's already there / it's free /
 > behavior-neutral" framing was wrong at several points and is corrected in
@@ -79,10 +88,10 @@ retained. This is HATEOAS-for-authz: each rejection carries the state-transition
 ### The load-bearing mechanism — gate-state-aware derivation (no lying menu)
 
 A pure authority intersection is **unsound** for `branch.protected`: branch protection is
-`authority ∧ ¬protected`, so a caller who hit `branch.protected` still *holds* `contents:write` — a naive
-`required_authority ⊆ held` would offer the very `commit` that was just denied (a *lying menu* that loops the
+`authority ∧ ¬protected`, so a caller who hit `branch.protected` still _holds_ `contents:write` — a naive
+`required_authority ⊆ held` would offer the very `commit` that was just denied (a _lying menu_ that loops the
 agent down a blocked channel). The corrected derivation **subtracts the (route, predicate, ref) that actually
-fired** and binds every entry to a *succeeding context* (e.g. commit to a **feature** branch — a different,
+fired** and binds every entry to a _succeeding context_ (e.g. commit to a **feature** branch — a different,
 unprotected ref — plus review actions), derives from the **exact `cfg` the gate already loaded at the target
 ref** (menu and gate cannot diverge), and **excludes `but review approve`** when the denial targets the
 caller's own branch (an L1 contract exclusion, never left to the reference primer).
@@ -112,18 +121,18 @@ succeeds while no listed action reproduces the denial that was just returned.
 
 ## Tasks
 
-| ID | Title | Agent | Estimate |
-|----|-------|-------|----------|
-| STEER-001 | Steering fields (`class`/`held_permissions`/`authorized_actions`/`do_not`) on `Denial` + `MergeGateError` + `ConfigError` + the `CommitGateError` envelope; add `DenialClass`/`AuthorizedAction` types + derives; `Authority` `Serialize` (stable `:` token) or per-serializer `name()` mapping, stable lexical order | rust-implementer | 210 min |
-| STEER-002 | `Route` enum + single-source `ROUTE_AUTHORITY_TABLE` in `but-authz`; compose non-authority predicates around it; reconcile the `forge.rs` `authorize_branch_action` match incl. `other =>`; preserve the `AUTHORITY_POSITIVE_PATTERN` honesty grep (keep literal `authorize`/`Authority::*` or update `invariant_build_gates.rs`) | rust-implementer | 270 min |
-| STEER-003 | Gate-state-aware `authorized_actions` derivation: `effective_set ∩ table` minus the failed `(route, predicate, ref)`, intent-scoped via the curated `AFFORDANCE_MAP`, self-approve excluded on own-branch, all text from the closed `&'static str` catalog | rust-implementer | 240 min |
-| STEER-004 | Wire the payload + exhaustive non-defaulted `(code, principal-resolution) → class` match into all constructors/gates; change `branch_protected(principal, &cfg, branch)` to re-call `effective_authority` for a gate-state-aware menu; `config.invalid`/no-handle/unknown-principal → `operator_required` + empty menu + `do_not` | rust-implementer | 210 min |
-| STEER-005 | Add the four fields to the three hand-rolled CLI serializers (`commit_gate_cli_error`, `review_gate_cli_error`, `merge_gate_cli_error`); coordinate the desktop surface with Sprint 06a `MGMT-IPC-002` (`json::Error`); best-effort serialization — a fault still emits `code`/`message`/`remediation_hint` + exit 1 | rust-implementer | 180 min |
-| STEER-006 | `but whoami` / `but can-i` self-scoped discovery (effective perms + own group memberships + authorized-action set); surface `but perm list` as the menu discovery affordance, degrade (omit) if absent; no other-group-member enumeration without `administration:read` | rust-implementer | 210 min |
-| STEER-007 | Denial-steering telemetry event (`code`, `class`, `had_lateral_action`, menu length) on the existing tracing path | rust-implementer | 120 min |
-| STEER-008 | Ship the non-enforced agent-priming reference primer (denials=redirects, affordances=options-not-orders, no-bypass, `class`/`do_not` contract); prove no `but-authz`/`but-api` path depends on it for correctness | rust-implementer | 90 min |
-| STEER-009 | Extend `governed_loop` for gate-state-aware no-lying-menu — replay each offered action in its stated context, plus a concurrent-ref-advance case (clean re-denial) and a serialization-fault case (exit 1); audit and update any whole-object-equality assertions on `Denial`/`MergeGateError` | rust-implementer | 240 min |
-| STEER-010 | Net-new honesty build-gates: closed-catalog grep (no `format!`/interpolation/config-sourced text in `authorized_actions`/`do_not`) + table/affordance coverage grep (every gated route ∈ `ROUTE_AUTHORITY_TABLE`; every table route has an `AFFORDANCE_MAP` entry not naming the denied route) + review | rust-reviewer | 120 min |
+| ID        | Title                                                                                                                                                                                                                                                                                                                             | Agent            | Estimate |
+| --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------- | -------- |
+| STEER-001 | Steering fields (`class`/`held_permissions`/`authorized_actions`/`do_not`) on `Denial` + `MergeGateError` + `ConfigError` + the `CommitGateError` envelope; add `DenialClass`/`AuthorizedAction` types + derives; `Authority` `Serialize` (stable `:` token) or per-serializer `name()` mapping, stable lexical order             | rust-implementer | 210 min  |
+| STEER-002 | `Route` enum + single-source `ROUTE_AUTHORITY_TABLE` in `but-authz`; compose non-authority predicates around it; reconcile the `forge.rs` `authorize_branch_action` match incl. `other =>`; preserve the `AUTHORITY_POSITIVE_PATTERN` honesty grep (keep literal `authorize`/`Authority::*` or update `invariant_build_gates.rs`) | rust-implementer | 270 min  |
+| STEER-003 | Gate-state-aware `authorized_actions` derivation: `effective_set ∩ table` minus the failed `(route, predicate, ref)`, intent-scoped via the curated `AFFORDANCE_MAP`, self-approve excluded on own-branch, all text from the closed `&'static str` catalog                                                                        | rust-implementer | 240 min  |
+| STEER-004 | Wire the payload + exhaustive non-defaulted `(code, principal-resolution) → class` match into all constructors/gates; change `branch_protected(principal, &cfg, branch)` to re-call `effective_authority` for a gate-state-aware menu; `config.invalid`/no-handle/unknown-principal → `operator_required` + empty menu + `do_not` | rust-implementer | 210 min  |
+| STEER-005 | Add the four fields to the three hand-rolled CLI serializers (`commit_gate_cli_error`, `review_gate_cli_error`, `merge_gate_cli_error`); coordinate the desktop surface with Sprint 06a `MGMT-IPC-002` (`json::Error`); best-effort serialization — a fault still emits `code`/`message`/`remediation_hint` + exit 1              | rust-implementer | 180 min  |
+| STEER-006 | `but whoami` / `but can-i` self-scoped discovery (effective perms + own group memberships + authorized-action set); surface `but perm list` as the menu discovery affordance, degrade (omit) if absent; no other-group-member enumeration without `administration:read`                                                           | rust-implementer | 210 min  |
+| STEER-007 | Denial-steering telemetry event (`code`, `class`, `had_lateral_action`, menu length) on the existing tracing path                                                                                                                                                                                                                 | rust-implementer | 120 min  |
+| STEER-008 | Ship the non-enforced agent-priming reference primer (denials=redirects, affordances=options-not-orders, no-bypass, `class`/`do_not` contract); prove no `but-authz`/`but-api` path depends on it for correctness                                                                                                                 | rust-implementer | 90 min   |
+| STEER-009 | Extend `governed_loop` for gate-state-aware no-lying-menu — replay each offered action in its stated context, plus a concurrent-ref-advance case (clean re-denial) and a serialization-fault case (exit 1); audit and update any whole-object-equality assertions on `Denial`/`MergeGateError`                                    | rust-implementer | 240 min  |
+| STEER-010 | Net-new honesty build-gates: closed-catalog grep (no `format!`/interpolation/config-sourced text in `authorized_actions`/`do_not`) + table/affordance coverage grep (every gated route ∈ `ROUTE_AUTHORITY_TABLE`; every table route has an `AFFORDANCE_MAP` entry not naming the denied route) + review                           | rust-reviewer    | 120 min  |
 
 ## Dependencies
 
@@ -154,7 +163,7 @@ succeeds while no listed action reproduces the denial that was just returned.
   the `missing_permission` (resolved-principal) path; it is structurally empty on the unresolved-principal and
   `config.invalid` paths.
 - **`class` is exhaustive by (code, principal-resolution), not by code alone (STEER-004).** `perm.denied`
-  splits: a *resolved* principal lacking authority is `actor_correctable`; an *unresolved* principal
+  splits: a _resolved_ principal lacking authority is `actor_correctable`; an _unresolved_ principal
   (no-handle / unknown-principal — same `perm.denied` code) is `operator_required` with an empty menu and a
   do-not-retry `do_not`, because such a caller cannot self-correct in-system (security HIGH #2). The mapping
   is a non-defaulted `match` — adding a future code/cause without classifying it is a **compile break**, never

@@ -48,6 +48,10 @@
 			"env": ["PLAYWRIGHT_BROWSERS_PATH"],
 			"dependsOn": ["package", "playwright:install:ct"]
 		},
+		"test:ct:desktop": {
+			"env": ["PLAYWRIGHT_BROWSERS_PATH"],
+			"dependsOn": ["package", "playwright:install:ct"]
+		},
 		"//#globallint": {
 			"dependsOn": [
 				"@gitbutler/ui#package",

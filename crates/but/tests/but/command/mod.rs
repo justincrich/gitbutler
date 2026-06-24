@@ -15,6 +15,8 @@ mod commit;
 mod commit2;
 #[cfg(all(feature = "legacy", feature = "but-2"))]
 mod commit_gate;
+#[cfg(feature = "legacy")]
+mod commit_rules;
 mod config;
 #[cfg(feature = "legacy")]
 mod confinement;
@@ -47,6 +49,8 @@ mod pick;
 mod push;
 #[cfg(feature = "legacy")]
 mod resolve;
+#[cfg(feature = "legacy")]
+mod review_comments_resolve;
 #[cfg(feature = "legacy")]
 mod review_guard;
 #[cfg(feature = "legacy")]

@@ -149,6 +149,7 @@ DEPENDENCIES
 Depends on: CLI-001, CLI-002
 Blocks: Sprint 05 approval, Sprint 06a governance UI reuse confidence
 ```
+
 </details>
 
 <!-- REQUIREMENT-CONTRACT v1 -->

@@ -5,7 +5,6 @@
 > Reviewer: deferred to PHASE 4.5 red-hat closeout — committed prior session; AssignmentState typed enum
 > Updated: 2026-06-22T18:07:12Z
 
-
 ## What this does
 
 Add a pure `AssignmentState { Pending, Approved, ChangesRequested }` enum with a `parse`/`name` round-trip at the `but-authz`/`but-api` boundary, so the `local_review_assignments.state` TEXT column is validated and typed on read/write — exactly the shape discipline `Authority`'s `parse`/`name` round-trip uses (`crates/but-authz/src/authority.rs:69`/`:94`). The DB column stays `TEXT` (migration-tolerant, matching `LocalReviewVerdict.verdict: String`). **No new `Authority` variant; no change to `authorize`/`effective_authority`.**

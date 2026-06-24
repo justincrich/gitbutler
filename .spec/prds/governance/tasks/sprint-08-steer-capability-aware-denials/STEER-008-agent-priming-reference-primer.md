@@ -162,6 +162,7 @@ blocks: (none)
 
 CODING STANDARDS: crates/AGENTS.md, crates/but/AGENTS.md, RULES.md
 ```
+
 </details>
 
 <!-- REQUIREMENT-CONTRACT v1 -->

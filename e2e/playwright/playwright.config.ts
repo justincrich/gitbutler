@@ -110,6 +110,12 @@ function webServers() {
 			// VITE_BUTLER_PORT: BUT_SERVER_PORT,
 			VITE_BUTLER_HOST: "localhost",
 			VITE_BUILD_TARGET: "web",
+			// Keep the e2e hermetic: a developer's local `.env.development.local`
+			// may set `VITE_FORCE_ADMIN=true`, which would force every signed-in
+			// user to admin and mask the role-based access tests (e.g. "member
+			// does not see Permissions & Governance"). Override it here so the
+			// governance access tests exercise real role gating.
+			VITE_FORCE_ADMIN: "false",
 		},
 		reuseExistingServer: true,
 		stdout: "pipe",

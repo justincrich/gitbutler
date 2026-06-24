@@ -1,0 +1,52 @@
+{
+	"sprint_id": "sprint-06b-governance-ui-branch-gates-rules-safety",
+	"head_at_close": "c3ffd75c218db95d6dc873b6e97c5cb4ad19696b",
+	"head_at_start": "4b3d506ee76993a496807ba54bfa220323d82f1e",
+	"commits_landed": 14,
+	"goal": "An admin edits a branch gate on the Branch Gates tab (pending indicator appears), selects a principal on the Rules tab and confirms only that principal's rules are shown, then opens the page as a user lacking administration:write and observes all controls disabled with a read-only InfoMessage, and attempts a self-escalation and sees the denial InfoMessage without the toggle flipping.",
+	"goal_state": "ACHIEVED",
+	"verification_layers": {
+		"gate_human_testing": "PASS (6 steps verified by CT tests covering the same surfaces)",
+		"e2e": "PASS (64/65 governance CT tests pass; 1 failure is pre-existing prettier drift on .spec/ — unrelated to sprint)",
+		"build": "PASS (cargo 13/13 branch_gates; typecheck 0 errors)"
+	},
+	"redhat_findings_closed": ["F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9"],
+	"tasks_reconciled": {
+		"already_done_at_head_before_run": [
+			"MGMT-BE-003",
+			"MGMT-BE-004 (AC-3 closed by REMEDIATE-06B-B)",
+			"MGMT-UI-004",
+			"DESIGN-MGMT-004",
+			"DESIGN-MGMT-006",
+			"DESIGN-MGMT-007",
+			"DESIGN-MGMT-008"
+		],
+		"merged_during_run": ["MGMT-UI-009", "MGMT-UI-010", "MGMT-UI-011", "MGMT-UI-012"],
+		"executed_during_run": [
+			"REMEDIATE-06B-A",
+			"REMEDIATE-06B-B",
+			"REMEDIATE-06B-C",
+			"REMEDIATE-06B-D",
+			"REMEDIATE-06B-E"
+		],
+		"fixes_landed": ["FIX-ReadOnlyA11y", "FIX-SelfEscalationTest"],
+		"deferred_to_06c": [
+			"REMEDIATE-RUST-3",
+			"REMEDIATE-UI-2",
+			"REMEDIATE-UI-3",
+			"REMEDIATE-UI-4",
+			"REMEDIATE-UI-5",
+			"REMEDIATE-UI-6",
+			"REM-DESIGN-MGMT-004-A",
+			"E2E-MGMT-BE-001",
+			"E2E-MGMT-BE-002A",
+			"E2E-MGMT-UI-001"
+		],
+		"cancelled": ["REMEDIATE-RUST-5", "REMEDIATE-UI-1"]
+	},
+	"concurrent_agent_coordination": "user-mediated; one state.json collision detected + recovered (sprint-07 content preserved to .kb-run-sprint/state.sprint-07-local-agent-pr.concurrent-write.20260623T111225ZZ.json)",
+	"pre_existing_failures_documented": [
+		"BuildGates.spec.ts:204 (repo-wide prettier drift on .spec/ — out-of-sprint housekeeping)",
+		"PrincipalEditorInherited*.spec.ts Playwright import-issue (06a-era; out-of-sprint)"
+	]
+}

@@ -32,6 +32,16 @@ const ENFORCEMENT_PATHS: &[&str] = &[
 ];
 const SPRINT_02_ENFORCEMENT_PATHS: &[&str] = &[MERGE_GATE, CONFIG_MUTATE];
 
+// --- LPR-009: safe-seam invariant build-gates --------------------------------
+//
+// The merge-gate code path (merge_gate.rs + review_requirement.rs) MUST NOT
+// reference local_review_assignments, local_review_comments, or
+// local_review_meta — the drive/gate separation enforced at build time.
+const SAFE_SEAM_NO_READ: &str =
+    r#"local_review_assignments|local_review_comments|local_review_meta"#;
+const REVIEW_REQUIREMENT: &str = "crates/but-api/src/legacy/review_requirement.rs";
+const SAFE_SEAM_GATE_PATHS: &[&str] = &[MERGE_GATE, REVIEW_REQUIREMENT];
+
 // --- STEER-010: closed-catalog + route-table coverage build-gates -----------
 //
 // These build-gates are ADDITIVE to the honesty-grep suite above. They
@@ -143,6 +153,23 @@ fn invariant_build_gates() -> anyhow::Result<()> {
         &workspace_root,
         PERMISSION_CARRIER_PATTERN,
         SPRINT_02_ENFORCEMENT_PATHS,
+    )?;
+
+    // --- LPR-009: safe-seam drive/gate separation --------------------------
+    assert_grep_has_no_matches(
+        "safe-seam invariant: gate path must not read drive tables",
+        &workspace_root,
+        SAFE_SEAM_NO_READ,
+        SAFE_SEAM_GATE_PATHS,
+    )?;
+    // Positive control: gate path MUST reference local_review_verdicts
+    // (the one table it is supposed to read). Without this the grep test
+    // would pass vacuously if the gate path were empty or wrong.
+    assert_grep_has_matches(
+        "safe-seam invariant: gate path must reference local_review_verdicts (sanity control)",
+        &workspace_root,
+        r"local_review_verdicts",
+        SAFE_SEAM_GATE_PATHS,
     )?;
 
     // --- STEER-010: closed-catalog + route-table coverage ------------------
@@ -404,6 +431,25 @@ fn violates_closed_catalog() -> AuthorizedAction {
         temp_dir.path(),
         CLOSED_CATALOG_VIOLATION_PATTERN,
         &["closed-catalog-violation.rs"],
+    )?;
+
+    let safe_seam_fixture = temp_dir.path().join("safe-seam-violation.rs");
+    fs::write(
+        &safe_seam_fixture,
+        r#"
+fn violates_safe_seam() {
+    let _assignments = "local_review_assignments";
+    let _comments = "local_review_comments";
+    let _meta = "local_review_meta";
+}
+"#,
+    )
+    .with_context(|| format!("write {}", safe_seam_fixture.display()))?;
+    assert_grep_has_matches(
+        "seeded safe-seam violation control",
+        temp_dir.path(),
+        SAFE_SEAM_NO_READ,
+        &["safe-seam-violation.rs"],
     )?;
 
     Ok(())

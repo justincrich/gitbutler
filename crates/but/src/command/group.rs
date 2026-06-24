@@ -63,6 +63,12 @@ pub async fn exec(
             .map_err(governance_cli_error)?;
             write_mutation(out, "removed member", &remove).map_err(CliError::from)
         }
+        Subcommands::Delete { name } => {
+            let delete =
+                but_api::legacy::governance::group_delete_with_repo(&repo, &target_ref, &name)
+                    .map_err(governance_cli_error)?;
+            write_mutation(out, "deleted", &delete).map_err(CliError::from)
+        }
     }
 }
 

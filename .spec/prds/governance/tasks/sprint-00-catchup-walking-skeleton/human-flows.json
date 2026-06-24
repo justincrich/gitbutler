@@ -1,0 +1,140 @@
+{
+	"sprint": "sprint-00-catchup-walking-skeleton",
+	"locked": true,
+	"locked_at": "2026-06-23",
+	"locked_from": ".spec/scenarios (backfilled from SPRINT.md test steps of sprint-01a + sprint-01b)",
+	"scope": "UC-AUTHZ-01,UC-AUTHZ-02,UC-AUTHZ-04,UC-GATES-01,UC-GATES-02,UC-LOOP-01,UC-LOOP-02",
+	"surface": "backend",
+	"replay_note": "Every run_cmd drives the REAL `but` binary via assert_cmd/snapbox (real git + real but-db, no mocks). The gate adds cold-boot + altitude lints on top. Verdict computed by tools/gate-evidence/ from exit codes + fresh artifacts — NOT narrated.",
+	"flows": [
+		{
+			"id": "CATCHUP-AUTHZ01-CORE",
+			"uc_ref": "UC-AUTHZ-01",
+			"type": "core",
+			"scope": "task-local",
+			"name": "Functional permission model — authorize() resolves authority set from committed config",
+			"run_cmd": "cargo test -p but-authz authorize -- --nocapture",
+			"surface_lint": "tools/e2e-surface/e2e_surface_check.py + tools/e2e-surface/coldboot_check.py",
+			"expected": "A principal with contents:write is permitted; one with only contents:read is denied with the exact Authority named. Authority comes from committed permissions.toml only."
+		},
+		{
+			"id": "CATCHUP-AUTHZ01-EDGE-ABSENT",
+			"uc_ref": "UC-AUTHZ-01",
+			"type": "edge",
+			"scope": "task-local",
+			"name": "Absent principal denied (fail-closed default-deny)",
+			"run_cmd": "cargo test -p but-authz authorize_absent_principal -- --nocapture",
+			"surface_lint": "coldboot_check.py — config must be committed (target-ref), not seeded at test time",
+			"expected": "A principal whose BUT_AGENT_HANDLE is absent from committed permissions.toml → denied perm.denied."
+		},
+		{
+			"id": "CATCHUP-AUTHZ02-CORE",
+			"uc_ref": "UC-AUTHZ-02",
+			"type": "core",
+			"scope": "task-local",
+			"name": "Agent-readable structured denial on stderr + exit 1",
+			"run_cmd": "cargo test -p but --features but-2 commit_gate -- --nocapture",
+			"expected": "A denied governed action emits {code, message, remediation_hint} JSON on stderr + exit 1; an authorized action exits 0 and proceeds."
+		},
+		{
+			"id": "CATCHUP-AUTHZ02-EDGE-UNSET",
+			"uc_ref": "UC-AUTHZ-02",
+			"type": "edge",
+			"scope": "task-local",
+			"name": "Unset BUT_AGENT_HANDLE rejected — no anonymous action",
+			"run_cmd": "cargo test -p but --features but-2 commit_gate_unset_handle -- --nocapture",
+			"expected": "Run a governed action with BUT_AGENT_HANDLE unset → rejected exit 1, no anonymous action runs."
+		},
+		{
+			"id": "CATCHUP-AUTHZ04-CORE",
+			"uc_ref": "UC-AUTHZ-04",
+			"type": "core",
+			"scope": "task-local",
+			"name": "Malformed gates.toml → config.invalid (fail-closed)",
+			"run_cmd": "cargo test -p but --features but-2 commit_gate_malformed -- --nocapture",
+			"expected": "Commit a malformed gates.toml to the target ref, run a governed action → denied config.invalid."
+		},
+		{
+			"id": "CATCHUP-AUTHZ04-EDGE-PARTIAL",
+			"uc_ref": "UC-AUTHZ-04",
+			"type": "edge",
+			"scope": "task-local",
+			"name": "Partial config (exactly one file) → config.invalid",
+			"run_cmd": "cargo test -p but --features but-2 'commit_gate_absent_config_is_ungoverned' -- --nocapture && cargo test -p but --features but-2 'commit_gate_malformed_partial_and_dryrun' -- --nocapture",
+			"expected": "Exactly one of {permissions.toml, gates.toml} → config.invalid (fail-closed). Both absent → ungoverned (allow). Opt-in-by-presence three-state model."
+		},
+		{
+			"id": "CATCHUP-GATES01-CORE",
+			"uc_ref": "UC-GATES-01",
+			"type": "core",
+			"scope": "task-local",
+			"name": "Commit gate — contents:write commit on feature branch lands",
+			"run_cmd": "cargo test -p but-api commit_gate -- --nocapture",
+			"expected": "As dev (contents:write), run but commit on a feature branch → exit 0, ref advances. Gate authorizes contents:write and target is not protected."
+		},
+		{
+			"id": "CATCHUP-GATES01-EDGE-PROTECTED",
+			"uc_ref": "UC-GATES-01",
+			"type": "edge",
+			"scope": "task-local",
+			"name": "Protected-branch commit denied + working-tree edit inert",
+			"run_cmd": "cargo test -p but-api commit_gate_protected_branch -- --nocapture",
+			"expected": "Direct commit to protected main → branch.protected. Working-tree gates.toml edit to unprotect → still branch.protected (target-ref-only read)."
+		},
+		{
+			"id": "CATCHUP-GATES02-CORE",
+			"uc_ref": "UC-GATES-02",
+			"type": "core",
+			"scope": "task-local",
+			"name": "Merge gate — merge after distinct approval at head proceeds",
+			"run_cmd": "cargo test -p but-api merge_gate -- --nocapture",
+			"expected": "As maintainer, run but merge after a distinct reviewer approval at head → exit 0, merge proceeds."
+		},
+		{
+			"id": "CATCHUP-GATES02-EDGE-DENIED",
+			"uc_ref": "UC-GATES-02",
+			"type": "edge",
+			"scope": "task-local",
+			"name": "Merge denied variants — no approval, stale, auto-merge, DryRun",
+			"run_cmd": "cargo test -p but-api merge_gate_denied_variants -- --nocapture",
+			"expected": "Zero approvals → gate.review_required. Stale approval → gate.review_required + approval_stale_at_head. Auto-merge as non-merge principal → perm.denied. DryRun merge → still denied, nothing persisted."
+		},
+		{
+			"id": "CATCHUP-LOOP01-CORE",
+			"uc_ref": "UC-LOOP-01",
+			"type": "core",
+			"scope": "journey",
+			"name": "T-LOOP-006 reference flow — 3-principal implement→review→merge canary [JOURNEY]",
+			"run_cmd": "cargo test -p but --features but-2 governed_loop -- --nocapture",
+			"surface_lint": "e2e_surface_check.py (enters at the real `but` CLI, not beneath) + coldboot_check.py (fresh repo, config committed as a human would — NOT seeded/injected)",
+			"expected": "reference_flow_full_loop + auto_merge_denied + remediation_traversable + dryrun_no_bypass + unset_handle_failclosed → 5/5 green. The implementer's merge AND auto-merge denied; maintainer's merge succeeds only after a distinct reviewer approval at head; a denied implementer following remediation_hint lands through a reviewed merge. Role separation emerges from the functional permission set."
+		},
+		{
+			"id": "CATCHUP-LOOP01-EDGE-TRAVERSAL",
+			"uc_ref": "UC-LOOP-01",
+			"type": "edge",
+			"scope": "journey",
+			"name": "Remediation-hint traversal — denied implementer follows the hint and lands [JOURNEY]",
+			"run_cmd": "cargo test -p but --features but-2 'governed_loop::remediation_traversable' -- --nocapture",
+			"expected": "A denied implementer follows its remediation_hint (feature branch → review → merge) and lands successfully. The irrigation thesis: the governed path is traversable."
+		},
+		{
+			"id": "CATCHUP-LOOP02-CORE",
+			"uc_ref": "UC-LOOP-02",
+			"type": "core",
+			"scope": "task-local",
+			"name": "No role-name in any enforcement path — functional authority only",
+			"run_cmd": "cargo test -p but-authz invariant_build_gates -- --nocapture",
+			"expected": "The enforcement path contains no role-name, no human-vs-AI predicate, no Permission overload. The build-gate honesty grep is green."
+		},
+		{
+			"id": "CATCHUP-LOOP02-EDGE-INVARIANT",
+			"uc_ref": "UC-LOOP-02",
+			"type": "edge",
+			"scope": "task-local",
+			"name": "Honesty invariant grep-gates re-asserted after AUTHZ hardening",
+			"run_cmd": "cargo test -p but-authz invariant_build_gates -- --nocapture",
+			"expected": "After all AUTHZ hardening, re-assert: no role name, no human-vs-AI predicate, no Permission overload. Invariant grep-gates green."
+		}
+	]
+}

@@ -5,7 +5,6 @@
 > Reviewer: deferred to PHASE 4.5 red-hat closeout — committed prior session; review_status full reconciler drive state
 > Updated: 2026-06-22T18:07:12Z
 
-
 ## What this does
 
 Extend LPR-005's `review_status` so a single branch-scoped read serves the **full review-drive state** for a target in **one payload**: the open `pending` assignments, the unresolved comment threads, and the verdict-at-head. This is what makes an orchestrator a **reconciler over `but` review state**, not a private state machine — it reads everything it needs to decide the next action (dispatch a reviewer / dispatch remediation / attempt the merge) from one `but review status` call, with no per-orchestrator shadow state. Two independent orchestrators reading the same repo converge because they read the same deterministic payload, and the orchestrator's "approved-at-head" read **agrees with** the gate's verdict-at-head (it reads the same `local_review_verdicts`@head query the gate runs) — without bypassing the gate.

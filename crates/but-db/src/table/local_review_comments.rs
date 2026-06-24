@@ -25,6 +25,7 @@ ON `local_review_comments`(`target`, `thread_id`);",
 
 /// Tests are in `but-db/tests/db/table/local_review_comments.rs`.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "export-schema", derive(schemars::JsonSchema))]
 pub struct LocalReviewComment {
     pub id: String,
     pub target: String,
@@ -36,6 +37,9 @@ pub struct LocalReviewComment {
     pub resolved: bool,
     pub created_at: chrono::NaiveDateTime,
 }
+
+#[cfg(feature = "export-schema")]
+but_schemars::register_sdk_type!(LocalReviewComment);
 
 impl DbHandle {
     pub fn local_review_comments(&self) -> LocalReviewCommentsHandle<'_> {

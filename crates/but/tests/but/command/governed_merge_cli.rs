@@ -22,7 +22,7 @@ fn merge_denial_is_structured_for_implementer_without_merge_authority() -> anyho
 Error: Failed to merge review.
 
 Caused by:
-    {"error":{"code":"perm.denied","message":"action requires merge; authorization denied (held permissions: contents:write, pull_requests:write)","remediation_hint":"request a reviewed merge or ask a maintainer to grant merge","unmet":[]}}
+    {"error":{"code":"perm.denied","message":"action requires merge; authorization denied (held permissions: contents:write, pull_requests:write)","remediation_hint":"request a reviewed merge or ask a maintainer to grant merge","class":"actor_correctable","held_permissions":["contents:write","pull_requests:write"],"authorized_actions":[{"command":"but review new","effect":"open a local review for a branch to hand off for review"},{"command":"but perm list","effect":"list your own effective permissions (self-discovery)"}],"unmet":[]}}
 
 "#]]);
 

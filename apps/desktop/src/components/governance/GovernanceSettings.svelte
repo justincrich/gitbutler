@@ -1,5 +1,9 @@
 <script lang="ts">
+	import BranchGatesList from "$components/governance/BranchGatesList.svelte";
 	import GroupsList from "$components/governance/GroupsList.svelte";
+	import LocalReviewView, {
+		createLocalReviewService,
+	} from "$components/governance/LocalReviewView.svelte";
 	import PrincipalsList from "$components/governance/PrincipalsList.svelte";
 	import RulesList from "$components/rules/RulesList.svelte";
 	import TabContent from "$components/shared/TabContent.svelte";
@@ -26,6 +30,12 @@
 	type Props = {
 		projectId?: string;
 		targetRef?: string;
+		/**
+		 * Branch to render local review status for in the "Local Review" tab.
+		 * When empty (or when no backend is available), the tab renders the
+		 * view's graceful "no local review open" empty state — never crashes.
+		 */
+		branch?: string;
 		service?: GovernanceRendererContract;
 		initialGroups?: GroupListEntry[];
 		initialPendingGroups?: string[];
@@ -34,7 +44,8 @@
 
 	const {
 		projectId = "",
-		targetRef = "refs/remotes/origin/master",
+		targetRef = "",
+		branch = "",
 		service: providedService,
 		initialGroups,
 		initialPendingGroups = [],
@@ -46,6 +57,12 @@
 	const service = untrack(
 		() => providedService ?? (backend ? createGovernanceRendererContract(backend) : undefined),
 	);
+	// LocalReviewView takes a dedicated LocalReviewService (reviewStatus +
+	// listComments) rather than the governance renderer contract. Build it from
+	// the same backend; undefined when no backend is injected (tests/SSR).
+	const localReviewService = untrack(() =>
+		backend ? createLocalReviewService(backend) : undefined,
+	);
 	const target = untrack(() => ({ projectId, targetRef }));
 	const pendingStore = service ? createGovernancePendingStore(service, target) : undefined;
 
@@ -54,8 +71,12 @@
 	// "Not configured" is a normal first-run state (no committed governance config on the
 	// target branch), NOT an error — render guidance instead of the tabs or a red banner.
 	const isNotConfigured = $derived(pendingStore?.access.isNotConfigured ?? false);
-	// The backend resolves the real target ref; the renderer prop may be stale.
-	const resolvedTargetRef = $derived(pendingStore?.access.targetRef || targetRef);
+	// The backend resolves the real target ref (governance_status_read returns
+	// target_ref); the renderer prop may be empty. resolvedTargetRef stays
+	// undefined until the backend has resolved it — never fall back to a
+	// hardcoded ref (origin/master), which the backend rejects with a
+	// target-ref-mismatch error.
+	const resolvedTargetRef = $derived(pendingStore?.access.targetRef || targetRef || undefined);
 	const commitDisabled = $derived(
 		isReadOnly || pendingCount === 0 || Boolean(pendingStore?.isCommitting),
 	);
@@ -190,6 +211,7 @@
 				<TabTrigger value="groups">Groups</TabTrigger>
 				<TabTrigger value="branch-gates">Branch Gates</TabTrigger>
 				<TabTrigger value="rules">Rules</TabTrigger>
+				<TabTrigger value="local-review">Local Review</TabTrigger>
 			</TabList>
 
 			<TabContent value="principals">
@@ -200,7 +222,7 @@
 					<h3>Principals</h3>
 					<PrincipalsList
 						{projectId}
-						targetRef={resolvedTargetRef}
+						targetRef={resolvedTargetRef ?? ""}
 						{isReadOnly}
 						{service}
 						onRefresh={refreshGovernance}
@@ -216,7 +238,7 @@
 					<h3>Groups</h3>
 					<GroupsList
 						{projectId}
-						targetRef={resolvedTargetRef}
+						targetRef={resolvedTargetRef ?? ""}
 						{isReadOnly}
 						groups={initialGroups}
 						pendingGroups={pendingGroupNames}
@@ -227,16 +249,17 @@
 			</TabContent>
 
 			<TabContent value="branch-gates">
-				<section class="governance-panel" data-testid="governance-branch-gates-panel">
+				<section
+					class="governance-panel governance-panel--branch-gates"
+					data-testid="governance-branch-gates-panel"
+				>
 					<h3>Branch Gates</h3>
-					<button
-						type="button"
-						class="governance-button"
-						disabled={isReadOnly}
-						data-testid="governance-branch-gates-control"
-					>
-						Add gate
-					</button>
+					<BranchGatesList
+						{projectId}
+						targetRef={resolvedTargetRef ?? ""}
+						{isReadOnly}
+						onRefresh={refreshGovernance}
+					/>
 				</section>
 			</TabContent>
 
@@ -246,6 +269,14 @@
 					data-testid="governance-rules-panel"
 				>
 					<h3>Rules</h3>
+					<button
+						type="button"
+						class="governance-button"
+						disabled={isReadOnly}
+						data-testid="governance-rules-control"
+					>
+						Add rule
+					</button>
 					{#if rulesPrincipalId}
 						<div class="governance-rules-list" data-testid="governance-rules-list">
 							<RulesList {projectId} principalId={rulesPrincipalId} />
@@ -257,6 +288,16 @@
 							</EmptyStatePlaceholder>
 						</div>
 					{/if}
+				</section>
+			</TabContent>
+
+			<TabContent value="local-review">
+				<section
+					class="governance-panel governance-panel--local-review"
+					data-testid="governance-local-review-panel"
+				>
+					<h3>Local Review</h3>
+					<LocalReviewView {projectId} {branch} service={localReviewService} {isReadOnly} />
 				</section>
 			</TabContent>
 		</Tabs>
@@ -323,7 +364,9 @@
 
 	.governance-panel--principals,
 	.governance-panel--groups,
-	.governance-panel--rules {
+	.governance-panel--branch-gates,
+	.governance-panel--rules,
+	.governance-panel--local-review {
 		flex-direction: column;
 	}
 

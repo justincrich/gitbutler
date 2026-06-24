@@ -1,4 +1,3 @@
-
 # REMEDIATE-06B-D: Add UC-MGMT-06 capstone no-bypass proof AC with symmetric self-revoke
 
 **Type:** REMEDIATION | **Status:** Done — satisfied at HEAD 5a57c802c4 by existing `PrincipalEditorSelfEscalation` test | **Priority:** P0 | **Effort:** 0 (capstone already implemented in prior sprint-06b run; reconciliation verified 2026-06-23)
@@ -13,18 +12,20 @@ The red-hat review (F2) flagged the UC-MGMT-06 capstone as missing because no To
 
 ```typescript
 test("PrincipalEditorSelfEscalation", async ({ mount }) => {
-  // ... mount with isCurrentUser: true ...
-  await component.getByTestId("principal-editor-toggle-administration-write").click();
-  await expect(component.getByTestId("principal-editor-toggle-administration-write")).toBeChecked();
+	// ... mount with isCurrentUser: true ...
+	await component.getByTestId("principal-editor-toggle-administration-write").click();
+	await expect(component.getByTestId("principal-editor-toggle-administration-write")).toBeChecked();
 
-  await component.getByTestId("principal-editor-save").click();
+	await component.getByTestId("principal-editor-save").click();
 
-  // THE NO-FLIP PROOF:
-  await expect(component.getByTestId("principal-editor-toggle-administration-write")).not.toBeChecked();
-  await expect(component.getByTestId("principal-editor-denial")).toContainText("perm.denied");
-  expect(calls).toEqual([
-    { name: "permGrant", args: [projectId, targetRef, principalId, "administration:write"] },
-  ]);
+	// THE NO-FLIP PROOF:
+	await expect(
+		component.getByTestId("principal-editor-toggle-administration-write"),
+	).not.toBeChecked();
+	await expect(component.getByTestId("principal-editor-denial")).toContainText("perm.denied");
+	expect(calls).toEqual([
+		{ name: "permGrant", args: [projectId, targetRef, principalId, "administration:write"] },
+	]);
 });
 ```
 
@@ -531,4 +532,3 @@ The CT test names are suggestions; the actual test name can differ as long as th
   ]
 }
 -->
-

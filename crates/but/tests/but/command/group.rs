@@ -2,49 +2,122 @@ use crate::utils::Sandbox;
 
 const REF_PIN_CAVEAT: &str = "takes effect once committed to the target branch";
 
+/// `but group delete` is now a first-class CLI verb backed by the existing
+/// admin-gated `group_delete_with_repo` backend. This test replaces the former
+/// `group_no_delete_cli_verb_surface` guard (which asserted the verb was
+/// intentionally absent) and proves the positive behavior:
+///
+/// - non-admin delete is denied with the stable `perm.denied` code (authz runs
+///   before the group lookup, so the denial holds even for an existing group),
+/// - admin delete exits 0 and prints the ref-pin caveat (consistent with the
+///   other group write verbs),
+/// - the deleted group no longer appears in `but group list`.
+///
+/// The group is created via the CLI first so it lands in the working-tree
+/// `permissions.toml` that `group list` reads (committed-only groups are not
+/// materialized into the working tree by `but setup`).
 #[test]
-fn group_no_delete_cli_verb_surface() -> anyhow::Result<()> {
-    let manifest_dir = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    let group_args = std::fs::read_to_string(manifest_dir.join("src/args/group.rs"))?;
-    let group_command = std::fs::read_to_string(manifest_dir.join("src/command/group.rs"))?;
-    let governance = std::fs::read_to_string(
-        manifest_dir
-            .parent()
-            .and_then(std::path::Path::parent)
-            .ok_or_else(|| anyhow::anyhow!("crate manifest must live below the workspace root"))?
-            .join("crates/but-api/src/legacy/governance.rs"),
-    )?;
+#[serial_test::serial]
+fn group_cli_delete_admin_succeeds_and_non_admin_denied() -> anyhow::Result<()> {
+    let env = group_env()?;
 
-    // SPEC-REPAIR-IPC-003 re-added the `group_delete` but-api fn (the Tauri
-    // command backing UI-008); that capability is now behaviorally proven by
-    // crates/but-api/tests/group_governance.rs. This guard therefore covers the
-    // CLI surface only: the `but group delete` VERB is intentionally still
-    // absent, since IPC-003 registers a Tauri command, not a CLI verb.
+    // Seed a group via the CLI so it is present in the working-tree config.
+    let create = env
+        .but("group create delete-target --permissions reviews:write")
+        .env("BUT_AGENT_HANDLE", "admin")
+        .output()?;
+    assert!(create.status.success(), "admin group create must succeed");
+    let list_before = env
+        .but("group list")
+        .env("BUT_AGENT_HANDLE", "admin-reader")
+        .output()?;
     assert!(
-        !group_args.contains("Delete"),
-        "the `but group` clap parser must not expose a Delete variant"
+        list_before.status.success(),
+        "admin-read group list must succeed"
     );
-    for (path, source) in [
-        ("crates/but/src/args/group.rs", group_args.as_str()),
-        ("crates/but/src/command/group.rs", group_command.as_str()),
-        (
-            "crates/but-api/src/legacy/governance.rs",
-            governance.as_str(),
-        ),
-    ] {
-        assert!(
-            !source.contains("todo!()") && !source.contains("unimplemented!()"),
-            "{path} must not contain a group surface placeholder"
-        );
-    }
+    let list_before_stdout = String::from_utf8_lossy(&list_before.stdout);
+    assert!(
+        list_before_stdout.contains("delete-target"),
+        "created group must appear in list before delete, got: {list_before_stdout}"
+    );
 
-    println!("`but group delete` CLI verb is absent and group surfaces have no placeholders");
+    // Non-admin (contents:write only) must be denied administration:write.
+    // The authz gate runs before group lookup, so the group still existing here
+    // proves the denial is a real permission denial, not a not-found error.
+    let denied = env
+        .but("group delete delete-target")
+        .env("BUT_AGENT_HANDLE", "rust-implementer")
+        .output()?;
+    assert_eq!(
+        denied.status.code(),
+        Some(1),
+        "non-admin group delete must exit 1, got status {:?}",
+        denied.status
+    );
+    let envelope = parse_cli_error_envelope(&denied, "non-admin group delete");
+    assert_eq!(
+        envelope.code, "perm.denied",
+        "non-admin delete denial must use the stable perm.denied code"
+    );
+    assert!(
+        envelope.message.contains("administration:write"),
+        "non-admin delete denial must name administration:write, got: {}",
+        envelope.message
+    );
+    assert!(
+        !envelope.remediation_hint.trim().is_empty(),
+        "non-admin delete denial must include a non-empty remediation_hint"
+    );
+
+    // The denial must not have removed the group.
+    let list_after_denial = env
+        .but("group list")
+        .env("BUT_AGENT_HANDLE", "admin-reader")
+        .output()?;
+    let list_after_denial_stdout = String::from_utf8_lossy(&list_after_denial.stdout);
+    assert!(
+        list_after_denial_stdout.contains("delete-target"),
+        "denied delete must leave the group in place, got: {list_after_denial_stdout}"
+    );
+
+    // Admin delete must succeed and print the ref-pin caveat, matching the
+    // other group write verbs.
+    let deleted = env
+        .but("group delete delete-target")
+        .env("BUT_AGENT_HANDLE", "admin")
+        .output()?;
+    assert!(
+        deleted.status.success(),
+        "admin group delete must succeed; got stderr: {}",
+        String::from_utf8_lossy(&deleted.stderr)
+    );
+    let deleted_stdout = String::from_utf8_lossy(&deleted.stdout);
+    assert!(
+        deleted_stdout.contains("delete-target") && deleted_stdout.contains(REF_PIN_CAVEAT),
+        "delete stdout must name the group and include the ref-pin caveat, got: {deleted_stdout}"
+    );
+
+    // The deleted group must no longer appear in `but group list`.
+    let list_after = env
+        .but("group list")
+        .env("BUT_AGENT_HANDLE", "admin-reader")
+        .output()?;
+    assert!(
+        list_after.status.success(),
+        "admin-read group list must succeed"
+    );
+    let list_after_stdout = String::from_utf8_lossy(&list_after.stdout);
+    assert!(
+        !list_after_stdout.contains("delete-target"),
+        "deleted group must not appear in list, got: {list_after_stdout}"
+    );
+
     Ok(())
 }
 
 #[test]
 #[serial_test::serial]
-fn group_cli_create_grant_members_list_denial_and_no_delete() -> anyhow::Result<()> {
+fn group_cli_create_grant_members_list_denial_and_delete() -> anyhow::Result<()> {
     let env = group_env()?;
     let repo = env.open_repo()?;
     let main_before = ref_id(&repo, "refs/heads/main")?;
@@ -157,13 +230,14 @@ fn group_cli_create_grant_members_list_denial_and_no_delete() -> anyhow::Result<
         .env("BUT_AGENT_HANDLE", "admin")
         .output()?;
     assert!(
-        !delete_attempt.status.success(),
-        "`but group delete` must not be implemented"
+        delete_attempt.status.success(),
+        "admin group delete must succeed; got stderr: {}",
+        String::from_utf8_lossy(&delete_attempt.stderr)
     );
-    let delete_stderr = String::from_utf8_lossy(&delete_attempt.stderr);
+    let delete_stdout = String::from_utf8_lossy(&delete_attempt.stdout);
     assert!(
-        delete_stderr.contains("delete"),
-        "unsupported delete error should name the rejected subcommand, got: {delete_stderr}"
+        delete_stdout.contains("release-captains") && delete_stdout.contains(REF_PIN_CAVEAT),
+        "delete stdout must name the group and include the ref-pin caveat, got: {delete_stdout}"
     );
 
     Ok(())

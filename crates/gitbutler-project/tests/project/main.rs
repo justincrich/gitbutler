@@ -524,3 +524,70 @@ mod delete {
             .collect())
     }
 }
+
+mod update {
+    use gitbutler_project::UpdateRequest;
+
+    use super::*;
+
+    /// LPR-REM-003 AC-1: `keep_reviews_local=false` must survive a
+    /// `Storage::update` round-trip. Previously `From<Project> for UpdateRequest`
+    /// explicitly discarded the field, so a UI toggle that flipped it to `false`
+    /// was silently dropped on save and the next read defaulted back to `true`.
+    #[test]
+    fn keep_reviews_local_false_survives_roundtrip() -> anyhow::Result<()> {
+        let data_dir = support::data_dir();
+        let repo = support::TestProject::default();
+        let project =
+            gitbutler_project::add_at_app_data_dir(data_dir.path(), repo.path())?.unwrap_project();
+        assert!(
+            *project.keep_reviews_local,
+            "sanity: a freshly-added project defaults to keep_reviews_local=true"
+        );
+
+        let mut req = UpdateRequest::default_with_id(project.id.clone());
+        req.keep_reviews_local = Some(false);
+        let updated = gitbutler_project::update_with_path(data_dir.path(), req)?;
+        assert!(
+            !*updated.keep_reviews_local,
+            "the Project returned from update reflects the new value"
+        );
+
+        let reloaded = gitbutler_project::get_with_path(data_dir.path(), project.id.clone())?;
+        assert!(
+            !*reloaded.keep_reviews_local,
+            "keep_reviews_local=false must survive the create-update-read cycle (LPR-REM-003 AC-1)"
+        );
+        Ok(())
+    }
+
+    /// LPR-REM-003 AC-2: An unrelated update (keep_reviews_local=None) must
+    /// leave the default value intact — proving the field isn't silently
+    /// clobbered when callers don't touch it.
+    #[test]
+    fn keep_reviews_local_default_preserved_when_update_omits_field() -> anyhow::Result<()> {
+        let data_dir = support::data_dir();
+        let repo = support::TestProject::default();
+        let project =
+            gitbutler_project::add_at_app_data_dir(data_dir.path(), repo.path())?.unwrap_project();
+        assert!(
+            *project.keep_reviews_local,
+            "sanity: a freshly-added project defaults to keep_reviews_local=true"
+        );
+
+        let mut req = UpdateRequest::default_with_id(project.id.clone());
+        req.title = Some("renamed-by-unrelated-update".to_string());
+        let _updated = gitbutler_project::update_with_path(data_dir.path(), req)?;
+
+        let reloaded = gitbutler_project::get_with_path(data_dir.path(), project.id.clone())?;
+        assert_eq!(
+            reloaded.title, "renamed-by-unrelated-update",
+            "sanity: the unrelated update did apply"
+        );
+        assert!(
+            *reloaded.keep_reviews_local,
+            "default keep_reviews_local=true must survive an update that omits the field (LPR-REM-003 AC-2)"
+        );
+        Ok(())
+    }
+}

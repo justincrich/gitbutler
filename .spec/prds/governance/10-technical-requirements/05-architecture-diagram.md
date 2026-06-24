@@ -4,6 +4,7 @@ last_validated: 2026-06-18
 prd_version: 1.3.0
 section: technical-requirements
 ---
+
 # Architecture Diagram
 
 ## The governed action path
@@ -68,10 +69,11 @@ section: technical-requirements
 ```
 
 ## Reading the diagram
+
 - **Top → bottom = the only path with consequence.** Edits in the shared working directory are inert until they become a Butler action (GitButler uses virtual branches over one working tree — no per-agent worktree); the action surface is where authority is acquired and the gates fire.
 - **The seam binds only callers that route through `but-api`** — Tauri / `but` CLI / TUI do; **N-API must be audited** so it cannot reach a lower-level crate ungoverned (R14, T-AUTHZ-016b). A direct N-API call below the seam is the same accepted-leak class as the fence.
 - **The commit gate is mechanism-agnostic** — it sits at the `commit_engine` narrow-waist and covers virtual-branch/stack, normal-git, and opt-in worktree-integrate paths alike; a mechanism left ungated is a blocking gap.
-- **`but-authz` is pure and fails closed** — it answers *may this principal do this action* from config read at the target ref, denying on unknown principal / unreadable config. It never reaches the network or drives an agent.
+- **`but-authz` is pure and fails closed** — it answers _may this principal do this action_ from config read at the target ref, denying on unknown principal / unreadable config. It never reaches the network or drives an agent.
 - **The review record is forgeable (R6, High)** — `local_review_verdicts` is not integrity-protected; a direct DB write forges an approval. The merge gate is sound only for reviews submitted through the governed `but review` action; HMAC/Ed25519 review integrity is the deferred closure.
-- **The fence is outside the enforcement surface** — it is what tries to keep agents *on* this path, deliberately leaky in the POC (the irrigation bet, not the steel trap); the merge-land bypass paths (forge auto-merge / UI / raw push), the N-API residual (R14), and the forged-review residual (R6) are the same accepted-leak class.
+- **The fence is outside the enforcement surface** — it is what tries to keep agents _on_ this path, deliberately leaky in the POC (the irrigation bet, not the steel trap); the merge-land bypass paths (forge auto-merge / UI / raw push), the N-API residual (R14), and the forged-review residual (R6) are the same accepted-leak class.
 - **The two gates are the choke points** — commit gate at the `commit_engine` narrow-waist, merge gate at the `but-api` PR-merge action, both consulting `but-authz` + `.gitbutler/gates.toml`.

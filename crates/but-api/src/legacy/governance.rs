@@ -224,6 +224,13 @@ pub struct GovernancePrincipalListEntry {
     pub group_memberships: Vec<String>,
     /// True only when direct working-tree principal grants differ from committed direct grants.
     pub pending: bool,
+    /// Additive, enforcement-neutral `kind` descriptor (e.g. `"agent"` / `"human"`)
+    /// read from the committed target-ref `[[principal]]` entry — the same source
+    /// [`principal_kind_read`] surfaces. `None` when the principal has no declared
+    /// `kind` (default-human). Lets the desktop Principals list render agent/human
+    /// badges from the list query without a second round-trip.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub kind: Option<String>,
 }
 
 /// Renderer display source for a group-inherited grant.
@@ -708,6 +715,23 @@ pub fn branch_gates_update_with_repo_as_principal(
     branch_gates_update_authorized(repo, target_ref, branch, protection)
 }
 
+/// Read a principal's declared enforcement-neutral `kind` from a loaded
+/// permissions wire.
+///
+/// Single source of truth for the `kind`-reading pattern shared by
+/// [`principal_kind_read_with_repo`] and [`principals_list`]: find the
+/// `[[principal]]` entry by id and clone its `kind` descriptor. Returns
+/// `None` when the principal is absent or has no declared `kind`
+/// (default-human). Works against either the committed target-ref wire or
+/// the working-tree wire.
+fn kind_for_principal(permissions: &PermissionsWire, principal_id: &str) -> Option<String> {
+    permissions
+        .principal
+        .iter()
+        .find(|entry| entry.id == principal_id)
+        .and_then(|entry| entry.kind.clone())
+}
+
 /// Read each principal's committed declared `kind` plus a pending signal from
 /// the working-tree-vs-target-ref diff.
 ///
@@ -733,16 +757,8 @@ pub fn principal_kind_read_with_repo(
     let principals = principal_ids
         .into_iter()
         .map(|principal_id| {
-            let committed_kind = committed
-                .principal
-                .iter()
-                .find(|entry| entry.id == principal_id)
-                .and_then(|entry| entry.kind.clone());
-            let working_kind = working
-                .principal
-                .iter()
-                .find(|entry| entry.id == principal_id)
-                .and_then(|entry| entry.kind.clone());
+            let committed_kind = kind_for_principal(&committed, &principal_id);
+            let working_kind = kind_for_principal(&working, &principal_id);
             PrincipalKindEntry {
                 principal_id,
                 kind: committed_kind.clone(),
@@ -1067,8 +1083,8 @@ fn principals_list(
     committed: PermissionsWire,
     working: PermissionsWire,
 ) -> anyhow::Result<GovernancePrincipalsList> {
-    let committed_view = permissions_view(committed)?;
-    let working_view = permissions_view(working)?;
+    let committed_view = permissions_view(&committed)?;
+    let working_view = permissions_view(&working)?;
     let principal_ids = committed_view
         .principal_ids()
         .chain(working_view.principal_ids())
@@ -1082,6 +1098,11 @@ fn principals_list(
             let group_memberships = committed_view.group_memberships(&principal_id);
             let pending =
                 committed_view.direct_set(&principal_id) != working_view.direct_set(&principal_id);
+            // `kind` is read from the committed target-ref wire (same source as
+            // `principal_kind_read`) so the renderer can badge agent/human from
+            // the list query alone; the working-tree kind only feeds the
+            // dedicated `principal_kind_read` pending signal, not this field.
+            let kind = kind_for_principal(&committed, &principal_id);
 
             GovernancePrincipalListEntry {
                 principal_id,
@@ -1089,6 +1110,7 @@ fn principals_list(
                 inherited_grants,
                 group_memberships,
                 pending,
+                kind,
             }
         })
         .collect();
@@ -1220,7 +1242,7 @@ impl PermissionsView {
     }
 }
 
-fn permissions_view(permissions: PermissionsWire) -> anyhow::Result<PermissionsView> {
+fn permissions_view(permissions: &PermissionsWire) -> anyhow::Result<PermissionsView> {
     let mut direct_grants = BTreeMap::new();
     let mut group_memberships: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
     let mut group_grants = BTreeMap::new();

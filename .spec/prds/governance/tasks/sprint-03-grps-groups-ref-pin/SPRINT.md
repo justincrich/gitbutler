@@ -22,7 +22,7 @@ generated_by: kb-sprint-tasks-plan
 
 The second hardening sprint. Sprint 01a/01b proved the positive governed loop and Sprint 02 made the
 negative space fail-closed. Sprint 03 adds the net-new **grouping** capability — the GitHub-teams model —
-on top of the per-principal authority primitive, and proves the one property that makes grouping *safe*
+on top of the per-principal authority primitive, and proves the one property that makes grouping _safe_
 rather than an escalation vector: **group definitions, grants, and membership are the same committed,
 ref-pinned governed config as every other permission, read at the target ref**.
 
@@ -34,8 +34,8 @@ Two properties, one per task:
   source grants, with the `perm.denied` contract. The authorization check is unchanged in shape (does the
   effective set contain the required `Authority`); nothing downstream knows whether a permission came from
   a direct grant or a group. The **group permission ceiling** is made explicit: a group **may** hold any
-  authority including `administration:write` (delegated admin), and granting it is an *accepted, named
-  property* that itself requires `administration:write` — never a silent escalation.
+  authority including `administration:write` (delegated admin), and granting it is an _accepted, named
+  property_ that itself requires `administration:write` — never a silent escalation.
 - **Ref-pinned governed membership + self-grant-inert (GRPS-002):** group config — definitions, grants,
   and membership — is read at the **target ref** when authorizing a git action, exactly as
   `.gitbutler/permissions.toml` is. A change whose head adds its own author to a `merge`-holding
@@ -58,13 +58,13 @@ authorized action proceeding).
 > git** and the explicit target-ref-only membership read.
 
 > **Re-grounding (the `but group` CLI verbs are Sprint 05, by design).** T-GRPS-001/002 ("`but group
-> create`/`grant`/`add-member`") and T-GRPS-010's "CLI warns" assertion name CLI verbs that **do not exist
+create`/`grant`/`add-member`") and T-GRPS-010's "CLI warns" assertion name CLI verbs that **do not exist
 > until Sprint 05** (CLI-002). Following the Sprint-02 precedent (which re-grounded the admin-write
 > persisted-write to its Sprint-05 consumer), GRPS-001/002 prove group **definition and membership** at
 > the `but-authz` config + real-git integration layer — by committing `[[group]]` / membership TOML to the
 > target ref directly and asserting the loader + resolver — NOT by driving a `but group` verb. The
 > "inert-until-committed CLI warning" surface (T-GRPS-010 CLI half) is named as the Sprint-05 consumer with
-> a `BLOCKED-UNTIL` note; this sprint proves the inert-until-committed *behavior* (the working-tree /
+> a `BLOCKED-UNTIL` note; this sprint proves the inert-until-committed _behavior_ (the working-tree /
 > feature-head edit has no authorization effect) against real git.
 
 ## Human Testing Gate
@@ -86,10 +86,10 @@ membership and grants are read only at the target ref.
 
 ## Tasks
 
-| ID | Title | Agent | Estimate |
-|----|-------|-------|----------|
-| GRPS-001 | Effective-set union via group membership + group permission ceiling | rust-implementer | 150 min |
-| GRPS-002 | Ref-pinned governed membership + self-grant-inert (target-ref-only read) | rust-implementer | 210 min |
+| ID       | Title                                                                    | Agent            | Estimate |
+| -------- | ------------------------------------------------------------------------ | ---------------- | -------- |
+| GRPS-001 | Effective-set union via group membership + group permission ceiling      | rust-implementer | 150 min  |
+| GRPS-002 | Ref-pinned governed membership + self-grant-inert (target-ref-only read) | rust-implementer | 210 min  |
 
 ## Dependencies
 
@@ -117,8 +117,8 @@ membership and grants are read only at the target ref.
   warns" half name `but group create/grant/add-member` verbs that do not exist until Sprint 05 (CLI-002).
   GRPS-001/002 prove group definition + membership at the `but-authz` config + integration layer (committed
   `[[group]]` / membership TOML asserted via the loader + resolver), carrying a `BLOCKED-UNTIL` note for the
-  CLI-warning surface. The inert-until-committed *behavior* is proven against real git here; the CLI warning
-  *message* is a Sprint-05 consumer obligation.
+  CLI-warning surface. The inert-until-committed _behavior_ is proven against real git here; the CLI warning
+  _message_ is a Sprint-05 consumer obligation.
 - **Drift / redundant double-union:** the union is computed both in `config.rs::normalize_permissions`
   (load-time) and `authorize.rs::effective_authority` (authorize-time). GRPS-001 must establish a single
   authoritative union and prove the GRPS contract; it must not leave two divergent union paths.
@@ -141,7 +141,7 @@ deterministic confirmation**. A fresh panel (`rust-reviewer` + `security-auditor
 the first draft with specification-correctness findings the rubric + fakeability gates cannot catch — most
 notably two `rust-reviewer` CRITICALs:
 
-- **R1** — the union "redundant double-union *divergence*" the task was framed to fix is a **fiction**:
+- **R1** — the union "redundant double-union _divergence_" the task was framed to fix is a **fiction**:
   `effective_authority` uses `principal_authorities(id)` as its fold base and re-unions only group grants
   `config.rs` already folded, so it is provably **equal** to `principal_authorities(p)` for every `p`. AC-2's
   "divergence-regression" negative control could never fire. Re-grounded GRPS-001 to an honest behavior-neutral

@@ -23,11 +23,11 @@ generated_by: kb-sprint-tasks-plan
 The first **governance-management UI** sprint — and the first that surfaces governance to a human inside
 the existing GitButler desktop app. Sprints 01a–05 built the enforcement core (the `but-authz` primitive,
 the commit + merge gates, fail-closed identity confinement, ref-pinned grouping) and the **CLI write path**
-(`but perm` / `but group`, Sprint 05) an admin uses to manage that config. Sprint 06a takes the *same*
+(`but perm` / `but group`, Sprint 05) an admin uses to manage that config. Sprint 06a takes the _same_
 `but-api` perm/group functions Sprint 05 authored and exposes them as **Tauri commands → generated
 `packages/but-sdk` → SvelteKit components** — a new admin-only **Project Settings page**
 (`"Permissions & Governance"`) with the **Principals** and **Groups** tabs, plus the cross-cutting
-**pending-until-committed** banner. It is a *feature inside `apps/desktop`*, **not a new app and not a new
+**pending-until-committed** banner. It is a _feature inside `apps/desktop`_, **not a new app and not a new
 route** — a state of the existing settings modal.
 
 > **The UI is a governed front-end, never a bypass (the load-bearing invariant).** Every write goes through
@@ -63,7 +63,7 @@ The sprint is split across four disciplines, in a strict producer-before-consume
 > surface; the first UI task (MGMT-UI-001) carries the scaffold obligation so the component tests below can
 > actually run. See [`10-technical-requirements/10-ui-infrastructure.md`](../../10-technical-requirements/10-ui-infrastructure.md).
 
-This sprint is **desktop UI** — its gate is verified by *using the Governance settings page* (open Project
+This sprint is **desktop UI** — its gate is verified by _using the Governance settings page_ (open Project
 Settings, see the admin-gated item, navigate the four tabs, edit a principal grant + a group grant, watch
 them stay pending until Commit). Every gate proof draws from
 [`11-e2e-testing-criteria.md`](../../11-e2e-testing-criteria.md).
@@ -86,24 +86,24 @@ clicking Commit changes.
 
 ## Tasks
 
-| ID | Title | Agent | Estimate |
-|----|-------|-------|----------|
-| MGMT-IPC-001 | `#[but_api]` governance fns (perm/group/status) + `json::Error` transport | rust-implementer | 90 min |
-| MGMT-IPC-002 | `json.rs` `Error` serializes the 3rd field `remediation_hint` (closes a real drop bug) | rust-implementer | 75 min |
-| MGMT-IPC-003 | Register governance commands in `generate_handler!` + capability + v1 human-fleet-owner identity (T-MGMT-042) | tauri-implementer | 60 min |
-| MGMT-IPC-004 | Regenerate `packages/but-sdk` (perm/group/status) — SDK build-gate before UI wiring | tauri-implementer | 45 min |
-| MGMT-IPC-005 | Pending-until-committed read IPC contract (working-tree vs target-ref) | tauri-implementer | 60 min |
-| MGMT-UI-001 | Register the governance page + extend `ProjectSettingsPageId` (in `uiState.svelte.ts`) | sveltekit-implementer | 30 min |
-| MGMT-UI-002 | `ProjectSettingsModalContent` governance branch + **wire `isAdmin`** to `SettingsModalLayout` | sveltekit-implementer | 45 min |
-| MGMT-UI-003 | `GovernanceSettings.svelte` + client-only pending-state store (no `+page.server.ts`) | sveltekit-implementer | 90 min |
-| MGMT-UI-005 | `GovernancePendingBanner` (warning InfoMessage + Commit action) | sveltekit-implementer | 30 min |
-| MGMT-UI-006 | `PrincipalsList` (rows + inline editor; inherited rows read-only) | sveltekit-implementer | 90 min |
-| MGMT-UI-007 | `PrincipalEditor` (SegmentControl presets + Toggle table + group TagInput) | sveltekit-implementer | 90 min |
-| MGMT-UI-008 | `GroupsList` (ExpandableSection per group; create/grant/add-member) | sveltekit-implementer | 75 min |
-| DESIGN-MGMT-001 | Wireframe-fidelity + visual-state annotations for all four tabs | frontend-designer | 60 min |
-| DESIGN-MGMT-002 | Pending-state visual contract (○ badge, count banner, commit affordance) | frontend-designer | 45 min |
-| DESIGN-MGMT-003 | Read-only state (disabled-control treatment + `administration:write` info banner) | frontend-designer | 30 min |
-| DESIGN-MGMT-005 | Inherited-vs-own permission row distinction in `PrincipalEditor` | frontend-designer | 40 min |
+| ID              | Title                                                                                                         | Agent                 | Estimate |
+| --------------- | ------------------------------------------------------------------------------------------------------------- | --------------------- | -------- |
+| MGMT-IPC-001    | `#[but_api]` governance fns (perm/group/status) + `json::Error` transport                                     | rust-implementer      | 90 min   |
+| MGMT-IPC-002    | `json.rs` `Error` serializes the 3rd field `remediation_hint` (closes a real drop bug)                        | rust-implementer      | 75 min   |
+| MGMT-IPC-003    | Register governance commands in `generate_handler!` + capability + v1 human-fleet-owner identity (T-MGMT-042) | tauri-implementer     | 60 min   |
+| MGMT-IPC-004    | Regenerate `packages/but-sdk` (perm/group/status) — SDK build-gate before UI wiring                           | tauri-implementer     | 45 min   |
+| MGMT-IPC-005    | Pending-until-committed read IPC contract (working-tree vs target-ref)                                        | tauri-implementer     | 60 min   |
+| MGMT-UI-001     | Register the governance page + extend `ProjectSettingsPageId` (in `uiState.svelte.ts`)                        | sveltekit-implementer | 30 min   |
+| MGMT-UI-002     | `ProjectSettingsModalContent` governance branch + **wire `isAdmin`** to `SettingsModalLayout`                 | sveltekit-implementer | 45 min   |
+| MGMT-UI-003     | `GovernanceSettings.svelte` + client-only pending-state store (no `+page.server.ts`)                          | sveltekit-implementer | 90 min   |
+| MGMT-UI-005     | `GovernancePendingBanner` (warning InfoMessage + Commit action)                                               | sveltekit-implementer | 30 min   |
+| MGMT-UI-006     | `PrincipalsList` (rows + inline editor; inherited rows read-only)                                             | sveltekit-implementer | 90 min   |
+| MGMT-UI-007     | `PrincipalEditor` (SegmentControl presets + Toggle table + group TagInput)                                    | sveltekit-implementer | 90 min   |
+| MGMT-UI-008     | `GroupsList` (ExpandableSection per group; create/grant/add-member)                                           | sveltekit-implementer | 75 min   |
+| DESIGN-MGMT-001 | Wireframe-fidelity + visual-state annotations for all four tabs                                               | frontend-designer     | 60 min   |
+| DESIGN-MGMT-002 | Pending-state visual contract (○ badge, count banner, commit affordance)                                      | frontend-designer     | 45 min   |
+| DESIGN-MGMT-003 | Read-only state (disabled-control treatment + `administration:write` info banner)                             | frontend-designer     | 30 min   |
+| DESIGN-MGMT-005 | Inherited-vs-own permission row distinction in `PrincipalEditor`                                              | frontend-designer     | 40 min   |
 
 ## Dependencies
 
@@ -152,9 +152,9 @@ MGMT-UI-003 ─┬→ MGMT-UI-005 (pending banner)
 - **SDK regen is a hard gate, not a courtesy (MGMT-IPC-004).** Per the SDK generation flow (`RULES.md`),
   `packages/but-sdk` is **generated** from Rust APIs; `pnpm build:sdk && pnpm format` must run after the
   governance commands land and **before** any UI task imports the new types, or the MGMT components cannot
-  type-check. MGMT-IPC-004 is the build-gate that produces the typed surface every MGMT-UI-* task consumes.
+  type-check. MGMT-IPC-004 is the build-gate that produces the typed surface every MGMT-UI-\* task consumes.
 - **No new route — a STATE of the settings modal (MGMT-UI-001/002).** Per the route-vs-state discriminator,
-  the governance surface adds a *section* to the existing Project Settings modal, so it extends the
+  the governance surface adds a _section_ to the existing Project Settings modal, so it extends the
   `ProjectSettingsPageId` union and branches `ProjectSettingsModalContent.svelte`; **no new top-level
   `[projectId]/…` route** is introduced. All pending-state tracking is CLIENT-ONLY (a Svelte store, no
   `+page.server.ts`), consistent with `apps/desktop` adapter-static (T-MGMT-036).

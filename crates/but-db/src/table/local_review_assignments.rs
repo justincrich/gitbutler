@@ -23,6 +23,7 @@ ON `local_review_assignments`(`target`, `reviewer_principal`);",
 
 /// Tests are in `but-db/tests/db/table/local_review_assignments.rs`.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "export-schema", derive(schemars::JsonSchema))]
 pub struct LocalReviewAssignment {
     pub id: String,
     pub target: String,
@@ -30,6 +31,9 @@ pub struct LocalReviewAssignment {
     pub state: String,
     pub assigned_at: chrono::NaiveDateTime,
 }
+
+#[cfg(feature = "export-schema")]
+but_schemars::register_sdk_type!(LocalReviewAssignment);
 
 impl DbHandle {
     pub fn local_review_assignments(&self) -> LocalReviewAssignmentsHandle<'_> {

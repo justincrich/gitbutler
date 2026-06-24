@@ -14,7 +14,7 @@ PRIMARY **AC-1** — `design review — reviewer confirms all five items are pre
 
 ## Scope
 
-  - apps/desktop/src/components/governance/DESIGN-ANNOTATIONS.md (MODIFY — extend with Sprint 06b error-boundary + IPC-failure section)
+- apps/desktop/src/components/governance/DESIGN-ANNOTATIONS.md (MODIFY — extend with Sprint 06b error-boundary + IPC-failure section)
 
 <details>
 <summary>▸ Full agent specification (TASK-TEMPLATE v5.2 — required reading for implementer + reviewer)</summary>
@@ -183,6 +183,7 @@ DEPENDENCIES
 Depends on: none
 Blocks:     MGMT-UI-004 (wrap GovernanceSettings in the existing shared/ErrorBoundary — this design contract specifies the title prop and compact flag to pass); MGMT-UI-011 (IPC-failure danger banner + Retry — this design contract specifies the InfoMessage props and the persistent-failure safe read-only state)
 ```
+
 </details>
 
 <!-- REQUIREMENT-CONTRACT v1 -->

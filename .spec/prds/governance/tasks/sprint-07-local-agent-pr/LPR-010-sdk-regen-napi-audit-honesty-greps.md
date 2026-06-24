@@ -5,7 +5,6 @@
 > Reviewer: deferred to PHASE 4.5 red-hat closeout — SDK regen unblocked + R14 N-API audit + honesty greps + T-LPR-043/044 integrity proofs; all gates green
 > Updated: 2026-06-22T18:07:12Z
 
-
 ## What this does
 
 Close out the LPR slice with the cross-cutting audit lane: (1) regenerate the TS SDK (`pnpm build:sdk && pnpm format`) for the six new `#[but_api(napi)]` verbs (`request_review`/`assign_reviewer`/`post_comment`/`list_comments`/`resolve_thread`/`review_status`) and verify it type-checks; (2) audit (R14) that the regenerated N-API bindings route through the gated `but-api` fns, not a parallel ungated path; (3) add the two **honesty/anti-fakeability greps** — `__pr_meta__` is a **reserved/rejected** `thread_id` (the opener itself lives in the dedicated `local_review_meta` table — the agent-tag source is sourced from a table, **not a comment body** — so `__pr_meta__` is purely the R23 negative control proving a comment-body sentinel cannot forge the tag), and the `agent-authored` tag is referenced by **no enforcement path** (T-LPR-022); (4) add the happy-path `but review *` CLI snapbox tests; and (5) add the **drive-layer-integrity proofs** (R22): a self-assignment is rejected (T-LPR-043) and an unauthorized self-resolve cannot suppress a remediation signal (T-LPR-044).

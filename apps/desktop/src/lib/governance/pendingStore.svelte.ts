@@ -107,7 +107,9 @@ export function createGovernancePendingStore(
 			// entirely (it would error on the missing config) and surface guidance instead.
 			const nextAccess = await service.readAccess(target.projectId);
 			access = nextAccess;
-			if (nextAccess.isNotConfigured) {
+			if (nextAccess.isNotConfigured || !nextAccess.targetRef) {
+				// Not configured, or the backend returned no target ref — defensively skip
+				// the pending read rather than falling through to a hardcoded/guessed ref.
 				pending = { principals: [], pendingCount: 0 };
 				return;
 			}

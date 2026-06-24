@@ -156,6 +156,8 @@ impl Subcommands {
                 Some(forge::pr::Subcommands::Assign { .. }) => PrNew,
                 Some(forge::pr::Subcommands::RequestChanges { .. }) => PrNew,
                 Some(forge::pr::Subcommands::Comment { .. }) => PrNew,
+                Some(forge::pr::Subcommands::Comments { .. }) => PrNew,
+                Some(forge::pr::Subcommands::Resolve { .. }) => PrNew,
                 Some(forge::pr::Subcommands::Close { .. }) => PrNew,
                 Some(forge::pr::Subcommands::Status { .. }) => PrNew,
                 Some(forge::pr::Subcommands::Merge { .. }) => PrMerge,

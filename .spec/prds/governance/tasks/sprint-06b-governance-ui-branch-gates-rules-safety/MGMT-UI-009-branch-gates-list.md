@@ -14,8 +14,8 @@ PRIMARY **AC-1** — `pnpm test:ct:desktop -- BranchGatesListRows`: Gate rows re
 
 ## Scope
 
-  - apps/desktop/src/components/governance/BranchGatesList.svelte (NEW)
-  - apps/desktop/tests/governance/BranchGatesList.spec.ts (NEW — CT specs)
+- apps/desktop/src/components/governance/BranchGatesList.svelte (NEW)
+- apps/desktop/tests/governance/BranchGatesList.spec.ts (NEW — CT specs)
 
 <details>
 <summary>▸ Full agent specification (TASK-TEMPLATE v5.2 — required reading for implementer + reviewer)</summary>
@@ -208,26 +208,26 @@ provides:
   - l
   - t
   - e
-  -  
+  -
   - —
-  -  
+  -
   - B
   - r
   - a
   - n
   - c
   - h
-  -  
+  -
   - G
   - a
   - t
   - e
   - s
-  -  
+  -
   - t
   - a
   - b
-  -  
+  -
   - c
   - o
   - n
@@ -236,7 +236,7 @@ provides:
   - n
   - t
   - :
-  -  
+  -
   - E
   - x
   - p
@@ -254,23 +254,23 @@ provides:
   - i
   - o
   - n
-  -  
+  -
   - p
   - e
   - r
-  -  
+  -
   - b
   - r
   - a
   - n
   - c
   - h
-  -  
+  -
   - w
   - i
   - t
   - h
-  -  
+  -
   - p
   - r
   - o
@@ -280,7 +280,7 @@ provides:
   - t
   - e
   - d
-  -  
+  -
   - T
   - o
   - g
@@ -288,7 +288,7 @@ provides:
   - l
   - e
   - ,
-  -  
+  -
   - m
   - i
   - n
@@ -302,7 +302,7 @@ provides:
   - a
   - l
   - s
-  -  
+  -
   - T
   - e
   - x
@@ -310,7 +310,7 @@ provides:
   - b
   - o
   - x
-  -  
+  -
   - (
   - n
   - u
@@ -320,7 +320,7 @@ provides:
   - r
   - )
   - ,
-  -  
+  -
   - r
   - e
   - q
@@ -349,7 +349,7 @@ provides:
   - h
   - o
   - r
-  -  
+  -
   - T
   - o
   - g
@@ -357,7 +357,7 @@ provides:
   - l
   - e
   - ,
-  -  
+  -
   - r
   - e
   - q
@@ -385,7 +385,7 @@ provides:
   - o
   - u
   - p
-  -  
+  -
   - T
   - a
   - g
@@ -401,17 +401,17 @@ provides:
   - e
   - c
   - t
-  -  
+  -
   - s
   - c
   - o
   - p
   - e
   - d
-  -  
+  -
   - t
   - o
-  -  
+  -
   - d
   - e
   - f
@@ -419,20 +419,20 @@ provides:
   - n
   - e
   - d
-  -  
+  -
   - g
   - r
   - o
   - u
   - p
   - s
-  -  
+  -
   - o
   - n
   - l
   - y
   - ;
-  -  
+  -
   - u
   - n
   - p
@@ -442,7 +442,7 @@ provides:
   - e
   - c
   - t
-  -  
+  -
   - c
   - o
   - n
@@ -455,14 +455,14 @@ provides:
   - i
   - o
   - n
-  -  
+  -
   - M
   - o
   - d
   - a
   - l
   - ;
-  -  
+  -
   - E
   - m
   - p
@@ -484,22 +484,22 @@ provides:
   - d
   - e
   - r
-  -  
+  -
   - w
   - h
   - e
   - n
-  -  
+  -
   - n
   - o
-  -  
+  -
   - g
   - a
   - t
   - e
   - s
   - ;
-  -  
+  -
   - p
   - e
   - n
@@ -507,24 +507,24 @@ provides:
   - i
   - n
   - g
-  -  
+  -
   - s
   - t
   - a
   - t
   - e
-  -  
+  -
   - a
   - f
   - t
   - e
   - r
-  -  
+  -
   - e
   - a
   - c
   - h
-  -  
+  -
   - g
   - a
   - t
@@ -536,14 +536,14 @@ provides:
   - f
   - i
   - g
-  -  
+  -
   - w
   - r
   - i
   - t
   - e
   - ;
-  -  
+  -
   - i
   - s
   - R
@@ -645,6 +645,7 @@ DEPENDENCIES
 Depends on: MGMT-BE-004 (branch_gates_read / branch_gates_update SDK + gate field types — this component's data source); MGMT-UI-001 (desktop CT harness; from Sprint 06a); MGMT-UI-003 (GovernanceSettings.svelte — provides isReadOnly prop and pendingStore context; from Sprint 06a); DESIGN-MGMT-006 (empty states for Branch Gates tab); DESIGN-MGMT-007 (four-tab IA + aria contract); MGMT-UI-008 (GroupsList.svelte — the primary ExpandableSection pattern; from Sprint 06a; if not yet landed, fall back to ExpandableSection.svelte + Modal.svelte as pattern sources)
 Blocks:     MGMT-UI-012 (build-gate tests assert no direct config write across all governance components including BranchGatesList)
 ```
+
 </details>
 
 <!-- REQUIREMENT-CONTRACT v1 -->

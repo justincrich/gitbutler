@@ -1160,11 +1160,13 @@ version = "0.0.0"
 dependencies = [
  "anyhow",
  "backoff",
+ "but-schemars",
  "but-utils",
  "chrono",
  "insta",
  "libc",
  "rusqlite",
+ "schemars 1.2.1",
  "serde",
  "tempfile",
  "tracing",

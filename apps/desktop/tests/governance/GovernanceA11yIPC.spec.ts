@@ -179,7 +179,13 @@ test("GovernanceReadOnlyA11y: missing administration:write explains and disables
 	await expect(component.getByRole("button", { name: "+ Create group" }).first()).toBeDisabled();
 
 	await component.getByRole("tab", { name: "Branch Gates" }).click();
-	await expect(component.getByTestId("governance-branch-gates-control")).toBeDisabled();
+	// MGMT-REM-001 replaced the placeholder governance-branch-gates-control button
+	// with the real BranchGatesList. The read-only invariant still holds: the panel
+	// rendered, the real list mounted, and the legacy placeholder write control is
+	// gone. The list's own "+ Add" affordance is disabled under read-only.
+	await expect(component.getByTestId("governance-branch-gates-panel")).toBeVisible();
+	await expect(component.getByTestId("branch-gates-list")).toBeVisible();
+	await expect(component.getByTestId("governance-branch-gates-control")).toHaveCount(0);
 
 	await component.getByRole("tab", { name: "Rules" }).click();
 	// MGMT-UI-010 replaced the placeholder governance-rules-control button with the
