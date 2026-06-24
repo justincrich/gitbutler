@@ -2,7 +2,7 @@
 sprint: 09
 sequence: 11
 timeline: Phase 6 — Remediation (post-audit hardening)
-status: Planned
+status: Done
 proposed_by: rust-planner + sveltekit-planner
 milestone: sprint-09-governance-remediation-lpr-mgmt-hardening
 prd: ../../README.md
@@ -21,7 +21,7 @@ origin: |
 
 **Sequence:** 11
 **Timeline:** Phase 6 — Remediation (post-audit hardening)
-**Status:** Planned
+**Status:** Done — closed 2026-06-23 (16/16 tasks merged to master at 396cdabab3)
 **Proposed by:** `rust-planner` + `sveltekit-planner` (parallel dispatch 2026-06-23)
 **Milestone:** — (`sprint-09-governance-remediation-lpr-mgmt-hardening`)
 

@@ -59,7 +59,7 @@ The product is **headless/CLI** for the AUTHZ · GRPS · GATES · LOOP groups (g
 | 8   | —         | [Sprint 06b: Governance UI — Branch Gates + Rules + Safety](#sprint-06b-governance-ui--branch-gates-rules-safety)     | Branch-gate edit pending; rules scoped; read-only + denial-no-flip safety                                                                                  | 11    | Sprint 06a, Sprint 04                       | Done                                             |
 | 9   | —         | [Sprint 07: Local Agent PR — Governed-Review Parity (LPR)](#sprint-07-local-agent-pr--governed-review-parity-lpr)     | Local review loop: assignment/comment/derived-PR/agent-tag; safe-seam proven                                                                               | 16+5  | Sprint 00, Sprint 01b, Sprint 04, Sprint 05 | Done                                             |
 | 10  | —         | [Sprint 08: Steer — Capability-Aware Denials](#sprint-08-steer--capability-aware-denials)                             | Denial carriers include steering fields; route-authority single-source; `but whoami`/`can-i`                                                               | 10    | Sprint 00                                   | Done                                             |
-| 11  | —         | [Sprint 09: Governance Remediation — LPR/MGMT Hardening](#sprint-09-governance-remediation--lprmgmt-hardening)        | Full local review loop runs CLI comment/resolve + Branch Gates tab renders open assignments/threads + keep-reviews-local persists + commit auto-rules fire | 16    | Sprint 00, 04, 05, 06b, 07, 08              | In Progress                                      |
+| 11  | —         | [Sprint 09: Governance Remediation — LPR/MGMT Hardening](#sprint-09-governance-remediation--lprmgmt-hardening)        | Full local review loop runs CLI comment/resolve + Branch Gates tab renders open assignments/threads + keep-reviews-local persists + commit auto-rules fire | 16    | Sprint 00, 04, 05, 06b, 07, 08              | Done                                            |
 
 _Milestone cells are `—` until the sprints are materialized as GitHub Milestones._
 
@@ -800,7 +800,7 @@ Expanded by `/kb-sprint-tasks-plan`. Detail files in [`tasks/sprint-08-steer-cap
 
 **Sequence:** 11
 **Timeline:** Phase 6 — Remediation (post-audit hardening)
-**Status:** In Progress
+**Status:** Done — closed 2026-06-23 (16/16 tasks merged to master at 396cdabab3)
 **Proposed by:** `rust-planner` + `sveltekit-planner` (parallel dispatch 2026-06-23, consolidated by orchestrator)
 **Milestone:** — (`sprint-09`)
 
