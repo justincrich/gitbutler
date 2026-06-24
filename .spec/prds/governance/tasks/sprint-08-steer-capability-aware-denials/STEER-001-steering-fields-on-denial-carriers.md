@@ -221,6 +221,7 @@ blocks: STEER-002, STEER-004, STEER-005
 
 CODING STANDARDS: crates/AGENTS.md, crates/WORKSPACE_MODEL.md, RULES.md
 ```
+
 </details>
 
 <!-- REQUIREMENT-CONTRACT v1 -->

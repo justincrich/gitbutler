@@ -1,7 +1,7 @@
 ---
 stability: FEATURE_SPEC
-last_validated: 2026-06-18
-prd_version: 1.3.0
+last_validated: 2026-06-23
+prd_version: 1.5.0
 scope_posture: full
 ---
 
@@ -58,6 +58,24 @@ These are the explicit edges of the POC, stated so no reader mistakes them for g
 - Per-agent management of functional permissions (role preset + functional toggles, inherited rows read-only, **batch-saved**), group membership (incl. group delete + destructive-action confirmations), branch gates (`gates.toml`), and per-agent automation rules (reusing the existing `rules/` components via a new optional `principalId` prop)
 - A **governed front-end**: every write calls the same `but-api` function the CLI uses, exposed via a Tauri command → generated `packages/but-sdk`; changes are **pending until committed** to the governance ref (with defined commit semantics); the surface is **read-only** without `administration:write`; self-escalation is not optimistically applied — the UI is never a bypass
 - **No new design-system work**: reuses `packages/ui` + `apps/desktop/src/components/shared` + the existing `settings/` and `rules/` surfaces (~6 thin new components + 1 `RulesList` prop + 1 settings-page entry). A **desktop CT/Vitest config** is a build prerequisite for the MGMT component tests (B14 / T-MGMT-000). Specialists: `sveltekit-*` + `tauri-*` + `frontend-designer`
+
+### Capability-aware denials — STEER (v1.4.0 enrichment, folded)
+
+- **A standard capability-aware denial shape.** Three additive fields on the existing `Denial` contract — `class`, `held_permissions`, `authorized_actions` — plus a `do_not` prohibition, carried uniformly by every actor-correctable denial across both gates and the authz primitive. `code`, `message`, `remediation_hint`, and `unmet` are **preserved unchanged** (back-compat + human readability)
+- **A derived, intent-scoped `authorized_actions` menu.** Computed deterministically as `effective_set ∩ route→Authority table`, filtered to the actions relevant to the denied intent, each entry `{command, effect}`. The single source of truth is the same route→Authority table the gates enforce against (no lying menu)
+- **A recoverability `class`** (`actor_correctable` | `operator_required`) that tells the agent whether to adapt-now or stop-and-escalate, with graceful degradation to the existing vertical "hand off / ask an admin" path when no lateral action exists
+- **Self-discovery on demand.** Team/group membership and the full permission/action set are reachable via `but perm list` (self-scoped — a **Sprint 05 deliverable this enrichment depends on**) surfaced as one of the `authorized_actions`, optionally via a net-new `but whoami` / `but can-i` entry point STEER builds. Provenance is served, not pushed inline
+- **Reference agent-priming guidance (L2, non-enforced).** A short "denials are redirects; affordances are not orders; never bypass" primer a harness/orchestrator MAY adopt — documented as reference, **not** an enforcement requirement (Stance 6)
+- **Traversability + anti-injection invariants (L3).** Every action a denial offers must actually succeed for that caller (no "lying menu"); steering text is drawn from a closed, code-owned catalog (no free-form or injectable content). Proven by extending the existing `governed_loop` test harness
+
+### Local Agent PR / governed-review parity — LPR (v1.5.0 enrichment, folded)
+
+- **A local PR object (Full).** Three new **additive** `but-db` tables (`local_review_assignments`, `local_review_comments`, `local_review_meta`) on the existing `SchemaVersion`-style migration system. The PR lifecycle state is **derived** (computed from commits + verdict-at-head + open assignments), not stored as a fourth truth
+- **A `but review` command/API surface.** Request/assign a reviewer, post/list/resolve comments, and query review status — built on the **already-shipped** authorities (`PullRequestsWrite` / `ReviewsWrite` / `CommentsWrite`); **no new authority is introduced**. Drive-layer integrity lives at the `but-api` boundary (assign distinct-from-author; resolve resolver-identity). Like the existing `approve_review`, these are local-cache writes (no network, no `DryRun` guard)
+- **A per-project "keep PRs local" setting.** A per-project operator preference on `gitbutler_project::Project` (same class as `forge_override`) that makes agent-authored reviews default to the local layer — **NOT** `administration:write`-gated, **NOT** ref-pinned config (R12 trusted-desktop). Remote mirroring is gated behind this setting (the bridge itself is named-for-later)
+- **An automatic agent-PR tag.** A review/PR opened by a principal whose committed `.gitbutler/permissions.toml` entry **declares `kind = "agent"`** is auto-tagged `agent-authored` (a label, `ForgeReview.labels` precedent) — the distinction is a **declared config fact** (additive optional `kind` field on `PrincipalWire`, read at the target ref), NOT inferred from handle-resolution. Cached in a dedicated `local_review_meta` row, never a comment body
+- **A `but-*` skill contract.** The `but-*` skills auto-set these PRs local when used (the skill workflow invokes the local `but review` surface with "keep PRs local"); the skills assume the local surface exists and is the default
+- **A reconciler usage model + the auto-hook.** The orchestrator-as-reconciler pattern (assignment → dispatch reviewer; unresolved comment → remediation; approved-verdict-at-head → merge). The existing `but-rules` (Trigger → Filter → Action) engine hosts an auto "review-requested" hook on commit (extending the shipped engine with a new commit `Trigger` + review-assignment `Action` variant)
 
 ## Out of Scope
 

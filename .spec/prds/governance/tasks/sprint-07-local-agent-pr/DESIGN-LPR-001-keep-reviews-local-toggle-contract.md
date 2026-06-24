@@ -5,7 +5,6 @@
 > Reviewer: deferred to PHASE 4.5 red-hat closeout — design contract committed prior session
 > Updated: 2026-06-22T18:07:12Z
 
-
 ## What this does
 
 Specify the exact toggle control for `keep_reviews_local` in the Project Settings modal, placed beside the existing forge settings (`ForgeForm.svelte`). The contract defines the on/off copy that explains "agent PRs stay local (no remote GitHub PR) vs. mirror to the forge," the default-local treatment (reflects `DefaultTrue`), the accessibility contract (label/keyboard), and the honest R21 caveat that this is an operator preference stored in the project store — not an authorization boundary.

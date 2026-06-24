@@ -217,6 +217,7 @@ blocks: STEER-010
 
 CODING STANDARDS: crates/AGENTS.md, crates/but/AGENTS.md, RULES.md
 ```
+
 </details>
 
 <!-- REQUIREMENT-CONTRACT v1 -->

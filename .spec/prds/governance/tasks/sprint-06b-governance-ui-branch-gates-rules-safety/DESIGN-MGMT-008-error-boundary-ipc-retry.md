@@ -61,7 +61,7 @@ A sveltekit-implementer reading this contract knows (a) exactly what title/compa
 --------------------------------------------------------------------------------
 DONE WHEN
 --------------------------------------------------------------------------------
-- [ ] AC-1 [PRIMARY]: ErrorBoundary fallback content specification [PRIMARY]
+- [x] AC-1 [PRIMARY]: ErrorBoundary fallback content specification [PRIMARY]
 - [ ] AC-2: IPC-failure danger banner + Retry specification
 - [ ] AC-3: Persistent-failure safe read-only state
 - [ ] AC-4: Two-category error distinction

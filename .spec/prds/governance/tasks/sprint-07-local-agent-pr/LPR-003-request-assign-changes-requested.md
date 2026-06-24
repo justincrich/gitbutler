@@ -5,7 +5,6 @@
 > Reviewer: deferred to PHASE 4.5 red-hat closeout — committed prior session; request/assign + changes_requested proofs AC-1..5
 > Updated: 2026-06-22T18:07:12Z
 
-
 ## What this does
 
 Add the two `#[but_api(napi)]` write verbs that open and assign a local review — `request_review` (opens the review for a branch, writes the first `local_review_assignments` row + the write-once `local_review_meta` opener row, `key="opener_principal"`) gated on **`PullRequestsWrite`** (the open-PR authority), and `assign_reviewer` (upserts a `pending` assignment for a reviewer principal) gated on **`ReviewsWrite`** (assignment is a review interaction, not opening the PR — tech-delta §B) and **enforcing `reviewer != author_principal_of_target_branch`** at the `but-api` boundary (the drive-layer mirror of the gate's `require_distinct_from_author`, R22) — both modeled exactly on the shipped `approve_review` (authorize-before-await, local-cache write, no DryRun guard). **AND implement the real `changes_requested` write inside `request_changes_review` — today a CONTRACT STUB (`forge.rs:551`) that authorizes `ReviewsWrite` then returns `task_contract_invalid` and writes nothing.** Plus the `but review request`/`assign`/`request-changes` CLI verbs routed through `review_gate_cli_error`. **No new `Authority` variant.**

@@ -5,7 +5,6 @@
 > Reviewer: deferred to PHASE 4.5 red-hat closeout — design contract committed prior session
 > Updated: 2026-06-22T18:07:12Z
 
-
 ## What this does
 
 Specify the information-architecture and state contract for the Local-Review view: a READ-ONLY view that renders a local PR object — reviewer assignments (plus assignment state), comment threads (file/line scoped or PR-level, with resolved/unresolved status), the derived lifecycle (`Draft` / `AwaitingReview` / `ChangesRequested` / `Approved` / `Mergeable` — derived at query time from commits + verdict-at-head + open assignments per LPR-005), and the `agent-authored` badge when the opener's declared `kind = "agent"`. The view is one component with four lifecycle states (not four separate views), fully read-only (no mutate controls — the CLI/agent drives writes), and reuses existing forge-review UI surfaces and patterns where possible.

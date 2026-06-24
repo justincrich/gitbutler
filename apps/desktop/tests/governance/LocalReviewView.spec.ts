@@ -261,29 +261,29 @@ test.describe("LocalReviewView", () => {
 				`${state.name}: expected class "${state.expectClass}"`,
 			).toBe(true);
 
-		if (state.expectAgent) {
-			const agentEl = component.getByTestId("local-review-agent-authored").last();
-			await expect(agentEl).toBeVisible();
-			const agentCls = await agentEl.evaluate((n) => (n as HTMLElement).className);
-			expect(agentCls.includes("safe"), `${state.name}: agent badge must NOT be safe/green`).toBe(
-				false,
-			);
-			// F2: verify the Tooltip component from @gitbutler/ui wraps the badge
-			// (per DESIGN-LPR-003 §AGENT-AUTHORED BADGE RULE). The Tooltip renders
-			// span.tooltip-wrap when its text prop is non-empty.
-			const hasTooltipAncestor = await agentEl.evaluate((n) => {
-				let el = (n as HTMLElement).parentElement;
-				while (el) {
-					if (el.classList.contains("tooltip-wrap")) return true;
-					el = el.parentElement;
-				}
-				return false;
-			});
-			expect(
-				hasTooltipAncestor,
-				`${state.name}: agent-authored Badge must be wrapped by Tooltip from @gitbutler/ui`,
-			).toBe(true);
-		} else {
+			if (state.expectAgent) {
+				const agentEl = component.getByTestId("local-review-agent-authored").last();
+				await expect(agentEl).toBeVisible();
+				const agentCls = await agentEl.evaluate((n) => (n as HTMLElement).className);
+				expect(agentCls.includes("safe"), `${state.name}: agent badge must NOT be safe/green`).toBe(
+					false,
+				);
+				// F2: verify the Tooltip component from @gitbutler/ui wraps the badge
+				// (per DESIGN-LPR-003 §AGENT-AUTHORED BADGE RULE). The Tooltip renders
+				// span.tooltip-wrap when its text prop is non-empty.
+				const hasTooltipAncestor = await agentEl.evaluate((n) => {
+					let el = (n as HTMLElement).parentElement;
+					while (el) {
+						if (el.classList.contains("tooltip-wrap")) return true;
+						el = el.parentElement;
+					}
+					return false;
+				});
+				expect(
+					hasTooltipAncestor,
+					`${state.name}: agent-authored Badge must be wrapped by Tooltip from @gitbutler/ui`,
+				).toBe(true);
+			} else {
 				// Scope to the last header to avoid matching elements from prior loop iterations
 				const lastHeader = component.getByTestId("local-review-header").last();
 				const agentInLast = await lastHeader
@@ -438,5 +438,81 @@ test.describe("LocalReviewView", () => {
 
 		const textInputs = await component.locator('input[type="text"]').count();
 		expect(textInputs).toBe(0);
+	});
+
+	// LPR-REM-007-UI: resilience to missing optional fields. Before LPR-REM-005
+	// lands, the backend ReviewStatus may omit open_assignments/unresolved_threads
+	// (which the view does not render) AND the PR-meta summary fields
+	// (source_branch/sha/author/title/created_at). The view must render with a
+	// bare-minimum payload (required fields only) without crashing.
+	test("LocalReviewViewMinimalPayload renders with required fields only and no summary rows", async ({
+		mount,
+	}) => {
+		const minimalStatus: LocalReviewStatusPayload = {
+			lifecycle: "Open",
+			agent_authored: false,
+			approved: false,
+			target: "refs/heads/main",
+			assignments: [],
+		};
+
+		const component = await mount(LocalReviewView, {
+			props: { projectId, branch, review: minimalStatus, comments: [] },
+		});
+
+		// Note: `component` points at the view's root <section>, so its own
+		// data-testid="local-review-view" is NOT a descendant and can't be
+		// located via component.getByTestId. Assert the header (a descendant)
+		// instead — that proves the component rendered.
+		await expect(component.getByTestId("local-review-header").last()).toBeVisible();
+		// "Open" lifecycle is labelled "Draft" (gray) per the LIFECYCLE_LABELS map.
+		await expect(component.getByTestId("local-review-lifecycle-badge").last()).toContainText(
+			"Draft",
+		);
+		// No optional summary fields (SHA/Author/Title/Created) -> zero <dt> rows.
+		await expect(component.getByTestId("local-review-header").last().locator("dt")).toHaveCount(0);
+		// Branch line renders the target; absent source_branch falls back to "—".
+		const minimalBranch = component
+			.getByTestId("local-review-header")
+			.last()
+			.locator(".local-review-header__branch");
+		await expect(minimalBranch).toContainText("\u2014");
+		await expect(minimalBranch).toContainText("main");
+		await expect(component.getByTestId("local-review-merge-gate-note").last()).toBeVisible();
+	});
+
+	// LPR-REM-007-UI: a full payload renders every summary field.
+	test("LocalReviewViewFullPayload renders SHA, Author, Title, and Created summary fields", async ({
+		mount,
+	}) => {
+		const fullStatus: LocalReviewStatusPayload = {
+			lifecycle: "AwaitingReview",
+			agent_authored: false,
+			approved: false,
+			target: "refs/heads/main",
+			source_branch: "refs/heads/feat/ship-it",
+			sha: "deadbeef",
+			author: "human:bob",
+			title: "feat: ship it",
+			created_at: "2026-06-23T12:00:00Z",
+			assignments: [],
+		};
+
+		const component = await mount(LocalReviewView, {
+			props: { projectId, branch, review: fullStatus, comments: [] },
+		});
+
+		const header = component.getByTestId("local-review-header").last();
+		await expect(header).toBeVisible();
+		// All four summary rows present.
+		await expect(header.locator("dt")).toHaveCount(4);
+		await expect(header).toContainText("deadbeef");
+		await expect(header).toContainText("human:bob");
+		await expect(header).toContainText("feat: ship it");
+		await expect(header).toContainText("2026-06-23T12:00:00Z");
+		// Source -> target branch line reflects the provided source_branch.
+		const fullBranch = header.locator(".local-review-header__branch");
+		await expect(fullBranch).toContainText("feat/ship-it");
+		await expect(fullBranch).toContainText("main");
 	});
 });

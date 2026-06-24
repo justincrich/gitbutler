@@ -28,11 +28,11 @@ next action.
 the **full drive state** for a target branch in **one** branch-scoped read.
 The payload carries:
 
-| Field                       | Drive fact                | Source query (reused, never forked)                                                                                                                                  |
-| --------------------------- | ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `open_assignments`          | **dispatch trigger**      | `local_review_assignments.list_by_target(target)` filtered to `state == "pending"`, preserving the Handle's `assigned_at ASC, id ASC` order                          |
-| `unresolved_threads`        | **remediation trigger**   | `local_review_comments.list_by_target(target)` grouped by `thread_id` where at least one comment has `resolved = false` (the reserved `__pr_meta__` thread excluded) |
-| `verdict_at_head` / `approved` | **merge trigger**         | `local_review_verdicts.list_by_target(target)` filtered to `head_oid == current_head_oid && verdict == "approved"` — the **exact** query `enforce_merge_gate` runs    |
+| Field                          | Drive fact              | Source query (reused, never forked)                                                                                                                                  |
+| ------------------------------ | ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `open_assignments`             | **dispatch trigger**    | `local_review_assignments.list_by_target(target)` filtered to `state == "pending"`, preserving the Handle's `assigned_at ASC, id ASC` order                          |
+| `unresolved_threads`           | **remediation trigger** | `local_review_comments.list_by_target(target)` grouped by `thread_id` where at least one comment has `resolved = false` (the reserved `__pr_meta__` thread excluded) |
+| `verdict_at_head` / `approved` | **merge trigger**       | `local_review_verdicts.list_by_target(target)` filtered to `head_oid == current_head_oid && verdict == "approved"` — the **exact** query `enforce_merge_gate` runs   |
 
 Plus the derived PR lifecycle fields (`target`, `assignments`, `lifecycle`,
 `agent_authored`, `open_threads`) that LPR-005 already carried.
@@ -45,12 +45,12 @@ A target with **no** drive state returns an `Ok` payload with empty vecs and
 The orchestrator runs a single read-then-act loop. Each branch is a pure
 function of the payload:
 
-| `review_status` payload                                         | Orchestrator action                                                                                                                                            |
-| --------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `open_assignments` is non-empty (a `pending` assignment exists) | **Dispatch a reviewer** — wake / assign the reviewer principal named in the assignment row to drive the review toward a verdict.                               |
-| `unresolved_threads` is non-empty (an unresolved thread exists) | **Dispatch remediation** — wake the branch author (or the assigned reviewer for that thread) to address the thread, then `but review resolve` to clear it.     |
-| `approved == true` (`verdict_at_head == Some("approved")`)      | **Attempt the governed merge** — call the governed `but merge <branch>`, which routes through `enforce_merge_gate` and re-derives verdict-at-head itself.       |
-| None of the above                                               | **Wait** — there is no drive work to do; the loop idles on the next read.                                                                                      |
+| `review_status` payload                                         | Orchestrator action                                                                                                                                        |
+| --------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `open_assignments` is non-empty (a `pending` assignment exists) | **Dispatch a reviewer** — wake / assign the reviewer principal named in the assignment row to drive the review toward a verdict.                           |
+| `unresolved_threads` is non-empty (an unresolved thread exists) | **Dispatch remediation** — wake the branch author (or the assigned reviewer for that thread) to address the thread, then `but review resolve` to clear it. |
+| `approved == true` (`verdict_at_head == Some("approved")`)      | **Attempt the governed merge** — call the governed `but merge <branch>`, which routes through `enforce_merge_gate` and re-derives verdict-at-head itself.  |
+| None of the above                                               | **Wait** — there is no drive work to do; the loop idles on the next read.                                                                                  |
 
 The branches are not mutually exclusive in the payload (an open assignment and
 an unresolved thread can coexist) — the orchestrator chooses the highest-priority
@@ -71,7 +71,7 @@ determinism contract has three load-bearing properties:
 2. **`Vec` everywhere, deterministic ordering.** Every collection in the payload
    reuses a Handle's existing `ORDER BY` (`local_review_assignments`,
    `local_review_comments`, and `local_review_verdicts` all `ORDER BY created_at
-   ASC, id ASC`). The thread grouping sorts by `thread_id`. No `HashMap` /
+ASC, id ASC`). The thread grouping sorts by `thread_id`. No `HashMap` /
    `HashSet` iteration order leaks into the payload.
 3. **No per-call timestamps / UUIDs in compared positions.** Every compared
    field is sourced from a stored row, not synthesized at read time.
@@ -98,12 +98,12 @@ assignments / threads / verdict on the named branch, an accepted branch-scoped
 disclosure, F-006), but it **writes nothing** and acquires **no write
 authority**.
 
-| Verbs that mutate (the reconciler dispatches INTO these)                                | Verbs that read (the reconciler surface)                       |
-| ---------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
-| `request_review`, `assign_reviewer` (`ReviewsWrite`)                                     | `review_status` (LPR-005 / LPR-008) — the reconciler read      |
-| `post_comment`, `resolve_thread` (`CommentsWrite`)                                       | `get_review` (`forge.rs:401`) — the branch-scoped read         |
-| `approve_review`, `request_changes_review` (`ReviewsWrite`)                              | `governance_status_read` — the broader governance read         |
-| `merge_review` → `enforce_merge_gate` → the governed `but merge` (`Merge` authority)     |                                                               |
+| Verbs that mutate (the reconciler dispatches INTO these)                             | Verbs that read (the reconciler surface)                  |
+| ------------------------------------------------------------------------------------ | --------------------------------------------------------- |
+| `request_review`, `assign_reviewer` (`ReviewsWrite`)                                 | `review_status` (LPR-005 / LPR-008) — the reconciler read |
+| `post_comment`, `resolve_thread` (`CommentsWrite`)                                   | `get_review` (`forge.rs:401`) — the branch-scoped read    |
+| `approve_review`, `request_changes_review` (`ReviewsWrite`)                          | `governance_status_read` — the broader governance read    |
+| `merge_review` → `enforce_merge_gate` → the governed `but merge` (`Merge` authority) |                                                           |
 
 The orchestrator's job is to **dispatch the write verbs in response to the
 read payload**, never to bypass them. In particular the approved-verdict-at-head
@@ -126,17 +126,17 @@ read does not replace the gate, and a merge is never authorized on the
 This is what LPR-009 proves:
 
 - **The static no-read proof** — `cargo test -p but-authz
-  safe_seam_gate_path_reads_no_new_table`: a build-gate honesty grep over
+safe_seam_gate_path_reads_no_new_table`: a build-gate honesty grep over
   `merge_gate.rs` + `review_requirement.rs` finds **zero** references to
   `local_review_assignments`, `local_review_comments`, or `local_review_meta`.
   The drive tables never participate in the land decision.
 - **The runtime equivalence proof** — `cargo test -p but-api
-  safe_seam_forged_drive_equals_empty_drive`: a fully forged drive layer (all
+safe_seam_forged_drive_equals_empty_drive`: a fully forged drive layer (all
   assignments approved, all comments resolved, written directly) yields an
   **identical** merge-gate decision to an empty drive layer for every
   verdict-at-head fixture.
 - **The inverse proof** — `cargo test -p but-api
-  safe_seam_only_verdict_at_head_flips_the_land`: with no approved
+safe_seam_only_verdict_at_head_flips_the_land`: with no approved
   verdict-at-head, drive metadata alone (a pending assignment + an unresolved
   thread) still cannot land.
 
@@ -492,7 +492,7 @@ residual, not a closed boundary.
 - **tech-delta §G** — the R18 / R19 / R20 / R21 / R22 / R23 risk register and
   the honesty-test note.
 - **forge.rs** — the `ReviewStatus` payload and the `review_status(ctx,
-  branch)` function. `crates/but-api/src/legacy/forge.rs`.
+branch)` function. `crates/but-api/src/legacy/forge.rs`.
 - **merge_gate.rs / review_requirement.rs** — the verdict-at-head query the
   reconciler read reuses. `crates/but-api/src/legacy/`.
 - **PRD UC-LPR-05** — the reconciler thesis.

@@ -5,7 +5,6 @@
 > Reviewer: deferred to PHASE 4.5 red-hat closeout — committed prior session; keep_reviews_local toggle in Project Settings
 > Updated: 2026-06-22T18:07:12Z
 
-
 ## What this does
 
 Add a `keep_reviews_local` Toggle to the Project settings modal's General settings tab

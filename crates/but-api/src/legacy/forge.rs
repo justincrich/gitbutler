@@ -840,19 +840,25 @@ pub async fn request_changes_review(
 }
 
 /// Comment on a branch review after enforcing `comments:write`.
+///
+/// Delegates directly to [`post_comment`], which refuses the reserved
+/// [`__pr_meta__`](RESERVED_PR_META_THREAD) thread id up front, authorizes the
+/// actor on `comments:write`, and inserts the [`LocalReviewComment`] row. A
+/// code comment carries `file = Some(..)` and `line = Some(..)`; a branch-level
+/// comment carries `None` for both.
+///
+/// [`LocalReviewComment`]: but_db::LocalReviewComment
 #[but_api(napi)]
 #[instrument(err(Debug))]
-pub async fn comment_review(ctx: ThreadSafeContext, branch: String, message: String) -> Result<()> {
-    let ctx = ctx.into_thread_local();
-    let repo = ctx.repo.get()?;
-    authorize_branch_action(&repo, &branch, Authority::CommentsWrite)?;
-    Err(task_contract_invalid(
-        "comment_review",
-        format!(
-            "branch `{branch}` with message_chars={}",
-            message.chars().count()
-        ),
-    ))
+pub async fn comment_review(
+    ctx: ThreadSafeContext,
+    branch: String,
+    message: String,
+    file: Option<String>,
+    line: Option<i64>,
+    thread_id: String,
+) -> Result<()> {
+    post_comment(ctx, branch, message, file, line, thread_id).await
 }
 
 /// Reserved thread id backed by [`local_review_meta`] rather than a real
@@ -1025,6 +1031,12 @@ pub struct ReviewStatus {
     /// Reviewer assignments on the target, in arrival order — every
     /// `local_review_assignments` row, including pending/approved/changes_requested.
     pub assignments: Vec<but_db::LocalReviewAssignment>,
+    /// The subset of `assignments` still in the `pending` drive-state — i.e. the
+    /// reviewers who haven't yet posted a verdict/changes-requested. This is the
+    /// LPR-008 drive-state read an orchestrator polls to decide whom to nudge;
+    /// it mirrors `assignments` and never reaches the merge gate (gates read
+    /// verdicts only — §E safe seam).
+    pub open_assignments: Vec<but_db::LocalReviewAssignment>,
     /// The verdict-at-head literal (`"approved"` / `"changes_requested"`) when a
     /// verdict row exists at the current HEAD, else `None`. The same input the
     /// merge gate re-derives itself.
@@ -1040,6 +1052,11 @@ pub struct ReviewStatus {
     /// Count of unresolved comment threads (one per distinct `thread_id` where
     /// at least one comment has `resolved = false`).
     pub open_threads: usize,
+    /// One representative comment per unresolved thread (the LPR-008 drive-state
+    /// read for orchestrators). A thread is unresolved when any of its comments
+    /// has `resolved = false`; the reserved `__pr_meta__` marker thread is
+    /// excluded. `len()` is always equal to [`ReviewStatus::open_threads`].
+    pub unresolved_threads: Vec<but_db::LocalReviewComment>,
 }
 
 #[cfg(feature = "export-schema")]
@@ -1098,10 +1115,24 @@ pub async fn review_status(ctx: ThreadSafeContext, branch: String) -> Result<Rev
     // pending remediation is never hidden by an older approval at the same head.
     let verdict_at_head = derive_verdict_at_head(&verdicts, &head_oid);
 
-    // open_threads: a thread is open if any of its comments has resolved=false.
-    // The reserved __pr_meta__ marker thread is filtered out (the opener lives
-    // in local_review_meta, not a comment row).
-    let open_threads = count_open_threads(&comments);
+    // open_threads + unresolved_threads: a thread is open if any of its
+    // comments has resolved=false. The reserved __pr_meta__ marker thread is
+    // filtered out (the opener lives in local_review_meta, not a comment row).
+    // `unresolved_threads` carries one representative comment per open thread so
+    // an orchestrator can drive on the branch's whole review surface (LPR-008
+    // branch-scoped disclosure, F-006).
+    let unresolved_threads = collect_unresolved_threads(&comments);
+    let open_threads = unresolved_threads.len();
+
+    // open_assignments: the subset of assignments still pending — i.e. reviewers
+    // the orchestrator is still waiting on. Mirrors `assignments` and never
+    // reaches the merge gate (the safe seam — gates read verdicts only).
+    let pending_state = AssignmentState::Pending.name();
+    let open_assignments = assignments
+        .iter()
+        .filter(|assignment| assignment.state == pending_state)
+        .cloned()
+        .collect();
 
     // agent_authored: derived from the opener principal's declared `kind` in the
     // committed permissions.toml at the target ref. Read at the target ref (not
@@ -1123,10 +1154,12 @@ pub async fn review_status(ctx: ThreadSafeContext, branch: String) -> Result<Rev
     Ok(ReviewStatus {
         target: branch,
         assignments,
+        open_assignments,
         verdict_at_head,
         lifecycle,
         agent_authored,
         open_threads,
+        unresolved_threads,
     })
 }
 
@@ -1151,21 +1184,29 @@ fn derive_verdict_at_head(
     }
 }
 
-/// Count distinct comment threads carrying at least one unresolved comment,
-/// excluding the reserved `__pr_meta__` marker thread.
-fn count_open_threads(comments: &[but_db::LocalReviewComment]) -> usize {
+/// Collect one representative [`LocalReviewComment`] per unresolved thread,
+/// excluding the reserved `__pr_meta__` marker thread. A thread is unresolved
+/// when any of its comments has `resolved = false`; the first such comment in
+/// arrival order wins the representative slot. The returned `len()` is the
+/// distinct open-thread count surfaced as [`ReviewStatus::open_threads`].
+///
+/// [`LocalReviewComment`]: but_db::LocalReviewComment
+fn collect_unresolved_threads(
+    comments: &[but_db::LocalReviewComment],
+) -> Vec<but_db::LocalReviewComment> {
     use std::collections::HashSet;
 
-    let mut open_threads: HashSet<&str> = HashSet::new();
+    let mut seen: HashSet<&str> = HashSet::new();
+    let mut open: Vec<but_db::LocalReviewComment> = Vec::new();
     for comment in comments {
         if comment.thread_id == RESERVED_PR_META_THREAD {
             continue;
         }
-        if !comment.resolved {
-            open_threads.insert(comment.thread_id.as_str());
+        if !comment.resolved && seen.insert(comment.thread_id.as_str()) {
+            open.push(comment.clone());
         }
     }
-    open_threads.len()
+    open
 }
 
 /// Derive the presentation lifecycle label from the verdict-at-head and the

@@ -1,0 +1,33 @@
+========== AC-1: SPRINT.md status + Completion Status ==========
+
+VERIFY: grep -c '^status: In Progress$' SPRINT.md
+1
+
+VERIFY: grep -c '^## Completion Status' SPRINT.md
+1
+
+Completion Status section content:
+## Completion Status (HEAD 4b3d506ee7)
+
+> Reconciled against `.spec/prds/governance/reviews/red-hat-20260623T031824Z-sprint-06b.md` (evidence base f7a1589c6c). 4 UI tasks (MGMT-UI-009/010/011/012) have prior implementation in worktree branches but never merged — tracked separately for re-merge.
+
+| Task | Agent | State at HEAD | Evidence |
+|------|-------|---------------|----------|
+| MGMT-BE-004 | rust-implementer | Done | governance.rs:555,563,641,664; AC-3 unverified pending REMEDIATE-06B-B |
+| MGMT-BE-003 | rust-implementer | Done | rules.rs:73; tests/rules_scoped.rs |
+| MGMT-UI-004 | sveltekit-implementer | Done (wrap in place; CT evidence pending) | ProjectSettingsModalContent.svelte:68-70 |
+| MGMT-UI-009 | sveltekit-implementer | Not Started at HEAD (impl in worktree branch — re-merge pending) | glob BranchGatesList* = 0 in main tree |
+| MGMT-UI-010 | sveltekit-implementer | Not Started at HEAD (impl in worktree branch — re-merge pending) | RulesList.svelte:20-22 has no principalId |
+| MGMT-UI-011 | sveltekit-implementer | Not Started at HEAD (impl in worktree branch — re-merge pending) | TabTrigger.svelte:25 inverted tabindex still live |
+| MGMT-UI-012 | sveltekit-implementer | Not Started at HEAD (impl in worktree branch — re-merge pending) | no gate script in package.json |
+| DESIGN-MGMT-004 | frontend-designer | Done | DESIGN-ANNOTATIONS.md:415,431,469,481 |
+| DESIGN-MGMT-006 | frontend-designer | Done | DESIGN-ANNOTATIONS.md covers all 4 tabs |
+| DESIGN-MGMT-007 | frontend-designer | Done | DESIGN-ANNOTATIONS.md WAI-ARIA tabs pattern |
+| DESIGN-MGMT-008 | frontend-designer | Done | DESIGN-ANNOTATIONS.md:311,492,493 |
+
+## Tasks
+
+| ID | Title | Agent | Estimate |
+
+Prose Status field:
+**Status:** In Progress

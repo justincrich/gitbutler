@@ -61,9 +61,9 @@ A Playwright component test mounts GovernanceSettings via a wrapper that causes 
 --------------------------------------------------------------------------------
 DONE WHEN
 --------------------------------------------------------------------------------
-- [ ] AC-1 [PRIMARY]: ErrorBoundary catches governance child throw and renders fallback
-- [ ] AC-2: No new GovernanceErrorBoundary.svelte file created (build-gate)
-- [ ] AC-3: ErrorBoundary wrapper is transparent on normal render (four tab triggers visible, 0 .boundary-error)
+- [ ] AC-1 [PRIMARY]: ErrorBoundary catches governance child throw and renders fallback /* PARTIAL: wrap in place but no CT evidence — see REMEDIATE-06B-B */
+- [x] AC-2: No new GovernanceErrorBoundary.svelte file created (build-gate)
+- [ ] AC-3: ErrorBoundary wrapper is transparent on normal render (four tab triggers visible, 0 .boundary-error) /* PARTIAL: wrap in place but no CT evidence — see REMEDIATE-06B-B */
 - [ ] All verification gates pass; only write_allowed files modified
 
 --------------------------------------------------------------------------------

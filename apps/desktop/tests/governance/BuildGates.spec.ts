@@ -202,8 +202,28 @@ test.describe("governance build gates", () => {
 	});
 
 	test("passes the repository lint gate", () => {
-		const result = runGateCommand("pnpm", ["lint"]);
+		// Invoke spawnSync directly so we can assert on the exit code explicitly;
+		// runGateCommand swallows the status (it throws on non-zero), which would
+		// leave the exit-code contract implicit rather than verified.
+		const result = spawnSync("pnpm", ["lint"], {
+			cwd: repoRoot,
+			encoding: "utf8",
+			stdio: ["ignore", "pipe", "pipe"],
+		});
+		const combined = `${result.stdout}${result.stderr}`;
 
-		expect(`${result.stdout}${result.stderr}`).toContain("lint");
+		// A green lint run MUST exit 0 — a non-zero code means a linter failed.
+		expect(result.status, `lint exited ${result.status}:\n${combined}`).toBe(0);
+
+		// And the output must carry no failure markers. Each tool in the `pnpm lint`
+		// chain (prettier, eslint, oxlint, knip) emits one of these on failure:
+		//   - "✖ N problem" / "✖ N error"   (ESLint)
+		//   - "[warn] Code style issue ..." (Prettier --check)
+		//   - "N warning(s)" / "N error(s)" (oxlint)
+		// None of these appear in a clean run, so their absence confirms success
+		// rather than merely that the word "lint" was printed.
+		expect(combined).not.toMatch(
+			/✖|\b\d+\s+errors?\b|\b\d+\s+warnings?\b|\b\d+\s+problems?\b|\[warn\]|Code style issue/i,
+		);
 	});
 });

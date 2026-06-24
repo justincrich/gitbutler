@@ -35,6 +35,11 @@ pub struct UpdateRequest {
     #[serde(default = "default_false")]
     pub unset_forge_override: bool,
     pub preferred_forge_user: Option<but_forge::ForgeUser>,
+    /// LPR-REM-003 — operator preference for keeping agent reviews local.
+    /// Mirrors `Project::keep_reviews_local` (a `DefaultTrue`); carried here as
+    /// `Option<bool>` so callers can leave it untouched (the precedent set by
+    /// `ok_with_force_push`).
+    pub keep_reviews_local: Option<bool>,
 }
 
 impl UpdateRequest {
@@ -60,6 +65,7 @@ impl UpdateRequest {
             forge_override: None,
             unset_forge_override: false,
             preferred_forge_user: None,
+            keep_reviews_local: None,
         }
     }
 }
@@ -83,13 +89,7 @@ impl From<Project> for UpdateRequest {
             snapshot_lines_threshold,
             forge_override,
             preferred_forge_user,
-            // LPR-006: `keep_reviews_local` is a DefaultTrue operator preference
-            // (R21 trusted-desktop). It round-trips through the project store via
-            // serde on `Project` itself; the `UpdateRequest` write surface is not
-            // extended here — the project-settings UI plumbing lands with the
-            // operator-facing surface in a later sprint. Discard explicitly so
-            // this exhaustive destructure stays exhaustive (signals future fields).
-            keep_reviews_local: _,
+            keep_reviews_local,
         }: Project,
     ) -> Self {
         UpdateRequest {
@@ -112,6 +112,7 @@ impl From<Project> for UpdateRequest {
             forge_override,
             unset_forge_override: false,
             preferred_forge_user,
+            keep_reviews_local: Some(keep_reviews_local.into()),
         }
     }
 }
@@ -183,6 +184,7 @@ impl Storage {
             forge_override,
             unset_forge_override,
             preferred_forge_user,
+            keep_reviews_local,
         }: UpdateRequest,
     ) -> Result<Project> {
         let mut projects = self.list()?;
@@ -243,6 +245,10 @@ impl Storage {
             *project.ok_with_force_push = ok_with_force_push;
         }
 
+        if let Some(keep_reviews_local) = keep_reviews_local {
+            *project.keep_reviews_local = keep_reviews_local;
+        }
+
         if let Some(force_push_protection) = force_push_protection {
             project.force_push_protection = force_push_protection;
         }
@@ -281,5 +287,30 @@ impl Storage {
         let projects = serde_json::to_string_pretty(&projects)?;
         self.inner.write(PROJECTS_FILE, &projects)?;
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::ProjectHandleOrLegacyProjectId;
+
+    #[test]
+    fn from_project_copies_keep_reviews_local() {
+        // LPR-REM-003 AC-3: `From<Project> for UpdateRequest` must copy
+        // `keep_reviews_local` across. Previously this field was explicitly
+        // discarded, so writes were silently dropped on the next update.
+        let mut project =
+            Project::default_with_id(ProjectHandleOrLegacyProjectId::LegacyProjectId(
+                but_project_handle::LegacyProjectId::from_number_for_testing(0),
+            ));
+        *project.keep_reviews_local = false;
+
+        let req: UpdateRequest = project.into();
+        assert_eq!(
+            req.keep_reviews_local,
+            Some(false),
+            "From<Project> must copy keep_reviews_local, not discard it"
+        );
     }
 }

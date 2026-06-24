@@ -5,7 +5,6 @@
 > Reviewer: deferred to PHASE 4.5 red-hat closeout — design contract committed prior session
 > Updated: 2026-06-22T18:07:12Z
 
-
 ## What this does
 
 Specify exactly how a principal's `kind = "agent" | "human"` is displayed and edited in the Governance Principals tab (the 6a surface, `PrincipalsList.svelte`). The contract defines the badge shape for read display, the select/input for editing, the default/omitted treatment (omitted `kind` = human), and the honest framing: `kind` is a descriptor that drives the agent-authored tag derivation — it is NOT an enforcement key and it does not change any gate decision.

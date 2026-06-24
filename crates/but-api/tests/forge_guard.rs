@@ -106,6 +106,9 @@ fn forge_guard_authorizes_comments_and_records_approval() -> anyhow::Result<()> 
             ctx.to_sync(),
             "feat".to_owned(),
             "note".to_owned(),
+            None,
+            None,
+            "t1".to_owned(),
         )) {
             Ok(()) => anyhow::bail!("read-only principal should be denied comments:write"),
             Err(err) => err,
@@ -159,33 +162,45 @@ fn forge_guard_no_stub_success_for_unimplemented_review_actions() -> anyhow::Res
     let ctx = but_ctx::Context::from_repo(repo)?.with_memory_app_cache();
     let runtime = tokio::runtime::Runtime::new()?;
 
-    // NOTE: `request_changes_review` was previously a contract stub here; LPR-003
-    // implemented its real `changes_requested` write, so it is exercised by the
-    // dedicated `local_review_assignments.rs` proofs. The two remaining verbs
-    // (comment, close) are still stubs and must still fail closed.
+    // NOTE: `request_changes_review` was previously a contract stub here;
+    // LPR-003 implemented its real `changes_requested` write, so it is
+    // exercised by the dedicated `local_review_assignments.rs` proofs.
+    // LPR-REM-001 wired `comment_review` to the real `post_comment` write,
+    // so it is exercised below as a successful row write. `close_review`
+    // is still a stub and must still fail closed.
 
     temp_env::with_var(
         "BUT_AGENT_HANDLE",
         Some("reviewer"),
         || -> anyhow::Result<()> {
-            let err = match runtime.block_on(but_api::legacy::forge::comment_review(
+            runtime.block_on(but_api::legacy::forge::comment_review(
                 ctx.to_sync(),
                 "feat".to_owned(),
                 "note".to_owned(),
-            )) {
-                Ok(()) => anyhow::bail!("comment must not report success without behavior"),
-                Err(err) => err,
+                None,
+                None,
+                "comment-thread".to_owned(),
+            ))?;
+            let db = ctx.db.get_cache()?;
+            let comments = db.local_review_comments().list_by_target("feat")?;
+            assert_eq!(
+                comments.len(),
+                1,
+                "authorized comment must write one local_review_comments row"
+            );
+            let [comment] = comments.as_slice() else {
+                unreachable!("len asserted as one, so first comment exists");
             };
-            let message = err.to_string();
-            assert!(
-                message.contains("comment_review"),
-                "comment blocker must name the unsupported action, got: {message}"
+            assert_eq!(comment.author_principal, "reviewer");
+            assert_eq!(comment.body, "note");
+            assert_ne!(
+                comment.thread_id, "__pr_meta__",
+                "thread id must never be the reserved opener marker"
             );
-            assert!(
-                message.contains("no downstream"),
-                "comment blocker must explain no downstream behavior exists, got: {message}"
+            println!(
+                "comment_review wrote row: author={}, thread={}",
+                comment.author_principal, comment.thread_id
             );
-            println!("comment_review blocker: {message}");
             Ok(())
         },
     )?;

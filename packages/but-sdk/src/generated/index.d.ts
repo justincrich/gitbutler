@@ -132,8 +132,18 @@ export declare function changesInWorktreeWithPerm(projectId: string): Promise<Wo
 /** Close a branch review after enforcing `pull_requests:write`. */
 export declare function closeReview(projectId: string, branch: string): Promise<void>
 
-/** Comment on a branch review after enforcing `comments:write`. */
-export declare function commentReview(projectId: string, branch: string, message: string): Promise<void>
+/**
+ * Comment on a branch review after enforcing `comments:write`.
+ *
+ * Delegates directly to [`post_comment`], which refuses the reserved
+ * [`__pr_meta__`](RESERVED_PR_META_THREAD) thread id up front, authorizes the
+ * actor on `comments:write`, and inserts the [`LocalReviewComment`] row. A
+ * code comment carries `file = Some(..)` and `line = Some(..)`; a branch-level
+ * comment carries `None` for both.
+ *
+ * [`LocalReviewComment`]: but_db::LocalReviewComment
+ */
+export declare function commentReview(projectId: string, branch: string, message: string, file: string | null, line: number | null, threadId: string): Promise<void>
 
 /**
  * Amend the commit at `commit_id` with `changes` and record an oplog snapshot on success.
@@ -1861,6 +1871,14 @@ export type GovernancePrincipalListEntry = {
   groupMemberships: Array<string>;
   /** True only when direct working-tree principal grants differ from committed direct grants. */
   pending: boolean;
+  /**
+   * Additive, enforcement-neutral `kind` descriptor (e.g. `"agent"` / `"human"`)
+   * read from the committed target-ref `[[principal]]` entry — the same source
+   * [`principal_kind_read`] surfaces. `None` when the principal has no declared
+   * `kind` (default-human). Lets the desktop Principals list render agent/human
+   * badges from the list query without a second round-trip.
+   */
+  kind: string | null;
 };
 
 /** Read-only renderer contract for all principals present in governance config. */
@@ -2213,10 +2231,7 @@ export type LineStats = {
   filesChanged: number;
 };
 
-/**
- * Schema mirror for [`but_db::LocalReviewAssignment`]. The shape mirrors
- * the but-db row 1:1; `NaiveDateTime` round-trips as an ISO-8601 string.
- */
+/** Tests are in `but-db/tests/db/table/local_review_assignments.rs`. */
 export type LocalReviewAssignment = {
   id: string;
   target: string;
@@ -2225,10 +2240,7 @@ export type LocalReviewAssignment = {
   assigned_at: string;
 };
 
-/**
- * Schema mirror for [`but_db::LocalReviewComment`]. The shape mirrors the
- * but-db row 1:1; `NaiveDateTime` round-trips as an ISO-8601 string.
- */
+/** Tests are in `but-db/tests/db/table/local_review_comments.rs`. */
 export type LocalReviewComment = {
   id: string;
   target: string;
@@ -2650,15 +2662,6 @@ export type ReviewState = "open" | "closed";
  * writes no row, and is never consulted by the gate. The lifecycle label is
  * presentation-only; the merge decision still re-derives verdict-at-head
  * itself (§E safe seam — the load-bearing invariant).
- *
- * LPR-008 extends this payload to serve the **full reconciler drive state** in
- * one read: [`open_assignments`](Self::open_assignments) (the dispatch
- * trigger), [`unresolved_threads`](Self::unresolved_threads) (the remediation
- * trigger), and [`approved`](Self::approved) (the presentation label derived
- * from the same verdict-at-head truth `enforce_merge_gate` re-derives). Two
- * orchestrators reading the same repo converge because the payload is
- * deterministic — every `Vec` reuses the Handles' `ORDER BY` (`created_at ASC,
- * id ASC`) and the thread grouping sorts by `thread_id`.
  */
 export type ReviewStatus = {
   /** The queried target ref (`refs/heads/<branch>`). */
@@ -2667,7 +2670,15 @@ export type ReviewStatus = {
    * Reviewer assignments on the target, in arrival order — every
    * `local_review_assignments` row, including pending/approved/changes_requested.
    */
-  assignments: LocalReviewAssignment;
+  assignments: Array<LocalReviewAssignment>;
+  /**
+   * The subset of `assignments` still in the `pending` drive-state — i.e. the
+   * reviewers who haven't yet posted a verdict/changes-requested. This is the
+   * LPR-008 drive-state read an orchestrator polls to decide whom to nudge;
+   * it mirrors `assignments` and never reaches the merge gate (gates read
+   * verdicts only — §E safe seam).
+   */
+  open_assignments: Array<LocalReviewAssignment>;
   /**
    * The verdict-at-head literal (`"approved"` / `"changes_requested"`) when a
    * verdict row exists at the current HEAD, else `None`. The same input the
@@ -2692,30 +2703,12 @@ export type ReviewStatus = {
    */
   open_threads: number;
   /**
-   * Pending reviewer assignments — the **dispatch trigger**. Derived from
-   * [`assignments`](Self::assignments) filtered to `state == "pending"`.
-   * Reuses the `local_review_assignments.list_by_target` ordering
-   * (`assigned_at ASC, id ASC`) so two reads converge.
+   * One representative comment per unresolved thread (the LPR-008 drive-state
+   * read for orchestrators). A thread is unresolved when any of its comments
+   * has `resolved = false`; the reserved `__pr_meta__` marker thread is
+   * excluded. `len()` is always equal to [`ReviewStatus::open_threads`].
    */
-  open_assignments: LocalReviewAssignment;
-  /**
-   * Unresolved comment threads — the **remediation trigger**. One entry per
-   * distinct `thread_id` carrying at least one `resolved = false` comment
-   * (the reserved [`__pr_meta__`](RESERVED_PR_META_THREAD) marker thread is
-   * excluded). Sorted by `thread_id` for two-read convergence; comments
-   * within a thread preserve the Handle's `created_at ASC, id ASC` order.
-   */
-  unresolved_threads: Array<UnresolvedThread>;
-  /**
-   * `true` iff a verdict row pinned to the current HEAD with
-   * `verdict == "approved"` exists. This is the EXACT query the merge gate
-   * runs (`local_review_verdicts.list_by_target(target)` filtered to
-   * `head_oid == current_head_oid && verdict == "approved"`). The label
-   * AGREES with [`enforce_merge_gate`](crate::legacy::merge_gate::enforce_merge_gate)
-   * because both read the same truth — it does NOT replace the gate. The
-   * actual land stays the gate's own re-derivation.
-   */
-  approved: boolean;
+  unresolved_threads: Array<LocalReviewComment>;
 };
 
 /** Information about the project's review template. */
@@ -3074,27 +3067,6 @@ export type UnifiedPatch = {
     /** The total amount of lines removed. */
     linesRemoved: number;
   };
-};
-
-/**
- * A grouped summary of an unresolved review comment thread — the remediation
- * trigger surface.
- *
- * One entry per distinct `thread_id` carrying at least one comment with
- * `resolved = false` (the reserved [`__pr_meta__`](RESERVED_PR_META_THREAD)
- * marker thread is excluded). Comments within a thread preserve the
- * `local_review_comments.list_by_target` ordering (`created_at ASC, id ASC`);
- * the threads themselves are sorted by `thread_id` so two reads of the same
- * state yield byte-identical payloads.
- */
-export type UnresolvedThread = {
-  /** The thread id this summary groups. */
-  thread_id: string;
-  /**
-   * Every unresolved (`resolved = false`) comment in this thread, in arrival
-   * order (`created_at ASC, id ASC`).
-   */
-  comments: LocalReviewComment;
 };
 
 /**

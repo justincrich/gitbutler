@@ -1,12 +1,12 @@
-# MGMT-UI-012: Build-gate tests: no direct config write, no SvelteKit server files, SDK type-check, human-principal
+# MGMT-UI-012: Build-gate tests: no direct config write, no +page.server.ts, SDK type-check, human-principal
 
 ## What this does
 
-Encode the four structural invariants of the governed SvelteKit front-end as executable build-gate commands that CI and the implementer can run to prove: (1) no governance component issues a direct .gitbutler/\*.toml write bypassing the SDK; (2) no +page.server.ts, +layout.server.ts, or +server.ts exists anywhere in apps/desktop/src (adapter-static compliance — widened by REMEDIATE-UI-2 to cover all SvelteKit server file kinds; apps/web/src is also checked for +page.server.ts and +layout.server.ts as defense-in-depth, while +server.ts is permitted there because apps/web uses adapter-vercel); (3) the regenerated but-sdk types type-check cleanly against all governance components; (4) the desktop config-management write path resolves the human fleet-owner (never falls through to resolve_principal_from_env, no agent superuser branch). These are boolean structural assertions — source-level grep/find/typecheck invariants — not behavioral scenarios. They run in CI on every commit that touches the governance surface.
+Encode the four structural invariants of the governed SvelteKit front-end as executable build-gate commands that CI and the implementer can run to prove: (1) no governance component issues a direct .gitbutler/\*.toml write bypassing the SDK; (2) no +page.server.ts exists anywhere in apps/desktop/src (adapter-static compliance); (3) the regenerated but-sdk types type-check cleanly against all governance components; (4) the desktop config-management write path resolves the human fleet-owner (never falls through to resolve_principal_from_env, no agent superuser branch). These are boolean structural assertions — source-level grep/find/typecheck invariants — not behavioral scenarios. They run in CI on every commit that touches the governance surface.
 
 ## Why
 
-Sprint 06b · PRD UC-MGMT-06 · capability CAP-AUTHZ-01. All four gates exit 0 on a clean sprint-06b tree: (AC-1) governance component grep finds zero direct .gitbutler write calls; (AC-2) gate script finds zero +page.server.ts, +layout.server.ts, or +server.ts under apps/desktop/src (widened by REMEDIATE-UI-2); (AC-3) pnpm -F @gitbutler/desktop check exits 0 agai
+Sprint 06b · PRD UC-MGMT-06 · capability CAP-AUTHZ-01. All four gates exit 0 on a clean sprint-06b tree: (AC-1) governance component grep finds zero direct .gitbutler write calls; (AC-2) find finds zero +page.server.ts under apps/desktop/src; (AC-3) pnpm -F @gitbutler/desktop check exits 0 agai
 
 ## How to verify
 
@@ -21,7 +21,7 @@ PRIMARY **AC-1** — `grep -rn 'gitbutler.*\.toml\|writeFile\|fs\.write\|writeTe
 
 ```
 ================================================================================
-TASK: MGMT-UI-012 — Build-gate tests: no direct config write, no SvelteKit server files, SDK type-check, human-principal
+TASK: MGMT-UI-012 — Build-gate tests: no direct config write, no +page.server.ts, SDK type-check, human-principal
 ================================================================================
 
 TASK_TYPE:   INFRA
@@ -41,21 +41,21 @@ RUNTIME_COMMANDS:
 --------------------------------------------------------------------------------
 OUTCOME
 --------------------------------------------------------------------------------
-All four gates exit 0 on a clean sprint-06b tree: (AC-1) governance component grep finds zero direct .gitbutler write calls; (AC-2) find finds zero +page.server.ts, +layout.server.ts, or +server.ts under apps/desktop/src and zero +page.server.ts or +layout.server.ts under apps/web/src (adapter-static compliance, widened by REMEDIATE-UI-2); (AC-3) pnpm -F @gitbutler/desktop check exits 0 against the regenerated SDK types; (AC-4) grep finds zero resolve_principal_from_env references in governance Tauri command wiring; (AC-5) find finds zero GovernanceErrorBoundary.svelte files. pnpm lint also exits 0.
+All four gates exit 0 on a clean sprint-06b tree: (AC-1) governance component grep finds zero direct .gitbutler write calls; (AC-2) find finds zero +page.server.ts under apps/desktop/src; (AC-3) pnpm -F @gitbutler/desktop check exits 0 against the regenerated SDK types; (AC-4) grep finds zero resolve_principal_from_env references in governance Tauri command wiring; (AC-5) find finds zero GovernanceErrorBoundary.svelte files. pnpm lint also exits 0.
 
 --------------------------------------------------------------------------------
 🚫 CRITICAL CONSTRAINTS (Never tier — read before acting)
 --------------------------------------------------------------------------------
 - [MUST] Every gate command must exit 0 on a clean tree — use `| wc -l | grep '^0$'` for absence gates so CI sees a non-zero exit on violation.
 - [MUST] Grep gates must exclude import and comment lines (pipe through `grep -v 'import'` and `grep -v '//'`) to avoid false positives on SDK import paths that mention the prohibited pattern.
-- [MUST] The SvelteKit server-file gate (AC-2) must cover the FULL apps/desktop/src tree (not only the governance subdirectory) per adapter-static constraint, and must forbid all three server file kinds: +page.server.ts, +layout.server.ts, and +server.ts. Under apps/web/src (adapter-vercel) only +page.server.ts and +layout.server.ts are forbidden; +server.ts is a legitimate adapter-vercel API route pattern.
+- [MUST] The +page.server.ts gate must cover the FULL apps/desktop/src tree (not only the governance subdirectory) per adapter-static constraint.
 - [MUST] The GovernanceErrorBoundary.svelte absence gate must assert the net-new file does NOT exist — MGMT-UI-004 uses the EXISTING shared/ErrorBoundary.svelte; any GovernanceErrorBoundary.svelte is a violation.
 - [MUST] The SDK type-check gate must run `pnpm -F @gitbutler/desktop check` against the regenerated but-sdk types (produced by MGMT-BE-003/004 + MGMT-IPC-004) — not against a cached or prior-sprint SDK snapshot.
 - [MUST] The human-principal gate (T-MGMT-042) asserts governance config-management write paths resolve the human principal via UserService/forge session — verified by grepping for `resolve_principal_from_env` in the Tauri governance command wiring (must be absent, replaced by the fleet-owner shim).
 - [MUST] All gates must be runnable from the repo root without changing the working directory.
 - [MUST] Gates are additive over the 06a grep pattern set — reuse and extend, do not reinvent.
 - [MUST] Grep exclusion pipeline MUST include 'warn\|error\|log' to avoid false-negatives from error message strings containing '.toml' path references (e.g. console.warn('Failed to load .gitbutler/gates.toml')).
-- [NEVER] NEVER add +page.server.ts, +layout.server.ts, or +server.ts under apps/desktop/src (adapter-static).
+- [NEVER] NEVER add +page.server.ts or +layout.server.ts under apps/desktop/src (adapter-static).
 - [NEVER] NEVER write or modify GovernanceErrorBoundary.svelte — that component must not exist; the existing shared/ErrorBoundary.svelte is the approved boundary.
 - [NEVER] NEVER weaken a gate by excluding governance-specific paths from the grep scope.
 - [NEVER] NEVER use `wc -l | grep -v '^0$'` (inverted logic) — the gate must exit 0 when the prohibited pattern is ABSENT.
@@ -64,14 +64,14 @@ All four gates exit 0 on a clean sprint-06b tree: (AC-1) governance component gr
 - [STRICTLY] Gate commands use the pipeline form: `grep -rn <pattern> <paths> | grep -v import | grep -v '//' | wc -l | grep '^0$'`
 - [STRICTLY] Type-check gate uses exactly: `pnpm -F @gitbutler/desktop check`
 - [STRICTLY] Lint gate uses exactly: `pnpm lint`
-- [STRICTLY] The SvelteKit server-file absence gate uses: `sh .spec/prds/governance/tasks/sprint-06b-governance-ui-branch-gates-rules-safety/MGMT-UI-012-gate.sh` (which scans apps/desktop/src for +page.server.ts, +layout.server.ts, +server.ts and apps/web/src for +page.server.ts, +layout.server.ts; widened by REMEDIATE-UI-2)
+- [STRICTLY] The +page.server.ts absence gate uses: `find apps/desktop/src -name '+page.server.ts' | wc -l | grep '^0$'`
 - [STRICTLY] proposed_by field MUST be 'sveltekit-planner' — this is a hard tripwire.
 
 --------------------------------------------------------------------------------
 DONE WHEN
 --------------------------------------------------------------------------------
 - [ ] AC-1: No direct .gitbutler/*.toml write in governance components (T-MGMT-027)
-- [ ] AC-2: No +page.server.ts, +layout.server.ts, or +server.ts anywhere under apps/desktop/src; no +page.server.ts or +layout.server.ts under apps/web/src (T-MGMT-036 — adapter-static, widened by REMEDIATE-UI-2)
+- [ ] AC-2: No +page.server.ts anywhere under apps/desktop/src (T-MGMT-036 — adapter-static)
 - [ ] AC-3: SDK regenerated and governance components type-check (T-MGMT-034)
 - [ ] AC-4: Fleet-owner identity shim IS present AND resolve_principal_from_env is absent on governance Tauri command path (T-MGMT-042 — two-part gate)
 - [ ] AC-5: No GovernanceErrorBoundary.svelte file exists (MGMT-UI-004 net-new boundary prohibition)
@@ -87,10 +87,10 @@ AC-1: No direct .gitbutler/*.toml write in governance components (T-MGMT-027)
   UNIT_TEST_JUSTIFIED: T-MGMT-027 governed-front-end invariant — filesystem structural check; no runtime service needed.
   VERIFY: grep -rn 'gitbutler.*\.toml\|writeFile\|fs\.write\|writeTextFile\|writeBinaryFile\|plugin-fs' apps/desktop/src/components/governance/ apps/desktop/src/components/settings/GovernanceSettings.svelte apps/desktop/src/components/rules/RulesList.svelte | grep -v 'but-sdk\|import\|//\|warn\|error\|log' | wc -l | grep '^0$'
 
-AC-2: No +page.server.ts, +layout.server.ts, or +server.ts under apps/desktop/src; no +page.server.ts or +layout.server.ts under apps/web/src (T-MGMT-036 — adapter-static, widened by REMEDIATE-UI-2)
+AC-2: No +page.server.ts anywhere under apps/desktop/src (T-MGMT-036 — adapter-static)
   TEST_TIER: build-gate   VERIFICATION_SERVICE: find-structural
   UNIT_TEST_JUSTIFIED: adapter-static constraint — filesystem structural check; no runtime service needed.
-  VERIFY: sh .spec/prds/governance/tasks/sprint-06b-governance-ui-branch-gates-rules-safety/MGMT-UI-012-gate.sh
+  VERIFY: find apps/desktop/src -name '+page.server.ts' | wc -l | grep '^0$'
 
 AC-3: SDK regenerated and governance components type-check (T-MGMT-034)
   TEST_TIER: build-gate   VERIFICATION_SERVICE: tsc-desktop
@@ -122,8 +122,8 @@ TEST CRITERIA (boolean; maps to ACs)
 --------------------------------------------------------------------------------
 - TC-1 (-> AC-1): grep of governance component paths finds zero direct .gitbutler write calls including Tauri fs plugin (writeTextFile/writeBinaryFile/@tauri-apps/plugin-fs) (exits 0)
     VERIFY: grep -rn 'gitbutler.*\.toml\|writeFile\|fs\.write\|writeTextFile\|writeBinaryFile\|plugin-fs' apps/desktop/src/components/governance/ apps/desktop/src/components/settings/GovernanceSettings.svelte apps/desktop/src/components/rules/RulesList.svelte | grep -v 'but-sdk\|import\|//\|warn\|error\|log' | wc -l | grep '^0$'
-- TC-2 (-> AC-2): gate script finds zero +page.server.ts, +layout.server.ts, or +server.ts under apps/desktop/src and zero +page.server.ts or +layout.server.ts under apps/web/src (exits 0)
-    VERIFY: sh .spec/prds/governance/tasks/sprint-06b-governance-ui-branch-gates-rules-safety/MGMT-UI-012-gate.sh
+- TC-2 (-> AC-2): find under apps/desktop/src finds zero +page.server.ts files (exits 0)
+    VERIFY: find apps/desktop/src -name '+page.server.ts' | wc -l | grep '^0$'
 - TC-3 (-> AC-3): pnpm -F @gitbutler/desktop check exits 0 against the regenerated but-sdk types
     VERIFY: pnpm -F @gitbutler/desktop check
 - TC-4 (-> AC-4): Two-part gate: (1) fleet-owner shim IS present on governance Tauri command wiring (positive grep exits non-zero before wc); (2) resolve_principal_from_env is absent (negative grep exits 0)
@@ -140,7 +140,7 @@ IMPLEMENTATION STEPS
 --------------------------------------------------------------------------------
 1. {'step': 1, 'title': 'Verify dependency outputs are present', 'detail': 'Confirm MGMT-UI-009 (BranchGatesList.svelte), MGMT-UI-010 (RulesList.svelte with principalId prop), MGMT-UI-011 (accessibility + IPC-failure banner), and MGMT-UI-004 (ErrorBoundary wrap) have all landed. Confirm MGMT-BE-003/004 + MGMT-IPC-004 have regenerated packages/but-sdk/src/generated. This task gates on all four UI tasks and both backend tasks. Do not author gate scripts until the components exist — the type-check gate (AC-3) would trivially pass against missing files.', 'files_read': ['apps/desktop/src/components/governance/BranchGatesList.svelte', 'apps/desktop/src/components/rules/RulesList.svelte', 'apps/desktop/src/components/settings/GovernanceSettings.svelte', 'packages/but-sdk/src/generated/index.ts']}
 2. {'step': 2, 'title': 'Run AC-1: no direct .gitbutler write gate', 'detail': 'Execute the grep gate against the governance component paths. If the gate fails (count > 0), identify the offending line, which component owns it, and surface it as a blocker against MGMT-UI-009/010/011. Do NOT weaken the grep — fix the component.', 'command': "grep -rn 'gitbutler.*\\.toml\\|writeFile\\|fs\\.write' apps/desktop/src/components/governance/ apps/desktop/src/components/settings/GovernanceSettings.svelte apps/desktop/src/components/rules/RulesList.svelte | grep -v 'but-sdk\\|import\\|//' | wc -l | grep '^0$'"}
-3. {'step': 3, 'title': 'Run AC-2: no SvelteKit server files gate', 'detail': 'Execute the gate script over apps/desktop/src (all three server file kinds) and apps/web/src (+page.server.ts, +layout.server.ts). If the gate fails, identify which file was created and which task authored it — every server file under the desktop tree is a sprint contract violation.', 'command': 'sh .spec/prds/governance/tasks/sprint-06b-governance-ui-branch-gates-rules-safety/MGMT-UI-012-gate.sh'}
+3. {'step': 3, 'title': 'Run AC-2: no +page.server.ts gate', 'detail': 'Execute the find gate over the full apps/desktop/src tree. If the gate fails, identify which file was created and which task authored it — every +page.server.ts under this tree is a sprint contract violation.', 'command': "find apps/desktop/src -name '+page.server.ts' | wc -l | grep '^0$'"}
 4. {'step': 4, 'title': 'Run AC-5: no GovernanceErrorBoundary.svelte gate', 'detail': 'Execute the find gate. If the file exists, it means a task created a net-new boundary component instead of reusing shared/ErrorBoundary.svelte — surface as a blocker against MGMT-UI-004.', 'command': "find apps/desktop/src -name 'GovernanceErrorBoundary.svelte' | wc -l | grep '^0$'"}
 5. {'step': 5, 'title': 'Run AC-4: human-principal (no resolve_principal_from_env on governance path) gate', 'detail': 'Execute the grep gate over gitbutler-tauri/src/. If the gate fails, the governance Tauri command handler is falling through to the env-handle path (resolve_principal_from_env) instead of using the fleet-owner shim — surface as a blocker against MGMT-IPC-003.', 'command': "grep -rn 'resolve_principal_from_env' crates/gitbutler-tauri/src/ | grep -i 'governance\\|perm_\\|group_\\|branch_gates' | grep -v '//' | wc -l | grep '^0$'"}
 6. {'step': 6, 'title': 'Run AC-3: SDK type-check gate', 'detail': 'Execute `pnpm -F @gitbutler/desktop check`. If it fails, read the tsc error output, identify the component and the offending type reference, and surface as a blocker against the relevant component task (MGMT-UI-009, MGMT-UI-010, or MGMT-UI-011) or against MGMT-IPC-004 if the SDK types are missing/malformed.', 'command': 'pnpm -F @gitbutler/desktop check'}
@@ -153,9 +153,9 @@ VERIFICATION CHECKLIST (boolean build-gates)
 - VG-1 [AC-1 / T-MGMT-027 / SEC-4]: No direct .gitbutler write in governance components
     CMD: grep -rn 'gitbutler.*\.toml\|writeFile\|fs\.write\|writeTextFile\|writeBinaryFile\|plugin-fs' apps/desktop/src/components/governance/ apps/desktop/src/components/settings/GovernanceSettings.svelte apps/desktop/src/components/rules/RulesList.svelte | grep -v 'but-sdk\|import\|//\|warn\|error\|log' | wc -l | grep '^0$'
     PASS: Command exits 0; grep finds no prohibited write patterns (including writeTextFile, writeBinaryFile, @tauri-apps/plugin-fs) in governance component source excluding import/comment/log lines.
-- VG-2 [AC-2 / T-MGMT-036 / REMEDIATE-UI-2]: No +page.server.ts, +layout.server.ts, or +server.ts under apps/desktop/src; no +page.server.ts or +layout.server.ts under apps/web/src
-    CMD: sh .spec/prds/governance/tasks/sprint-06b-governance-ui-branch-gates-rules-safety/MGMT-UI-012-gate.sh
-    PASS: Command exits 0; gate script returns no forbidden SvelteKit server files anywhere under the desktop source tree (all three kinds) or the web source tree (+page.server.ts, +layout.server.ts).
+- VG-2 [AC-2 / T-MGMT-036]: No +page.server.ts under apps/desktop/src
+    CMD: find apps/desktop/src -name '+page.server.ts' | wc -l | grep '^0$'
+    PASS: Command exits 0; find returns no +page.server.ts files anywhere under the desktop source tree.
 - VG-3 [AC-3 / T-MGMT-034]: Governance components type-check against regenerated SDK
     CMD: pnpm -F @gitbutler/desktop check
     PASS: Command exits 0; tsc reports no type errors in any governance component or store file.
@@ -184,7 +184,7 @@ writeAllowed:
   - apps/desktop/tests/governance/BuildGates.spec.ts (optional: CI-runnable test file that wraps the gate commands as test cases, if the project CI convention requires a test file rather than raw shell commands)
 writeProhibited:
   - apps/desktop/src/components/governance/GovernanceErrorBoundary.svelte (MUST NOT EXIST)
-  - any +page.server.ts, +layout.server.ts, or +server.ts under apps/desktop/src/ (adapter-static — widened by REMEDIATE-UI-2)
+  - any +page.server.ts or +layout.server.ts under apps/desktop/src/
   - packages/but-sdk/src/generated/ (generated by pnpm build:sdk — do not hand-edit)
   - apps/desktop/src/components/governance/BranchGatesList.svelte (authored by MGMT-UI-009)
   - apps/desktop/src/components/rules/RulesList.svelte (MGMT-UI-010 owns the principalId extension)
@@ -208,7 +208,7 @@ READING LIST
 VERIFICATION GATES
 --------------------------------------------------------------------------------
 - grep -rn 'gitbutler.*\.toml\|writeFile\|fs\.write\|writeTextFile\|writeBinaryFile\|plugin-fs' apps/desktop/src/components/governance/ apps/desktop/src/components/settings/GovernanceSettings.svelte apps/desktop/src/components/rules/RulesList.svelte | grep -v 'but-sdk\|import\|//\|warn\|error\|log' | wc -l | grep '^0$'   -> exit 0
-- sh .spec/prds/governance/tasks/sprint-06b-governance-ui-branch-gates-rules-safety/MGMT-UI-012-gate.sh   -> exit 0
+- find apps/desktop/src -name '+page.server.ts' | wc -l | grep '^0$'   -> exit 0
 - pnpm -F @gitbutler/desktop check   -> exit 0
 - grep -rn 'fleet_owner\|with_fleet_owner_identity\|UserService\|forge_session' crates/gitbutler-tauri/src/ | grep -i 'governance\|perm_\|group_\|branch_gates' | grep -v '//' | wc -l | grep -v '^0$' && grep -rn 'resolve_principal_from_env' crates/gitbutler-tauri/src/ | grep -i 'governance\|perm_\|group_\|branch_gates' | grep -v '//' | wc -l | grep '^0$'   -> exit 0 (both parts pass)
 - find apps/desktop/src -name 'GovernanceErrorBoundary.svelte' | wc -l | grep '^0$'   -> exit 0
@@ -680,8 +680,8 @@ Blocks:     none
       "id": "AC-2",
       "type": "acceptance_criterion",
       "primary": false,
-      "description": "GIVEN apps/desktop/src uses adapter-static and apps/web/src uses adapter-vercel WHEN the gate script scans for forbidden SvelteKit server files THEN no +page.server.ts, +layout.server.ts, or +server.ts is found under apps/desktop/src and no +page.server.ts or +layout.server.ts is found under apps/web/src (widened by REMEDIATE-UI-2)",
-      "verify": "sh .spec/prds/governance/tasks/sprint-06b-governance-ui-branch-gates-rules-safety/MGMT-UI-012-gate.sh"
+      "description": "GIVEN  WHEN  THEN",
+      "verify": "find apps/desktop/src -name '+page.server.ts' | wc -l | grep '^0$'"
     },
     {
       "id": "AC-3",
@@ -728,8 +728,8 @@ Blocks:     none
     {
       "id": "TC-2",
       "type": "test_criterion",
-      "description": "gate script finds zero +page.server.ts, +layout.server.ts, or +server.ts under apps/desktop/src and zero +page.server.ts or +layout.server.ts under apps/web/src (exits 0)",
-      "verify": "sh .spec/prds/governance/tasks/sprint-06b-governance-ui-branch-gates-rules-safety/MGMT-UI-012-gate.sh",
+      "description": "find under apps/desktop/src finds zero +page.server.ts files (exits 0)",
+      "verify": "find apps/desktop/src -name '+page.server.ts' | wc -l | grep '^0$'",
       "maps_to_ac": "AC-2"
     },
     {

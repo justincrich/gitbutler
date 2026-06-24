@@ -5,7 +5,6 @@
 > Reviewer: deferred to PHASE 4.5 red-hat closeout — committed prior session; keep_reviews_local DefaultTrue + mirror gate
 > Updated: 2026-06-22T18:07:12Z
 
-
 ## What this does
 
 Add a per-project `keep_reviews_local: DefaultTrue` field to `gitbutler_project::Project` (beside the existing forge knobs `forge_override`/`preferred_forge_user`), so agent-authored reviews **default to the local layer** and older project files without the field deserialize to local. Wire the default-local behavior into `request_review` (an agent review stays local while the flag is true), and add the **remote-mirror gate** — the conditional that makes the remote-mirror path unreachable while `keep_reviews_local == true`. The mirror **path itself is NOT built** (it is the named-for-later `mirror_local_review` seam, §D). The setting is a per-project operator preference set through the normal project-settings surface (the same path that sets `forge_override`), owned by the desktop human under the R12 trusted-desktop model — NOT `administration:write`-gated, NOT ref-pinned committed config. An untrusted project-store write that flips it (→ agent PRs mirror to a public forge) is the named residual R21.

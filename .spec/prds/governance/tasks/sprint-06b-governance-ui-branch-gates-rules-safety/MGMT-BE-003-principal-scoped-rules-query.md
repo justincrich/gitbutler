@@ -70,11 +70,11 @@ Proven against the real rules store: (1) list_workspace_rules_scoped(ctx, None) 
 --------------------------------------------------------------------------------
 DONE WHEN
 --------------------------------------------------------------------------------
-- [ ] AC-1 [PRIMARY]: Unset principalId is the existing list_workspace_rules BY CONSTRUCTION — list_workspace_rules_scoped(ctx, None) delegates to list_workspace_rules(ctx) so the in-workspace stack filter cannot drift
-- [ ] AC-2: principalId=Some narrows to only that principal's rules (the agent-association scope actually filters)
-- [ ] AC-3: A principal with no associated rules returns an empty list (clean empty-state, not an error)
-- [ ] AC-4: The scoped rules query is exposed via the but-api -> Tauri -> but-sdk governed path with the optional principalId argument
-- [ ] AC-5: Cross-principal scoping is honest: a caller cannot enumerate another principal's rules via a renderer-supplied principalId (v1 self/admin-read scope)
+- [x] AC-1 [PRIMARY]: Unset principalId is the existing list_workspace_rules BY CONSTRUCTION — list_workspace_rules_scoped(ctx, None) delegates to list_workspace_rules(ctx) so the in-workspace stack filter cannot drift
+- [x] AC-2: principalId=Some narrows to only that principal's rules (the agent-association scope actually filters)
+- [x] AC-3: A principal with no associated rules returns an empty list (clean empty-state, not an error)
+- [x] AC-4: The scoped rules query is exposed via the but-api -> Tauri -> but-sdk governed path with the optional principalId argument
+- [x] AC-5: Cross-principal scoping is honest: a caller cannot enumerate another principal's rules via a renderer-supplied principalId (v1 self/admin-read scope)
 - [ ] All verification gates pass; only write_allowed files modified
 
 --------------------------------------------------------------------------------

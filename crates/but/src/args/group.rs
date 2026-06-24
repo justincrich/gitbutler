@@ -40,4 +40,9 @@ pub enum Subcommands {
         /// Principal to remove from the members list.
         member: String,
     },
+    /// Delete a governed group from the working-tree governance config.
+    Delete {
+        /// Group name to delete.
+        name: String,
+    },
 }

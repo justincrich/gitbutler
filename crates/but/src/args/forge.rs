@@ -101,6 +101,34 @@ pub mod pr {
             /// Comment text.
             #[clap(short = 'm', long = "message")]
             message: String,
+            /// File path for a code comment. Omit for a branch-level comment.
+            #[clap(long, value_name = "FILE")]
+            file: Option<String>,
+            /// Line number for a code comment. Use with `--file`.
+            #[clap(long, value_name = "LINE")]
+            line: Option<u32>,
+            /// Thread id to append to. Omit to start a new thread.
+            #[clap(long, value_name = "THREAD")]
+            thread: Option<String>,
+        },
+        /// List every comment thread on a branch review (read-only).
+        Comments {
+            /// The branch whose review threads to list.
+            #[clap(value_name = "BRANCH")]
+            branch: String,
+        },
+        /// Resolve a comment thread on a branch review after authorization.
+        ///
+        /// Enforces `comments:write` plus the R22 resolver-identity constraint:
+        /// only the thread author, the assigned reviewer, or a `reviews:write`
+        /// holder may resolve a thread.
+        Resolve {
+            /// The branch whose review thread to resolve.
+            #[clap(value_name = "BRANCH")]
+            branch: String,
+            /// The thread id to resolve.
+            #[clap(long, value_name = "THREAD")]
+            thread: String,
         },
         /// Close a branch review after authorization.
         Close {

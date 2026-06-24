@@ -1,6 +1,5 @@
 <script lang="ts">
-	import { getContext, type Snippet } from "svelte";
-	import type { TabContext } from "$lib/utils/tabs";
+	import { type Snippet } from "svelte";
 
 	interface Props {
 		children: Snippet;
@@ -8,7 +7,6 @@
 	}
 
 	const { ariaLabel, children }: Props = $props();
-	const tabStore = getContext<TabContext>("tab");
 
 	function enabledTabs(tabList: EventTarget | null): HTMLButtonElement[] {
 		if (!(tabList instanceof HTMLElement)) return [];
@@ -18,12 +16,8 @@
 		);
 	}
 
-	function activateTab(tabs: HTMLButtonElement[], index: number) {
-		const tab = tabs[index];
-		if (!tab) return;
-
-		tabStore?.setSelected(tab.value);
-		tab.focus();
+	function focusTab(tabs: HTMLButtonElement[], index: number) {
+		tabs[index]?.focus();
 	}
 
 	function handleKeydown(event: KeyboardEvent) {
@@ -33,16 +27,16 @@
 
 		if (event.key === "ArrowRight") {
 			event.preventDefault();
-			activateTab(tabs, (currentIndex + 1) % tabs.length);
+			focusTab(tabs, (currentIndex + 1) % tabs.length);
 		} else if (event.key === "ArrowLeft") {
 			event.preventDefault();
-			activateTab(tabs, (currentIndex - 1 + tabs.length) % tabs.length);
+			focusTab(tabs, (currentIndex - 1 + tabs.length) % tabs.length);
 		} else if (event.key === "Home") {
 			event.preventDefault();
-			activateTab(tabs, 0);
+			focusTab(tabs, 0);
 		} else if (event.key === "End") {
 			event.preventDefault();
-			activateTab(tabs, tabs.length - 1);
+			focusTab(tabs, tabs.length - 1);
 		}
 	}
 </script>

@@ -1,0 +1,108 @@
+{
+	"sprint": "sprint-00-catchup-walking-skeleton",
+	"verdict": "pass",
+	"flows": [
+		{
+			"id": "CATCHUP-AUTHZ01-CORE",
+			"run_cmd": "cargo test -p but-authz authorize -- --nocapture",
+			"exit_code": 0,
+			"surface": "surface_ok",
+			"coldboot": "coldboot_ok"
+		},
+		{
+			"id": "CATCHUP-AUTHZ01-EDGE-ABSENT",
+			"run_cmd": "cargo test -p but-authz authorize_absent_principal -- --nocapture",
+			"exit_code": 0,
+			"surface": "surface_ok",
+			"coldboot": "coldboot_ok"
+		},
+		{
+			"id": "CATCHUP-AUTHZ02-CORE",
+			"run_cmd": "cargo test -p but --features but-2 commit_gate -- --nocapture",
+			"exit_code": 0,
+			"surface": "surface_ok",
+			"coldboot": "coldboot_ok"
+		},
+		{
+			"id": "CATCHUP-AUTHZ02-EDGE-UNSET",
+			"run_cmd": "cargo test -p but --features but-2 commit_gate_unset_handle -- --nocapture",
+			"exit_code": 0,
+			"surface": "surface_ok",
+			"coldboot": "coldboot_ok"
+		},
+		{
+			"id": "CATCHUP-AUTHZ04-CORE",
+			"run_cmd": "cargo test -p but --features but-2 commit_gate_malformed -- --nocapture",
+			"exit_code": 0,
+			"surface": "surface_ok",
+			"coldboot": "coldboot_ok"
+		},
+		{
+			"id": "CATCHUP-AUTHZ04-EDGE-PARTIAL",
+			"run_cmd": "cargo test -p but --features but-2 'commit_gate_absent_config_is_ungoverned' -- --nocapture && cargo test -p but --features but-2 'commit_gate_malformed_partial_and_dryrun' -- --nocapture",
+			"exit_code": 0,
+			"surface": "surface_ok",
+			"coldboot": "coldboot_ok"
+		},
+		{
+			"id": "CATCHUP-GATES01-CORE",
+			"run_cmd": "cargo test -p but-api commit_gate -- --nocapture",
+			"exit_code": 0,
+			"surface": "surface_ok",
+			"coldboot": "coldboot_ok"
+		},
+		{
+			"id": "CATCHUP-GATES01-EDGE-PROTECTED",
+			"run_cmd": "cargo test -p but-api commit_gate_protected_branch -- --nocapture",
+			"exit_code": 0,
+			"surface": "surface_ok",
+			"coldboot": "coldboot_ok"
+		},
+		{
+			"id": "CATCHUP-GATES02-CORE",
+			"run_cmd": "cargo test -p but-api merge_gate -- --nocapture",
+			"exit_code": 0,
+			"surface": "surface_ok",
+			"coldboot": "coldboot_ok"
+		},
+		{
+			"id": "CATCHUP-GATES02-EDGE-DENIED",
+			"run_cmd": "cargo test -p but-api merge_gate_denied_variants -- --nocapture",
+			"exit_code": 0,
+			"surface": "surface_ok",
+			"coldboot": "coldboot_ok"
+		},
+		{
+			"id": "CATCHUP-LOOP01-CORE",
+			"run_cmd": "cargo test -p but --features but-2 governed_loop -- --nocapture",
+			"exit_code": 0,
+			"surface": "surface_ok",
+			"coldboot": "coldboot_ok"
+		},
+		{
+			"id": "CATCHUP-LOOP01-EDGE-TRAVERSAL",
+			"run_cmd": "cargo test -p but --features but-2 'governed_loop::remediation_traversable' -- --nocapture",
+			"exit_code": 0,
+			"surface": "surface_ok",
+			"coldboot": "coldboot_ok"
+		},
+		{
+			"id": "CATCHUP-LOOP02-CORE",
+			"run_cmd": "cargo test -p but-authz invariant_build_gates -- --nocapture",
+			"exit_code": 0,
+			"surface": "surface_ok",
+			"coldboot": "coldboot_ok"
+		},
+		{
+			"id": "CATCHUP-LOOP02-EDGE-INVARIANT",
+			"run_cmd": "cargo test -p but-authz invariant_build_gates -- --nocapture",
+			"exit_code": 0,
+			"surface": "surface_ok",
+			"coldboot": "coldboot_ok"
+		}
+	],
+	"surface_check_ok": true,
+	"coldboot_check_ok": true,
+	"computed_at": "2026-06-23T19:02:50.164089+00:00",
+	"computed_by": "tools/gate-evidence/gate_evidence_check.py (exit codes, not narrated)"
+}

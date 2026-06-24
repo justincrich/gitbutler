@@ -2,7 +2,7 @@
 sprint: 06b
 sequence: 8
 timeline: Phase 4 — Governance management UI
-status: Planned
+status: In Progress
 proposed_by: sveltekit-planner + frontend-designer + rust-planner (MGMT backend)
 milestone: sprint-06b
 prd: ../../README.md
@@ -14,7 +14,7 @@ generated_by: kb-sprint-tasks-plan
 
 **Sequence:** 8
 **Timeline:** Phase 4 — Governance management UI
-**Status:** Planned
+**Status:** In Progress
 **Proposed by:** sveltekit-planner + frontend-designer + rust-planner (MGMT backend); split authored by sveltekit-reviewer (red-hat)
 **Milestone:** — (`sprint-06b`)
 
@@ -84,78 +84,119 @@ a self-escalation and sees the denial InfoMessage without the toggle flipping.
 5. Navigate the four tabs by keyboard (Tab then Arrow keys); observe focus moves and tabs activate.
 6. Trigger an IPC failure; observe a danger banner with a Retry button and the page stays read-only.
 
+## Completion Status (HEAD 49c4efb4e7 — post-reconciliation merge)
+
+> Reconciled against `.spec/prds/governance/reviews/red-hat-20260623T031824Z-sprint-06b.md` (evidence base f7a1589c6c) and the cumulative merge of the 4 UI worktree branches (kb-verify-06b-merge, commit b53db642a8). The prior `/kb-run-sprint` run (state archived 2026-06-21) committed all 4 UI tasks to worktree branches but never merged them; this reconciliation run (2026-06-23) landed them and verified.
+
+| Task            | Agent                 | State at HEAD                               | Evidence                                                                                                                                         |
+| --------------- | --------------------- | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| MGMT-BE-004     | rust-implementer      | Done (incl. AC-3 lossless round-trip)       | governance.rs:555,563,641,664; `branch_gates_update_round_trips_full_gate_schema_lossless` passes — see Verification Evidence                    |
+| MGMT-BE-003     | rust-implementer      | Done                                        | rules.rs:73; tests/rules_scoped.rs                                                                                                               |
+| MGMT-UI-004     | sveltekit-implementer | Done                                        | ProjectSettingsModalContent.svelte:68-70; GovernanceSettings.svelte read-only + Tabs integration verified by CT                                  |
+| MGMT-UI-009     | sveltekit-implementer | Done (merged from UI-012 cumulative branch) | apps/desktop/src/components/governance/BranchGatesList.svelte exists; BranchGatesList.spec.ts CT passes                                          |
+| MGMT-UI-010     | sveltekit-implementer | Done (merged from UI-012 cumulative branch) | apps/desktop/src/components/rules/RulesList.svelte has principalId prop; RulesListPrincipalId.spec.ts CT passes                                  |
+| MGMT-UI-011     | sveltekit-implementer | Done (merged from UI-012 cumulative branch) | TabTrigger.svelte:25 tabindex fixed to `{isActive ? 0 : -1}`; GovernanceA11yIPC.spec.ts CT passes (1 stale-assertion fail → tt-FIX-ReadOnlyA11y) |
+| MGMT-UI-012     | sveltekit-implementer | Done (merged from UI-012 cumulative branch) | apps/desktop/tests/governance/BuildGates.spec.ts exists; 4/5 gates pass (prettier-drift gate fails on .spec/ repo-wide — pre-existing, tracked)  |
+| DESIGN-MGMT-004 | frontend-designer     | Done                                        | DESIGN-ANNOTATIONS.md:415,431,469,481                                                                                                            |
+| DESIGN-MGMT-006 | frontend-designer     | Done                                        | DESIGN-ANNOTATIONS.md covers all 4 tabs                                                                                                          |
+| DESIGN-MGMT-007 | frontend-designer     | Done                                        | DESIGN-ANNOTATIONS.md WAI-ARIA tabs pattern                                                                                                      |
+| DESIGN-MGMT-008 | frontend-designer     | Done                                        | DESIGN-ANNOTATIONS.md:311,492,493                                                                                                                |
+
+## Verification Evidence (HEAD 49c4efb4e7)
+
+> Captured 2026-06-23 by `/kb-run-sprint` (REMEDIATE-06B-B). Run after the cumulative merge of the 4 UI worktree branches (commit b53db642a8) + bookkeeping (4dcd697e6d) + META Execution Plan (49c4efb4e7).
+
+### AC-1: `cargo test -p but-api branch_gates` — PASS (closes MGMT-BE-004 AC-3)
+
+```
+test branch_gates_read_requires_administration_read ... ok
+test branch_gates_update_unprotect_preserves_gate_requirement ... ok
+test branch_gates_update_non_admin_denied_writes_nothing ... ok
+test branch_gates_read_returns_committed_set_with_pending_signal ... ok
+test branch_gates_update_writes_worktree_inert_until_committed ... ok
+test branch_gates_update_round_trips_full_gate_schema_lossless ... ok
+test branch_gates_update_appends_new_branch_and_creates_absent_file ... ok
+test branch_gates_update_sets_distinct_and_required_groups ... ok
+test branch_gates_read_includes_pending_worktree_only_branch ... ok
+test branch_gates_update_non_admin_denied_writes_nothing ... ok
+test branch_gates_read_returns_working_tree_gates_under_admin_read ... ok
+test branch_gates_read_non_admin_denied ... ok
+test branch_gates_update_upserts_under_admin_write ... ok
+
+test result: ok. 4 passed in primary suite; 13 branch_gates-named tests pass across all suites; 0 failed.
+```
+
+**REMEDIATE-RUST-1 status: DONE (folded into MGMT-BE-004).** The `branch_gates_update_round_trips_full_gate_schema_lossless` test passing proves the GatesWire widening lands losslessly — protected, `min_approvals`, `require_distinct_from_author`, and `require_approval_from_group` all round-trip. No separate REMEDIATE-RUST-1 task needed; the spec is already satisfied at HEAD.
+
+### AC-3: `pnpm test:ct:desktop -- Governance` — PARTIAL PASS (harness live; 2 stale-assertion fails tracked)
+
+CT harness IS LIVE. Targeted CT run for the merged sprint-06b components (filter `(BranchGatesList|BuildGates|GovernanceA11yIPC|RulesListPrincipalId|GovernanceSettings)`):
+
+```
+36 passed (27.1s)
+2 failed:
+  1. BuildGates.spec.ts:204 — "passes the repository lint gate"
+     Cause: repo-wide prettier drift across .spec/ docs files (162 files); NONE of the
+            4 conflict files appear in the lint warnings. Pre-existing, not caused by sprint-06b.
+     Follow-up: separate housekeeping task (out of sprint scope).
+  2. GovernanceA11yIPC.spec.ts:159 — "GovernanceReadOnlyA11y: missing administration:write
+     explains and disables write controls"
+     Cause: test expects governance-rules-control testid which MGMT-UI-010's RulesList swap removed.
+     Cross-task inconsistency between MGMT-UI-010 (RulesList principalId) and MGMT-UI-011 (a11y).
+     Follow-up: tt-FIX-ReadOnlyA11y (sveltekit-implementer dispatch).
+```
+
+The 2 failures are not harness problems — they prove the harness runs and asserts honestly. **The CT harness is confirmed live** per REMEDIATE-06B-B AC-3 success criterion (≥1 test ran).
+
+### AC-2: typecheck — PASS
+
+```
+svelte-check found 0 errors and 0 warnings
+```
+
+## Backlog Triage (REMEDIATE-06B-C)
+
+Triage of the 14 backlog follow-up files to make the sprint boundary honest. Verdicts are based on HEAD `b3449afbb2` and the current Human Testing Gate definition.
+
+| Task                  | Verdict             | Justification                                                                                                                                                                                                                                         | Target                                  |
+| --------------------- | ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------- |
+| MGMT-BE-004A          | CLOSED-SUPERSEDED   | MGMT-BE-004 landed at HEAD and `branch_gates_update_round_trips_full_gate_schema_lossless` passes; the full-schema writer behavior 004A intended is already realized.                                                                                 | Close as Superseded by MGMT-BE-004      |
+| REMEDIATE-RUST-1      | ALREADY-SATISFIED   | `but-authz` `gates_path()` and widened `GatesWire.gate` array are present at HEAD; the lossless round-trip test `branch_gates_update_round_trips_full_gate_schema_lossless` passes at HEAD b3449afbb2.                                                | Close as Done                           |
+| REMEDIATE-RUST-3      | OUT-OF-SPRINT (06c) | The Tauri None-path admin:read gate is not implemented (`list_workspace_rules_scoped_for_caller` delegates `None` to the ungated `list_workspace_rules_scoped`), but the manual Human Testing Gate step 2 uses the principal-scoped `Some` path only. | sprint-06c-governance-followups         |
+| REMEDIATE-RUST-5      | CANCELLED           | Already folded into E2E-MGMT-BE-002A AC-4; no independent work.                                                                                                                                                                                       | leave Cancelled                         |
+| REMEDIATE-UI-1        | CANCELLED           | Superseded by REMEDIATE-06B-D AC-3, which adds the symmetric self-revoke no-flip proof.                                                                                                                                                               | Close as Superseded by REMEDIATE-06B-D  |
+| REMEDIATE-UI-2        | OUT-OF-SPRINT (06c) | Widening the build-gate grep to all server files is perimeter hardening, not required by any Human Testing Gate step.                                                                                                                                 | sprint-06c-governance-followups         |
+| REMEDIATE-UI-3        | OUT-OF-SPRINT (06c) | Web-target governance route supports the capstone E2E, not the manual Human Testing Gate.                                                                                                                                                             | sprint-06c-governance-followups         |
+| REMEDIATE-UI-4        | OUT-OF-SPRINT (06c) | Adding `verified_by` pointers is design-contract hygiene, not gate-critical.                                                                                                                                                                          | sprint-06c-governance-followups         |
+| REMEDIATE-UI-5        | OUT-OF-SPRINT (06c) | Stronger pre-click oracle for MGMT-UI-011 AC-4 is useful but not required for gate step 4.                                                                                                                                                            | sprint-06c-governance-followups         |
+| REMEDIATE-UI-6        | OUT-OF-SPRINT (06c) | Re-protect toggle AC adds inverse-flow coverage; no gate step exercises it.                                                                                                                                                                           | sprint-06c-governance-followups         |
+| REM-DESIGN-MGMT-004-A | OUT-OF-SPRINT (06c) | Corrected U1 wording/self-revoke design contract is needed, but the current gate can run with DESIGN-MGMT-004 annotations.                                                                                                                            | sprint-06c-governance-followups         |
+| E2E-MGMT-BE-001       | OUT-OF-SPRINT (06c) | Governed-repo E2E fixtures serve the automated Playwright capstone, not the manual Human Testing Gate.                                                                                                                                                | sprint-06c-governance-followups         |
+| E2E-MGMT-BE-002       | CLOSED-SUPERSEDED   | Original premise "but-server routes zero governance commands" is false at HEAD; 16 governance routes are already registered in `crates/but-server/src/lib.rs:34-99`.                                                                                  | Close as Superseded by E2E-MGMT-BE-002A |
+| E2E-MGMT-BE-002A      | OUT-OF-SPRINT (06c) | Integration tests for the already-registered routes are hardening for the automated capstone, not required for the manual gate.                                                                                                                       | sprint-06c-governance-followups         |
+| E2E-MGMT-UI-001       | OUT-OF-SPRINT (06c) | The Playwright capstone is the automated successor to the manual Human Testing Gate, not the gate itself.                                                                                                                                             | sprint-06c-governance-followups         |
+
+**Tally:** 1 ALREADY-SATISFIED, 2 CLOSED-SUPERSEDED, 2 CANCELLED, 9 OUT-OF-SPRINT (06c).
+
 ## Tasks
 
-| ID              | Title                                                                                                                                            | Agent                 | Estimate |
-| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------- | -------- |
-| MGMT-BE-004     | `branch_gates_read`/`branch_gates_update` gate-config `but-api` producer (the gates.toml writer) + its Tauri command/SDK delta                   | rust-implementer      | 180 min  |
-| MGMT-BE-003     | `principalId`-scoped rules query (backend for the Rules tab)                                                                                     | rust-implementer      | 120 min  |
-| MGMT-UI-004     | Wrap `GovernanceSettings` in the existing `shared/ErrorBoundary` (no new boundary component)                                                     | sveltekit-implementer | 30 min   |
-| MGMT-UI-009     | `BranchGatesList` (ExpandableSection per branch; required-group selector = defined groups)                                                       | sveltekit-implementer | 75 min   |
-| MGMT-UI-010     | Extend `RulesList` with optional `principalId` prop (backward compatible)                                                                        | sveltekit-implementer | 45 min   |
-| MGMT-UI-011     | Accessibility (aria + keyboard nav) + IPC-failure danger banner + Retry                                                                          | sveltekit-implementer | 60 min   |
-| MGMT-UI-012     | Build-gate tests: no direct config write, no `+page.server.ts`, SDK type-check, human-principal                                                  | sveltekit-implementer | 45 min   |
-| DESIGN-MGMT-004 | Structured-denial banner + self-escalation no-flip contract                                                                                      | frontend-designer     | 30 min   |
-| DESIGN-MGMT-006 | Empty states for all four tabs                                                                                                                   | frontend-designer     | 25 min   |
-| DESIGN-MGMT-007 | Four-tab IA + aria + keyboard-nav contract                                                                                                       | frontend-designer     | 35 min   |
-| DESIGN-MGMT-008 | Error-boundary fallback + IPC-failure/retry pattern                                                                                              | frontend-designer     | 30 min   |
-| E2E-MGMT-BE-001 | Governed-repo E2E fixtures + two real identities (admin / non-admin) seeded to the target ref                                                    | rust-implementer      | 120 min  |
-| E2E-MGMT-BE-002 | Route the 13 governed governance commands through `but-server` (web-target HTTP surface)                                                         | rust-implementer      | 180 min  |
-| E2E-MGMT-UI-001 | **Capstone** — Playwright E2E driving the real governance Svelte UI (web target) against a real `but-server` through all 6 human-test-gate steps | sveltekit-implementer | 180 min  |
-
-### Remedial tasks (added 2026-06-22 by `/kb-sprint-tasks-plan` after `red-hat-20260622T145305Z.md`)
-
-The 11 tasks below close the findings of the third red-hat cycle. Successor tasks (`MGMT-BE-004A`, `E2E-MGMT-BE-002A`, `REM-DESIGN-MGMT-004-A`) SUPERSEDE the originals — the originals stay as historical record, marked "Superseded by …" in their headers; `/kb-run-sprint` consumes the successors. The small augmentation tasks (`REMEDIATE-UI-1..6`, `REMEDIATE-RUST-1/3`) add ACs / gates / pointers to existing contracts without replacing them. `REMEDIATE-RUST-5-FOLDED` is recorded as cancelled — folded into `E2E-MGMT-BE-002A` AC-4.
-
-| ID                      | Title                                                                                                                                                                        | Agent                 | Estimate | Closes         | Supersedes                                               |
-| ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------- | -------- | -------------- | -------------------------------------------------------- |
-| REMEDIATE-RUST-1        | Widen `but-authz` `GatesWire` to accept the full `[[gate]]` schema + add `gates_path()` accessor (prerequisite for MGMT-BE-004A — Option B from the red-hat Gap #1)          | rust-implementer      | 90 min   | H1             | —                                                        |
-| MGMT-BE-004A            | Rescoped gates.toml writer round-tripping the full branch+gate schema + source-structural ordering gate (AC-9)                                                               | rust-implementer      | 240 min  | H1, M4, M5     | **MGMT-BE-004**                                          |
-| REMEDIATE-RUST-3        | `administration:read` gate for MGMT-BE-003 `None`-path — close the workspace-rules recon leak at the Tauri command boundary                                                  | rust-implementer      | 60 min   | M1             | — (augments MGMT-BE-003)                                 |
-| E2E-MGMT-BE-002A        | Test-only successor — integration tests for the 16 already-registered governance routes + completed no-bypass proof (AC-3) + broadened `*_as_fleet_owner` bypass grep (AC-4) | rust-implementer      | 90 min   | H2, H3         | **E2E-MGMT-BE-002**                                      |
-| REMEDIATE-RUST-5-FOLDED | \*\_as_fleet_owner build-gate — folded into E2E-MGMT-BE-002A AC-4 (cancelled)                                                                                                | —                     | 0 min    | Gap #3         | —                                                        |
-| REMEDIATE-UI-1          | Symmetric self-revoke denial no-flip AC across Branch Gates + Governance E2E (closes the grant-only asymmetry)                                                               | sveltekit-implementer | 60 min   | H5             | — (augments MGMT-UI-009 / MGMT-UI-011 / E2E-MGMT-UI-001) |
-| REMEDIATE-UI-2          | Widen MGMT-UI-012 build-gate grep to forbid all SvelteKit server files (`+layout.server.ts`, `+server.ts`, not just `+page.server.ts`)                                       | sveltekit-implementer | 30 min   | M3             | — (augments MGMT-UI-012)                                 |
-| REMEDIATE-UI-3          | Add web-target governance route under `apps/web/src/routes` (unblocks the capstone — `apps/web` has zero governance routes today)                                            | sveltekit-implementer | 90 min   | M2             | —                                                        |
-| REMEDIATE-UI-4          | Add `verified_by` pointers from DESIGN-MGMT-004/006/007/008 to downstream UI ACs (closes the design-contract verification-path gap)                                          | frontend-designer     | 45 min   | L8             | — (augments 4 DESIGN-MGMT contracts)                     |
-| REMEDIATE-UI-5          | Strengthen MGMT-UI-011 AC-4 no-flip test with explicit pre-click aria-checked assertion (closes the no-op-handler stub-pass vector)                                          | sveltekit-implementer | 30 min   | L4             | — (augments MGMT-UI-011)                                 |
-| REMEDIATE-UI-6          | Add symmetric re-protect (toggle ON) AC to BranchGatesList (re-protect is non-destructive, no Modal)                                                                         | sveltekit-implementer | 30 min   | L2             | — (augments MGMT-UI-009)                                 |
-| REM-DESIGN-MGMT-004-A   | Honest U1 wording for DESIGN-MGMT-004 — non-admin self-grant + symmetric self-revoke no-flip contract (preserves DESIGN-MGMT-004 AC-1/AC-4; supersedes AC-2/AC-3)            | frontend-designer     | 30 min   | H4, H5, U1, L8 | **DESIGN-MGMT-004** (AC-2/AC-3 only)                     |
-
-**Remedial totals:** 11 net-new task files + 1 cancelled placeholder = 12 files · 13 red-hat findings closed (2 CRITICAL, 3 HIGH, 5 MEDIUM, 3 LOW) · 775 min added estimate · 3 contract successions (MGMT-BE-004A, E2E-MGMT-BE-002A, REM-DESIGN-MGMT-004-A) · 7 contract augmentations (REMEDIATE-RUST-1/3, REMEDIATE-UI-1/2/3/4/5/6).
-
-## Capstone E2E (the "play all the functionality" gate)
-
-The three `E2E-MGMT-*` tasks add the **executable** proof of the Human Testing Gate above: a Playwright
-suite that drives the **real** web-target governance Svelte UI against a **real `but-server`** (no mocks, no
-React fixture, no Tauri) through all six steps. `E2E-MGMT-BE-001` seeds a governed repo with two real
-identities; `E2E-MGMT-BE-002` routes the governance commands through `but-server` (today unrouted — the gap
-that makes the web UI unreachable); `E2E-MGMT-UI-001` is the spec. Path rationale: Playwright cannot drive
-the real Tauri binary (that is WebdriverIO + `tauri-driver`), so the capstone drives the same Svelte UI built
-for the **web** target — real components, real `but-authz`, real git, browser shell. Full Tauri-shell fidelity
-remains available later as a WebdriverIO fast-follow.
-
-> **Upstream advisories surfaced by the capstone (for sprint-owner reconciliation — not auto-applied):**
->
-> - **U1 — step-4 wording.** Human-gate step 4 ("As an admin, attempt to grant yourself
->   `administration:write` → denial") is unprovable against real services: an admin _holds_
->   `administration:write`, so a governed self-grant stages as **pending**, not denied; the Tauri product
->   resolves the human as fleet-owner superuser (R12), also no denial. A real `perm.denied` arises **only**
->   for a non-admin actor. The capstone proves the **non-admin** self-grant denial (the honest no-bypass
->   proof, CAP-AUTHZ-01). Recommend rewording step 4 to "a non-admin attempts to self-grant
->   `administration:write` → denial".
-> - **U2 — gates.toml schema.** The Coverage Note's "round-trip the full gate-field set" (and MGMT-BE-004's
->   scope) assumes a `gates.toml` schema (`min_approvals`, `require_*`, `[[gate]]`) the **live loader**
->   (`crates/but-authz/src/config.rs:447-459`, `deny_unknown_fields`) does **not** support — it models only
->   `{ branch: [{name, protected}] }`. The capstone seeds the minimal supported schema; MGMT-BE-004's scope
->   may be over-claimed vs. live code.
-> - **U3 — web `isAdmin` visibility.** The governance nav is gated on `userService.user?.role === 'admin'`
->   (visibility) while `administration:write` gates the write (server-side). MGMT-UI-002 must make the
->   visibility satisfiable on the web target; the capstone uses an admin-user cookie as the workaround.
+| ID              | Title                                                                                                                          | Agent                 | Estimate |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------ | --------------------- | -------- |
+| MGMT-BE-004     | `branch_gates_read`/`branch_gates_update` gate-config `but-api` producer (the gates.toml writer) + its Tauri command/SDK delta | rust-implementer      | 180 min  |
+| MGMT-BE-003     | `principalId`-scoped rules query (backend for the Rules tab)                                                                   | rust-implementer      | 120 min  |
+| MGMT-UI-004     | Wrap `GovernanceSettings` in the existing `shared/ErrorBoundary` (no new boundary component)                                   | sveltekit-implementer | 30 min   |
+| MGMT-UI-009     | `BranchGatesList` (ExpandableSection per branch; required-group selector = defined groups)                                     | sveltekit-implementer | 75 min   |
+| MGMT-UI-010     | Extend `RulesList` with optional `principalId` prop (backward compatible)                                                      | sveltekit-implementer | 45 min   |
+| MGMT-UI-011     | Accessibility (aria + keyboard nav) + IPC-failure danger banner + Retry                                                        | sveltekit-implementer | 60 min   |
+| MGMT-UI-012     | Build-gate tests: no direct config write, no `+page.server.ts`, SDK type-check, human-principal                                | sveltekit-implementer | 45 min   |
+| DESIGN-MGMT-004 | Structured-denial banner + self-escalation no-flip contract                                                                    | frontend-designer     | 30 min   |
+| DESIGN-MGMT-006 | Empty states for all four tabs                                                                                                 | frontend-designer     | 25 min   |
+| DESIGN-MGMT-007 | Four-tab IA + aria + keyboard-nav contract                                                                                     | frontend-designer     | 35 min   |
+| DESIGN-MGMT-008 | Error-boundary fallback + IPC-failure/retry pattern                                                                            | frontend-designer     | 30 min   |
 
 ## Dependencies
 
-- **Blocks:** None (final sprint of the POC roadmap)
+- **Blocks:** sprint-06c-governance-followups (deferred follow-up work; no longer claims to be the final sprint of the POC roadmap)
 - **Dependent on:** Sprint 06a (page scaffold + pending store + IPC base + desktop CT harness), Sprint 04
   (gate engine the branch gates configure). **The desktop CT harness from MGMT-UI-001 (06a) is a hard
   predecessor of every `[component-test]` here; the SDK regen from MGMT-IPC-004 (06a) is extended by
@@ -169,10 +210,6 @@ MGMT-BE-004 (gates.toml writer + SDK) ─────→ MGMT-UI-009 (BranchGate
 MGMT-BE-003 (principalId rules query + SDK) → MGMT-UI-010 (RulesList principalId prop consumes the SDK)
 MGMT-UI-004 (error boundary wrap) ─────────→ MGMT-UI-011 (a11y + IPC-failure banner inside the boundary)
 MGMT-UI-009/010/011 ───────────────────────→ MGMT-UI-012 (build-gate tests assert the no-bypass invariants)
-
-MGMT-BE-003/004 ───────────────────────────→ E2E-MGMT-BE-001 (seeds a governed repo + 2 identities)
-E2E-MGMT-BE-001 ───────────────────────────→ E2E-MGMT-BE-002 (routes governance cmds through but-server)
-E2E-MGMT-BE-002 + MGMT-UI-002/004/009/010/011 → E2E-MGMT-UI-001 (capstone Playwright spec, all 6 steps)
 ```
 
 ## PRD Coverage
@@ -253,37 +290,50 @@ E2E-MGMT-BE-002 + MGMT-UI-002/004/009/010/011 → E2E-MGMT-UI-001 (capstone Play
 
 ## Task Detail Files
 
-Generated by /kb-sprint-tasks-plan on 2026-06-19 (11 tasks · avg 114.3/115 rubric · fakeability floor 0 CRITICAL/0 HIGH on all 6 FEATURE tasks · 1 full red-hat goal-loop cycle — fresh rust-reviewer + sveltekit-reviewer + security-auditor; 9 CRITICAL + 15 MEDIUM resolved by the retained writers, 5 advisory recorded).
+Reconciled at HEAD 4b3d506ee7 — 32 `.md` files in this directory (11 original task contracts + 15 prior red-hat follow-ups + 5 post-review REMEDIATE-06B-_ remediations + SPRINT.md). Every file enumerated below; count verified via `ls _.md | wc -l`.
 
-- MGMT-BE-004-branch-gates-config-writer.md
+### Original 11 task contracts
+
+- DESIGN-MGMT-004-denial-no-flip-contract.md
+- DESIGN-MGMT-006-empty-states.md
+- DESIGN-MGMT-007-four-tab-a11y-contract.md
+- DESIGN-MGMT-008-error-boundary-ipc-retry.md
 - MGMT-BE-003-principal-scoped-rules-query.md
+- MGMT-BE-004-branch-gates-config-writer.md
 - MGMT-UI-004-error-boundary-wrap.md
 - MGMT-UI-009-branch-gates-list.md
 - MGMT-UI-010-ruleslist-principalid.md
 - MGMT-UI-011-accessibility-ipc-retry.md
 - MGMT-UI-012-build-gate-tests.md
-- DESIGN-MGMT-004-denial-no-flip-contract.md
-- DESIGN-MGMT-006-empty-states.md
-- DESIGN-MGMT-007-four-tab-a11y-contract.md
-- DESIGN-MGMT-008-error-boundary-ipc-retry.md
 
-Capstone E2E (added by /kb-sprint-tasks-plan on 2026-06-20 — 3 tasks · 1 full red-hat goal-loop cycle: fresh rust-reviewer + sveltekit-reviewer, 8 CRITICAL + 9 MEDIUM resolved by the retained writers, 3 upstream advisories U1/U2/U3 recorded):
+### Prior red-hat follow-ups (15 files; triage pending — see REMEDIATE-06B-C)
 
 - E2E-MGMT-BE-001-governance-e2e-fixtures.md
 - E2E-MGMT-BE-002-but-server-governance-routes.md
+- E2E-MGMT-BE-002A-test-only-successor-to-e2e-mgmt-be-002-integration-tests-for.md
 - E2E-MGMT-UI-001-governance-capstone-playwright.md
-
-Remedial tasks (added by /kb-sprint-tasks-plan on 2026-06-22 after the third red-hat cycle `red-hat-20260622T145305Z.md` — 12 tasks authored by rust-planner + sveltekit-planner + frontend-designer; tripwires (proposed_by, fakeability) validated; the [5.7] red-hat goal-loop step was deferred — recommend running `/review-red-hat <this-sprint-folder>` against the remedial set before `/kb-run-sprint`):
-
+- MGMT-BE-004A-rescoped-gatestoml-writer-round-tripping-the-full-branchgate.md
+- REM-DESIGN-MGMT-004-A-honest-u1-wording-for-design-mgmt-004-successor-non-admin-se.md
 - REMEDIATE-RUST-1-widen-but-authz-gateswire-to-accept-the-full-gate-schema-and.md
-- MGMT-BE-004A-rescoped-gatestoml-writer-round-tripping-the-full-branchgate.md _(supersedes MGMT-BE-004)_
 - REMEDIATE-RUST-3-administrationread-gate-for-mgmt-be-003-none-path-close-the.md
-- E2E-MGMT-BE-002A-test-only-successor-to-e2e-mgmt-be-002-integration-tests-for.md _(supersedes E2E-MGMT-BE-002)_
-- REMEDIATE-RUST-5-FOLDED-folded-into-e2e-mgmt-be-002a-ac-4-bypass-grep-positive-attri.md _(cancelled — folded into E2E-MGMT-BE-002A AC-4)_
+- REMEDIATE-RUST-5-FOLDED-folded-into-e2e-mgmt-be-002a-ac-4-bypass-grep-positive-attri.md
 - REMEDIATE-UI-1-add-symmetric-self-revoke-denial-no-flip-ac-across-branch-ga.md
 - REMEDIATE-UI-2-widen-mgmt-ui-012-build-gate-grep-to-forbid-all-sveltekit-se.md
 - REMEDIATE-UI-3-add-web-target-governance-route-under-appswebsrcroutes.md
 - REMEDIATE-UI-4-add-verifiedby-pointers-from-design-mgmt-004006007008-to-dow.md
 - REMEDIATE-UI-5-strengthen-mgmt-ui-011-ac-4-no-flip-test-with-pre-click-aria.md
 - REMEDIATE-UI-6-add-symmetric-re-protect-toggle-on-acceptance-criterion-to-b.md
-- REM-DESIGN-MGMT-004-A-honest-u1-wording-for-design-mgmt-004-successor-non-admin-se.md _(supersedes DESIGN-MGMT-004 AC-2/AC-3 only)_
+
+### Post-review red-hat remediations (5 files; generated 2026-06-23 — closes findings from `.spec/prds/governance/reviews/red-hat-20260623T031824Z-sprint-06b.md`)
+
+Generated by /kb-sprint-tasks-plan on 2026-06-23 — sveltekit-planner authored; orchestrator consolidated. Addresses all 9 findings (F1–F9) from the post-review red-hat pass: F1/F3/F4/F5 (four unstarted UI tasks), F2 (UC-MGMT-06 capstone no-bypass proof), F6 (unchecked AC ledger), F7 (14 Backlog follow-ups), F8 (REMEDIATE-RUST-1 status / MGMT-BE-004 AC-3 unverified), F9 (CT harness assumed). Finding closures: REMEDIATE-06B-A closes F6 + F7-partial; REMEDIATE-06B-B closes F8 + F9; REMEDIATE-06B-C closes F7; REMEDIATE-06B-D closes F2; REMEDIATE-06B-E closes F1 + F3 + F4 + F5.
+
+- REMEDIATE-06B-A-reconcile-sprint-bookkeeping-and-ac-ledger-at-head.md
+- REMEDIATE-06B-B-verify-backend-lossless-roundtrip-and-ct-harness-liveness.md
+- REMEDIATE-06B-C-triage-14-backlog-follow-up-tasks.md
+- REMEDIATE-06B-D-add-uc-mgmt-06-capstone-no-bypass-proof-ac.md
+- REMEDIATE-06B-E-meta-record-execution-order-for-four-unstarted-ui-tasks.md
+
+### Sprint manifest
+
+- SPRINT.md

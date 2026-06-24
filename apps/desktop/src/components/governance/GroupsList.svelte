@@ -130,6 +130,14 @@
 			return;
 		}
 
+		// Wait for the backend (governance_status_read) to resolve the real target
+		// ref before firing listGroups. Firing with a stale/guessed ref makes the
+		// backend reject the request ("target ref mismatch"); keep the loading
+		// state and re-fire once access.targetRef arrives.
+		if (!targetRef) {
+			return;
+		}
+
 		untrack(() => {
 			void loadGroups();
 		});
@@ -227,6 +235,8 @@
 	}
 
 	async function loadGroups() {
+		if (!targetRef) return;
+
 		isLoading = true;
 		loadError = undefined;
 

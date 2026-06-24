@@ -104,58 +104,6 @@ fence is a guardrail, not a wall. The local review store is forgeable by a direc
 
 ---
 
-## Enrichment — Local Agent PR: make `but` the convergence _state_, not just the gate
-
-**Enrichment → [`prds/governance/enrichments/v1.5.0-local-agent-pr/`](./prds/governance/enrichments/v1.5.0-local-agent-pr/README.md)** ·
-v1.5.0 · +1 functional group · 7 use cases · 40 acceptance criteria · 6 named risks (R18–R23) · lands as
-**Sprint 07**. _Specced to executable depth and adversarially reviewed; not yet built._
-
-Deliverable 1 makes the _land_ legible — who may act, did a distinct reviewer approve. This enrichment makes the
-_whole review loop_ legible, by turning `but`'s own review state into the thing an orchestrator **drives off**.
-Today an orchestrator carries the implement→review→merge loop in its own per-harness tracker and only touches `but`
-at the commit and merge moments. The bet here is a **reconciler over `but` state** — _dispatch a reviewer because
-`but` shows commits with no verdict; remediate because it shows an unresolved comment; merge because it shows an
-approval at head_ — which moves the loop logic out of fragile per-harness prompts and into queries against the one
-engine every harness reads identically. That is the convergence layer made concrete: not private bookkeeping inside
-each agent, but one shared, inspectable state. To support it, the local review layer gains **GitHub-PR parity** —
-three additive `but-db` tables (`local_review_assignments`, `local_review_comments`, `local_review_meta`) for
-reviewer assignment, file/line comment threads, a _derived_ PR lifecycle, and an `agent-authored` tag — plus the
-`but review` verbs (request / assign / comment / resolve / status) the reconciler reads.
-
-**Four decisions a reviewer should understand:**
-
-- **Local by default; remote is a per-project opt-in.** Agent reviews stay local (`keep_reviews_local`, default-on)
-  — no remote GitHub PR per task. That is deliberate: agent volume turns the human PR queue into the very
-  bottleneck this repo is about, and GitHub itself shipped PR caps and kill-switches to stem the flood. A local PR
-  gives the assignment / comment / audit affordances **without** adding to that queue; mirroring to a real forge is
-  opt-in, never the default. And the setting is named for what it is — an operator preference (R12 trusted-desktop),
-  _not_ an `administration:write` boundary — rather than dressing a preference up as enforcement.
-
-- **The safe seam — new state _drives_, it never _gates_.** The merge gate's truth stays exactly what shipped: a
-  distinct reviewer verdict at head in `local_review_verdicts`. Every table this enrichment adds is additive
-  _drive-metadata the gate never reads_ — held to a build-gate grep over the gate path and a forged-vs-empty proof
-  (a fabricated set of assignments and comments yields an identical merge decision; only a real verdict-at-head
-  lands a change). PR-parity for orchestration with **zero blast radius on the governance core.** _Gate gates; drive
-  drives._
-
-- **The agent tag is a declared fact, not a guessed one.** Tagging a review "agent-authored" sounds trivial until
-  you read the code: a principal has no agent-vs-human discriminator — every caller resolves through
-  `BUT_AGENT_HANDLE`. Deriving the tag from "resolved from a handle" would be a fabrication that _cannot actually
-  tell agent from human._ So the distinction is a **declared `kind`** on the committed `permissions.toml` principal,
-  read at the target ref — named honestly as descriptive metadata (spoofable by an env re-export, R19), never an
-  enforcement key. Catching that fabrication in red-hat review and correcting it _is_ the discipline these specs are
-  about.
-
-- **Made legible in the desktop.** The backend opens three follow-on UI surfaces (specced): a local-only toggle in
-  Project Settings, the principal `kind` in the Governance principals editor, and a read-only **Local-Review view**
-  that renders the assignments, comment threads, derived lifecycle, and agent tag — the PR _as_ the audit layer,
-  visible at the moment of convergence.
-
-The roadmap places this at the human-directed priority slot: **Local Agent PR is Sprint 07; STEER becomes Sprint 08.** Same provenance as the rest — the agent-tag fabrication and several drive-layer integrity gaps were caught by
-adversarial review and fixed before the task set was accepted.
-
----
-
 ## Deliverable 2 — Check Runner: "done" is proven by re-running, not claimed
 
 **Full PRD → [`prds/check-runner/`](./prds/check-runner/README.md)** · 3 functional groups ·
@@ -248,14 +196,14 @@ projection scales from one excellent local working tree toward a cross-machine f
 
 ## Map
 
-| Path                                                                         | What it is                                                                                                                                                     |
-| ---------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [`prds/governance/`](./prds/governance/README.md)                            | PRD #1 — permissions, groups, commit/merge gates, the governed loop, the management UI                                                                         |
-| [`prds/governance/ROADMAP.md`](./prds/governance/ROADMAP.md)                 | 10-sprint roadmap (8 built/in-progress + 2 planned enrichment sprints — Local Agent PR, STEER) with per-sprint human-testing gates and review provenance       |
-| [`prds/governance/enrichments/`](./prds/governance/enrichments/)             | Governance enrichments (planned): **Local Agent PR** — governed-review parity (v1.5.0 → Sprint 07) · **STEER** — capability-aware denials (v1.4.0 → Sprint 08) |
-| [`prds/check-runner/`](./prds/check-runner/README.md)                        | PRD #2 — local deterministic checks + the required-checks merge clause                                                                                         |
-| [`artifacts/team-product/`](./artifacts/team-product/04-synthesis-report.md) | The agent-verification definition-of-done, feature inventory, gap analysis, and synthesis                                                                      |
-| [`reviews/`](./reviews/)                                                     | Adversarial spec audits                                                                                                                                        |
+| Path                                                                         | What it is                                                                                |
+| ---------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| [`prds/governance/`](./prds/governance/README.md)                            | PRD #1 — permissions, groups, commit/merge gates, the governed loop, the management UI    |
+| [`prds/governance/ROADMAP.md`](./prds/governance/ROADMAP.md)                 | 8-sprint roadmap with per-sprint human-testing gates and review provenance                |
+| [`prds/governance/enrichments/`](./prds/governance/enrichments/)             | STEER — capability-aware denials (planned)                                                |
+| [`prds/check-runner/`](./prds/check-runner/README.md)                        | PRD #2 — local deterministic checks + the required-checks merge clause                    |
+| [`artifacts/team-product/`](./artifacts/team-product/04-synthesis-report.md) | The agent-verification definition-of-done, feature inventory, gap analysis, and synthesis |
+| [`reviews/`](./reviews/)                                                     | Adversarial spec audits                                                                   |
 
 ---
 

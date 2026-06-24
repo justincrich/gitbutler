@@ -94,18 +94,95 @@ pub async fn request_changes(
 }
 
 /// Comment on a branch review after the forge boundary authorizes the actor.
+///
+/// When `--thread` is omitted a fresh thread id is generated so each
+/// stand-alone comment opens its own thread. The `file`/`line` pair selects a
+/// code comment; both `None` is a branch-level comment.
 pub async fn comment(
     ctx: &mut Context,
     branch: String,
     message: String,
+    file: Option<String>,
+    line: Option<i64>,
+    thread: Option<String>,
     out: &mut OutputChannel,
 ) -> anyhow::Result<(), CliError> {
-    but_api::legacy::forge::comment_review(ctx.to_sync(), branch.clone(), message)
+    let thread_id = thread.unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
+    but_api::legacy::forge::comment_review(
+        ctx.to_sync(),
+        branch.clone(),
+        message,
+        file,
+        line,
+        thread_id,
+    )
+    .await
+    .map_err(review_gate_cli_error)?;
+
+    if let Some(out) = out.for_human() {
+        writeln!(out, "Commented on review for {branch}")?;
+    }
+
+    Ok(())
+}
+
+/// List every comment thread on a branch review (read-only).
+///
+/// Routes through `but_api::legacy::forge::list_comments` — a branch-scoped
+/// read with no write authority. The human output groups comments by thread id
+/// and shows the author, file/line (for code comments), body, and resolved
+/// state.
+pub async fn comments(
+    ctx: &mut Context,
+    branch: String,
+    out: &mut OutputChannel,
+) -> anyhow::Result<(), CliError> {
+    let comments = but_api::legacy::forge::list_comments(ctx.to_sync(), branch.clone())
+        .await
+        .map_err(review_gate_cli_error)?;
+
+    if let Some(out) = out.for_json() {
+        out.write_value(&comments)?;
+    } else if let Some(out) = out.for_human() {
+        if comments.is_empty() {
+            writeln!(out, "No comment threads on {branch}")?;
+        } else {
+            for comment in &comments {
+                let location = match (&comment.file, comment.line) {
+                    (Some(file), Some(line)) => format!("{file}:{line}"),
+                    (Some(file), None) => file.clone(),
+                    _ => "branch".to_owned(),
+                };
+                let resolved = if comment.resolved { " [resolved]" } else { "" };
+                writeln!(
+                    out,
+                    "thread {} | {} | {} | {}{}",
+                    comment.thread_id, comment.author_principal, location, comment.body, resolved,
+                )?;
+            }
+        }
+    }
+
+    Ok(())
+}
+
+/// Resolve a comment thread on a branch review after authorization.
+///
+/// Enforces `comments:write` plus the R22 resolver-identity constraint — the
+/// backend (`resolve_thread`) performs the identity check; this function just
+/// wires the CLI through.
+pub async fn resolve(
+    ctx: &mut Context,
+    branch: String,
+    thread: String,
+    out: &mut OutputChannel,
+) -> anyhow::Result<(), CliError> {
+    but_api::legacy::forge::resolve_thread(ctx.to_sync(), branch.clone(), thread.clone(), true)
         .await
         .map_err(review_gate_cli_error)?;
 
     if let Some(out) = out.for_human() {
-        writeln!(out, "Commented on review for {branch}")?;
+        writeln!(out, "Resolved thread {thread} on {branch}")?;
     }
 
     Ok(())

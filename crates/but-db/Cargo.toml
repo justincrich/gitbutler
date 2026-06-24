@@ -10,6 +10,12 @@ description = "A place for defining metadata stored in a sqlite file"
 [lib]
 doctest = false
 
+[features]
+# Generate JSON schemas for TypeScript type generation via schemars.
+# `chrono04` lets `chrono::NaiveDateTime` fields (e.g. `assigned_at`, `created_at`)
+# satisfy `schemars::JsonSchema` so types exported through `#[but_api]` compile.
+export-schema = ["dep:schemars", "dep:but-schemars"]
+
 [dependencies]
 rusqlite = { workspace = true, features = ["chrono"] }
 serde.workspace = true
@@ -19,6 +25,10 @@ but-utils.workspace = true
 # other things
 tracing.workspace = true
 backoff.workspace = true
+# schemars is only needed when generating SDK JSON schemas; `chrono04` provides
+# `JsonSchema` impls for `chrono` types so exported structs compile.
+schemars = { workspace = true, optional = true, features = ["chrono04"] }
+but-schemars = { workspace = true, optional = true }
 
 
 [dev-dependencies]

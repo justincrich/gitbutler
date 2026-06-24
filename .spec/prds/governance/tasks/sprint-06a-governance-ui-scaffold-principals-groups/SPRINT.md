@@ -70,9 +70,6 @@ them stay pending until Commit). Every gate proof draws from
 
 ## Human Testing Gate
 
-For the manual governance UI tutorial and E2E user-flow checklist, see
-[`HUMAN_TESTING_STEPS.md`](HUMAN_TESTING_STEPS.md).
-
 **Gate:** An admin opens Project Settings, sees the Permissions & Governance sidebar item, navigates to it,
 observes four tabs, edits a principal's own-grant permission on the Principals tab, expands a group and
 grants a permission on the Groups tab, and sees both changes remain pending with a commit banner until
@@ -81,14 +78,11 @@ clicking Commit changes.
 ### Test Steps
 
 1. Open the GitButler desktop app and open Project Settings via the existing shortcut.
-2. As an admin, observe the Permissions & Governance sidebar item is visible.
-3. As a non-admin/member, confirm Permissions & Governance is absent while normal settings remain visible.
-4. As an admin without `administration:write`, confirm the page is viewable but governance write controls are disabled.
-5. Click Permissions & Governance and observe four tabs: Principals, Groups, Branch Gates, Rules.
-6. On Principals, click a principal row, toggle an own-grant permission on, and observe a pending circle and commit banner.
-7. On Groups, expand a group and grant a permission; observe the group pending state and same commit banner.
-8. Switch across Principals, Groups, Branch Gates, and Rules; observe the pending banner persists across tabs.
-9. Click Commit changes and observe all pending indicators clear and the effective set update.
+2. Observe the Permissions & Governance sidebar item shows for an admin; sign in as non-admin, confirm absent.
+3. Click Permissions & Governance and observe four tabs: Principals, Groups, Branch Gates, Rules.
+4. On Principals, click a principal row, toggle an own-grant permission on; observe a pending circle and commit banner.
+5. On Groups, expand a group and grant a permission; observe the pending circle and banner persist across tabs.
+6. Click Commit changes and observe all pending indicators clear and the effective set update.
 
 ## Tasks
 
@@ -110,14 +104,6 @@ clicking Commit changes.
 | DESIGN-MGMT-002 | Pending-state visual contract (○ badge, count banner, commit affordance)                                      | frontend-designer     | 45 min   |
 | DESIGN-MGMT-003 | Read-only state (disabled-control treatment + `administration:write` info banner)                             | frontend-designer     | 30 min   |
 | DESIGN-MGMT-005 | Inherited-vs-own permission row distinction in `PrincipalEditor`                                              | frontend-designer     | 40 min   |
-| E2E-GOV-001     | Governance fixture E2E: admin/member visibility and four-tab navigation                                       | electron-implementer  | 60 min   |
-| E2E-GOV-002     | Governance fixture E2E: read-only admin disabled state                                                        | electron-implementer  | 45 min   |
-| E2E-GOV-003     | Governance fixture E2E: principal and group pending edits                                                     | electron-implementer  | 60 min   |
-| E2E-GOV-004     | Governance fixture E2E: pending persistence across tabs and commit clearing                                   | electron-implementer  | 60 min   |
-| E2E-GOV-101     | Desktop E2E: governance sidebar access gate for admin and non-admin users                                     | sveltekit-implementer | 60 min   |
-| E2E-GOV-102     | Desktop E2E: read-only admin and four governance tabs                                                         | sveltekit-implementer | 60 min   |
-| E2E-GOV-103     | Desktop E2E: principal own-grant and group grant enter pending state                                          | sveltekit-implementer | 75 min   |
-| E2E-GOV-104     | Desktop E2E: pending persists across governance tabs and clears after commit                                  | sveltekit-implementer | 75 min   |
 
 ## Dependencies
 
@@ -136,9 +122,6 @@ MGMT-UI-001 (page id + CT harness) ─→ MGMT-UI-002 (branch + isAdmin) ─→ 
 MGMT-UI-003 ─┬→ MGMT-UI-005 (pending banner)
              ├→ MGMT-UI-006 (PrincipalsList) ─→ MGMT-UI-007 (PrincipalEditor)
              └→ MGMT-UI-008 (GroupsList)
-E2E-GOV-001 ─→ E2E-GOV-002
-            ├→ E2E-GOV-003 ─→ E2E-GOV-004
-E2E-GOV-101 ─→ E2E-GOV-102 ─→ E2E-GOV-103 ─→ E2E-GOV-104
 ```
 
 ## PRD Coverage
@@ -256,14 +239,6 @@ language is superseded by the live `core:default` convention (no per-command all
 says `ProjectSettingsPageId` lives in `projectSettingsPages.ts` but the live code + `10-ui-infrastructure.md` say
 `uiState.svelte.ts` (the tasks correctly target `uiState.svelte.ts`).
 
-## E2E Task Expansion Addendum
-
-Added on 2026-06-20 after the human gate was expanded beyond the admin happy path. The E2E task set came from
-dispatched planner proposals: `electron-planner` authored the fixture/headed preflight contracts
-(`E2E-GOV-001`..`004`), `sveltekit-planner` authored the real desktop-product contracts (`E2E-GOV-101`..`104`),
-and `frontend-designer` supplied the watchable evidence labels folded into those files. Fixture evidence is
-explicitly marked as fixture-only and does not replace the desktop-product E2E closeout proof.
-
 ## Task Detail Files
 
 Generated by `/kb-sprint-tasks-plan` on 2026-06-19.
@@ -284,11 +259,3 @@ Generated by `/kb-sprint-tasks-plan` on 2026-06-19.
 - `DESIGN-MGMT-002-pending-state-contract.md`
 - `DESIGN-MGMT-003-read-only-state.md`
 - `DESIGN-MGMT-005-inherited-vs-own-rows.md`
-- `E2E-GOV-001-admin-member-tabs.md`
-- `E2E-GOV-002-read-only-admin.md`
-- `E2E-GOV-003-principal-group-pending.md`
-- `E2E-GOV-004-cross-tab-commit.md`
-- `E2E-GOV-101-desktop-access-gate.md`
-- `E2E-GOV-102-desktop-tabs-readonly.md`
-- `E2E-GOV-103-desktop-pending-edits.md`
-- `E2E-GOV-104-desktop-cross-tab-commit.md`

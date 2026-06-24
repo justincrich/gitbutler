@@ -572,7 +572,121 @@ pub(crate) fn commit(
         }
     }
 
+    // LPR-REM-004: fire `Trigger::Commit` rules (e.g. the LPR-007
+    // "review-requested" hook) AFTER the post-commit git hooks. This is a
+    // post-commit drive-metadata write — it NEVER blocks or rolls back the
+    // commit (which has already landed by construction), and any error is
+    // logged as a warning and discarded.
+    //
+    // Idempotency: the backend `local_review_assignments_mut().upsert(...)`
+    // uses `ON CONFLICT(target, reviewer_principal) DO UPDATE`, so re-running
+    // on the same commit (e.g. via `--amend`) updates the existing row in
+    // place rather than duplicating it.
+    //
+    // This evaluates even when `--no-hooks` is set. `--no-hooks` skips Git's
+    // hook machinery (pre/commit-msg/post-commit shell hooks), not GitButler's
+    // rule policy — the engine is non-fatal and idempotent, so always running
+    // it is safe, and silently dropping configured review policy behind a
+    // git-hook flag would surprise users.
+    fire_commit_trigger_rules(
+        ctx,
+        &target_branch.reference,
+        &files_to_commit,
+        out,
+        guard.read_permission(),
+    );
+
     Ok(())
+}
+
+/// LPR-REM-004: evaluate `Trigger::Commit` rules against the commit that just
+/// landed and write their drive-metadata side effects (e.g. a `pending`
+/// `local_review_assignments` row for `Action::RequestReview`).
+///
+/// Non-fatal by design — failures are logged and never propagated. The commit
+/// has already landed; this hook only writes presentation metadata that no
+/// commit/merge gate reads (proven statically by
+/// `cargo test -p but-authz invariant_build_gates` and dynamically by
+/// `crates/but-rules/tests/review_requested_hook.rs`).
+///
+/// Idempotency: `local_review_assignments` carries a UNIQUE index on
+/// `(target, reviewer_principal)` and the upsert uses
+/// `ON CONFLICT … DO UPDATE`, so re-running on the same commit (e.g. via
+/// `--amend`) updates the existing row in place rather than duplicating it.
+fn fire_commit_trigger_rules(
+    ctx: &mut but_ctx::Context,
+    target_ref: &gix::refs::FullName,
+    files_to_commit: &[FileAssignment],
+    out: &mut OutputChannel,
+    perm: &but_core::sync::RepoShared,
+) {
+    // `BUT_AGENT_HANDLE` is the principal axis the engine's
+    // `Filter::ClaudeCodeSessionId` matches against — same env var the rest
+    // of the governance subsystem resolves the caller from. `None` means
+    // "no originating session", which simply rules out session-scoped rules.
+    let session_id = std::env::var("BUT_AGENT_HANDLE")
+        .ok()
+        .filter(|handle| !handle.is_empty());
+
+    let changed_paths = files_to_commit
+        .iter()
+        .map(|f| f.path.to_str_lossy().into_owned())
+        .collect::<Vec<_>>();
+
+    let commit_ctx = but_rules::CommitContext {
+        target: target_ref.to_string(),
+        session_id,
+        changed_paths,
+    };
+
+    // Re-borrow the project DB through the existing worktree permission (no
+    // new lock acquisition — `perm` is just a sentinel proving we already
+    // hold the guard). Failures here are non-fatal: the commit has landed.
+    let outcome = (|| -> anyhow::Result<usize> {
+        let (_, _, mut db) = ctx.workspace_and_db_mut_with_perm(perm)?;
+        let rules = but_rules::list_rules(&db)?;
+        but_rules::process_commit_rules(rules, &commit_ctx, &mut db)
+    })();
+
+    let t = theme::get();
+    match outcome {
+        Ok(0) => {
+            tracing::debug!(
+                target = %commit_ctx.target,
+                "commit-trigger rule engine produced no assignments"
+            );
+        }
+        Ok(n) => {
+            tracing::info!(
+                n,
+                target = %commit_ctx.target,
+                "commit-trigger rules opened review assignment(s)"
+            );
+            if let Some(human) = out.for_human() {
+                let _ = writeln!(
+                    human,
+                    "{} Opened {n} review assignment(s) via commit-trigger rules.",
+                    t.sym().success,
+                );
+            }
+        }
+        Err(error) => {
+            // Non-fatal: the commit already landed. Surface the failure to
+            // logs and the human user, but never propagate it.
+            tracing::warn!(
+                %error,
+                target = %commit_ctx.target,
+                "commit-trigger rule evaluation failed (non-fatal; commit already landed)"
+            );
+            if let Some(human) = out.for_human() {
+                let _ = writeln!(
+                    human,
+                    "{} commit-trigger rule evaluation skipped: {error}",
+                    t.attention.paint("Warning:"),
+                );
+            }
+        }
+    }
 }
 
 pub(crate) fn commit_gate_cli_error(err: CliError) -> CliError {

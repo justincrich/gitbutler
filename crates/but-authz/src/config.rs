@@ -544,7 +544,7 @@ struct GatesWire {
     branch: Vec<BranchWire>,
     #[allow(dead_code)]
     #[serde(default)]
-    gate: Vec<GateWire>,
+    gate: Vec<toml::Value>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -552,25 +552,4 @@ struct GatesWire {
 struct BranchWire {
     name: String,
     protected: bool,
-}
-
-/// Raw `[[gate]]` gates TOML entry.
-///
-/// Mirrors `but_api::legacy::merge_gate::GateWire` field-for-field so the
-/// loader accepts the full review-requirement array without `config.invalid`.
-/// The normalization layer still ignores gate entries; the writer task
-/// (MGMT-BE-004A) owns lossless round-trip serialization.
-#[derive(Debug, Deserialize)]
-#[serde(deny_unknown_fields)]
-#[allow(dead_code)]
-struct GateWire {
-    branch: String,
-    #[serde(rename = "type")]
-    kind: String,
-    #[serde(default)]
-    min_approvals: usize,
-    #[serde(default)]
-    require_approval_from_group: Vec<String>,
-    #[serde(default)]
-    require_distinct_from_author: bool,
 }

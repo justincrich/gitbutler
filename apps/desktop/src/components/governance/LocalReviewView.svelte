@@ -267,12 +267,7 @@
 				</Badge>
 				{#if review.agent_authored}
 					<Tooltip text={AGENT_AUTHORED_TOOLTIP} delay={0}>
-						<Badge
-							testId="local-review-agent-authored"
-							style="gray"
-							kind="soft"
-							size="tag"
-						>
+						<Badge testId="local-review-agent-authored" style="gray" kind="soft" size="tag">
 							agent-authored
 						</Badge>
 					</Tooltip>
