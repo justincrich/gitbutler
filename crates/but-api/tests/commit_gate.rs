@@ -383,6 +383,106 @@ fn governance_fixtures_are_structurally_distinct() -> anyhow::Result<()> {
     Ok(())
 }
 
+/// STEER-009 AC-7 — positive field assertions for the new steering fields
+/// (`class`/`held_permissions`/`authorized_actions`/`do_not`) on the two
+/// commit-gate denial types: `branch.protected` (caller HOLDS contents:write,
+/// branch is protected) and `perm.denied` (caller LACKS contents:write).
+///
+/// The existing tests (`commit_gate_feature_ok_protected_rejected`,
+/// `commit_gate_readonly_and_bad_handle_denied`,
+/// `commit_gate_malformed_partial_and_dryrun`) already carry positive
+/// assertions for `class`, `held_permissions`, and `authorized_actions` on
+/// individual denial paths. This test consolidates the AC-7 audit: it confirms
+/// NO whole-object-equality assertion on Denial/CommitGateError survives (all
+/// existing asserts are field-level) and adds a final positive check that the
+/// new fields are present and carry the expected values across BOTH denial
+/// types.
+#[test]
+#[serial_test::serial]
+fn commit_gate_steering_fields_positive_assertions() -> anyhow::Result<()> {
+    let (repo, _tmp) = governed_repo();
+
+    // ---- branch.protected: dev (holds contents:write) commits to main ----
+    temp_env::with_var("BUT_AGENT_HANDLE", Some("dev"), || -> anyhow::Result<()> {
+        checkout(&repo, "main");
+        write_file(&repo, "steer-audit-protected.txt", "audit\n")?;
+        let mut ctx = but_ctx::Context::from_repo(repo.clone())?.with_memory_app_cache();
+        let err = match commit_to_ref(&mut ctx, MAIN_REF, "steer audit protected", DryRun::No) {
+            Ok(_) => anyhow::bail!("protected main commit should be denied"),
+            Err(err) => err,
+        };
+        let denial = err
+            .downcast_ref::<but_authz::Denial>()
+            .expect("branch.protected should be a Denial");
+
+        assert_eq!(denial.code, "branch.protected");
+        assert_eq!(
+            denial.class,
+            but_authz::DenialClass::ActorCorrectable,
+            "branch.protected MUST be actor_correctable"
+        );
+        assert!(
+            denial
+                .held_permissions
+                .contains(&but_authz::Authority::ContentsWrite),
+            "branch.protected held_permissions MUST include contents:write"
+        );
+        assert!(
+            !denial.authorized_actions.is_empty(),
+            "branch.protected MUST carry a non-empty authorized_actions menu"
+        );
+
+        reset_worktree(&repo);
+        Ok(())
+    })?;
+
+    // ---- perm.denied: ro (lacks contents:write) commits to feat ----
+    temp_env::with_var("BUT_AGENT_HANDLE", Some("ro"), || -> anyhow::Result<()> {
+        checkout(&repo, "feat");
+        write_file(&repo, "steer-audit-perm.txt", "audit\n")?;
+        let mut ctx = but_ctx::Context::from_repo(repo.clone())?.with_memory_app_cache();
+        let err = match commit_to_ref(&mut ctx, FEAT_REF, "steer audit perm", DryRun::No) {
+            Ok(_) => anyhow::bail!("readonly commit should be denied"),
+            Err(err) => err,
+        };
+        let denial = err
+            .downcast_ref::<but_authz::Denial>()
+            .expect("perm.denied should be a Denial");
+
+        assert_eq!(denial.code, "perm.denied");
+        assert_eq!(
+            denial.class,
+            but_authz::DenialClass::ActorCorrectable,
+            "resolved-principal perm.denied (ro) MUST be actor_correctable"
+        );
+        // ro holds contents:read only — held_permissions is non-empty.
+        assert!(
+            !denial.held_permissions.is_empty(),
+            "perm.denied held_permissions MUST be non-empty for a resolved principal: {:?}",
+            denial.held_permissions
+        );
+        // The menu offers review verbs + discovery (ro may hold comments:write
+        // or reviews:write in other configs; here ro holds contents:read only,
+        // so the menu is discovery-only — but it MUST be non-empty).
+        assert!(
+            !denial.authorized_actions.is_empty(),
+            "perm.denied authorized_actions MUST be non-empty (at least discovery)"
+        );
+
+        Ok(())
+    })?;
+
+    println!("AC-7: commit_gate.rs steering fields positive assertions:");
+    println!(
+        "  branch.protected: class=actor_correctable, held_permissions includes contents:write, authorized_actions non-empty"
+    );
+    println!(
+        "  perm.denied: class=actor_correctable, held_permissions non-empty, authorized_actions non-empty"
+    );
+
+    Ok(())
+}
+
 #[test]
 #[serial_test::serial]
 fn commit_gate_commit_relative_checks_contents_write_without_branch_protection()

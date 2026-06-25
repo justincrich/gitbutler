@@ -93,9 +93,9 @@ A pure authority intersection is **unsound** for `branch.protected`: branch prot
 agent down a blocked channel). The corrected derivation **subtracts the (route, predicate, ref) that actually
 fired** and binds every entry to a _succeeding context_ (e.g. commit to a **feature** branch — a different,
 unprotected ref — plus review actions), derives from the **exact `cfg` the gate already loaded at the target
-ref** (menu and gate cannot diverge), and **excludes `but review approve`** when the denial targets the
-caller's own branch (an L1 contract exclusion, never left to the reference primer).
-
+ref** (menu and gate cannot diverge), and **excludes `but review approve`** from all `Route::Commit`
+(commit-path) denials, including the caller's own branch (an L1 contract exclusion, never left to the
+reference primer).
 This sprint is **headless/CLI and UI-independent** — the MGMT render of the menu is deferred to a future
 Sprint 06c. Every property is verified by running a `but` command and asserting on the **structured JSON
 denial on stderr + exit code 1**, the same hand-assertion style (not `insta` snapshots) as the shipped
@@ -121,18 +121,18 @@ succeeds while no listed action reproduces the denial that was just returned.
 
 ## Tasks
 
-| ID        | Title                                                                                                                                                                                                                                                                                                                             | Agent            | Estimate |
-| --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------- | -------- |
-| STEER-001 | Steering fields (`class`/`held_permissions`/`authorized_actions`/`do_not`) on `Denial` + `MergeGateError` + `ConfigError` + the `CommitGateError` envelope; add `DenialClass`/`AuthorizedAction` types + derives; `Authority` `Serialize` (stable `:` token) or per-serializer `name()` mapping, stable lexical order             | rust-implementer | 210 min  |
-| STEER-002 | `Route` enum + single-source `ROUTE_AUTHORITY_TABLE` in `but-authz`; compose non-authority predicates around it; reconcile the `forge.rs` `authorize_branch_action` match incl. `other =>`; preserve the `AUTHORITY_POSITIVE_PATTERN` honesty grep (keep literal `authorize`/`Authority::*` or update `invariant_build_gates.rs`) | rust-implementer | 270 min  |
-| STEER-003 | Gate-state-aware `authorized_actions` derivation: `effective_set ∩ table` minus the failed `(route, predicate, ref)`, intent-scoped via the curated `AFFORDANCE_MAP`, self-approve excluded on own-branch, all text from the closed `&'static str` catalog                                                                        | rust-implementer | 240 min  |
-| STEER-004 | Wire the payload + exhaustive non-defaulted `(code, principal-resolution) → class` match into all constructors/gates; change `branch_protected(principal, &cfg, branch)` to re-call `effective_authority` for a gate-state-aware menu; `config.invalid`/no-handle/unknown-principal → `operator_required` + empty menu + `do_not` | rust-implementer | 210 min  |
-| STEER-005 | Add the four fields to the three hand-rolled CLI serializers (`commit_gate_cli_error`, `review_gate_cli_error`, `merge_gate_cli_error`); coordinate the desktop surface with Sprint 06a `MGMT-IPC-002` (`json::Error`); best-effort serialization — a fault still emits `code`/`message`/`remediation_hint` + exit 1              | rust-implementer | 180 min  |
-| STEER-006 | `but whoami` / `but can-i` self-scoped discovery (effective perms + own group memberships + authorized-action set); surface `but perm list` as the menu discovery affordance, degrade (omit) if absent; no other-group-member enumeration without `administration:read`                                                           | rust-implementer | 210 min  |
-| STEER-007 | Denial-steering telemetry event (`code`, `class`, `had_lateral_action`, menu length) on the existing tracing path                                                                                                                                                                                                                 | rust-implementer | 120 min  |
-| STEER-008 | Ship the non-enforced agent-priming reference primer (denials=redirects, affordances=options-not-orders, no-bypass, `class`/`do_not` contract); prove no `but-authz`/`but-api` path depends on it for correctness                                                                                                                 | rust-implementer | 90 min   |
-| STEER-009 | Extend `governed_loop` for gate-state-aware no-lying-menu — replay each offered action in its stated context, plus a concurrent-ref-advance case (clean re-denial) and a serialization-fault case (exit 1); audit and update any whole-object-equality assertions on `Denial`/`MergeGateError`                                    | rust-implementer | 240 min  |
-| STEER-010 | Net-new honesty build-gates: closed-catalog grep (no `format!`/interpolation/config-sourced text in `authorized_actions`/`do_not`) + table/affordance coverage grep (every gated route ∈ `ROUTE_AUTHORITY_TABLE`; every table route has an `AFFORDANCE_MAP` entry not naming the denied route) + review                           | rust-reviewer    | 120 min  |
+| ID | Title | Agent | Estimate |
+|----|-------|-------|----------|
+| STEER-001 | Steering fields (`class`/`held_permissions`/`authorized_actions`/`do_not`) on `Denial` + `MergeGateError` + `ConfigError` + the `CommitGateError` envelope; add `DenialClass`/`AuthorizedAction` types + derives; `Authority` `Serialize` (stable `:` token) or per-serializer `name()` mapping, stable lexical order | rust-implementer | 210 min |
+| STEER-002 | `Route` enum + single-source `ROUTE_AUTHORITY_TABLE` in `but-authz`; compose non-authority predicates around it; reconcile the `forge.rs` `authorize_branch_action` match incl. `other =>`; preserve the `AUTHORITY_POSITIVE_PATTERN` honesty grep (keep literal `authorize`/`Authority::*` or update `invariant_build_gates.rs`) | rust-implementer | 270 min |
+| STEER-003 | Gate-state-aware `authorized_actions` derivation: `effective_set ∩ table` minus the failed `(route, predicate, ref)`, intent-scoped via the curated `AFFORDANCE_MAP`, self-approve excluded from commit-path denials, all text from the closed `&'static str` catalog | rust-implementer | 240 min |
+| STEER-004 | Wire the payload + exhaustive non-defaulted `(code, principal-resolution) → class` match into all constructors/gates; change `branch_protected(principal, &cfg, branch)` to re-call `effective_authority` for a gate-state-aware menu; `config.invalid`/no-handle/unknown-principal → `operator_required` + empty menu + `do_not` | rust-implementer | 210 min |
+| STEER-005 | Add the four fields to the four hand-rolled CLI serializers (`commit_gate_cli_error`, `review_gate_cli_error`, `merge_gate_cli_error`, `governance_cli_error`); coordinate the desktop surface with Sprint 06a `MGMT-IPC-002` (`json::Error`); best-effort serialization — a fault still emits `code`/`message`/`remediation_hint` + exit 1 | rust-implementer | 180 min |
+| STEER-006 | `but whoami` / `but can-i` self-scoped discovery (effective perms + own group memberships + authorized-action set); surface `but perm list` as the menu discovery affordance, degrade (omit) if absent; no other-group-member enumeration without `administration:read` | rust-implementer | 210 min |
+| STEER-007 | Denial-steering telemetry event (`code`, `class`, `had_lateral_action`, menu length) on the existing tracing path | rust-implementer | 120 min |
+| STEER-008 | Ship the non-enforced agent-priming reference primer (denials=redirects, affordances=options-not-orders, no-bypass, `class`/`do_not` contract); prove no `but-authz`/`but-api` path depends on it for correctness | rust-implementer | 90 min |
+| STEER-009 | Extend `governed_loop` for gate-state-aware no-lying-menu — replay each offered action in its stated context, plus a concurrent-ref-advance case (clean re-denial) and a serialization-fault case (exit 1); audit and update any whole-object-equality assertions on `Denial`/`MergeGateError` | rust-implementer | 240 min |
+| STEER-010 | Net-new honesty build-gates: closed-catalog grep (no `format!`/interpolation/config-sourced text in `authorized_actions`/`do_not`) + table/affordance coverage grep (every gated route ∈ `ROUTE_AUTHORITY_TABLE`; every table route has an `AFFORDANCE_MAP` entry not naming the denied route) + review | rust-reviewer | 120 min |
 
 ## Dependencies
 
@@ -171,7 +171,7 @@ succeeds while no listed action reproduces the denial that was just returned.
 - **No lying menu, gate-state-aware (STEER-003).** Every offered action, run in its stated context, must
   succeed for that caller. For `branch.protected` the affordance is a **feature-branch** commit (a different,
   unprotected ref) + review — never the protected-ref commit just denied. `but review approve` is **excluded**
-  on the caller's own branch (L1 exclusion). The menu derives from the same `cfg`/ref the gate judged against
+  from all `Route::Commit` (commit-path) denials, including the caller's own branch (L1 exclusion). The menu derives from the same `cfg`/ref the gate judged against
   (a runtime property — proven by T-STEER-009/024 integration tests, **not** a static grep).
 - **`ROUTE_AUTHORITY_TABLE` is a real refactor (STEER-002).** No `Route` type or table exists; authority
   checks are scattered (commit: authorize + branch-protection predicate; merge: authorize + review-requirement
@@ -242,14 +242,14 @@ writers and confirmed **22/22 CLOSED, 0 reopened** by a fresh cycle-2 panel (bot
   `governance_cli_error` as a fourth serialization site with a covering AC.
 - **SA-1 / RR-4 (CRITICAL/MEDIUM)** — STEER-009's serialization-fault proof depended on a seam STEER-005 did
   not contractually provide. Remediated: STEER-005 provides a **test-only** fault seam keyed on env var
-  `BUT_STEER_FORCE_SERIALIZATION_FAULT`, `#[cfg(debug_assertions)]`/`cfg(test)`-gated and **compiled out of
+  `BUT_STEER_FORCE_SERIALIZATION_FAULT`, `cfg(test)`/dev-feature-gated and **compiled out of
   release** (never a production bypass); STEER-009 consumes that exact name.
 - **SA-2 (CRITICAL)** — the no-lying-menu replay covered only `branch.protected`. Remediated: STEER-009 now
   replays the `gate.review_required` (merge) and `perm.denied` (missing-authority) menus too — all three
   menu-bearing denial types proven.
 - **MEDIUM** — class as a stable serialized enum string on the denial envelope (RR-3, T-STEER-016); bounded
   closed-catalog grep scope + an R15 boundary teeth control (SA-3); a DryRun-under-fault fail-closed case
-  (SA-4); exhaustive `class` via a `DenialCause` enum match (no `_ =>`) proven by a real `trybuild` compile-fail
+  (SA-4); exhaustive `class` via a `DenialCause` enum match (no `_ =>`) proven by the Rust type system
   (SA-5); a principal-existence-oracle AC on `but can-i` (SA-6).
 
 **Upstream advisory (record, non-blocking):** the locked enrichment §1's "four carriers / three CLI serializers"
@@ -258,16 +258,36 @@ The task set covers them within Sprint 08; reconcile the enrichment §1 wording 
 
 **Deferred advisories (LOW, ACCEPTED — carried to the implementer at GREEN, not a remediation run):**
 
-- **SA2-1** — prefer `cfg(test)` / a dedicated dev-only feature flag over bare `#[cfg(debug_assertions)]` for
-  the fault seam (a debug-profile non-test binary also has `debug_assertions`); STEER-010's reviewer pass
-  should verify the seam site.
-- **SA2-2** — STEER-006 AC-6 should assert full message **equality** between the unknown-target and
-  existing-target denials (not only a token blocklist) to fully close the existence-oracle channel.
-- **RR2-1** — pin STEER-003's `CATALOG` to `crates/but-authz/src/catalog.rs` (or let STEER-010's grep glob the
-  realized module) so the closed-catalog grep scope matches the implemented layout.
 - **RR2-2** — prune transitive `blocks` over-declarations (cosmetic; `depends_on` is authoritative and acyclic).
 - **RR2-3** — backfill STEER-006 AC-4/5/6 `negative_control.would_fail_if` with the concrete failures already
   named in their THEN clauses (the teeth already live in the THEN + verify).
+
+(The previously deferred **SA2-1**, **SA2-2**, and **RR2-1** were closed by the cycle-3 remediation below.)
+
+## Cycle-3 Red-Hat Re-Review (2026-06-22)
+
+A retained `rust-planner` re-reviewed the 2026-06-22 red-hat report and remediated all 11 spec-level findings in-place in the task files:
+
+- **M1 (STEER-010)** — corrected the `CATALOG` site reference from the nonexistent `crates/but-authz/src/catalog.rs` to `crates/but-authz/src/menu.rs:160`.
+- **M2 (STEER-010)** — replaced the absent `trybuild` / `compile_fail` proof with the compiler-enforced non-defaulted `match` exhaustiveness pattern at `crates/but-authz/src/authorize.rs:91-98`.
+- **M3 (STEER-005)** — repaired the JSON `REQUIREMENT-CONTRACT` AC-4 description to match the body AC-4 (admin-write four steering fields + remediation_hint + affordance row).
+- **M4 (STEER-003)** — made the `but review approve` exclusion unconditional on `Route::Commit` (commit-path denials) rather than relying on an undefined "own-branch" predicate; added AC-7/TC-11.
+- **M5 (STEER-009)** — expanded the no-lying-menu replay coverage to the fourth menu-bearing denial type (`administration:write` / admin-write via `governance_cli_error` / `but perm grant`), adding AC-8/TC-9 and updating the critical MUST list plus the runtime command.
+- **M6 (STEER-004 / STEER-010)** — confirmed `DenialCause` classification routes through the exhaustive match; added STEER-010 AC-5/TC-6 to grep for direct `class:` field assignment outside the match.
+- **L1 (STEER-005)** — tightened the fault-seam gating from bare `#[cfg(debug_assertions)]` to `cfg(test)` or a `[dev-dependencies]`-only feature flag, adding AC-8/TC-12.
+- **L2 (STEER-006)** — strengthened AC-6/TC-7 to assert canonical message equality (after normalizing the target principal id) plus equal `class`/`authorized_actions`/`held_permissions`/`do_not` envelope shape between unknown-target and existing-target cross-principal `can-i` denials (the explicit `class` dimension was added by the consolidator after the fresh security-auditor flagged it as the last residual).
+- **L3 (STEER-010)** — added concrete failure vectors (`.` + `push_str`, `write!`, `concat!`, `Cow::Owned`) to AC-1/TC-2's would-fail scenario.
+- **L4 (STEER-004)** — clarified AC-2 to distinguish `authorized_actions == []` for operator-required branch-protected (no landing authority held) from an omitted `held_permissions` case.
+- **L5 (STEER-004)** — refreshed stale `branch_protected` line references to `crates/but-api/src/commit/gate.rs:257`.
+
+Cycle-3 verdict: **RESOLVED / READY FOR `/kb-run-sprint`** — 0 CRITICAL/HIGH findings, 0 unaddressed MEDIUM or LOW concerns. The remaining deferred items (RR2-2, RR2-3) are cosmetic; all 54 ACs remain fakeability-clean and the sprint dependency graph stays acyclic.
+
+**Cycle-3 fresh re-validation (2026-06-22):** a fresh `rust-reviewer` + `security-auditor` panel (no writer context) re-reviewed the remediation in parallel — **11/11 ✅ CLOSED** (rust-reviewer), **7/8 ✅ CLOSED + 1 ⚠️ MOSTLY CLOSED** (security-auditor; the residual was the missing explicit `class` dimension in L2, which the consolidator closed with a one-line fix to STEER-006 AC-6/TC-7). All 8 §9 invariants now PASS. 0 new regressions. 0 AC/TC renumbering. 0 JSON contract drift. Full report at [`../../reviews/red-hat-20260622T214308Z-cycle3-revalidation.md`](../../reviews/red-hat-20260622T214308Z-cycle3-revalidation.md).
+
+**Carried advisories (for the implementer at GREEN time, non-blocking):**
+
+- **A1 (M6 follow-up)** — STEER-004 should explicitly require `Denial::new()` (`denial.rs:166`) and `ConfigError::invalid()` (`config.rs:310`) to route `class` through `DenialCause::*.class()` rather than direct field assignment, so STEER-010 AC-5's grep passes without re-work.
+- **A2 (L1 follow-up)** — STEER-005's `writeAllowed` should name `crates/but-authz/src/denial.rs:330` (where the fault seam actually lives), not just "lib.rs or but-api serializer module".
 
 ## Task Detail Files
 

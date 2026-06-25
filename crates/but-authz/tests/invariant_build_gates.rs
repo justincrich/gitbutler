@@ -100,6 +100,59 @@ const ENGINE_SOURCE_TREES: &[&str] = &["crates/but-authz/src", "crates/but-api/s
 const PRIMER_REFERENCE_PATTERN: &str =
     r#"governance-denial-primer|options, not orders|denials are redirects, not"#;
 
+// ---------------------------------------------------------------------------
+// STEER-010 — closed-catalog + table/affordance coverage honesty greps.
+//
+// These sit BESIDE the shipped no-role-preset (ROLE_BRANCH_PATTERN),
+// no-human-vs-AI (HUMAN_OR_LABEL_BRANCH_PATTERN), positive-authorize
+// (AUTHORITY_POSITIVE_PATTERN), and no-Permission (PERMISSION_CARRIER_PATTERN)
+// patterns. They do NOT replace or weaken any shipped assertion.
+// ---------------------------------------------------------------------------
+
+/// Matches `format!` construction flowing into the NEW steering fields
+/// (`authorized_actions` / `do_not`). The closed-catalog invariant (§9.2)
+/// requires every command/effect in these fields to be a closed
+/// `&'static str` constant — never `format!`, interpolated, config-sourced,
+/// or model-generated. Scoped to the menu/authorize/denial construction
+/// sites ONLY (not the whole `but-authz/src` tree) so the legitimate
+/// `format!` in the R15 `message`/`remediation_hint` fields does not
+/// false-positive.
+const STEER_CLOSED_CATALOG_PATTERN: &str =
+    r#"\bformat!\(.*\b(authorized_actions|do_not)\b|\b(authorized_actions|do_not)\b.*\bformat!\("#;
+
+/// Matches `format!` in the R15 `message`/`remediation_hint` construction —
+/// the ACCEPTED leak (R15 mitigates these separately). Asserting this pattern
+/// HAS matches proves the closed-catalog grep is scoped correctly: the R15
+/// fields DO use `format!` and the closed-catalog grep correctly EXCLUDES
+/// them. If this assertion fails, either the R15 fields were accidentally
+/// closed (a behaviour change outside this task's scope) or the grep paths
+/// are wrong.
+const R15_MESSAGE_INTERPOLATION_PATTERN: &str = r#"\b(message|remediation_hint)\b.*\bformat!\("#;
+
+const AUTHZ_MENU: &str = "crates/but-authz/src/menu.rs";
+const AUTHZ_DENIAL: &str = "crates/but-authz/src/denial.rs";
+const AUTHZ_ROUTE: &str = "crates/but-authz/src/route.rs";
+
+/// The closed-catalog grep scope: the exact menu/authorize/denial
+/// construction sites STEER-003/004 own. NOT the whole `but-authz/src` tree
+/// (the R15 `message`/`remediation_hint` construction in these same files
+/// legitimately uses `format!` and must be in-scope for the R15 boundary
+/// assertion but must NOT trip the closed-catalog grep).
+const STEER_CLOSED_CATALOG_PATHS: &[&str] = &[AUTHZ_MENU, AUTHZ_AUTHORIZE, AUTHZ_DENIAL];
+
+/// The 6 `Route` variants, hardcoded for text-based coverage checks. The
+/// honesty-grep philosophy: assert over SOURCE TEXT, not runtime types, so
+/// the gate catches violations in the text even if runtime behaviour is
+/// coincidentally correct.
+const STEER_ROUTE_VARIANTS: &[&str] = &[
+    "Commit",
+    "Merge",
+    "ForgeReviewsWrite",
+    "ForgeCommentsWrite",
+    "ForgePullRequestsWrite",
+    "Admin",
+];
+
 #[test]
 fn invariant_build_gates() -> anyhow::Result<()> {
     let workspace_root = workspace_root()?;
@@ -208,6 +261,186 @@ fn invariant_build_gates() -> anyhow::Result<()> {
     )?;
 
     assert_seeded_controls_fire()?;
+
+    Ok(())
+}
+
+/// STEER-010 AC-1: closed-catalog grep scoped to the exact menu/authorize/
+/// denial construction sites. Asserts NO `format!`/interpolation leaks into
+/// the `authorized_actions`/`do_not` steering fields (the NEW fields), while
+/// proving the R15 `message`/`remediation_hint` fields DO use `format!` (the
+/// accepted leak) — demonstrating the grep is scoped correctly and does not
+/// over-reach onto R15.
+#[test]
+fn steer_closed_catalog_no_interpolation_in_steering_fields() -> anyhow::Result<()> {
+    let workspace_root = workspace_root()?;
+    assert_paths_exist_and_non_empty(&workspace_root, STEER_CLOSED_CATALOG_PATHS)?;
+
+    // Closed-catalog invariant: NO format!/interpolation leaks into the
+    // authorized_actions or do_not steering fields. Every command/effect is
+    // a closed &'static str catalog constant (§9.2).
+    assert_grep_has_no_matches(
+        "closed-catalog steering-fields invariant (no format! in authorized_actions/do_not)",
+        &workspace_root,
+        STEER_CLOSED_CATALOG_PATTERN,
+        STEER_CLOSED_CATALOG_PATHS,
+    )?;
+
+    // R15 scope proof: format! IS present in message/remediation_hint (the
+    // accepted R15 leak). This proves the closed-catalog grep is correctly
+    // scoped — it does not over-reach onto the R15 fields. If this fails,
+    // the R15 fields were accidentally closed (behaviour change) or the grep
+    // paths are wrong.
+    assert_grep_has_matches(
+        "R15 message/remediation_hint interpolation present (closed-catalog scope proof)",
+        &workspace_root,
+        R15_MESSAGE_INTERPOLATION_PATTERN,
+        STEER_CLOSED_CATALOG_PATHS,
+    )?;
+
+    Ok(())
+}
+
+/// STEER-010 AC-2: table/affordance coverage grep. Reads `route.rs` and
+/// `menu.rs` as text and asserts:
+///
+/// 1. Every `Route::ALL` variant appears in `ROUTE_AUTHORITY_TABLE` (table
+///    coverage — a gated route missing from the table is caught).
+/// 2. Every `Route` variant has at least one entry in `AFFORDANCE_MAP`
+///    (affordance coverage).
+/// 3. No `AFFORDANCE_MAP` entry for an `Authority` predicate offers the
+///    denied route as a candidate (no self-referencing affordance — offering
+///    an un-held route would be a lying menu). The `BranchProtected`
+///    predicate is the documented C5 succeeding-context exception (the caller
+///    HOLDS the authority, just at a different ref).
+#[test]
+fn steer_table_affordance_coverage() -> anyhow::Result<()> {
+    let workspace_root = workspace_root()?;
+    assert_paths_exist_and_non_empty(&workspace_root, &[AUTHZ_ROUTE, AUTHZ_MENU])?;
+
+    let route_src = fs::read_to_string(workspace_root.join(AUTHZ_ROUTE))
+        .with_context(|| format!("read {AUTHZ_ROUTE}"))?;
+    let menu_src = fs::read_to_string(workspace_root.join(AUTHZ_MENU))
+        .with_context(|| format!("read {AUTHZ_MENU}"))?;
+
+    // Isolate the const definitions (skip doc comments + doctests that may
+    // reference the same tokens).
+    let table_section = route_src
+        .split("pub const ROUTE_AUTHORITY_TABLE:")
+        .nth(1)
+        .context("ROUTE_AUTHORITY_TABLE definition not found in route.rs")?;
+    let affordance_section = menu_src
+        .split("pub const AFFORDANCE_MAP:")
+        .nth(1)
+        .context("AFFORDANCE_MAP definition not found in menu.rs")?;
+
+    // 1. Every Route::ALL variant appears in ROUTE_AUTHORITY_TABLE.
+    for variant in STEER_ROUTE_VARIANTS {
+        let token = format!("Route::{variant}");
+        assert!(
+            table_section.contains(&token),
+            "Route::{variant} must appear in ROUTE_AUTHORITY_TABLE ({AUTHZ_ROUTE})"
+        );
+    }
+
+    // 2. Every Route variant has at least one AFFORDANCE_MAP entry.
+    for variant in STEER_ROUTE_VARIANTS {
+        let token = format!("Route::{variant}");
+        assert!(
+            affordance_section.contains(&token),
+            "Route::{variant} must have at least one AFFORDANCE_MAP entry ({AUTHZ_MENU})"
+        );
+    }
+
+    // 3. No self-referencing affordance for Authority-predicate entries.
+    //    For (Route::X, DenialPredicate::Authority, &[...]), no candidate
+    //    may name Route::X. The caller LACKS X's authority, so offering it
+    //    would be a lying menu. BranchProtected is the documented C5
+    //    succeeding-context exception.
+    for variant in STEER_ROUTE_VARIANTS {
+        let route_token = format!("Route::{variant}");
+        let mut search_from = 0;
+        while let Some(rel_pos) = affordance_section[search_from..].find(&route_token) {
+            let abs_pos = search_from + rel_pos;
+            let window_end = (abs_pos + 100).min(affordance_section.len());
+            let window_after = &affordance_section[abs_pos..window_end];
+
+            if window_after.contains("DenialPredicate::Authority") {
+                // This is an Authority entry for Route::VARIANT. Check the
+                // candidate block (next 500 chars) for a self-referencing
+                // affordance.
+                let candidate_end = (abs_pos + 500).min(affordance_section.len());
+                let candidate_window = &affordance_section[abs_pos..candidate_end];
+                let self_ref = format!("Affordance::new({route_token}");
+                assert!(
+                    !candidate_window.contains(&self_ref),
+                    "Authority-predicate AFFORDANCE_MAP entry for {route_token} \
+                     must not offer the denied route as a candidate (lying menu)"
+                );
+            }
+            search_from = abs_pos + route_token.len();
+        }
+    }
+
+    Ok(())
+}
+
+/// STEER-010 AC-1 boundary/teeth control: proves the closed-catalog grep
+/// has teeth on the NEW steering fields AND correctly excludes the R15
+/// fields.
+///
+/// - R15 boundary: a `format!` in a `message`/`remediation_hint` construction
+///   must NOT trip the closed-catalog grep (scope excludes R15).
+/// - Teeth: a `format!` in an `authorized_actions`/`do_not` construction
+///   MUST trip the closed-catalog grep (the gate bites on the new fields).
+#[test]
+fn steer_closed_catalog_r15_boundary_teeth_control() -> anyhow::Result<()> {
+    let temp_dir = TempDir::new().context("create R15 boundary temp directory")?;
+
+    // R15 boundary control: format! in message/remediation_hint must NOT
+    // trip the closed-catalog grep (the scope correctly excludes R15).
+    let r15_fixture = temp_dir.path().join("r15-message-interpolation.rs");
+    fs::write(
+        &r15_fixture,
+        r#"fn build_denial(missing: &str) -> Denial {
+    Denial {
+        message: format!("action requires {}", missing),
+        remediation_hint: format!("request a grant for {}", missing),
+        authorized_actions: Vec::new(),
+        do_not: None,
+    }
+}
+"#,
+    )
+    .with_context(|| format!("write {}", r15_fixture.display()))?;
+    assert_grep_has_no_matches(
+        "R15 boundary: format! in message/remediation_hint must NOT trip closed-catalog grep",
+        temp_dir.path(),
+        STEER_CLOSED_CATALOG_PATTERN,
+        &["r15-message-interpolation.rs"],
+    )?;
+
+    // Teeth control: format! in authorized_actions/do_not MUST trip the
+    // closed-catalog grep (the gate has teeth on the new fields).
+    let teeth_fixture = temp_dir.path().join("steering-field-interpolation.rs");
+    fs::write(
+        &teeth_fixture,
+        r#"fn build_menu(name: &str) -> Denial {
+    Denial {
+        authorized_actions: vec![AuthorizedAction::new(format!("but {}", name), "effect")],
+        do_not: Some(format!("do not retry as {}", name)),
+        ..Default::default()
+    }
+}
+"#,
+    )
+    .with_context(|| format!("write {}", teeth_fixture.display()))?;
+    assert_grep_has_matches(
+        "closed-catalog teeth: format! in authorized_actions/do_not MUST trip grep",
+        temp_dir.path(),
+        STEER_CLOSED_CATALOG_PATTERN,
+        &["steering-field-interpolation.rs"],
+    )?;
 
     Ok(())
 }
