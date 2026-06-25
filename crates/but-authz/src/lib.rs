@@ -7,6 +7,7 @@ mod config;
 mod denial;
 mod menu;
 mod principal;
+mod process;
 mod registry;
 mod route;
 
@@ -26,5 +27,6 @@ pub use menu::{
     authorized_actions,
 };
 pub use principal::{Group, GroupName, Principal, PrincipalId};
+pub use process::{current_pid, process_start_time};
 pub use registry::{AgentId, ProcessKey, Registration, Registry};
 pub use route::{ROUTE_AUTHORITY_TABLE, Route};
