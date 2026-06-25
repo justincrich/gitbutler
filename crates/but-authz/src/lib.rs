@@ -15,6 +15,7 @@ pub use assignment_state::{AssignmentState, AssignmentStateParseError};
 pub use authority::{Authority, AuthoritySet, ParseAuthorityError, serialize_authority_tokens};
 pub use authorize::{
     DenialCause, authorize, effective_authority, resolve_principal, resolve_principal_from_env,
+    resolve_principal_with_registry,
 };
 pub use config::{
     BranchName, BranchProtection, ConfigError, GovConfig, GroupWire, PermissionsWire,

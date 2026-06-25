@@ -1,11 +1,16 @@
-use std::{env, ffi::OsString};
+use std::{
+    env,
+    ffi::{OsStr, OsString},
+};
 
 use crate::{
     Authority, AuthoritySet, Denial, DenialClass, DeniedRoute, GovConfig, Principal, PrincipalId,
-    authorized_actions,
+    Registry, authorized_actions,
+    process::{current_pid, process_start_time},
 };
 
 const BUT_AGENT_HANDLE: &str = "BUT_AGENT_HANDLE";
+const BUT_AUTHZ_ALLOW_ENV_HANDLE: &str = "BUT_AUTHZ_ALLOW_ENV_HANDLE";
 
 /// Do-not-retry hint for unresolved-principal denials (no-handle /
 /// unknown-principal). These resolve NO principal, so the caller cannot
@@ -56,10 +61,11 @@ pub enum DenialCause {
     /// holds the merge authority but the review-requirement predicate denied
     /// the merge. The actor can self-correct by collecting approvals.
     ReviewRequired,
-    /// The acting principal could not be resolved from the environment
-    /// (no-handle / unknown-principal). These carry the `perm.denied` code
-    /// but resolve NO principal, so the caller cannot self-correct in-system
-    /// — an operator must register the principal or set `BUT_AGENT_HANDLE`.
+    /// The acting principal could not be resolved from trusted identity state
+    /// (no-handle / unknown-principal / unregistered / stale registration).
+    /// These carry the `perm.denied` code but resolve NO principal, so the
+    /// caller cannot self-correct in-system — an operator must register the
+    /// principal/process or set `BUT_AGENT_HANDLE` where explicitly allowed.
     UnresolvedPrincipal,
     /// The committed `.gitbutler` governance config is malformed, incomplete,
     /// or unreadable (`config.invalid`). An operator must fix the committed
@@ -167,10 +173,99 @@ pub fn resolve_principal(
     };
 
     let handle = handle.to_string_lossy().into_owned();
-    let principal_id = PrincipalId::new(handle.clone());
+    principal_from_handle(&handle, cfg)
+}
+
+/// Resolve the acting principal through the process registry, optionally
+/// falling back to the legacy environment handle when explicitly enabled.
+///
+/// Resolution order is strict:
+///
+/// 1. exact registry hit for the current `(pid, start_time)` resolves the
+///    registered principal;
+/// 2. registry miss falls back to [`resolve_principal`] only when
+///    `BUT_AUTHZ_ALLOW_ENV_HANDLE=1`;
+/// 3. otherwise the process is denied as unregistered, or as stale when a
+///    different start time is registered for the same pid.
+///
+/// `reg=None` is treated as a registry miss.
+pub fn resolve_principal_with_registry(
+    reg: Option<&Registry>,
+    cfg: &GovConfig,
+) -> Result<Principal, Denial> {
+    let pid = current_pid();
+    resolve_principal_with_registry_lookup(
+        reg,
+        pid,
+        process_start_time(pid),
+        |key| env::var_os(key),
+        cfg,
+    )
+}
+
+fn resolve_principal_with_registry_lookup(
+    reg: Option<&Registry>,
+    pid: u32,
+    observed_start_time: anyhow::Result<u64>,
+    lookup: impl Fn(&str) -> Option<OsString>,
+    cfg: &GovConfig,
+) -> Result<Principal, Denial> {
+    match observed_start_time {
+        Ok(observed_start_time) => {
+            if let Some(agent_id) =
+                reg.and_then(|registry| registry.resolve((pid, observed_start_time)))
+            {
+                return principal_from_handle(agent_id.as_str(), cfg);
+            }
+
+            if allow_env_handle(&lookup) {
+                return resolve_principal(lookup, cfg);
+            }
+
+            if let Some(registered_start_time) =
+                registered_start_time_for_pid(reg, pid, observed_start_time)
+            {
+                return Err(Denial::stale_registration(
+                    pid,
+                    observed_start_time,
+                    registered_start_time,
+                ));
+            }
+
+            Err(Denial::unregistered(pid, observed_start_time))
+        }
+        Err(error) => {
+            if allow_env_handle(&lookup) {
+                return resolve_principal(lookup, cfg);
+            }
+
+            Err(Denial::unregistered_start_time_unresolved(pid, &error))
+        }
+    }
+}
+
+fn allow_env_handle(lookup: &impl Fn(&str) -> Option<OsString>) -> bool {
+    lookup(BUT_AUTHZ_ALLOW_ENV_HANDLE).as_deref() == Some(OsStr::new("1"))
+}
+
+fn registered_start_time_for_pid(
+    reg: Option<&Registry>,
+    pid: u32,
+    observed_start_time: u64,
+) -> Option<u64> {
+    reg?.registrations()
+        .keys()
+        .find_map(|(registered_pid, registered_start_time)| {
+            (*registered_pid == pid && *registered_start_time != observed_start_time)
+                .then_some(*registered_start_time)
+        })
+}
+
+fn principal_from_handle(handle: &str, cfg: &GovConfig) -> Result<Principal, Denial> {
+    let principal_id = PrincipalId::new(handle);
     let authorities = cfg
         .principal_authorities(&principal_id)
-        .ok_or_else(|| Denial::unknown_principal(&handle))?
+        .ok_or_else(|| Denial::unknown_principal(handle))?
         .clone();
     let groups = cfg
         .groups()
@@ -289,6 +384,69 @@ impl Denial {
             message: format!("principal \"{handle}\" not found in committed governance config"),
             remediation_hint:
                 "commit the principal to governance config before running governed actions"
+                    .to_owned(),
+            class: DenialCause::UnresolvedPrincipal.class(),
+            held_permissions: Vec::new(),
+            authorized_actions: Vec::new(),
+            do_not: Some(DO_NOT_UNRESOLVED_PRINCIPAL),
+        }
+    }
+
+    /// Build a structured denial for a process that has no current registry
+    /// entry for its `(pid, start_time)`.
+    ///
+    /// Sets `class=OperatorRequired`, empty `held_permissions` /
+    /// `authorized_actions`, and a do-not-retry hint because the process
+    /// identity must be registered by an operator before governed actions can
+    /// proceed.
+    pub fn unregistered(pid: u32, start_time: u64) -> Self {
+        Self {
+            code: Self::PERM_DENIED_CODE,
+            message: format!(
+                "unregistered process pid {pid} start_time {start_time}; no governed principal resolved"
+            ),
+            remediation_hint:
+                "create or refresh the process registration before running governed actions"
+                    .to_owned(),
+            class: DenialCause::UnresolvedPrincipal.class(),
+            held_permissions: Vec::new(),
+            authorized_actions: Vec::new(),
+            do_not: Some(DO_NOT_UNRESOLVED_PRINCIPAL),
+        }
+    }
+
+    /// Build a structured denial for a same-pid registry entry whose start
+    /// time no longer matches the observed process start time.
+    ///
+    /// This fails closed against pid reuse: a stale registration must not
+    /// authenticate the current process.
+    pub fn stale_registration(
+        pid: u32,
+        observed_start_time: u64,
+        registered_start_time: u64,
+    ) -> Self {
+        Self {
+            code: Self::PERM_DENIED_CODE,
+            message: format!(
+                "stale process registration for pid {pid}: observed start_time {observed_start_time} differs from registered start_time {registered_start_time}; refusing possible pid reuse"
+            ),
+            remediation_hint: "refresh the process registration before running governed actions"
+                .to_owned(),
+            class: DenialCause::UnresolvedPrincipal.class(),
+            held_permissions: Vec::new(),
+            authorized_actions: Vec::new(),
+            do_not: Some(DO_NOT_UNRESOLVED_PRINCIPAL),
+        }
+    }
+
+    fn unregistered_start_time_unresolved(pid: u32, error: &anyhow::Error) -> Self {
+        Self {
+            code: Self::PERM_DENIED_CODE,
+            message: format!(
+                "unregistered process pid {pid}; process start time could not be resolved: {error}"
+            ),
+            remediation_hint:
+                "create or refresh the process registration after process start time is available"
                     .to_owned(),
             class: DenialCause::UnresolvedPrincipal.class(),
             held_permissions: Vec::new(),
