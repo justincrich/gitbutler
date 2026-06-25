@@ -20,6 +20,12 @@ const PERMISSIONS_PATH: &str = ".gitbutler/permissions.toml";
 const GATES_PATH: &str = ".gitbutler/gates.toml";
 const CONFIG_INVALID_CODE: &str = "config.invalid";
 const REVIEW_REQUIRED_CODE: &str = "gate.review_required";
+/// Do-not-retry directive emitted on every operator_required merge-gate
+/// denial (config_invalid + undefined required groups). Consistent so an
+/// agent receives the same do-not-retry signal whenever an operator must
+/// fix the committed `.gitbutler` config.
+const DO_NOT_OPERATOR_CONFIG: &str =
+    "do not retry — an operator must fix the committed .gitbutler config";
 
 /// Structured merge-gate error payload for CLI and API callers.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -112,7 +118,11 @@ pub fn enforce_merge_gate(ctx: &but_ctx::Context, review_id: usize) -> anyhow::R
             class: DenialClass::OperatorRequired,
             held_permissions: Vec::new(),
             authorized_actions: Vec::new(),
-            do_not: None,
+            // Operator-required: an operator must define the missing groups
+            // in the committed governance config. Mirrors the `config_invalid`
+            // do_not below so an agent receives a consistent do-not-retry
+            // directive on every operator_required merge-gate path.
+            do_not: Some(DO_NOT_OPERATOR_CONFIG),
         };
         // STEER-007: operator_required telemetry — undefined required groups
         // yields an empty menu (operator must define the missing groups).
@@ -438,7 +448,7 @@ fn config_invalid(message: String) -> MergeGateError {
         class: DenialClass::OperatorRequired,
         held_permissions: Vec::new(),
         authorized_actions: Vec::new(),
-        do_not: Some("do not retry — an operator must fix the committed .gitbutler config"),
+        do_not: Some(DO_NOT_OPERATOR_CONFIG),
     };
     // STEER-007: operator_required config.invalid telemetry — fires once at
     // the payload-build boundary. Empty menu (operator must fix config).

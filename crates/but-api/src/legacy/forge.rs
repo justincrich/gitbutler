@@ -139,7 +139,12 @@ pub fn classify_error(err: &anyhow::Error) -> Option<ForgeGateError> {
         .map(|error| ForgeGateError {
             code: error.code(),
             message: error.to_string(),
-            class: error.class.unwrap_or_default(),
+            // Fail loudly rather than silently defaulting to ActorCorrectable
+            // if a future ConfigError constructor forgets to set `class`.
+            // `ConfigError::invalid()` always sets `Some(OperatorRequired)`.
+            class: error
+                .class
+                .expect("ConfigError must carry class (set via ConfigError::invalid())"),
             held_permissions: Vec::new(),
             authorized_actions: Vec::new(),
             do_not: error.do_not,

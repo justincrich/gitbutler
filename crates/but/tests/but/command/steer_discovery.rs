@@ -392,10 +392,23 @@ fn steer_discovery_not_a_principal_oracle() -> anyhow::Result<()> {
         "existing-target can-i must be perm.denied"
     );
 
-    // Both paths must be indistinguishable (same code).
+    // Both paths must be indistinguishable (same code AND same message).
+    // SA-2 advisory bar: token blocklist is necessary but not sufficient —
+    // a future regression that names the unknown target in the message
+    // would slip past the `!contains` checks above. Full message equality
+    // closes the existence-oracle channel completely. Both paths route
+    // through `Denial::missing_permission(AdministrationRead, &caller_held)`
+    // BEFORE target resolution, so the message is constructed from the
+    // caller's effective set, not the target's existence.
     assert_eq!(
         unknown_env.code, existing_env.code,
         "unknown-target and existing-target must return the SAME denial code"
+    );
+    assert_eq!(
+        unknown_env.message, existing_env.message,
+        "unknown-target and existing-target must return the SAME denial message \
+         (no existence oracle); unknown={:?} existing={:?}",
+        unknown_env.message, existing_env.message
     );
 
     println!("AC-6: discovery is not a principal-existence oracle");

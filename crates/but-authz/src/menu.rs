@@ -81,11 +81,19 @@ impl DenialPredicate {
 }
 
 /// The denied route passed to [`authorized_actions`] — the `(route_d,
-/// predicate_d)` tuple with an `own_branch` flag for the L1 self-approve
-/// exclusion.
+/// predicate_d)` tuple with an `own_branch` flag reserved for the L1
+/// self-approve exclusion.
 ///
 /// STEER-004 constructs this from the gate site's denial context and passes it
 /// to [`authorized_actions`] alongside the cfg the gate already loaded.
+///
+/// **Current behavior (stronger than spec):** under the shipped
+/// [`AFFORDANCE_MAP`] curation, `but review approve` is excluded from EVERY
+/// denial menu unconditionally — no gate site calls [`DeniedRoute::with_own_branch`]
+/// today. The `own_branch` flag is therefore inert defense-in-depth, retained
+/// for a future per-branch policy that lifts the curatorial exclusion for
+/// non-own-branch denials. The post-complete red-hat review recorded this
+/// spec-vs-code reconciliation.
 ///
 /// ```
 /// use but_authz::{DeniedRoute, DenialPredicate, Route};
@@ -172,10 +180,15 @@ pub const CATALOG: &[AuthorizedAction] = &[
         "request changes on a branch review",
     ),
     AuthorizedAction::new("but review comment", "post a review comment on a branch"),
-    // `but review approve` is in the catalog so STEER-010 can grep for it, but
-    // it is EXCLUDED from the menu on own-branch denials (L1 self-approve
-    // exclusion). On non-own-branch denials it may appear if the caller holds
-    // reviews:write.
+    // `but review approve` is in the catalog so STEER-010 can grep for it
+    // and so the L1 self-approve exclusion at line ~467 has a command token
+    // to match against. Under the current `AFFORDANCE_MAP` curation it is
+    // NEVER offered on ANY denial menu (no row names it as a candidate) —
+    // self-approve is excluded unconditionally, which is stronger than the
+    // spec's "exclude on own-branch" language. The `own_branch` flag below
+    // is reserved for a future per-branch policy that lifts this curatorial
+    // exclusion for non-own-branch denials; until then it stays inert and
+    // `but review approve` stays out of every rendered menu.
     AuthorizedAction::new(
         COMMAND_REVIEW_APPROVE,
         "approve a branch review as a reviews:write holder",

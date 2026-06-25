@@ -2,7 +2,7 @@
 sprint: 07
 sequence: 9
 timeline: Phase 5 — Capability-aware denials (v1.4.0 enrichment; appended after Sprint 06b)
-status: In Progress
+status: Completed
 proposed_by: rust-planner
 milestone: sprint-07-steer-capability-aware-denials
 prd: ../../README.md
@@ -15,7 +15,7 @@ generated_by: kb-sprint-tasks-plan
 
 **Sequence:** 9
 **Timeline:** Phase 5 — Capability-aware denials (v1.4.0 enrichment; appended after Sprint 06b)
-**Status:** In Progress
+**Status:** Completed
 **Proposed by:** rust-planner
 **Milestone:** — (`sprint-07-steer-capability-aware-denials`)
 

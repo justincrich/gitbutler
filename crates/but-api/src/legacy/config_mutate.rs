@@ -1,6 +1,6 @@
 use but_authz::{
-    Authority, AuthorizedAction, Denial, DenialClass, load_governance_config,
-    serialize_authority_tokens,
+    Authority, AuthorizedAction, Denial, DenialClass, DenialPredicate, DeniedRoute, Route,
+    load_governance_config, serialize_authority_tokens,
 };
 use serde::Serialize;
 
@@ -49,7 +49,18 @@ pub fn enforce_administration_write_gate(
     // call is preserved so the AUTHORITY_POSITIVE_PATTERN honesty grep
     // keeps matching.
     let required = but_authz::Route::Admin.required_authority();
-    but_authz::authorize(&principal, required, &cfg)?;
+    // STEER-004: enrich the authorize denial with a route-scoped menu
+    // (ActorCorrectable path), mirroring the commit and merge gates. The
+    // deny/allow decision is unchanged. Without this, an admin-write denial
+    // would carry an empty `authorized_actions` (no `but perm list` discovery
+    // affordance) — the red-hat post-complete review flagged this gap.
+    but_authz::authorize(&principal, required, &cfg).map_err(|denial| {
+        denial.with_authorized_actions(
+            &principal,
+            &DeniedRoute::new(Route::Admin, DenialPredicate::Authority),
+            &cfg,
+        )
+    })?;
 
     Ok(())
 }
@@ -77,7 +88,12 @@ pub fn classify_error(err: &anyhow::Error) -> Option<AdminWriteGateError> {
         .map(|error| AdminWriteGateError {
             code: error.code(),
             message: error.to_string(),
-            class: error.class.unwrap_or_default(),
+            // Fail loudly rather than silently defaulting to ActorCorrectable
+            // if a future ConfigError constructor forgets to set `class`.
+            // `ConfigError::invalid()` always sets `Some(OperatorRequired)`.
+            class: error
+                .class
+                .expect("ConfigError must carry class (set via ConfigError::invalid())"),
             held_permissions: Vec::new(),
             authorized_actions: Vec::new(),
             do_not: error.do_not,
