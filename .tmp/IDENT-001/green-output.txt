@@ -1,0 +1,15 @@
+   Compiling but-authz v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-001/crates/but-authz)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.80s
+     Running tests/registry.rs (target/debug/deps/registry-994246125cb96037)
+
+running 8 tests
+test IDENT_001_empty_registry_resolves_no_principal ... ok
+test IDENT_001_register_resolve_round_trip_uses_pid_and_start_time ... ok
+test IDENT_001_same_pid_with_different_start_time_does_not_resolve ... ok
+test IDENT_001_gc_keeps_expiry_boundary_and_drops_afterwards ... ok
+test IDENT_001_unregister_removes_exact_pid_start_time_pair ... ok
+test IDENT_001_load_missing_file_returns_empty_registry ... ok
+test IDENT_001_write_missing_parent_returns_error_naming_path ... ok
+test IDENT_001_write_then_load_round_trips_parseable_toml ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
