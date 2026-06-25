@@ -1,7 +1,7 @@
 use but_authz::{
+    Authority, AuthoritySet, Denial, GovConfig, GroupName, Principal, PrincipalId, Registry,
     authorize, current_pid, effective_authority, load_governance_config, process_start_time,
-    resolve_principal, resolve_principal_with_registry, Authority, AuthoritySet, Denial, GovConfig,
-    GroupName, Principal, PrincipalId, Registry,
+    resolve_principal, resolve_principal_with_registry,
 };
 use std::ffi::OsString;
 use std::sync::Mutex;

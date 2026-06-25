@@ -1,0 +1,50 @@
+warning: function `IDENT_003_registry_hit_resolves_registered_principal` should have a snake case name
+   --> crates/but-authz/tests/authorize.rs:153:4
+    |
+153 | fn IDENT_003_registry_hit_resolves_registered_principal() -> anyhow::Result<()> {
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `ident_003_registry_hit_resolves_registered_principal`
+    |
+    = note: `#[warn(non_snake_case)]` (part of `#[warn(nonstandard_style)]`) on by default
+
+warning: function `IDENT_003_registry_miss_allows_flagged_env_fallback` should have a snake case name
+   --> crates/but-authz/tests/authorize.rs:172:4
+    |
+172 | fn IDENT_003_registry_miss_allows_flagged_env_fallback() -> anyhow::Result<()> {
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `ident_003_registry_miss_allows_flagged_env_fallback`
+
+warning: function `IDENT_003_registry_miss_without_env_flag_denies_unregistered` should have a snake case name
+   --> crates/but-authz/tests/authorize.rs:190:4
+    |
+190 | fn IDENT_003_registry_miss_without_env_flag_denies_unregistered() -> anyhow::Result<()> {
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `ident_003_registry_miss_without_env_flag_denies_unregistered`
+
+warning: function `IDENT_003_stale_registry_entry_denies_pid_reuse` should have a snake case name
+   --> crates/but-authz/tests/authorize.rs:222:4
+    |
+222 | fn IDENT_003_stale_registry_entry_denies_pid_reuse() -> anyhow::Result<()> {
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `ident_003_stale_registry_entry_denies_pid_reuse`
+
+warning: function `IDENT_003_none_registry_allows_flagged_env_fallback` should have a snake case name
+   --> crates/but-authz/tests/authorize.rs:271:4
+    |
+271 | fn IDENT_003_none_registry_allows_flagged_env_fallback() -> anyhow::Result<()> {
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `ident_003_none_registry_allows_flagged_env_fallback`
+
+warning: `but-authz` (test "authorize") generated 5 warnings
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.17s
+     Running tests/authorize.rs (target/debug/deps/authorize-bfc7f8dd5e07578f)
+
+running 10 tests
+test IDENT_003_registry_hit_resolves_registered_principal ... ok
+test IDENT_003_none_registry_allows_flagged_env_fallback ... ok
+test IDENT_003_registry_miss_allows_flagged_env_fallback ... ok
+test IDENT_003_registry_miss_without_env_flag_denies_unregistered ... ok
+test IDENT_003_stale_registry_entry_denies_pid_reuse ... ok
+test resolve_unknown_principal_denied ... ok
+test effective_authority_union ... ok
+test authorize_held_vs_missing ... ok
+test authority_only_from_config ... ok
+test resolve_no_handle_rejected ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.12s
+
