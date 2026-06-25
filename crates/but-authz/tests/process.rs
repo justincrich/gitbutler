@@ -61,3 +61,21 @@ fn IDENT_002_nonexistent_pid_returns_error_that_names_pid() {
         "process_start_time({pid}) error must name the pid; got {message:?}"
     );
 }
+
+#[allow(non_snake_case)]
+#[cfg(not(any(target_os = "linux", target_os = "macos")))]
+#[test]
+fn IDENT_002_unsupported_platform_returns_error_naming_platform() {
+    let error = process_start_time(1234).expect_err("unsupported platform must return Err");
+    let message = error.to_string();
+
+    assert!(
+        message.contains("unsupported platform"),
+        "unsupported-platform error must explain the platform is unsupported; got {message:?}"
+    );
+    assert!(
+        message.contains(std::env::consts::OS),
+        "unsupported-platform error must name the target OS {}; got {message:?}",
+        std::env::consts::OS
+    );
+}
