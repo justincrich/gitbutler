@@ -1,0 +1,64 @@
+{
+  "task_id": "IDENT-001",
+  "verification_policy": {
+    "requires_tests": true,
+    "requires_red_evidence": true,
+    "requires_seeded_evidence": true,
+    "tdd_mode": "red_first"
+  },
+  "project_commands": {
+    "typecheck": "cargo check -p but-authz --all-targets",
+    "lint": "cargo fmt --check",
+    "test": "cargo test -p but-authz --test registry"
+  },
+  "requirements": [
+    {
+      "id": "AC-1",
+      "verify": "cargo test -p but-authz --test registry"
+    },
+    {
+      "id": "AC-2",
+      "verify": "cargo test -p but-authz --test registry"
+    },
+    {
+      "id": "AC-3",
+      "verify": "cargo test -p but-authz --test registry"
+    },
+    {
+      "id": "AC-4",
+      "verify": "cargo test -p but-authz --test registry"
+    },
+    {
+      "id": "AC-5",
+      "verify": "cargo test -p but-authz --test registry"
+    },
+    {
+      "id": "TC-1",
+      "verify": "cargo test -p but-authz --test registry"
+    },
+    {
+      "id": "TC-2",
+      "verify": "cargo test -p but-authz --test registry"
+    },
+    {
+      "id": "TC-3",
+      "verify": "cargo test -p but-authz --test registry"
+    },
+    {
+      "id": "TC-4",
+      "verify": "cargo test -p but-authz --test registry"
+    },
+    {
+      "id": "TC-5",
+      "verify": "cargo test -p but-authz --test registry"
+    },
+    {
+      "id": "TC-6",
+      "verify": "cargo test -p but-authz --test registry"
+    },
+    {
+      "id": "TC-7",
+      "verify": "cargo test -p but-authz --test registry"
+    }
+  ]
+}
