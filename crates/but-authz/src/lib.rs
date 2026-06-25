@@ -7,6 +7,7 @@ mod config;
 mod denial;
 mod menu;
 mod principal;
+mod registry;
 mod route;
 
 pub use assignment_state::{AssignmentState, AssignmentStateParseError};
@@ -25,4 +26,5 @@ pub use menu::{
     authorized_actions,
 };
 pub use principal::{Group, GroupName, Principal, PrincipalId};
+pub use registry::{AgentId, ProcessKey, Registration, Registry};
 pub use route::{ROUTE_AUTHORITY_TABLE, Route};
