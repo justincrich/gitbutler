@@ -1,0 +1,12 @@
+   Compiling but-authz v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-002/crates/but-authz)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.76s
+     Running tests/process.rs (target/debug/deps/process-0397c82901147ebf)
+
+running 4 tests
+test IDENT_002_current_pid_matches_std_process_id ... ok
+test IDENT_002_current_process_start_time_is_sane_unix_timestamp ... ok
+test IDENT_002_current_process_start_time_is_stable_across_reads ... ok
+test IDENT_002_nonexistent_pid_returns_error_that_names_pid ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

@@ -1,0 +1,11 @@
+   Compiling but-authz v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-002/crates/but-authz)
+error[E0432]: unresolved imports `but_authz::current_pid`, `but_authz::process_start_time`
+ --> crates/but-authz/tests/process.rs:3:17
+  |
+3 | use but_authz::{current_pid, process_start_time};
+  |                 ^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^ no `process_start_time` in the root
+  |                 |
+  |                 no `current_pid` in the root
+
+For more information about this error, try `rustc --explain E0432`.
+error: could not compile `but-authz` (test "process") due to 1 previous error
