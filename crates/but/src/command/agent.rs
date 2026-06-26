@@ -6,20 +6,18 @@
 
 use std::{
     collections::BTreeSet,
-    env, fs,
+    fs,
     path::{Path, PathBuf},
 };
 
 use anyhow::Context as _;
 use but_ctx::Context;
 use serde::{Deserialize, Serialize};
-use sha2::{Digest, Sha256};
 
 use crate::{CliError, args::agent::Subcommands, bad_input, utils::OutputChannel};
 
 const AGENTS_PATH: &str = ".gitbutler/agents.toml";
 const PERMISSIONS_PATH: &str = ".gitbutler/permissions.toml";
-const REGISTRY_FILE_NAME: &str = "agents-runtime.toml";
 const MIGRATE_CAVEAT: &str = "agents.toml written to the working tree; inert until committed. Commit the add of .gitbutler/agents.toml and the delete of .gitbutler/permissions.toml together.";
 
 /// Execute `but agent`.
@@ -39,7 +37,7 @@ pub async fn exec(
             let (pid, start_time) = resolve_process_key(pid, start_time)?;
             let roster = load_committed_agents(ctx)?;
             if !roster.contains(r#as.as_str()) {
-                return Err(bad_input(format!("unknown agent_id: {as}", as = r#as))
+                return Err(bad_input(format!("unknown agent_id: {as}"))
                     .arg_name("--as")
                     .arg_value(r#as)
                     .into());
@@ -76,13 +74,12 @@ pub async fn exec(
                 None => registry
                     .registrations()
                     .iter()
-                    .filter_map(|(&(entry_pid, entry_start_time), registration)| {
-                        (entry_pid == pid).then(|| RemovedRegistration {
-                            pid: entry_pid,
-                            start_time: entry_start_time,
-                            agent_id: registration.agent_id.as_str().to_owned(),
-                            expires_at: registration.expires_at,
-                        })
+                    .filter(|&(&(entry_pid, _), _)| entry_pid == pid)
+                    .map(|(&(entry_pid, entry_start_time), registration)| RemovedRegistration {
+                        pid: entry_pid,
+                        start_time: entry_start_time,
+                        agent_id: registration.agent_id.as_str().to_owned(),
+                        expires_at: registration.expires_at,
                     })
                     .collect::<Vec<_>>(),
             };
@@ -217,47 +214,18 @@ fn resolve_process_key(pid: Option<u32>, start_time: Option<u64>) -> Result<(u32
 }
 
 fn resolve_registry_path(ctx: &mut Context) -> anyhow::Result<RegistryPath> {
-    if let Some(path) = env::var_os("BUT_AGENT_REGISTRY_PATH") {
-        let path = PathBuf::from(path);
-        tracing::debug!(path = %path.display(), "using BUT_AGENT_REGISTRY_PATH for agent registry");
-        return Ok(RegistryPath {
-            path,
-            create_parent: false,
-        });
-    }
-
     let repo = ctx.repo.get()?;
-    let repo_hash = repo_hash(&repo)?;
-    if let Some(runtime_dir) = env::var_os("XDG_RUNTIME_DIR") {
-        let path = PathBuf::from(runtime_dir)
-            .join("gitbutler")
-            .join(repo_hash)
-            .join(REGISTRY_FILE_NAME);
-        tracing::debug!(path = %path.display(), "using XDG_RUNTIME_DIR agent registry path");
-        return Ok(RegistryPath {
-            path,
-            create_parent: true,
-        });
-    }
-
-    let workdir = repo
-        .workdir()
+    let location = but_authz::runtime_registry_location(&repo)?
         .context("worktree is required for default agent registry path without XDG_RUNTIME_DIR")?;
-    let path = workdir.join(".gitbutler").join(REGISTRY_FILE_NAME);
-    tracing::debug!(path = %path.display(), "using worktree agent registry path");
+    tracing::debug!(
+        path = %location.path.display(),
+        create_parent = location.create_parent,
+        "resolved agent registry path"
+    );
     Ok(RegistryPath {
-        path,
-        create_parent: true,
+        path: location.path,
+        create_parent: location.create_parent,
     })
-}
-
-fn repo_hash(repo: &gix::Repository) -> anyhow::Result<String> {
-    let path = gix::path::realpath(repo.git_dir()).unwrap_or_else(|_| repo.git_dir().to_owned());
-    let digest = Sha256::digest(path.as_os_str().as_encoded_bytes());
-    Ok(digest[..16]
-        .iter()
-        .map(|byte| format!("{byte:02x}"))
-        .collect())
 }
 
 fn write_registry_or_exit(registry: &but_authz::Registry, registry_path: &RegistryPath) {

@@ -1,5 +1,5 @@
 use std::{
-    path::Path,
+    path::{Path, PathBuf},
     process::{Child, Command, Stdio},
     thread,
     time::Duration,
@@ -285,6 +285,113 @@ removed: pid=[..] start_time=[..]
     Ok(())
 }
 
+// C1 keystone (XDG mode): default-path register -> gate round-trip with NONE of
+// `BUT_AGENT_REGISTRY_PATH` / `BUT_AGENT_HANDLE` / `BUT_AUTHZ_ALLOW_ENV_HANDLE`
+// set. This exercises the REAL runtime registry path resolution shared by the
+// CLI writer (`but agent register`) and the gate reader. The CLI and the gate
+// must resolve the SAME default file: `$XDG_RUNTIME_DIR/gitbutler/<repo-hash>/
+// agents-runtime.toml`. Before the resolver was unified, the CLI writer and the
+// gate reader used two different filenames, so a registered process was
+// invisible to the gate in the field (registry-miss -> perm.denied). Every
+// other gate test pins `BUT_AGENT_REGISTRY_PATH` to one shared file, masking
+// the divergence; here the default path is resolved for real, so the registered
+// commit must exit 0.
+#[test]
+#[serial_test::serial]
+fn commit_gate_default_xdg_registry_path_register_then_commit_allowed() -> anyhow::Result<()> {
+    let env = governed_operator_env()?;
+    let xdg_runtime_dir = tempfile::tempdir().context("creating XDG_RUNTIME_DIR tempdir")?;
+
+    env.file("registered-default-xdg.txt", "registered-default-xdg");
+    let stopped_commit = spawn_stopped_but_commit_default_registry(
+        &env,
+        "registered-default-xdg",
+        Some(xdg_runtime_dir.path()),
+    )?;
+    env.but(format!(
+        "agent register --pid {} --start-time {} --as dev --ttl 4h",
+        stopped_commit.pid, stopped_commit.start_time
+    ))
+    .env("XDG_RUNTIME_DIR", xdg_runtime_dir.path())
+    .assert()
+    .success()
+    .stdout_eq(snapbox::str![[r#"
+registered: pid=[..] start_time=[..] agent_id=dev expires_at=[..]
+
+"#]]);
+
+    let written = find_files_named(xdg_runtime_dir.path(), "agents-runtime.toml");
+    assert_eq!(
+        written.len(),
+        1,
+        "but agent register must write exactly one agents-runtime.toml under XDG_RUNTIME_DIR for the gate to read; found {written:?}"
+    );
+
+    continue_process(stopped_commit.pid)?;
+    let registered_output = stopped_commit.child.wait_with_output()?;
+    assert!(
+        registered_output.status.success(),
+        "default-path (XDG) register->commit must exit 0; stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&registered_output.stdout),
+        String::from_utf8_lossy(&registered_output.stderr)
+    );
+    println!("default XDG-path register->commit exits 0 with no env overrides");
+    drop(xdg_runtime_dir);
+
+    Ok(())
+}
+
+// C1 keystone (macOS workdir-fallback mode): same default-path round-trip with
+// NO env overrides AND no `XDG_RUNTIME_DIR`, so resolution falls back to
+// `<workdir>/.gitbutler/agents-runtime.toml` (the macOS field path). The CLI
+// writer and the gate reader must resolve the same workdir file; the registered
+// commit must exit 0.
+#[test]
+#[serial_test::serial]
+fn commit_gate_default_workdir_registry_path_register_then_commit_allowed() -> anyhow::Result<()> {
+    let env = governed_operator_env()?;
+
+    env.file(
+        "registered-default-workdir.txt",
+        "registered-default-workdir",
+    );
+    let stopped_commit =
+        spawn_stopped_but_commit_default_registry(&env, "registered-default-workdir", None)?;
+    env.but(format!(
+        "agent register --pid {} --start-time {} --as dev --ttl 4h",
+        stopped_commit.pid, stopped_commit.start_time
+    ))
+    .env_remove("XDG_RUNTIME_DIR")
+    .assert()
+    .success()
+    .stdout_eq(snapbox::str![[r#"
+registered: pid=[..] start_time=[..] agent_id=dev expires_at=[..]
+
+"#]]);
+
+    let registry_file = env
+        .projects_root()
+        .join(".gitbutler")
+        .join("agents-runtime.toml");
+    assert!(
+        registry_file.exists(),
+        "but agent register (no XDG) must write {} for the gate to read",
+        registry_file.display()
+    );
+
+    continue_process(stopped_commit.pid)?;
+    let registered_output = stopped_commit.child.wait_with_output()?;
+    assert!(
+        registered_output.status.success(),
+        "default-path (workdir fallback) register->commit must exit 0; stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&registered_output.stdout),
+        String::from_utf8_lossy(&registered_output.stderr)
+    );
+    println!("default workdir-fallback register->commit exits 0 with no env overrides");
+
+    Ok(())
+}
+
 fn governed_env(name: &str, stack: Option<&str>) -> anyhow::Result<Sandbox> {
     let env = Sandbox::open_scenario_with_target_and_default_settings(name)?;
     env.invoke_bash(
@@ -442,6 +549,71 @@ exec "$BUT_BIN" --format json commit feat -m "$COMMIT_MESSAGE"
         pid,
         start_time,
     })
+}
+
+// Spawn a stopped `but commit` child that resolves the DEFAULT runtime registry
+// path (no `BUT_AGENT_REGISTRY_PATH`). `xdg_runtime_dir` selects the resolution
+// mode: `Some` sets `XDG_RUNTIME_DIR` (XDG mode), `None` removes it (workdir
+// fallback). The same selection must be applied to the paired `but agent
+// register` call so both halves resolve the same file.
+fn spawn_stopped_but_commit_default_registry(
+    env: &Sandbox,
+    message: &str,
+    xdg_runtime_dir: Option<&Path>,
+) -> anyhow::Result<StoppedButCommit> {
+    let but_bin = snapbox::cmd::cargo_bin!("but");
+    let mut command = Command::new("sh");
+    command
+        .arg("-c")
+        .arg(
+            r#"
+kill -STOP $$
+exec "$BUT_BIN" --format json commit feat -m "$COMMIT_MESSAGE"
+"#,
+        )
+        .env("BUT_BIN", but_bin)
+        .env("COMMIT_MESSAGE", message)
+        .env_remove("BUT_AGENT_REGISTRY_PATH")
+        .env_remove("BUT_AGENT_HANDLE")
+        .env_remove("BUT_AUTHZ_ALLOW_ENV_HANDLE")
+        .env_remove("BUT_OUTPUT_FORMAT")
+        .env("E2E_TEST_APP_DATA_DIR", env.app_data_dir())
+        .env("GITBUTLER_CHANGE_ID", "42")
+        .env("NOPAGER", "1")
+        .current_dir(env.projects_root())
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped());
+    match xdg_runtime_dir {
+        Some(dir) => command.env("XDG_RUNTIME_DIR", dir),
+        None => command.env_remove("XDG_RUNTIME_DIR"),
+    };
+    let child = command
+        .spawn()
+        .context("spawning stopped but commit process with default registry path")?;
+    let pid = child.id();
+    let start_time = process_start_time_retry(pid)?;
+    Ok(StoppedButCommit {
+        child,
+        pid,
+        start_time,
+    })
+}
+
+fn find_files_named(root: &Path, name: &str) -> Vec<PathBuf> {
+    let mut found = Vec::new();
+    let Ok(entries) = std::fs::read_dir(root) else {
+        return found;
+    };
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if path.is_dir() {
+            found.extend(find_files_named(&path, name));
+        } else if path.file_name().and_then(|name| name.to_str()) == Some(name) {
+            found.push(path);
+        }
+    }
+    found
 }
 
 fn process_start_time_retry(pid: u32) -> anyhow::Result<u64> {

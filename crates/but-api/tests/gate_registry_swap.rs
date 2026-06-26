@@ -27,7 +27,7 @@ const REVIEW_ID: usize = 1;
 #[serial_test::serial]
 fn commit_gate_registered_process_allowed_then_unregistered_denied() -> anyhow::Result<()> {
     let (repo, tmp) = governed_repo();
-    let registry_path = tmp.path().join("agent-registry.toml");
+    let registry_path = tmp.path().join("agents-runtime.toml");
     write_process_registry(&registry_path, true)?;
 
     temp_env::with_vars(
@@ -50,7 +50,7 @@ fn commit_gate_registered_process_allowed_then_unregistered_denied() -> anyhow::
 #[serial_test::serial]
 fn branch_gates_read_registered_process_allowed_then_unregistered_denied() -> anyhow::Result<()> {
     let (repo, tmp) = governed_repo();
-    let registry_path = tmp.path().join("agent-registry.toml");
+    let registry_path = tmp.path().join("agents-runtime.toml");
     write_process_registry(&registry_path, true)?;
 
     with_registry_only(&registry_path, || {
@@ -64,7 +64,7 @@ fn branch_gates_read_registered_process_allowed_then_unregistered_denied() -> an
 #[serial_test::serial]
 fn group_list_registered_process_allowed_then_unregistered_denied() -> anyhow::Result<()> {
     let (repo, tmp) = governed_repo();
-    let registry_path = tmp.path().join("agent-registry.toml");
+    let registry_path = tmp.path().join("agents-runtime.toml");
     write_process_registry(&registry_path, true)?;
 
     with_registry_only(&registry_path, || {
@@ -78,7 +78,7 @@ fn group_list_registered_process_allowed_then_unregistered_denied() -> anyhow::R
 #[serial_test::serial]
 fn perm_list_registered_process_allowed_then_unregistered_denied() -> anyhow::Result<()> {
     let (repo, tmp) = governed_repo();
-    let registry_path = tmp.path().join("agent-registry.toml");
+    let registry_path = tmp.path().join("agents-runtime.toml");
     write_process_registry(&registry_path, true)?;
 
     with_registry_only(&registry_path, || {
@@ -92,7 +92,7 @@ fn perm_list_registered_process_allowed_then_unregistered_denied() -> anyhow::Re
 #[serial_test::serial]
 fn governance_status_read_registered_then_unregistered_empty() -> anyhow::Result<()> {
     let (repo, tmp) = governed_repo();
-    let registry_path = tmp.path().join("agent-registry.toml");
+    let registry_path = tmp.path().join("agents-runtime.toml");
     write_process_registry(&registry_path, true)?;
     let ctx = context_with_target_ref(&repo, FEAT_REMOTE_REF)?;
 
@@ -130,7 +130,7 @@ fn governance_status_read_registered_then_unregistered_empty() -> anyhow::Result
 #[serial_test::serial]
 fn governance_status_read_malformed_registry_propagates_instead_of_empty() -> anyhow::Result<()> {
     let (repo, tmp) = governed_repo();
-    let registry_path = tmp.path().join("agent-registry.toml");
+    let registry_path = tmp.path().join("agents-runtime.toml");
     fs::write(&registry_path, "not valid toml = [")?;
     let ctx = context_with_target_ref(&repo, FEAT_REMOTE_REF)?;
 
@@ -154,7 +154,7 @@ fn governance_status_read_malformed_registry_propagates_instead_of_empty() -> an
 #[serial_test::serial]
 fn workspace_rules_scoped_for_caller_registered_then_unregistered_denied() -> anyhow::Result<()> {
     let (repo, tmp) = governed_repo();
-    let registry_path = tmp.path().join("agent-registry.toml");
+    let registry_path = tmp.path().join("agents-runtime.toml");
     write_process_registry(&registry_path, true)?;
     let mut ctx = context_with_target_ref(&repo, FEAT_REMOTE_REF)?;
     let seeded = seed_workspace_rules(&mut ctx)?;
@@ -176,7 +176,7 @@ fn workspace_rules_scoped_for_caller_registered_then_unregistered_denied() -> an
 #[serial_test::serial]
 fn admin_write_gate_registered_process_allowed_then_unregistered_denied() -> anyhow::Result<()> {
     let (repo, tmp) = governed_repo();
-    let registry_path = tmp.path().join("agent-registry.toml");
+    let registry_path = tmp.path().join("agents-runtime.toml");
     write_process_registry(&registry_path, true)?;
 
     with_registry_only(&registry_path, || {
@@ -190,7 +190,7 @@ fn admin_write_gate_registered_process_allowed_then_unregistered_denied() -> any
 #[serial_test::serial]
 fn merge_gate_registered_process_allowed_then_unregistered_denied() -> anyhow::Result<()> {
     let (repo, tmp) = governed_repo();
-    let registry_path = tmp.path().join("agent-registry.toml");
+    let registry_path = tmp.path().join("agents-runtime.toml");
     write_process_registry(&registry_path, true)?;
     let ctx = context_with_review(&repo)?;
 
@@ -203,7 +203,7 @@ fn merge_gate_registered_process_allowed_then_unregistered_denied() -> anyhow::R
 #[serial_test::serial]
 fn whoami_registered_process_allowed_then_unregistered_denied() -> anyhow::Result<()> {
     let (repo, tmp) = governed_repo();
-    let registry_path = tmp.path().join("agent-registry.toml");
+    let registry_path = tmp.path().join("agents-runtime.toml");
     write_process_registry(&registry_path, true)?;
 
     with_registry_only(&registry_path, || {
@@ -226,7 +226,7 @@ fn whoami_registered_process_allowed_then_unregistered_denied() -> anyhow::Resul
 #[serial_test::serial]
 fn can_i_registered_process_allowed_then_unregistered_denied() -> anyhow::Result<()> {
     let (repo, tmp) = governed_repo();
-    let registry_path = tmp.path().join("agent-registry.toml");
+    let registry_path = tmp.path().join("agents-runtime.toml");
     write_process_registry(&registry_path, true)?;
 
     with_registry_only(&registry_path, || {
@@ -247,7 +247,7 @@ fn can_i_registered_process_allowed_then_unregistered_denied() -> anyhow::Result
 #[serial_test::serial]
 fn forge_review_registered_process_allowed_then_unregistered_denied() -> anyhow::Result<()> {
     let (repo, tmp) = governed_repo();
-    let registry_path = tmp.path().join("agent-registry.toml");
+    let registry_path = tmp.path().join("agents-runtime.toml");
     write_process_registry(&registry_path, true)?;
 
     with_registry_only(&registry_path, || {
@@ -273,7 +273,7 @@ fn forge_review_registered_process_allowed_then_unregistered_denied() -> anyhow:
 #[serial_test::serial]
 fn env_fallback_still_allowed_on_registry_miss() -> anyhow::Result<()> {
     let (repo, tmp) = governed_repo();
-    let registry_path = tmp.path().join("agent-registry.toml");
+    let registry_path = tmp.path().join("agents-runtime.toml");
     write_process_registry(&registry_path, false)?;
     assert_eq!(
         but_authz::Registry::load(&registry_path)?.len(),
@@ -306,7 +306,7 @@ fn env_fallback_still_allowed_on_registry_miss() -> anyhow::Result<()> {
 #[serial_test::serial]
 fn merge_gate_env_only_without_flag_denied() -> anyhow::Result<()> {
     let (repo, tmp) = governed_repo();
-    let registry_path = tmp.path().join("agent-registry.toml");
+    let registry_path = tmp.path().join("agents-runtime.toml");
     write_process_registry(&registry_path, false)?;
     let ctx = context_with_review(&repo)?;
 
@@ -339,7 +339,7 @@ fn merge_gate_env_only_without_flag_denied() -> anyhow::Result<()> {
 #[serial_test::serial]
 fn expired_current_process_registry_entry_denied() -> anyhow::Result<()> {
     let (repo, tmp) = governed_repo();
-    let registry_path = tmp.path().join("agent-registry.toml");
+    let registry_path = tmp.path().join("agents-runtime.toml");
     let (pid, start_time) = write_expired_current_process_registry(&registry_path)?;
 
     with_registry_only(&registry_path, || {
@@ -370,7 +370,7 @@ fn expired_current_process_registry_entry_denied() -> anyhow::Result<()> {
 #[serial_test::serial]
 fn current_pid_wrong_start_time_denied_at_commit_gate() -> anyhow::Result<()> {
     let (repo, tmp) = governed_repo();
-    let registry_path = tmp.path().join("agent-registry.toml");
+    let registry_path = tmp.path().join("agents-runtime.toml");
     let (pid, observed_start_time, registered_start_time) =
         write_current_pid_wrong_start_time_registry(&registry_path)?;
 
@@ -402,7 +402,7 @@ fn current_pid_wrong_start_time_denied_at_commit_gate() -> anyhow::Result<()> {
 #[serial_test::serial]
 fn wrong_pid_current_start_time_denied_at_commit_gate() -> anyhow::Result<()> {
     let (repo, tmp) = governed_repo();
-    let registry_path = tmp.path().join("agent-registry.toml");
+    let registry_path = tmp.path().join("agents-runtime.toml");
     let (current_pid, wrong_pid, current_start_time) =
         write_wrong_pid_current_start_time_registry(&registry_path)?;
 
@@ -434,7 +434,7 @@ fn wrong_pid_current_start_time_denied_at_commit_gate() -> anyhow::Result<()> {
 #[serial_test::serial]
 fn malformed_registry_propagates_instead_of_empty() -> anyhow::Result<()> {
     let (repo, tmp) = governed_repo();
-    let registry_path = tmp.path().join("agent-registry.toml");
+    let registry_path = tmp.path().join("agents-runtime.toml");
     fs::write(&registry_path, "not valid toml = [")?;
 
     with_registry_only(&registry_path, || {
@@ -458,7 +458,7 @@ fn malformed_registry_propagates_instead_of_empty() -> anyhow::Result<()> {
 #[serial_test::serial]
 fn unreadable_registry_falls_through_to_structured_denial() -> anyhow::Result<()> {
     let (repo, tmp) = governed_repo();
-    let registry_path = tmp.path().join("agent-registry.toml");
+    let registry_path = tmp.path().join("agents-runtime.toml");
     fs::create_dir(&registry_path)?;
 
     with_registry_only(&registry_path, || {
@@ -471,7 +471,7 @@ fn unreadable_registry_falls_through_to_structured_denial() -> anyhow::Result<()
 #[serial_test::serial]
 fn env_fallback_still_allowed_when_registry_unreadable() -> anyhow::Result<()> {
     let (repo, tmp) = governed_repo();
-    let registry_path = tmp.path().join("agent-registry.toml");
+    let registry_path = tmp.path().join("agents-runtime.toml");
     fs::create_dir(&registry_path)?;
 
     temp_env::with_vars(
