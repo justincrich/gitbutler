@@ -1,33 +1,33 @@
-# IDENT-014 — `crates/but/tests/but/command/agent.rs` — extend with `migrate` snapshots (initial + idempotent re-run + dual-file warning)
+# IDENT-014 — `crates/but/tests/but/command/agent.rs` — extend with `migrate` snapshots (initial + idempotent re-run + permissions-only warning)
 
 **Sprint:** [Sprint 09](./SPRINT.md) · **Agent:** `rust-reviewer` · **Estimate:** 120 min · **Type:** FEATURE (TEST) · **Status:** READY · **Proposed By:** rust-planner
 
 ## Background
 
-Sprint 08's IDENT-007 created `crates/but/tests/but/command/agent.rs` with `register`/`whoami`/`list`/`unregister` snapbox snapshots. This task EXTENDS that file with 3 new snapshots covering IDENT-011's `but agent migrate` verb + IDENT-009's dual-file deprecation warning.
+Sprint 08's IDENT-007 created `crates/but/tests/but/command/agent.rs` with `register`/`whoami`/`list`/`unregister` snapbox snapshots. This task EXTENDS that file with 3 new snapshots covering IDENT-011's `but agent migrate` verb + IDENT-009's permissions-only legacy deprecation warning.
 
 **Why it matters.** CLI snapshots are the human-readable contract: they document the exact operator-facing output and catch regressions in caveat wording, exit codes, and idempotent messaging. Sprint 11's `but-migrate` skill consumes this verb — these snapshots are the regression net for skill-driven repo migrations.
 
-**Current state.** `crates/but/tests/but/command/agent.rs` exists (Sprint 08) with `register`/`whoami`/`list`/`unregister` snapshots. IDENT-011 adds the `migrate` verb; this task captures its snapshots. The deprecation warning (IDENT-009) is observable via any loader-invoking CLI command against a dual-file repo.
+**Current state.** `crates/but/tests/but/command/agent.rs` exists (Sprint 08) with `register`/`whoami`/`list`/`unregister` snapshots. IDENT-011 adds the `migrate` verb; this task captures its snapshots. The deprecation warning (IDENT-009) is observable via any loader-invoking CLI command against a legacy repo with only `permissions.toml` committed.
 
-**Desired state.** 3 new `#[test]` fns in `agent.rs`: `agent_migrate_initial_writes_agents_toml_with_caveat`, `agent_migrate_idempotent_rerun_is_noop`, `agent_migrate_dual_file_emits_deprecation_warning`.
+**Desired state.** 3 new `#[test]` fns in `agent.rs`: `agent_migrate_initial_writes_agents_toml_with_caveat`, `agent_migrate_idempotent_rerun_is_noop`, `agent_migrate_permissions_only_emits_deprecation_warning`.
 
 ## Critical Constraints
 
 - **MUST** use `env.but(...).assert().success()/failure()` with `.stdout_eq(snapbox::str![...])` / `.stderr_eq(snapbox::str![...])` — the snapbox pattern from `crates/but/tests/but/command/merge_gate.rs:14-27`.
 - **MUST** use `[..]` or `...` wildcards for volatile portions (repo paths, OIDs, timestamps) instead of weakening the snapshot.
-- **MUST** seed both-files-committed state for AC-3 via `env.invoke_bash(...)` — never `std::process::Command::new("git")`.
+- **MUST** seed permissions-only legacy state for AC-3 via `env.invoke_bash(...)` — never `std::process::Command::new("git")`.
 - **MUST** mark each `#[test]` with `#[serial_test::serial]` (mirrors `perm.rs:6` — shared `projects_root` workspace state).
 - **NEVER** rewrite or rename any existing test fn in `agent.rs` (IDENT-007 owns those bodies).
 - **NEVER** use `env.but(...).output()` followed by manual stdout string assertions — keep output checks in snapbox (per `crates/but/AGENTS.md`).
 - **NEVER** call `load_governance_config` or any `but-api`/`but-authz` Rust function directly from this CLI test file — this is a CLI snapshot suite; the loader is exercised through a real CLI command.
 - **NEVER** introduce a new CLI command to observe the warning — reuse an existing loader-invoking command (`but perm list` / `but agent list --committed`).
 - **STRICTLY** the idempotent re-run snapshot (AC-2) MUST be textually DISTINCT from the initial-run snapshot (AC-1) — the migrate verb must print a different message when `agents.toml` already exists. If IDENT-011 emits identical output for both, file that as an IDENT-011 finding, do not paper over it here.
-- **STRICTLY** the dual-file warning (AC-3) MUST be observed on a repo where the operator committed `agents.toml` WITHOUT removing `permissions.toml` (the incomplete-migration state) — this is the scenario the warning is designed to catch.
+- **STRICTLY** the permissions-only warning (AC-3) MUST be observed on a legacy repo where `.gitbutler/permissions.toml` is committed and `.gitbutler/agents.toml` is absent. When `agents.toml` is present, the loader must prefer it and ignore `permissions.toml` without this warning.
 
 ## Specification
 
-**Objective:** Add 3 snapbox snapshot tests to `crates/but/tests/but/command/agent.rs` covering the `but agent migrate` verb: (1) initial run writes `agents.toml` + prints the ref-pin caveat; (2) a second run is a no-op with a distinct message; (3) when both `permissions.toml` and `agents.toml` are committed, a follow-up loader-invoking CLI command emits the deprecation warning naming `permissions.toml` + `but agent migrate`.
+**Objective:** Add 3 snapbox snapshot tests to `crates/but/tests/but/command/agent.rs` covering the `but agent migrate` verb: (1) initial run writes `agents.toml` + prints the ref-pin caveat; (2) a second run is a no-op with a distinct message; (3) when only legacy `permissions.toml` is committed, a loader-invoking CLI command emits exactly one deprecation warning naming `permissions.toml` + `but agent migrate`.
 
 **Success state:** `cargo test -p but --test but::command::agent` passes with the 3 new snapshots captured. `SNAPSHOTS=overwrite` regenerates them cleanly. No existing `agent.rs` snapshot is modified.
 
@@ -42,9 +42,9 @@ Sprint 08's IDENT-007 created `crates/but/tests/but/command/agent.rs` with `regi
 - **Verify:** `cargo test -p but --test but::command::agent agent_migrate_idempotent_rerun_is_noop`
 - **Scenario:** `start_ref=agents_toml_already_written`; `must_observe` = [exit 0, stdout snapshot matches AND is textually distinct from AC-1's snapshot, `agents.toml` working-tree content unchanged (sha or byte equality before/after the second run)]; `must_not_observe` = [AC-1's caveat+confirmation message repeated verbatim, `agents.toml` rewritten (content diff), non-zero exit].
 
-**AC-3** — dual-file emits deprecation warning: GIVEN a governed Sandbox where BOTH `.gitbutler/permissions.toml` AND `.gitbutler/agents.toml` are committed (the incomplete-migration state an operator would be in after running migrate + `git add agents.toml` but BEFORE `git rm permissions.toml`) WHEN a loader-invoking CLI command is run (e.g. `but perm list` or `but agent list --committed` — whichever exercises `load_governance_config`) THEN the command emits exactly one deprecation warning line naming `permissions.toml` as deprecated AND naming `but agent migrate` (or the remediation) — captured via snapbox on stderr or stdout per where IDENT-009 emits it.
-- **Verify:** `cargo test -p but --test but::command::agent agent_migrate_dual_file_emits_deprecation_warning`
-- **Scenario:** `start_ref=both_files_committed`; `must_observe` = [loader-invoking command exits 0, exactly one warning line containing "permissions.toml" AND ("deprecated" OR "but agent migrate")]; `must_not_observe` = [zero warning lines, more than one warning line, command failing (warning must not escalate during migration window)].
+**AC-3** — permissions-only legacy repo emits deprecation warning: GIVEN a governed Sandbox where ONLY `.gitbutler/permissions.toml` is committed (`.gitbutler/agents.toml` absent) WHEN a loader-invoking CLI command is run (e.g. `but perm list` or `but agent list --committed` — whichever exercises `load_governance_config`) THEN the command emits exactly one deprecation warning line naming `permissions.toml` as deprecated AND naming `but agent migrate` (or the remediation) — captured via snapbox on stderr or stdout per where IDENT-009 emits it.
+- **Verify:** `cargo test -p but --test but::command::agent agent_migrate_permissions_only_emits_deprecation_warning`
+- **Scenario:** `start_ref=permissions_only_committed`; `must_observe` = [loader-invoking command exits 0, exactly one warning line containing "permissions.toml" AND ("deprecated" OR "but agent migrate")]; `must_not_observe` = [zero warning lines, more than one warning line, command failing (warning must not escalate during migration window), `agents.toml` present in the fixture].
 
 ## Test Criteria
 
@@ -53,7 +53,7 @@ Sprint 08's IDENT-007 created `crates/but/tests/but/command/agent.rs` with `regi
 | TC-1 | `but agent migrate` on a permissions-only repo exits 0 and stdout matches the snapshot containing the ref-pin caveat is true | AC-1 |
 | TC-2 | `.gitbutler/agents.toml` exists in the working tree after the initial migrate is true | AC-1 |
 | TC-3 | A second `but agent migrate` exits 0 with a stdout snapshot textually distinct from the initial run AND leaves `agents.toml` byte-unchanged is true | AC-2 |
-| TC-4 | On a both-files-committed repo, a loader-invoking CLI command emits exactly one warning line naming `permissions.toml` + `but agent migrate` is true | AC-3 |
+| TC-4 | On a permissions-only legacy repo, a loader-invoking CLI command emits exactly one warning line naming `permissions.toml` + `but agent migrate` is true | AC-3 |
 
 ## Reading List
 
@@ -81,7 +81,7 @@ Sprint 08's IDENT-007 created `crates/but/tests/but/command/agent.rs` with `regi
 **Source:** `crates/but/tests/but/command/perm.rs:3` (`REF_PIN_CAVEAT` constant — "takes effect once committed to the target branch").
 
 **Design notes:**
-- EXTEND coordination with Sprint 08's IDENT-007: additive only. If IDENT-007's helper fns (e.g. a `governed_agent_env()` builder) can be reused, reuse them; if a new fixture variant is needed (dual-file-committed), add a new private helper fn, do not fork an existing one.
+- EXTEND coordination with Sprint 08's IDENT-007: additive only. If IDENT-007's helper fns (e.g. a `governed_agent_env()` builder) can be reused, reuse them; if a new permissions-only fixture helper is needed, add a new private helper fn, do not fork an existing one.
 - AC-3 command choice: `but perm list` is the safest loader-invoking path (it calls `load_governance_config` to resolve the principal). If IDENT-011 also lands `but agent list --committed`, that is the more thematically appropriate choice. Pick whichever compiles against the post-IDENT-011 state.
 - Snapshot stability: use `[..]` wildcards for the working-tree path prefix (the `Sandbox` `projects_root` is temp-dir-derived) and for any OIDs.
 
@@ -92,7 +92,7 @@ Sprint 08's IDENT-007 created `crates/but/tests/but/command/agent.rs` with `regi
 TDD RED→GREEN per AC:
 1. **RED AC-1:** Write `agent_migrate_initial_writes_agents_toml_with_caveat` — seed permissions-only Sandbox, run `env.but("agent").arg("migrate").assert().success().stdout_eq(snapbox::str![r#""#])` (empty snapshot placeholder), assert `agents.toml` exists. Run → snapshot mismatch (or migrate verb missing if IDENT-011 hasn't landed).
 2. **GREEN:** `SNAPSHOTS=overwrite cargo test -p but --test but::command::agent agent_migrate_initial_writes_agents_toml_with_caveat` — review captured snapshot, commit it.
-3. Repeat for AC-2 (idempotent) and AC-3 (dual-file warning).
+3. Repeat for AC-2 (idempotent) and AC-3 (permissions-only warning).
 4. Run `cargo fmt`, `cargo clippy -p but --all-targets -- -D warnings`, `cargo test -p but --test but::command::agent`.
 5. Commit via `but commit`.
 
@@ -117,13 +117,13 @@ TDD RED→GREEN per AC:
 
 - All 3 new tests use snapbox `.stdout_eq`/`.stderr_eq` (no manual stdout assertions).
 - AC-2's no-op snapshot is textually distinct from AC-1's first-run snapshot.
-- AC-3 observes the warning via a real CLI command (not a direct `load_governance_config` call).
+- AC-3 observes the permissions-only warning via a real CLI command (not a direct `load_governance_config` call).
 - `[..]` wildcards limited to volatile portions (paths, OIDs); no over-loose snapshots.
 - `#[serial_test::serial]` on every new `#[test]`.
 
 ## Dependencies
 
-- **Depends on:** IDENT-007 (Sprint 08 — created the file being extended), IDENT-009 (dual-file warning), IDENT-011 (migrate verb).
+- **Depends on:** IDENT-007 (Sprint 08 — created the file being extended), IDENT-009 (permissions-only warning), IDENT-011 (migrate verb).
 - **Blocks:** Sprint 11 (snapshots are the regression net for `but-migrate` skill's repo migration path).
 
 <!-- REQUIREMENT-CONTRACT v1 -->
@@ -149,13 +149,6 @@ TDD RED→GREEN per AC:
       "seed_method": "public_api",
       "records": [
         "permissions_only_committed then run but agent migrate once"
-      ]
-    },
-    "both_files_committed": {
-      "description": "Sandbox where BOTH permissions.toml and agents.toml are committed (incomplete-migration state)",
-      "seed_method": "public_api",
-      "records": [
-        "invoke_bash commits both files"
       ]
     }
   },
@@ -284,16 +277,16 @@ TDD RED→GREEN per AC:
     {
       "id": "AC-3",
       "type": "acceptance_criterion",
-      "description": "GIVEN both files committed WHEN loader-invoking CLI command runs THEN exactly one warning line naming permissions.toml + but agent migrate",
+      "description": "GIVEN permissions-only legacy repo WHEN loader-invoking CLI command runs THEN exactly one warning line naming permissions.toml + but agent migrate",
       "test_tier": "integration",
       "verification_service": "but-cli",
-      "verify": "cargo test -p but --test but::command::agent agent_migrate_dual_file_emits_deprecation_warning",
+      "verify": "cargo test -p but --test but::command::agent agent_migrate_permissions_only_emits_deprecation_warning",
       "maps_to_ac": null,
       "scenario": {
         "tier": "visible",
         "test_tier": "integration",
         "verification_service": "but-cli",
-        "start_ref": "both_files_committed",
+        "start_ref": "permissions_only_committed",
         "must_observe": [
           "exit 0",
           "one warning naming permissions.toml + but agent migrate"
@@ -301,11 +294,12 @@ TDD RED→GREEN per AC:
         "must_not_observe": [
           "zero warnings",
           ">1 warnings",
-          "non-zero exit"
+          "non-zero exit",
+          "agents.toml present"
         ],
         "negative_control": {
           "would_fail_if": [
-            "IDENT-009 emits no dual-file warning",
+            "IDENT-009 emits no permissions-only warning",
             "warning omits remediation",
             "wrong CLI command picked"
           ]
@@ -316,7 +310,7 @@ TDD RED→GREEN per AC:
         },
         "cases": [
           {
-            "start_ref": "both_files_committed",
+            "start_ref": "permissions_only_committed",
             "action": {
               "actor": "ci",
               "steps": [
@@ -331,7 +325,8 @@ TDD RED→GREEN per AC:
               "must_not_observe": [
                 "warning count == 0",
                 "warning count > 1",
-                "empty warning text"
+                "empty warning text",
+                "fixture includes `.gitbutler/agents.toml`"
               ]
             }
           }
@@ -362,8 +357,8 @@ TDD RED→GREEN per AC:
     {
       "id": "TC-4",
       "type": "test_criterion",
-      "description": "dual-file loader command emits one warning naming permissions.toml + but agent migrate",
-      "verify": "cargo test -p but --test but::command::agent agent_migrate_dual_file_emits_deprecation_warning",
+      "description": "permissions-only loader command emits one warning naming permissions.toml + but agent migrate",
+      "verify": "cargo test -p but --test but::command::agent agent_migrate_permissions_only_emits_deprecation_warning",
       "maps_to_ac": "AC-3"
     }
   ]
