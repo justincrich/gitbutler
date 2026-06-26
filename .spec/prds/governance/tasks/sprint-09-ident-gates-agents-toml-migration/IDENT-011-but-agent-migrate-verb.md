@@ -34,21 +34,21 @@ The IDENT file rename (`permissions.toml` → `agents.toml`) needs a CLI verb op
 
 **Objective:** Add a `migrate` verb to the `but agent` CLI (created by Sprint 08) that rewrites a working-tree `permissions.toml` into `agents.toml` by renaming `[[principal]]` → `[[agent]]`, prints the ref-pin caveat, and is idempotent.
 
-**Success state:** `cargo test -p but --test but::command::agent` `migrate` snapshots pass (initial migrate writes `agents.toml`; re-run is a no-op; missing-source errors cleanly). The CLI exits 0 on success and nonzero on missing `permissions.toml`.
+**Success state:** `cargo test -p but --features but-2 --test but -- agent_migrate` `migrate` snapshots pass (initial migrate writes `agents.toml`; re-run is a no-op; missing-source errors cleanly). The CLI exits 0 on success and nonzero on missing `permissions.toml`.
 
 ## Acceptance Criteria
 
 **AC-1 (PRIMARY)** — GIVEN a working tree with `.gitbutler/permissions.toml` (`[[principal]]` blocks) and no `agents.toml` WHEN `but agent migrate` THEN `.gitbutler/agents.toml` is written whose content equals the `permissions.toml` with every `[[principal]]` header replaced by `[[agent]]` (fields/comments unchanged); exit 0; stdout prints the ref-pin caveat naming the add+delete commit step.
-- **Verify:** `cargo test -p but --test but::command::agent -- agent_migrate_writes_agents_toml`
+- **Verify:** `cargo test -p but --features but-2 --test but -- agent_migrate_writes_agents_toml`
 - **TEST_TIER:** integration · **VERIFICATION_SERVICE:** but-cli · **FLOW_REF:** UC-IDENT-04
 - **Scenario:** `start_ref=worktree_permissions_only`; `must_observe` = [`agents.toml` exists, content == `permissions.toml` with `[[principal]]`→`[[agent]]`, stdout has ref-pin caveat, exit 0]; `must_not_observe` = [`agents.toml` absent, field names changed, `permissions.toml` deleted, target ref mutated]; `negative_control.would_fail_if` = [migrate no-ops, migrate writes target ref, `[[principal]]`→`[[agent]]` rename missing or also rewrites field names].
 
 **AC-2** — GIVEN a working tree that already has `.gitbutler/agents.toml` (from a prior migrate) WHEN `but agent migrate` again THEN exit 0, `agents.toml` byte-content unchanged, stdout prints a distinct "already migrated; no change" message.
-- **Verify:** `cargo test -p but --test but::command::agent -- agent_migrate_idempotent`
+- **Verify:** `cargo test -p but --features but-2 --test but -- agent_migrate_idempotent`
 - **Scenario:** `must_observe` = [exit 0, bytes unchanged, distinct no-op snapshot]; `must_not_observe` = [`agents.toml` overwritten, nonzero exit, first-run message repeated].
 
 **AC-3** — GIVEN a working tree with NEITHER `permissions.toml` nor `agents.toml` WHEN `but agent migrate` THEN nonzero exit, stderr names the missing `.gitbutler/permissions.toml` path, no `agents.toml` written.
-- **Verify:** `cargo test -p but --test but::command::agent -- agent_migrate_missing_source`
+- **Verify:** `cargo test -p but --features but-2 --test but -- agent_migrate_missing_source`
 - **Scenario:** `must_observe` = [nonzero exit, stderr names `permissions.toml`]; `must_not_observe` = [exit 0, `agents.toml` created].
 
 ## Test Criteria
@@ -98,12 +98,12 @@ TDD RED→GREEN→REFACTOR per AC:
 2. **GREEN:** Add `Migrate` to `args::agent::Subcommands`; add the match arm + helper fn in `command::agent::exec`; do the line-oriented text transform; print the caveat via `OutputChannel`.
 3. **REFACTOR:** Extract the transform into a private `fn rewrite_principals_to_agents(contents: &str) -> String` for testability.
 4. Repeat for AC-2 (idempotent) and AC-3 (missing source).
-5. Run `cargo fmt`, `cargo clippy -p but --all-targets -- -D warnings`, `cargo test -p but --test but::command::agent`.
+5. Run `cargo fmt`, `cargo clippy -p but --all-targets -- -D warnings`, `cargo test -p but --features but-2 --test but -- agent_migrate`.
 6. Commit via `but commit`.
 
 ## Orchestrator Verification Protocol
 
-1. `cargo test -p but --test but::command::agent` exit 0 (new `migrate` snapshots pass).
+1. `cargo test -p but --features but-2 --test but -- agent_migrate` exit 0 (new `migrate` snapshots pass).
 2. `cargo check -p but --all-targets` clean.
 3. `crates/but/src/command/agent.rs` has a `Migrate` arm; `crates/but/src/args/agent.rs` has a `Migrate` variant.
 
@@ -114,7 +114,7 @@ TDD RED→GREEN→REFACTOR per AC:
 
 ## Evidence Gates
 
-- `cargo test -p but --test but::command::agent` exit 0
+- `cargo test -p but --features but-2 --test but -- agent_migrate` exit 0
 - `Migrate` variant present in `args::agent::Subcommands`
 - `Migrate` arm present in `command::agent::exec`
 
@@ -165,7 +165,7 @@ TDD RED→GREEN→REFACTOR per AC:
       "description": "GIVEN working tree with permissions.toml and no agents.toml WHEN `but agent migrate` THEN agents.toml written ([[principal]]→[[agent]], fields unchanged), exit 0, stdout prints ref-pin caveat",
       "test_tier": "integration",
       "verification_service": "but-cli",
-      "verify": "cargo test -p but --test but::command::agent -- agent_migrate_writes_agents_toml",
+      "verify": "cargo test -p but --features but-2 --test but -- agent_migrate_writes_agents_toml",
       "maps_to_ac": null,
       "flow_ref": "UC-IDENT-04",
       "scenario": {
@@ -231,7 +231,7 @@ TDD RED→GREEN→REFACTOR per AC:
       "description": "GIVEN agents.toml already present WHEN `but agent migrate` again THEN exit 0, no file change, 'already migrated' message",
       "test_tier": "integration",
       "verification_service": "but-cli",
-      "verify": "cargo test -p but --test but::command::agent -- agent_migrate_idempotent",
+      "verify": "cargo test -p but --features but-2 --test but -- agent_migrate_idempotent",
       "maps_to_ac": null,
       "scenario": {
         "tier": "visible",
@@ -292,7 +292,7 @@ TDD RED→GREEN→REFACTOR per AC:
       "description": "GIVEN no permissions.toml and no agents.toml WHEN `but agent migrate` THEN nonzero exit, stderr names permissions.toml, no agents.toml written",
       "test_tier": "integration",
       "verification_service": "but-cli",
-      "verify": "cargo test -p but --test but::command::agent -- agent_migrate_missing_source",
+      "verify": "cargo test -p but --features but-2 --test but -- agent_migrate_missing_source",
       "maps_to_ac": null,
       "scenario": {
         "tier": "visible",
@@ -346,21 +346,21 @@ TDD RED→GREEN→REFACTOR per AC:
       "id": "TC-1",
       "type": "test_criterion",
       "description": "migrate writes agents.toml + caveat",
-      "verify": "cargo test -p but --test but::command::agent -- agent_migrate_writes_agents_toml",
+      "verify": "cargo test -p but --features but-2 --test but -- agent_migrate_writes_agents_toml",
       "maps_to_ac": "AC-1"
     },
     {
       "id": "TC-2",
       "type": "test_criterion",
       "description": "migrate idempotent",
-      "verify": "cargo test -p but --test but::command::agent -- agent_migrate_idempotent",
+      "verify": "cargo test -p but --features but-2 --test but -- agent_migrate_idempotent",
       "maps_to_ac": "AC-2"
     },
     {
       "id": "TC-3",
       "type": "test_criterion",
       "description": "migrate missing source errors",
-      "verify": "cargo test -p but --test but::command::agent -- agent_migrate_missing_source",
+      "verify": "cargo test -p but --features but-2 --test but -- agent_migrate_missing_source",
       "maps_to_ac": "AC-3"
     }
   ]

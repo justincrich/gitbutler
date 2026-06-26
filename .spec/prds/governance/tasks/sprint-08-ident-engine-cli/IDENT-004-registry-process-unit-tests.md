@@ -44,12 +44,12 @@ IDENT-001/002/003 each shipped minimal RED→GREEN tests for their own surface. 
 
 | ID | Boolean | Maps to AC |
 |----|---------|------------|
-| TC-1 | `tests/registry.rs::registry_round_trip` passes (3 entries, byte-exact) | AC-1 |
-| TC-2 | `tests/registry.rs::ttl_boundary` passes (gc(999)/gc(1000) keep; gc(1001) drops) | AC-2 |
-| TC-3 | `tests/registry.rs::pid_reuse_rejection` passes (same pid, different start → None) | AC-3 |
-| TC-4 | `tests/registry.rs::concurrent_writes` passes (4 threads, all entries land, file parses) | AC-4 |
-| TC-5 | `tests/process.rs::start_time_monotonic` passes | AC-5 |
-| TC-6 | `tests/authorize.rs::resolve_principal_with_registry_*` (5 sub-tests for IDENT-003 ACs) pass | AC-6 |
+| TC-1 | `tests/registry.rs::IDENT_004_registry_write_then_load_round_trips_three_distinct_entries_exact_fields` passes (3 entries, byte-exact) | AC-1 |
+| TC-2 | `tests/registry.rs::IDENT_004_gc_keeps_expiry_boundary_and_drops_afterwards` passes (gc(999)/gc(1000) keep; gc(1001) drops) | AC-2 |
+| TC-3 | `tests/registry.rs::IDENT_001_same_pid_with_different_start_time_does_not_resolve` passes (same pid, different start → None) | AC-3 |
+| TC-4 | `tests/registry.rs::IDENT_004_concurrent_registry_writes_preserve_all_distinct_entries_and_parse` passes (4 threads, all entries land, file parses) | AC-4 |
+| TC-5 | `tests/process.rs::IDENT_004_current_process_start_time_is_monotonic_and_sane_unix_seconds` passes | AC-5 |
+| TC-6 | `tests/authorize.rs::IDENT_003_*` (5 sub-tests for IDENT-003 ACs) pass | AC-6 |
 
 ## Reading List
 
@@ -147,7 +147,7 @@ fn concurrent_writes_to_same_path_all_entries_land() -> anyhow::Result<()> {
 <!--
 {
   "tdd_mode": "shared",
-  "shared_test_ref": "crates/but-authz/tests/registry.rs; crates/but-authz/tests/process.rs; crates/but-authz/tests/authorize.rs::resolve_principal_with_registry_*",
+  "shared_test_ref": "crates/but-authz/tests/registry.rs; crates/but-authz/tests/process.rs; crates/but-authz/tests/authorize.rs::IDENT_003_*",
   "verification_policy": {
     "requires_tests": true,
     "requires_red_evidence": false,
@@ -204,7 +204,7 @@ fn concurrent_writes_to_same_path_all_entries_land() -> anyhow::Result<()> {
           }
         ]
       },
-      "verify": "cargo test -p but-authz --test registry registry_round_trip"
+      "verify": "cargo test -p but-authz --test registry IDENT_004_registry_write_then_load_round_trips_three_distinct_entries_exact_fields"
     },
     {
       "id": "AC-2",
@@ -253,7 +253,7 @@ fn concurrent_writes_to_same_path_all_entries_land() -> anyhow::Result<()> {
           }
         ]
       },
-      "verify": "cargo test -p but-authz --test registry ttl_boundary"
+      "verify": "cargo test -p but-authz --test registry IDENT_004_gc_keeps_expiry_boundary_and_drops_afterwards"
     },
     {
       "id": "AC-3",
@@ -301,7 +301,7 @@ fn concurrent_writes_to_same_path_all_entries_land() -> anyhow::Result<()> {
           }
         ]
       },
-      "verify": "cargo test -p but-authz --test registry pid_reuse_rejection"
+      "verify": "cargo test -p but-authz --test registry IDENT_001_same_pid_with_different_start_time_does_not_resolve"
     },
     {
       "id": "AC-4",
@@ -351,7 +351,7 @@ fn concurrent_writes_to_same_path_all_entries_land() -> anyhow::Result<()> {
           }
         ]
       },
-      "verify": "cargo test -p but-authz --test registry concurrent_writes"
+      "verify": "cargo test -p but-authz --test registry IDENT_004_concurrent_registry_writes_preserve_all_distinct_entries_and_parse"
     },
     {
       "id": "AC-5",
@@ -398,7 +398,7 @@ fn concurrent_writes_to_same_path_all_entries_land() -> anyhow::Result<()> {
           }
         ]
       },
-      "verify": "cargo test -p but-authz --test process start_time_monotonic"
+      "verify": "cargo test -p but-authz --test process IDENT_004_current_process_start_time_is_monotonic_and_sane_unix_seconds"
     },
     {
       "id": "AC-6",
@@ -448,49 +448,49 @@ fn concurrent_writes_to_same_path_all_entries_land() -> anyhow::Result<()> {
           }
         ]
       },
-      "verify": "cargo test -p but-authz --test authorize resolve_principal_with_registry"
+      "verify": "cargo test -p but-authz --test authorize IDENT_003"
     },
     {
       "id": "TC-1",
       "type": "test_criterion",
       "maps_to_ac": "AC-1",
-      "description": "registry_round_trip passes (3 entries byte-exact)",
-      "verify": "cargo test -p but-authz --test registry registry_round_trip"
+      "description": "IDENT_004_registry_write_then_load_round_trips_three_distinct_entries_exact_fields passes (3 entries byte-exact)",
+      "verify": "cargo test -p but-authz --test registry IDENT_004_registry_write_then_load_round_trips_three_distinct_entries_exact_fields"
     },
     {
       "id": "TC-2",
       "type": "test_criterion",
       "maps_to_ac": "AC-2",
-      "description": "ttl_boundary passes (gc(999)/gc(1000) keep; gc(1001) drops)",
-      "verify": "cargo test -p but-authz --test registry ttl_boundary"
+      "description": "IDENT_004_gc_keeps_expiry_boundary_and_drops_afterwards passes (gc(999)/gc(1000) keep; gc(1001) drops)",
+      "verify": "cargo test -p but-authz --test registry IDENT_004_gc_keeps_expiry_boundary_and_drops_afterwards"
     },
     {
       "id": "TC-3",
       "type": "test_criterion",
       "maps_to_ac": "AC-3",
-      "description": "pid_reuse_rejection passes",
-      "verify": "cargo test -p but-authz --test registry pid_reuse_rejection"
+      "description": "IDENT_001_same_pid_with_different_start_time_does_not_resolve passes",
+      "verify": "cargo test -p but-authz --test registry IDENT_001_same_pid_with_different_start_time_does_not_resolve"
     },
     {
       "id": "TC-4",
       "type": "test_criterion",
       "maps_to_ac": "AC-4",
-      "description": "concurrent_writes passes (4 threads, all entries land)",
-      "verify": "cargo test -p but-authz --test registry concurrent_writes"
+      "description": "IDENT_004_concurrent_registry_writes_preserve_all_distinct_entries_and_parse passes (4 threads, all entries land)",
+      "verify": "cargo test -p but-authz --test registry IDENT_004_concurrent_registry_writes_preserve_all_distinct_entries_and_parse"
     },
     {
       "id": "TC-5",
       "type": "test_criterion",
       "maps_to_ac": "AC-5",
-      "description": "start_time_monotonic passes",
-      "verify": "cargo test -p but-authz --test process start_time_monotonic"
+      "description": "IDENT_004_current_process_start_time_is_monotonic_and_sane_unix_seconds passes",
+      "verify": "cargo test -p but-authz --test process IDENT_004_current_process_start_time_is_monotonic_and_sane_unix_seconds"
     },
     {
       "id": "TC-6",
       "type": "test_criterion",
       "maps_to_ac": "AC-6",
-      "description": "resolve_principal_with_registry_* (5 sub-tests) pass",
-      "verify": "cargo test -p but-authz --test authorize resolve_principal_with_registry"
+      "description": "IDENT_003_* (5 sub-tests for IDENT-003 ACs) pass",
+      "verify": "cargo test -p but-authz --test authorize IDENT_003"
     }
   ],
   "fixtures": {

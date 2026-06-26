@@ -229,7 +229,7 @@ TDD RED→GREEN→REFACTOR per AC:
           }
         ]
       },
-      "verify": "cargo test -p but-authz --test authorize resolve_principal_with_registry_hit"
+      "verify": "cargo test -p but-authz --test authorize IDENT_003_registry_hit_resolves_registered_principal"
     },
     {
       "id": "AC-2",
@@ -277,7 +277,7 @@ TDD RED→GREEN→REFACTOR per AC:
           }
         ]
       },
-      "verify": "cargo test -p but-authz --test authorize resolve_principal_with_registry_env_fallback_when_allowed"
+      "verify": "cargo test -p but-authz --test authorize IDENT_003_registry_miss_allows_flagged_env_fallback"
     },
     {
       "id": "AC-3",
@@ -324,7 +324,7 @@ TDD RED→GREEN→REFACTOR per AC:
           }
         ]
       },
-      "verify": "cargo test -p but-authz --test authorize resolve_principal_with_registry_unregistered_denial"
+      "verify": "cargo test -p but-authz --test authorize IDENT_003_registry_miss_without_env_flag_denies_unregistered"
     },
     {
       "id": "AC-4",
@@ -373,7 +373,7 @@ TDD RED→GREEN→REFACTOR per AC:
           }
         ]
       },
-      "verify": "cargo test -p but-authz --test authorize resolve_principal_with_registry_stale_registration_denial"
+      "verify": "cargo test -p but-authz --test authorize IDENT_003_stale_registry_entry_denies_pid_reuse"
     },
     {
       "id": "AC-5",
@@ -420,49 +420,49 @@ TDD RED→GREEN→REFACTOR per AC:
           }
         ]
       },
-      "verify": "cargo test -p but-authz --test authorize resolve_principal_with_registry_none_env_fallback"
+      "verify": "cargo test -p but-authz --test authorize IDENT_003_none_registry_allows_flagged_env_fallback"
     },
     {
       "id": "TC-1",
       "type": "test_criterion",
       "maps_to_ac": "AC-1",
       "description": "Registry hit returns the registered principal.id()",
-      "verify": "cargo test -p but-authz --test authorize resolve_principal_with_registry_hit"
+      "verify": "cargo test -p but-authz --test authorize IDENT_003_registry_hit_resolves_registered_principal"
     },
     {
       "id": "TC-2",
       "type": "test_criterion",
       "maps_to_ac": "AC-2",
       "description": "Registry miss + flag set → env fallback",
-      "verify": "cargo test -p but-authz --test authorize resolve_principal_with_registry_env_fallback_when_allowed"
+      "verify": "cargo test -p but-authz --test authorize IDENT_003_registry_miss_allows_flagged_env_fallback"
     },
     {
       "id": "TC-3",
       "type": "test_criterion",
       "maps_to_ac": "AC-3",
       "description": "Registry miss + flag unset → Denial::unregistered with perm.denied",
-      "verify": "cargo test -p but-authz --test authorize resolve_principal_with_registry_unregistered_denial"
+      "verify": "cargo test -p but-authz --test authorize IDENT_003_registry_miss_without_env_flag_denies_unregistered"
     },
     {
       "id": "TC-4",
       "type": "test_criterion",
       "maps_to_ac": "AC-4",
       "description": "Stale registration → Denial::stale_registration with perm.denied",
-      "verify": "cargo test -p but-authz --test authorize resolve_principal_with_registry_stale_registration_denial"
+      "verify": "cargo test -p but-authz --test authorize IDENT_003_stale_registry_entry_denies_pid_reuse"
     },
     {
       "id": "TC-5",
       "type": "test_criterion",
       "maps_to_ac": "AC-5",
       "description": "None registry + flag set → env fallback without panic",
-      "verify": "cargo test -p but-authz --test authorize resolve_principal_with_registry_none_env_fallback"
+      "verify": "cargo test -p but-authz --test authorize IDENT_003_none_registry_allows_flagged_env_fallback"
     },
     {
       "id": "TC-6",
       "type": "test_criterion",
       "maps_to_ac": "AC-5",
       "description": "resolve_principal_from_env unchanged (existing tests still pass)",
-      "verify": "cargo test -p but-authz --test authorize resolve_principal_from_env"
+      "verify": "cargo test -p but-authz --test authorize test_resolver_env_fallback"
     }
   ],
   "fixtures": {

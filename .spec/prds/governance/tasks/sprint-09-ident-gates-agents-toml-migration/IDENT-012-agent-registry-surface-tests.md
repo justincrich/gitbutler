@@ -16,7 +16,7 @@ IDENT-010 proves each of the 8 callsite swaps with focused register→action→u
 
 - **MUST** write 4 `#[test]` fns: `commit_surface`, `merge_surface`, `admin_write_surface`, `forge_review_surface`.
 - **MUST** seed a governed repo via `but_testsupport::writable_scenario` + `invoke_bash`; seed the runtime registry via `BUT_AGENT_REGISTRY_PATH` pointing at a per-test tempfile.
-- **MUST** use the test process's OWN real `(pid, start_time)` via `but_authz::process::current_pid()` / `current_start_time()` — so the registry hit is real, not a fake.
+- **MUST** use the test process's OWN real `(pid, start_time)` via `but_authz::process::current_pid()` / `process_start_time(current_pid())` — so the registry hit is real, not a fake.
 - **MUST** assert on the real `Denial` code (`perm.denied`), not on error `Display` text.
 - **MUST** clean up `BUT_AGENT_REGISTRY_PATH` across tests (RAII guard or `std::env::remove_var` in `Drop`) — parallel test isolation.
 - **MUST** print evidence lines via `println!` (mirrors existing `tests/config.rs` evidence-capture style).
@@ -147,7 +147,7 @@ TDD RED→GREEN per surface (4 micro-cycles):
       "seed_method": "public_api",
       "records": [
         "writable_scenario + invoke_bash commits surface-appropriate governance",
-        "Registry::write(BUT_AGENT_REGISTRY_PATH) seeds (current_pid(), current_start_time()) → surface principal"
+        "Registry::write(BUT_AGENT_REGISTRY_PATH) seeds (current_pid(), process_start_time(current_pid())) → surface principal"
       ]
     }
   },

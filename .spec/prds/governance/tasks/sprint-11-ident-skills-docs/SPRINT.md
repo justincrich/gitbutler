@@ -2,7 +2,7 @@
 sprint: 11
 sequence: 13
 timeline: Phase 6 — IDENT skills + docs (v1.4.0)
-status: In Progress
+status: In Progress (docs landed; skills + field proof pending; IDENT-028 AC-1/AC-3 blocked-until-C1)
 proposed_by: rust-planner (upstream ROADMAP `--no-specialists` declaration; task expansion dispatches rust-planner per RULES.md specialist table)
 milestone: sprint-11-ident-skills-docs
 prd: ../../README.md
@@ -14,9 +14,19 @@ generated_by: kb-sprint-tasks-plan
 
 **Sequence:** 13
 **Timeline:** Phase 6 — IDENT skills + docs (v1.4.0)
-**Status:** In Progress
+**Status:** In Progress (split) — repo-local docs **LANDED** (IDENT-022/023/024) · brain skills + field proof **PENDING** (IDENT-025/026/027/028) · IDENT-028 AC-1/AC-3 **BLOCKED-UNTIL-C1**
 **Proposed by:** rust-planner (upstream ROADMAP declared `--no-specialists` for the sprint skeleton; task expansion here dispatches `rust-planner` per the RULES.md Specialist Agents table — `--no-specialists` is "never the default" per the skill NEVER-TIER, and the project resolves `rust-planner` for the `crates/` Rust backend + repo-docs surface)
 **Milestone:** — (`sprint-11-ident-skills-docs`)
+
+## Status
+
+This sprint is **not a single flat state** — it splits three ways:
+
+- **LANDED · repo-local docs (IDENT-022/023/024):** committed to this repo (commit `IDENT-022/023/024: document agent identity model in repo docs`) — the RULES.md "Agent identity" subsection, NEW `crates/but-authz/README.md`, and cross-references in `crates/AGENTS.md` / `crates/but/AGENTS.md` / `DEVELOPMENT.md` "Code Hitlist" / `crates/WORKSPACE_MODEL.md`. The build-gate / source-grep ACs (T-IDENT-032..035) are provable inside this repo and are done.
+- **PENDING · brain skills + field proof (IDENT-025/026/027/028):** the `but-init` / `but-migrate` / dispatch-skill edits (canonical in `~/Projects/brain/skills/`, mirrored to `~/.claude/skills/`) and the `agent-intel` field migration are not yet landed/proved.
+- **BLOCKED-UNTIL-C1 · IDENT-028 AC-1/AC-3 (field gate enforcement):** the registered-`but commit` success receipt (AC-1) and the unregistered `perm.denied` receipt (AC-3) cannot be honestly captured until the **registry-path fix (C1)** propagates — C1 unifies the split where the CLI writes `agents-runtime.toml` while the gate reads `agent-registry.toml`. Until C1 lands, the default-path round-trip is inert and AC-3 only "passes" because an empty registry denies everyone.
+
+> **Evidence-pending.** The end-to-end ACs — **T-IDENT-036/037/038** (brain-repo skill e2e), **IDENT-027 AC-7** (`but agent whoami` round-trip), and **IDENT-028 AC-1/AC-3** (field gate receipts) — are evidence-pending: not yet backed by captured run-logs / gate receipts.
 
 ## Overview
 

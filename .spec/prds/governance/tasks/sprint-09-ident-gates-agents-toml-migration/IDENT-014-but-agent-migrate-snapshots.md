@@ -29,21 +29,21 @@ Sprint 08's IDENT-007 created `crates/but/tests/but/command/agent.rs` with `regi
 
 **Objective:** Add 3 snapbox snapshot tests to `crates/but/tests/but/command/agent.rs` covering the `but agent migrate` verb: (1) initial run writes `agents.toml` + prints the ref-pin caveat; (2) a second run is a no-op with a distinct message; (3) when only legacy `permissions.toml` is committed, a loader-invoking CLI command emits exactly one deprecation warning naming `permissions.toml` + `but agent migrate`.
 
-**Success state:** `cargo test -p but --test but::command::agent` passes with the 3 new snapshots captured. `SNAPSHOTS=overwrite` regenerates them cleanly. No existing `agent.rs` snapshot is modified.
+**Success state:** `cargo test -p but --features but-2 --test but -- agent_migrate` passes with the 3 new snapshots captured. `SNAPSHOTS=overwrite` regenerates them cleanly. No existing `agent.rs` snapshot is modified.
 
 ## Acceptance Criteria
 
 **AC-1 (PRIMARY)** — initial migrate writes `agents.toml` with caveat: GIVEN a governed Sandbox with ONLY `.gitbutler/permissions.toml` committed (no `agents.toml` in working tree or at target ref) WHEN `but agent migrate` is invoked via `env.but("agent").arg("migrate").assert().success().stdout_eq(...)` THEN exit 0; stdout matches the snapbox snapshot which includes (a) confirmation that `.gitbutler/agents.toml` was written and (b) the ref-pin caveat ("takes effect once committed to the target branch" — same caveat string as `but perm grant` per `perm.rs:3`); the working tree now contains `.gitbutler/agents.toml`.
-- **Verify:** `cargo test -p but --test but::command::agent agent_migrate_initial_writes_agents_toml_with_caveat` (update with `SNAPSHOTS=overwrite`)
+- **Verify:** `cargo test -p but --features but-2 --test but -- agent_migrate_initial_writes_agents_toml_with_caveat` (update with `SNAPSHOTS=overwrite`)
 - **TEST_TIER:** integration · **VERIFICATION_SERVICE:** but-cli · **FLOW_REF:** UC-IDENT-04
 - **Scenario:** `start_ref=permissions_only_committed`; `must_observe` = [exit 0, stdout snapshot matches (contains agents.toml-written confirmation + ref-pin caveat), `.gitbutler/agents.toml` exists in working tree]; `must_not_observe` = [non-zero exit, stdout missing ref-pin caveat, no agents.toml file written]; `negative_control.would_fail_if` = [IDENT-011's migrate verb does not print the ref-pin caveat, verb writes wrong path or does not write at all, snapshot omits caveat line and a future regression silently drops it].
 
 **AC-2** — idempotent re-run is no-op: GIVEN a governed Sandbox where `but agent migrate` has already run (`agents.toml` exists in working tree from AC-1's state, `permissions.toml` still present) WHEN `but agent migrate` is invoked a SECOND time THEN exit 0; stdout matches a DISTINCT snapbox snapshot that communicates the no-op (e.g. "agents.toml already exists; nothing to do"); working-tree `agents.toml` content is byte-unchanged from the first run (no rewrite).
-- **Verify:** `cargo test -p but --test but::command::agent agent_migrate_idempotent_rerun_is_noop`
+- **Verify:** `cargo test -p but --features but-2 --test but -- agent_migrate_idempotent_rerun_is_noop`
 - **Scenario:** `start_ref=agents_toml_already_written`; `must_observe` = [exit 0, stdout snapshot matches AND is textually distinct from AC-1's snapshot, `agents.toml` working-tree content unchanged (sha or byte equality before/after the second run)]; `must_not_observe` = [AC-1's caveat+confirmation message repeated verbatim, `agents.toml` rewritten (content diff), non-zero exit].
 
 **AC-3** — permissions-only legacy repo emits deprecation warning: GIVEN a governed Sandbox where ONLY `.gitbutler/permissions.toml` is committed (`.gitbutler/agents.toml` absent) WHEN a loader-invoking CLI command is run (e.g. `but perm list` or `but agent list --committed` — whichever exercises `load_governance_config`) THEN the command emits exactly one deprecation warning line naming `permissions.toml` as deprecated AND naming `but agent migrate` (or the remediation) — captured via snapbox on stderr or stdout per where IDENT-009 emits it.
-- **Verify:** `cargo test -p but --test but::command::agent agent_migrate_permissions_only_emits_deprecation_warning`
+- **Verify:** `cargo test -p but --features but-2 --test but -- agent_migrate_permissions_only_emits_deprecation_warning`
 - **Scenario:** `start_ref=permissions_only_committed`; `must_observe` = [loader-invoking command exits 0, exactly one warning line containing "permissions.toml" AND ("deprecated" OR "but agent migrate")]; `must_not_observe` = [zero warning lines, more than one warning line, command failing (warning must not escalate during migration window), `agents.toml` present in the fixture].
 
 ## Test Criteria
@@ -91,14 +91,14 @@ Sprint 08's IDENT-007 created `crates/but/tests/but/command/agent.rs` with `regi
 
 TDD RED→GREEN per AC:
 1. **RED AC-1:** Write `agent_migrate_initial_writes_agents_toml_with_caveat` — seed permissions-only Sandbox, run `env.but("agent").arg("migrate").assert().success().stdout_eq(snapbox::str![r#""#])` (empty snapshot placeholder), assert `agents.toml` exists. Run → snapshot mismatch (or migrate verb missing if IDENT-011 hasn't landed).
-2. **GREEN:** `SNAPSHOTS=overwrite cargo test -p but --test but::command::agent agent_migrate_initial_writes_agents_toml_with_caveat` — review captured snapshot, commit it.
+2. **GREEN:** `SNAPSHOTS=overwrite cargo test -p but --features but-2 --test but -- agent_migrate_initial_writes_agents_toml_with_caveat` — review captured snapshot, commit it.
 3. Repeat for AC-2 (idempotent) and AC-3 (permissions-only warning).
-4. Run `cargo fmt`, `cargo clippy -p but --all-targets -- -D warnings`, `cargo test -p but --test but::command::agent`.
+4. Run `cargo fmt`, `cargo clippy -p but --all-targets -- -D warnings`, `cargo test -p but --features but-2 --test but -- agent_migrate`.
 5. Commit via `but commit`.
 
 ## Orchestrator Verification Protocol
 
-1. `cargo test -p but --test but::command::agent` exit 0 (3 new snapshots pass; existing snapshots unchanged).
+1. `cargo test -p but --features but-2 --test but -- agent_migrate` exit 0 (3 new snapshots pass; existing snapshots unchanged).
 2. `cargo check -p but --all-targets` clean.
 3. Snapshot files exist under `crates/but/tests/but/command/snapshots/agent/`.
 
@@ -109,7 +109,7 @@ TDD RED→GREEN per AC:
 
 ## Evidence Gates
 
-- `cargo test -p but --test but::command::agent` exit 0
+- `cargo test -p but --features but-2 --test but -- agent_migrate` exit 0
 - 3 new snapshot files captured
 - No existing `agent.rs` snapshot modified (diff is purely additive)
 
@@ -160,7 +160,7 @@ TDD RED→GREEN per AC:
       "description": "GIVEN permissions-only Sandbox WHEN `but agent migrate` THEN exit 0 + stdout snapshot with ref-pin caveat + agents.toml written",
       "test_tier": "integration",
       "verification_service": "but-cli",
-      "verify": "cargo test -p but --test but::command::agent agent_migrate_initial_writes_agents_toml_with_caveat",
+      "verify": "cargo test -p but --features but-2 --test but -- agent_migrate_initial_writes_agents_toml_with_caveat",
       "maps_to_ac": null,
       "flow_ref": "UC-IDENT-04",
       "scenario": {
@@ -220,7 +220,7 @@ TDD RED→GREEN per AC:
       "description": "GIVEN agents.toml already exists WHEN `but agent migrate` again THEN exit 0 + distinct no-op snapshot + agents.toml byte-unchanged",
       "test_tier": "integration",
       "verification_service": "but-cli",
-      "verify": "cargo test -p but --test but::command::agent agent_migrate_idempotent_rerun_is_noop",
+      "verify": "cargo test -p but --features but-2 --test but -- agent_migrate_idempotent_rerun_is_noop",
       "maps_to_ac": null,
       "scenario": {
         "tier": "visible",
@@ -280,7 +280,7 @@ TDD RED→GREEN per AC:
       "description": "GIVEN permissions-only legacy repo WHEN loader-invoking CLI command runs THEN exactly one warning line naming permissions.toml + but agent migrate",
       "test_tier": "integration",
       "verification_service": "but-cli",
-      "verify": "cargo test -p but --test but::command::agent agent_migrate_permissions_only_emits_deprecation_warning",
+      "verify": "cargo test -p but --features but-2 --test but -- agent_migrate_permissions_only_emits_deprecation_warning",
       "maps_to_ac": null,
       "scenario": {
         "tier": "visible",
@@ -337,28 +337,28 @@ TDD RED→GREEN per AC:
       "id": "TC-1",
       "type": "test_criterion",
       "description": "initial migrate exit 0 + caveat snapshot",
-      "verify": "cargo test -p but --test but::command::agent agent_migrate_initial_writes_agents_toml_with_caveat",
+      "verify": "cargo test -p but --features but-2 --test but -- agent_migrate_initial_writes_agents_toml_with_caveat",
       "maps_to_ac": "AC-1"
     },
     {
       "id": "TC-2",
       "type": "test_criterion",
       "description": "agents.toml written to working tree",
-      "verify": "cargo test -p but --test but::command::agent agent_migrate_initial_writes_agents_toml_with_caveat",
+      "verify": "cargo test -p but --features but-2 --test but -- agent_migrate_initial_writes_agents_toml_with_caveat",
       "maps_to_ac": "AC-1"
     },
     {
       "id": "TC-3",
       "type": "test_criterion",
       "description": "second migrate distinct no-op snapshot + bytes unchanged",
-      "verify": "cargo test -p but --test but::command::agent agent_migrate_idempotent_rerun_is_noop",
+      "verify": "cargo test -p but --features but-2 --test but -- agent_migrate_idempotent_rerun_is_noop",
       "maps_to_ac": "AC-2"
     },
     {
       "id": "TC-4",
       "type": "test_criterion",
       "description": "permissions-only loader command emits one warning naming permissions.toml + but agent migrate",
-      "verify": "cargo test -p but --test but::command::agent agent_migrate_permissions_only_emits_deprecation_warning",
+      "verify": "cargo test -p but --features but-2 --test but -- agent_migrate_permissions_only_emits_deprecation_warning",
       "maps_to_ac": "AC-3"
     }
   ]
