@@ -18,7 +18,9 @@ use sha2::{Digest, Sha256};
 use crate::{CliError, args::agent::Subcommands, bad_input, utils::OutputChannel};
 
 const AGENTS_PATH: &str = ".gitbutler/agents.toml";
+const PERMISSIONS_PATH: &str = ".gitbutler/permissions.toml";
 const REGISTRY_FILE_NAME: &str = "agents-runtime.toml";
+const MIGRATE_CAVEAT: &str = "agents.toml written to the working tree; inert until committed. Commit the add of .gitbutler/agents.toml and the delete of .gitbutler/permissions.toml together.";
 
 /// Execute `but agent`.
 pub async fn exec(
@@ -130,7 +132,70 @@ pub async fn exec(
             };
             write_whoami(out, pid, start_time, agent_id.as_str()).map_err(CliError::from)
         }
+        Subcommands::Migrate => migrate(ctx, out).map_err(CliError::from),
     }
+}
+
+fn migrate(ctx: &mut Context, out: &mut OutputChannel) -> anyhow::Result<()> {
+    let repo = ctx.repo.get()?;
+    let workdir = repo
+        .workdir()
+        .context("working tree is required to migrate .gitbutler/permissions.toml")?;
+    let permissions_path = workdir.join(PERMISSIONS_PATH);
+    let agents_path = workdir.join(AGENTS_PATH);
+
+    match fs::metadata(&agents_path) {
+        Ok(metadata) if metadata.len() > 0 => {
+            return write_migrate_already_done(out);
+        }
+        Ok(_) => {}
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+        Err(error) => {
+            return Err(error).with_context(|| format!("reading metadata for {AGENTS_PATH}"));
+        }
+    }
+
+    let contents = fs::read_to_string(&permissions_path)
+        .with_context(|| format!("reading {PERMISSIONS_PATH} from working tree"))?;
+    let rewritten = rewrite_principals_to_agents(&contents);
+    fs::write(&agents_path, rewritten)
+        .with_context(|| format!("writing {AGENTS_PATH} to working tree"))?;
+
+    write_migrate_success(out)
+}
+
+fn rewrite_principals_to_agents(contents: &str) -> String {
+    let mut rewritten = String::with_capacity(contents.len());
+    for line in contents.split_inclusive('\n') {
+        let (line_without_lf, lf) = match line.strip_suffix('\n') {
+            Some(line_without_lf) => (line_without_lf, "\n"),
+            None => (line, ""),
+        };
+        let (line_without_eol, cr) = match line_without_lf.strip_suffix('\r') {
+            Some(line_without_eol) => (line_without_eol, "\r"),
+            None => (line_without_lf, ""),
+        };
+        let trimmed = line_without_eol.trim_start_matches([' ', '\t']);
+        let prefix_len = line_without_eol.len() - trimmed.len();
+
+        if let Some(suffix) = trimmed.strip_prefix("[[principal]]")
+            && is_table_header_suffix(suffix)
+        {
+            rewritten.push_str(&line_without_eol[..prefix_len]);
+            rewritten.push_str("[[agent]]");
+            rewritten.push_str(suffix);
+            rewritten.push_str(cr);
+            rewritten.push_str(lf);
+        } else {
+            rewritten.push_str(line);
+        }
+    }
+    rewritten
+}
+
+fn is_table_header_suffix(suffix: &str) -> bool {
+    let suffix = suffix.trim_start_matches([' ', '\t']);
+    suffix.is_empty() || suffix.starts_with('#')
 }
 
 fn resolve_process_key(pid: Option<u32>, start_time: Option<u64>) -> Result<(u32, u64), CliError> {
@@ -393,6 +458,40 @@ fn write_whoami(
     Ok(())
 }
 
+fn write_migrate_success(out: &mut OutputChannel) -> anyhow::Result<()> {
+    if let Some(out) = out.for_human_or_shell() {
+        writeln!(
+            out,
+            "migrated: {PERMISSIONS_PATH} -> {AGENTS_PATH}; {MIGRATE_CAVEAT}"
+        )?;
+    } else if let Some(out) = out.for_json() {
+        out.write_value(MigrateOutput {
+            status: "migrated",
+            source: Some(PERMISSIONS_PATH),
+            destination: AGENTS_PATH,
+            caveat: Some(MIGRATE_CAVEAT),
+        })?;
+    }
+    Ok(())
+}
+
+fn write_migrate_already_done(out: &mut OutputChannel) -> anyhow::Result<()> {
+    if let Some(out) = out.for_human_or_shell() {
+        writeln!(
+            out,
+            "already migrated; no change: {AGENTS_PATH} already exists"
+        )?;
+    } else if let Some(out) = out.for_json() {
+        out.write_value(MigrateOutput {
+            status: "already_migrated",
+            source: None,
+            destination: AGENTS_PATH,
+            caveat: None,
+        })?;
+    }
+    Ok(())
+}
+
 #[derive(Debug)]
 struct RegistryPath {
     path: PathBuf,
@@ -443,6 +542,14 @@ struct WhoamiOutput<'a> {
     pid: u32,
     start_time: u64,
     agent_id: &'a str,
+}
+
+#[derive(Debug, Serialize)]
+struct MigrateOutput<'a> {
+    status: &'a str,
+    source: Option<&'a str>,
+    destination: &'a str,
+    caveat: Option<&'a str>,
 }
 
 #[derive(Debug, Serialize)]

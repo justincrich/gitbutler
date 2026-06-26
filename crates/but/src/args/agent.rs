@@ -43,6 +43,8 @@ pub enum Subcommands {
     },
     /// Print the committed agent id for this process.
     Whoami,
+    /// Rewrite working-tree `.gitbutler/permissions.toml` to `.gitbutler/agents.toml`.
+    Migrate,
 }
 
 fn parse_ttl_seconds(value: &str) -> Result<u64, String> {
