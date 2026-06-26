@@ -25,6 +25,29 @@ use super::config_mutate::enforce_administration_write_gate;
 /// Operator-facing caveat for working-tree governance writes.
 pub const REF_PIN_CAVEAT: &str = "takes effect once committed to the target branch";
 
+/// Compile-time witness that the caller passed the authenticated fleet-owner
+/// boundary.
+///
+/// The private `_private` field makes this constructible ONLY via
+/// [`FleetOwnerCapability::mint`] — even from other crates, which cannot use a
+/// struct literal against a private field. Every `*_as_fleet_owner` governance
+/// mutation requires `&FleetOwnerCapability`, so none of them is reachable
+/// without first crossing the authenticated boundary that mints the witness.
+pub struct FleetOwnerCapability {
+    _private: (),
+}
+
+impl FleetOwnerCapability {
+    /// Mint the fleet-owner capability witness.
+    ///
+    /// Call this ONLY at the authenticated fleet-owner boundary, immediately
+    /// after the signed-in desktop fleet-owner identity has been resolved.
+    #[must_use]
+    pub fn mint() -> Self {
+        Self { _private: () }
+    }
+}
+
 /// Result of a governance permission write.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, schemars::JsonSchema)]
 pub struct PermWriteOutcome {
@@ -607,6 +630,7 @@ pub fn branch_gates_update_with_repo(
 /// Update one branch gate entry after the desktop fleet-owner boundary has
 /// asserted unconditional administration-write authority.
 pub fn branch_gates_update_with_repo_as_fleet_owner(
+    _cap: &FleetOwnerCapability,
     repo: &gix::Repository,
     target_ref: &str,
     branch: &str,
@@ -652,6 +676,7 @@ pub fn governance_commit_with_repo(
 /// Commit governance config files after the desktop fleet-owner boundary has
 /// asserted unconditional administration-write authority.
 pub fn governance_commit_with_repo_as_fleet_owner(
+    _cap: &FleetOwnerCapability,
     repo: &gix::Repository,
     target_ref: &str,
 ) -> anyhow::Result<GovernanceCommitOutcome> {
@@ -1217,6 +1242,7 @@ pub fn group_create_with_repo(
 /// Create a governed group after the desktop fleet-owner boundary has asserted
 /// unconditional administration-write authority.
 pub fn group_create_with_repo_as_fleet_owner(
+    _cap: &FleetOwnerCapability,
     repo: &gix::Repository,
     target_ref: &str,
     group: &str,
@@ -1273,6 +1299,7 @@ pub fn group_grant_with_repo(
 /// fleet-owner boundary has asserted unconditional administration-write
 /// authority.
 pub fn group_grant_with_repo_as_fleet_owner(
+    _cap: &FleetOwnerCapability,
     repo: &gix::Repository,
     target_ref: &str,
     group: &str,
@@ -1326,6 +1353,7 @@ pub fn group_revoke_with_repo(
 /// fleet-owner boundary has asserted unconditional administration-write
 /// authority.
 pub fn group_revoke_with_repo_as_fleet_owner(
+    _cap: &FleetOwnerCapability,
     repo: &gix::Repository,
     target_ref: &str,
     group: &str,
@@ -1373,6 +1401,7 @@ pub fn group_add_member_with_repo(
 /// Add a principal to a governed group after the desktop fleet-owner boundary
 /// has asserted unconditional administration-write authority.
 pub fn group_add_member_with_repo_as_fleet_owner(
+    _cap: &FleetOwnerCapability,
     repo: &gix::Repository,
     target_ref: &str,
     group: &str,
@@ -1417,6 +1446,7 @@ pub fn group_remove_member_with_repo(
 /// Remove a principal from a governed group after the desktop fleet-owner
 /// boundary has asserted unconditional administration-write authority.
 pub fn group_remove_member_with_repo_as_fleet_owner(
+    _cap: &FleetOwnerCapability,
     repo: &gix::Repository,
     target_ref: &str,
     group: &str,
@@ -1456,6 +1486,7 @@ pub fn group_delete_with_repo(
 /// Delete a governed group after the desktop fleet-owner boundary has asserted
 /// unconditional administration-write authority.
 pub fn group_delete_with_repo_as_fleet_owner(
+    _cap: &FleetOwnerCapability,
     repo: &gix::Repository,
     target_ref: &str,
     group: &str,
@@ -1786,6 +1817,7 @@ pub fn perm_grant_with_repo(
 /// This is intentionally not used by the agent runtime-registry path, which must
 /// continue to call [`perm_grant_with_repo`] and resolve through `but-authz`.
 pub fn perm_grant_with_repo_as_fleet_owner(
+    _cap: &FleetOwnerCapability,
     repo: &gix::Repository,
     target_ref: &str,
     principal: &str,
@@ -1838,6 +1870,7 @@ pub fn perm_revoke_with_repo(
 /// Revoke direct permissions after the desktop fleet-owner boundary has
 /// asserted unconditional administration-write authority.
 pub fn perm_revoke_with_repo_as_fleet_owner(
+    _cap: &FleetOwnerCapability,
     repo: &gix::Repository,
     target_ref: &str,
     principal: &str,
