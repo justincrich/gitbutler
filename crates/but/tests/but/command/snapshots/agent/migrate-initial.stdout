@@ -1,0 +1,1 @@
+migrated: .gitbutler/permissions.toml -> .gitbutler/agents.toml; agents.toml written to the working tree; inert until committed. Commit the add of .gitbutler/agents.toml and the delete of .gitbutler/permissions.toml together.

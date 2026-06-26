@@ -41,6 +41,11 @@ id = "release-bot"
 role = "maintain"
 "#;
 
+const GOVERNANCE_GATES_TOML: &str = r#"[[branch]]
+name = "main"
+protected = true
+"#;
+
 const PREEXISTING_AGENTS_TOML_SENTINEL: &str = r#"# sentinel: hand-authored agents.toml must not be regenerated
 [[agent]]
 id = "hand-authored"
@@ -299,7 +304,7 @@ fn agent_migrate_initial_writes_agents_toml_with_caveat() -> anyhow::Result<()> 
     env.but("agent migrate")
         .assert()
         .success()
-        .stdout_eq(snapbox::str![])
+        .stdout_eq(snapshot!("snapshots/agent/migrate-initial.stdout"))
         .stderr_eq(snapbox::str![]);
 
     assert!(
@@ -322,7 +327,7 @@ fn agent_migrate_idempotent_rerun_is_noop() -> anyhow::Result<()> {
     env.but("agent migrate")
         .assert()
         .success()
-        .stdout_eq(snapbox::str![])
+        .stdout_eq(snapshot!("snapshots/agent/migrate-idempotent.stdout"))
         .stderr_eq(snapbox::str![]);
 
     assert_eq!(
@@ -340,10 +345,18 @@ fn agent_migrate_permissions_only_emits_deprecation_warning() -> anyhow::Result<
     let env = permissions_only_committed_fixture(LEGACY_PERMISSIONS_TOML)?;
 
     env.but("perm list --principal rust-implementer")
+        .env("BUT_AGENT_HANDLE", "rust-implementer")
+        .env("BUT_AUTHZ_ALLOW_ENV_HANDLE", "1")
         .assert()
         .success()
-        .stdout_eq(snapbox::str![])
-        .stderr_eq(snapbox::str![]);
+        .stdout_eq(snapbox::str![[r#"
+rust-implementer:
+  contents:write
+
+"#]])
+        .stderr_eq(snapshot!(
+            "snapshots/agent/permissions-only-deprecation.stderr"
+        ));
 
     Ok(())
 }
@@ -391,7 +404,12 @@ permissions_blob=$(git hash-object -w --stdin <<'EOF'
 {permissions_toml}
 EOF
 )
+gates_blob=$(git hash-object -w --stdin <<'EOF'
+{GOVERNANCE_GATES_TOML}
+EOF
+)
 git update-index --add --cacheinfo 100644 "$permissions_blob" .gitbutler/permissions.toml
+git update-index --add --cacheinfo 100644 "$gates_blob" .gitbutler/gates.toml
 tree=$(git write-tree)
 commit=$(printf 'seed legacy permissions\n' | git commit-tree "$tree" -p "$base")
 git update-ref refs/heads/main "$commit"
@@ -400,6 +418,9 @@ unset GIT_INDEX_FILE
 mkdir -p .gitbutler
 cat >.gitbutler/permissions.toml <<'EOF'
 {permissions_toml}
+EOF
+cat >.gitbutler/gates.toml <<'EOF'
+{GOVERNANCE_GATES_TOML}
 EOF
 "#
     ));
