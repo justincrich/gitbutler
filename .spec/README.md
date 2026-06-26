@@ -71,8 +71,9 @@ GitButler's verification *bar* is high (it's a Git engine with strict semantics)
 
 ## Deliverable 1 — Governance: hold agents accountable to the same standards as humans
 
-**Full PRD → [`prds/governance/`](./prds/governance/README.md)** · v1.3.0 · 5 functional
-groups · 17 use cases · 129 acceptance criteria · 8 sprints.
+**Full PRD → [`prds/governance/`](./prds/governance/README.md)** · v1.4.0 · 6 functional
+groups · 17 audited use cases · 129 acceptance criteria · 13 sprints (8 core + STEER + 4
+IDENT; the IDENT group's use cases are specced, its criteria still in progress).
 
 A functional, GitHub-mirrored **permission system** (`but-authz`) plus **principal
 grouping**, wired into **two thin gates on GitButler's own git actions** — a commit gate
@@ -80,6 +81,14 @@ grouping**, wired into **two thin gates on GitButler's own git actions** — a c
 review requirement at head) — applied **branching-mechanism-agnostically** (virtual
 branches, plain git, opt-in worktrees). Role separation (implementer vs. reviewer vs.
 maintainer) **emerges from the permission set**; no enforcement path keys off a role name.
+
+A sixth functional group — **agent identity registration (IDENT)** — replaces the
+self-asserted `BUT_AGENT_HANDLE` environment variable with a runtime PID registry anchored
+in committed `.gitbutler/agents.toml`, so every governed `but` invocation resolves to a
+registered `(pid, start_time)` instead of whatever an agent claims to be. Identity here is
+process-level, **not cryptographic** (the trust root is the host OS plus the orchestrator
+that writes the registry); it is **specced across sprints 08–11, not yet built**. Full spec
+→ [`12-uc-agent-identity.md`](./prds/governance/12-uc-agent-identity.md).
 
 **The thesis — irrigation, not a dam.** You don't harness a river by stopping it; you
 channel it. An agent *can* step outside the governed path, but if compliance is cheaper
@@ -96,6 +105,7 @@ the only acts with consequence.
 | Merge gate (`merge` authority + review-at-head, self-escalation-proof) | **Merged + tested** | `crates/but-api/src/legacy/merge_gate.rs`; `local_review_verdicts` in `but-db` |
 | CLI: `but perm` / `but group` | **Merged** | `crates/but/src/args/{perm,group}.rs` |
 | Desktop governance UI (Tauri IPC + settings scaffold) | **In progress** — IPC merged; principal/group/branch-gate forms pending | `apps/desktop/.../governance/` |
+| Agent identity registry (`but agent register/whoami/migrate`, `agents.toml`) | **Specced** — sprints 08–11, not yet built | [`12-uc-agent-identity.md`](./prds/governance/12-uc-agent-identity.md); planned in `crates/but-authz/` |
 
 **What it deliberately does *not* do** (stated plainly, because honesty is part of the
 design): it governs GitButler's own `but` actions, **not raw git or the filesystem** — the
@@ -139,15 +149,15 @@ it down; cutting a feature to fit the threat model is part of the work.
 They are one system, not two features. The merge decision becomes a single check of
 **process *and* quality**:
 
-| | Governance | Check Runner | STEER (governance enrichment) |
-|---|---|---|---|
-| Answers | *May* this principal act? Did a human approve? | Did the committed checks really run and pass at this head? | What is the agent's next legal move? |
-| Enforces | Process | Quality | Redirection |
+| | Governance | Check Runner |
+|---|---|---|
+| Answers | *May* this principal act? Did a human approve? | Did the committed checks really run and pass at this head? |
+| Enforces | Process | Quality |
 
 Both read their config at the target ref, both fail closed, and both speak the same
-structured denial contract (`{code, message, remediation_hint}`). [STEER][steer] then makes
-every denial name the agent's authorized next action — irrigation applied at the moment of
-denial, so a blocked agent self-corrects instead of thrashing.
+structured denial contract (`{code, message, remediation_hint}`). (A third column — denials
+that name an agent's authorized next move, the [STEER][steer] direction — is specced, not
+delivered; it lives under [future work](#where-this-goes).)
 
 ---
 
@@ -157,9 +167,15 @@ If I were building this full-time, the throughline is bigger than two gates. The
 of agentic engineering — the merge tax, silent overwrites, reward hacking, comprehension
 debt, missing audit trails — all cluster at one place: **convergence**, where many streams
 of cheap generation must become one verified, attributed, mergeable truth. That plane is
-unclaimed, and GitButler's primitives already *are* a convergence engine. Three bets, each
+unclaimed, and GitButler's primitives already *are* a convergence engine. Four bets, each
 grounded in something the engine already has:
 
+- **From two gates to a governed action surface.** Today enforcement sits on the two acts
+  with consequence — commit and merge. The natural extension is a single, enumerable
+  route-authority over every `but` action plus capability-aware denials that tell a blocked
+  agent its authorized next move (the [STEER][steer] direction, already specced) — turning
+  two checkpoints into a legible map of the whole governed surface, rather than a broad
+  action-governance claim shipped today.
 - **Conflict-free parallel convergence.** N agents → N virtual branches over *one* working
   tree instead of N worktrees — no merge tax, no disk blow-up. Hunk-assignment already knows
   who owns what, so GitButler can *predict* a collision before it becomes a silent overwrite;
@@ -199,8 +215,9 @@ projection scales from one excellent local working tree toward a cross-machine f
 | Path | What it is |
 |---|---|
 | [`prds/governance/`](./prds/governance/README.md) | PRD #1 — permissions, groups, commit/merge gates, the governed loop, the management UI |
-| [`prds/governance/ROADMAP.md`](./prds/governance/ROADMAP.md) | 8-sprint roadmap with per-sprint human-testing gates and review provenance |
-| [`prds/governance/enrichments/`](./prds/governance/enrichments/) | STEER — capability-aware denials (planned) |
+| [`prds/governance/ROADMAP.md`](./prds/governance/ROADMAP.md) | 13-sprint roadmap (8 core + STEER + 4 IDENT) with per-sprint human-testing gates and review provenance |
+| [`prds/governance/enrichments/`](./prds/governance/enrichments/) | STEER — capability-aware denials (specced, sprint 07) |
+| [`prds/governance/12-uc-agent-identity.md`](./prds/governance/12-uc-agent-identity.md) | IDENT — agent identity registration use cases (specced, sprints 08–11) |
 | [`prds/check-runner/`](./prds/check-runner/README.md) | PRD #2 — local deterministic checks + the required-checks merge clause |
 | [`artifacts/team-product/`](./artifacts/team-product/04-synthesis-report.md) | The agent-verification definition-of-done, feature inventory, gap analysis, and synthesis |
 | [`reviews/`](./reviews/) | Adversarial spec audits |
