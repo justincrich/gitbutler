@@ -324,6 +324,68 @@ fn IDENT_004_concurrent_registry_writes_preserve_all_distinct_entries_and_parse(
 }
 
 #[test]
+fn IDENT_004_unregister_write_removes_exact_key_without_resurrecting_via_merge()
+-> anyhow::Result<()> {
+    let tmp = TempDir::new()?;
+    let path = tmp.path().join("agents.toml");
+    let original = ExpectedRegistration::new(30_000, 1_900_000_000, "original", 600, "operator-a");
+    let kept = ExpectedRegistration::new(30_001, 1_900_000_001, "kept", 600, "operator-a");
+    let concurrent =
+        ExpectedRegistration::new(30_002, 1_900_000_002, "concurrent", 600, "operator-b");
+
+    let mut initial = Registry::empty();
+    for entry in [&original, &kept] {
+        initial.register(
+            entry.key.0,
+            entry.key.1,
+            entry.agent_id.clone(),
+            entry.ttl_seconds,
+            entry.registered_by.clone(),
+        )?;
+    }
+    initial.write(&path)?;
+
+    let mut stale = Registry::load(&path)?;
+    let removed = stale
+        .unregister(original.key)
+        .expect("the stale registry must remove the exact original key");
+    assert_eq!(
+        removed.agent_id.as_str(),
+        original.agent_id.as_str(),
+        "unregister must return the removed original registration"
+    );
+
+    let mut concurrent_writer = Registry::load(&path)?;
+    concurrent_writer.register(
+        concurrent.key.0,
+        concurrent.key.1,
+        concurrent.agent_id.clone(),
+        concurrent.ttl_seconds,
+        concurrent.registered_by.clone(),
+    )?;
+    concurrent_writer.write(&path)?;
+
+    stale.write(&path)?;
+    let loaded = Registry::load(&path)?;
+
+    assert_eq!(
+        loaded.resolve(original.key),
+        None,
+        "three-way merge must not resurrect a key removed from the loaded base"
+    );
+    assert!(
+        registration_matches(&loaded, &kept),
+        "writing the stale unregister must keep unchanged base entries"
+    );
+    assert!(
+        registration_matches(&loaded, &concurrent),
+        "writing the stale unregister must preserve concurrent additions outside its base deletion"
+    );
+
+    Ok(())
+}
+
+#[test]
 fn IDENT_001_load_missing_file_returns_empty_registry() -> anyhow::Result<()> {
     let tmp = TempDir::new()?;
     let path = tmp.path().join("agents.toml");

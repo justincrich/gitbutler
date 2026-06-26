@@ -1,3 +1,4 @@
+    Checking but-authz v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-004/crates/but-authz)
 warning: function `IDENT_003_registry_hit_resolves_registered_principal` should have a snake case name
    --> crates/but-authz/tests/authorize.rs:157:4
     |
@@ -30,6 +31,5 @@ warning: function `IDENT_003_none_registry_allows_flagged_env_fallback` should h
 275 | fn IDENT_003_none_registry_allows_flagged_env_fallback() -> anyhow::Result<()> {
     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `ident_003_none_registry_allows_flagged_env_fallback`
 
-    Checking but-authz v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-004/crates/but-authz)
 warning: `but-authz` (test "authorize") generated 5 warnings
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.25s
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.72s

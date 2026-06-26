@@ -1,14 +1,12 @@
-use std::{
-    collections::BTreeMap,
-    fs::{self, File},
-    io::Write,
-    path::{Path, PathBuf},
-};
+use std::{collections::BTreeMap, fs, io::Write, path::Path, time::Duration};
 
 use anyhow::{Context, anyhow};
+use gix::lock::acquire::Fail;
 use serde::{Deserialize, Serialize};
 
 use crate::PrincipalId;
+
+const REGISTRY_LOCK_TIMEOUT: Duration = Duration::from_secs(10);
 
 /// Agent identity used by the runtime process registry.
 pub type AgentId = PrincipalId;
@@ -26,10 +24,19 @@ pub struct Registration {
 }
 
 /// Runtime registry mapping process identity to registered agent identity.
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Default)]
 pub struct Registry {
     registrations: BTreeMap<ProcessKey, Registration>,
+    loaded_base: Option<BTreeMap<ProcessKey, Registration>>,
 }
+
+impl PartialEq for Registry {
+    fn eq(&self, other: &Self) -> bool {
+        self.registrations == other.registrations
+    }
+}
+
+impl Eq for Registry {}
 
 impl Registry {
     /// Create an empty runtime registry.
@@ -40,22 +47,11 @@ impl Registry {
     /// Load a registry from a TOML file, treating a missing file as empty.
     pub fn load(path: impl AsRef<Path>) -> anyhow::Result<Self> {
         let path = path.as_ref();
-        let content = match fs::read_to_string(path) {
-            Ok(content) => content,
-            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
-                return Ok(Self::empty());
-            }
-            Err(error) => {
-                return Err(error).with_context(|| format!("reading registry {}", path.display()));
-            }
-        };
-
-        let wire = toml::from_str::<RegistryWire>(&content)
-            .with_context(|| format!("parsing registry {}", path.display()))?;
-        Self::from_wire(wire).with_context(|| format!("loading registry {}", path.display()))
+        let registrations = load_registrations(path)?;
+        Ok(Self::from_loaded(registrations))
     }
 
-    /// Write the registry to a TOML file via same-directory temp file + rename.
+    /// Write the registry to a TOML file through a Git-style lock file.
     pub fn write(&self, path: impl AsRef<Path>) -> anyhow::Result<()> {
         let path = path.as_ref();
         self.write_inner(path)
@@ -125,33 +121,55 @@ impl Registry {
     }
 
     fn write_inner(&self, path: &Path) -> anyhow::Result<()> {
-        let temp_path = temp_path_for(path)?;
-        let content = toml::to_string_pretty(&RegistryWire::from(self))
+        let mut lock = gix::lock::File::acquire_to_update_resource(
+            path,
+            Fail::AfterDurationWithBackoff(REGISTRY_LOCK_TIMEOUT),
+            None,
+        )
+        .with_context(|| format!("locking registry {}", path.display()))?;
+        let current = load_registrations(path)?;
+        let merged = self.merged_registrations(current);
+        let content = toml::to_string_pretty(&RegistryWire::from(&merged))
             .context("serializing registry TOML")?;
 
-        let write_result = (|| -> anyhow::Result<()> {
-            let mut file = File::create(&temp_path)
-                .with_context(|| format!("creating temporary registry {}", temp_path.display()))?;
-            file.write_all(content.as_bytes())
-                .with_context(|| format!("writing temporary registry {}", temp_path.display()))?;
-            file.sync_all()
-                .with_context(|| format!("syncing temporary registry {}", temp_path.display()))?;
-            drop(file);
-            fs::rename(&temp_path, path).with_context(|| {
-                format!(
-                    "renaming temporary registry {} to {}",
-                    temp_path.display(),
-                    path.display()
-                )
-            })?;
-            Ok(())
-        })();
+        lock.write_all(content.as_bytes()).with_context(|| {
+            format!(
+                "writing temporary locked registry {}",
+                lock.lock_path().display()
+            )
+        })?;
+        lock.flush().with_context(|| {
+            format!(
+                "flushing temporary locked registry {}",
+                lock.lock_path().display()
+            )
+        })?;
+        lock.with_mut(|file| file.sync_all()).with_context(|| {
+            format!(
+                "syncing temporary locked registry {}",
+                lock.lock_path().display()
+            )
+        })?;
+        lock.commit()
+            .map_err(|error| error.error)
+            .with_context(|| format!("committing registry {}", path.display()))?;
 
-        if write_result.is_err() {
-            let _ = fs::remove_file(&temp_path);
+        Ok(())
+    }
+
+    fn merged_registrations(
+        &self,
+        mut current: BTreeMap<ProcessKey, Registration>,
+    ) -> BTreeMap<ProcessKey, Registration> {
+        if let Some(loaded_base) = &self.loaded_base {
+            for key in loaded_base.keys() {
+                if !self.registrations.contains_key(key) {
+                    current.remove(key);
+                }
+            }
         }
-
-        write_result
+        current.extend(self.registrations.clone());
+        current
     }
 
     fn from_wire(wire: RegistryWire) -> anyhow::Result<Self> {
@@ -172,7 +190,14 @@ impl Registry {
                 ));
             }
         }
-        Ok(Self { registrations })
+        Ok(Self::from_loaded(registrations))
+    }
+
+    fn from_loaded(registrations: BTreeMap<ProcessKey, Registration>) -> Self {
+        Self {
+            loaded_base: Some(registrations.clone()),
+            registrations,
+        }
     }
 }
 
@@ -188,12 +213,22 @@ impl From<String> for PrincipalId {
     }
 }
 
-fn temp_path_for(path: &Path) -> anyhow::Result<PathBuf> {
-    let file_name = path
-        .file_name()
-        .ok_or_else(|| anyhow!("registry path {} has no file name", path.display()))?;
-    let temp_file_name = format!("{}.tmp.{}", file_name.to_string_lossy(), std::process::id());
-    Ok(path.with_file_name(temp_file_name))
+fn load_registrations(path: &Path) -> anyhow::Result<BTreeMap<ProcessKey, Registration>> {
+    let content = match fs::read_to_string(path) {
+        Ok(content) => content,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+            return Ok(BTreeMap::new());
+        }
+        Err(error) => {
+            return Err(error).with_context(|| format!("reading registry {}", path.display()));
+        }
+    };
+
+    let wire = toml::from_str::<RegistryWire>(&content)
+        .with_context(|| format!("parsing registry {}", path.display()))?;
+    Registry::from_wire(wire)
+        .map(|registry| registry.registrations)
+        .with_context(|| format!("loading registry {}", path.display()))
 }
 
 #[derive(Debug, Default, Deserialize, Serialize)]
@@ -203,11 +238,10 @@ struct RegistryWire {
     registration: Vec<RegistrationWire>,
 }
 
-impl From<&Registry> for RegistryWire {
-    fn from(registry: &Registry) -> Self {
+impl From<&BTreeMap<ProcessKey, Registration>> for RegistryWire {
+    fn from(registrations: &BTreeMap<ProcessKey, Registration>) -> Self {
         Self {
-            registration: registry
-                .registrations
+            registration: registrations
                 .iter()
                 .map(|((pid, start_time), registration)| RegistrationWire {
                     pid: *pid,
@@ -219,6 +253,12 @@ impl From<&Registry> for RegistryWire {
                 })
                 .collect(),
         }
+    }
+}
+
+impl From<&Registry> for RegistryWire {
+    fn from(registry: &Registry) -> Self {
+        Self::from(&registry.registrations)
     }
 }
 
