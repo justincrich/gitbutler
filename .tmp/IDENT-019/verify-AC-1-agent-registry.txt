@@ -1,0 +1,12 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.23s
+     Running tests/agent_registry.rs (target/debug/deps/agent_registry-6ad69d08b81c4ef3)
+
+running 5 tests
+test admin_write_surface ... ok
+test merge_surface ... ok
+test forge_review_surface ... ok
+test commit_surface ... ok
+test expired_current_process_registry_entry_denied ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.52s
+

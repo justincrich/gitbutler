@@ -1,4 +1,8 @@
-use std::{ffi::OsString, path::PathBuf};
+use std::{
+    ffi::OsString,
+    path::PathBuf,
+    time::{Duration, SystemTime, UNIX_EPOCH},
+};
 
 use anyhow::Context as _;
 use but_api::{
@@ -176,20 +180,10 @@ impl RegistryEnv {
         let path = file.path().to_owned();
         let pid = but_authz::current_pid();
         let start_time = but_authz::process_start_time(pid)?;
-        let expires_at = start_time.saturating_sub(1);
-        std::fs::write(
-            &path,
-            format!(
-                r#"[[registration]]
-pid = {pid}
-start_time = {start_time}
-agent_id = "{agent_id}"
-registered_at = {start_time}
-expires_at = {expires_at}
-registered_by = "operator"
-"#
-            ),
-        )?;
+        let mut registry = Registry::empty();
+        registry.register(pid, start_time, agent_id, 0, "operator")?;
+        registry.write(&path)?;
+        wait_until_after(start_time)?;
 
         let env = Self {
             path,
@@ -207,7 +201,7 @@ registered_by = "operator"
             "wrote expired registry entry pid={} start_time={} expires_at={} as `{}` via BUT_AGENT_REGISTRY_PATH={}",
             env.pid,
             env.start_time,
-            expires_at,
+            env.start_time,
             agent_id,
             env.path.display()
         );
@@ -407,6 +401,17 @@ fn assert_perm_denied(err: &anyhow::Error, surface: &str) {
         Denial::PERM_DENIED_CODE,
         "{surface} denial must use the stable perm.denied code"
     );
+}
+
+fn wait_until_after(timestamp: u64) -> anyhow::Result<()> {
+    while unix_time_seconds()? <= timestamp {
+        std::thread::sleep(Duration::from_millis(20));
+    }
+    Ok(())
+}
+
+fn unix_time_seconds() -> anyhow::Result<u64> {
+    Ok(SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs())
 }
 
 fn set_env_var(key: &str, value: Option<&std::ffi::OsStr>) {

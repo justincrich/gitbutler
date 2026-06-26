@@ -1,0 +1,14 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.23s
+     Running tests/agent_registry.rs (target/debug/deps/agent_registry-6ad69d08b81c4ef3)
+
+running 1 test
+registered test process pid=87014 start_time=1782488540 as `reviewer` via BUT_AGENT_REGISTRY_PATH=/var/folders/rt/8_hh9gmj43x4763f7_l_nk3c0000gn/T/.tmpUG8QCv
+warning: .gitbutler/permissions.toml is deprecated; run: but agent migrate
+forge_review_surface registered principal `reviewer` authorized with Ok(Some)
+unregistered test process pid=87014 start_time=1782488540 from /var/folders/rt/8_hh9gmj43x4763f7_l_nk3c0000gn/T/.tmpUG8QCv
+warning: .gitbutler/permissions.toml is deprecated; run: but agent migrate
+forge_review_surface unregistered process denied with `perm.denied`
+test forge_review_surface ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 4 filtered out; finished in 0.13s
+

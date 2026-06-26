@@ -1,0 +1,94 @@
+{
+  "task_id": "IDENT-019",
+  "status": "completed",
+  "red_evidence_preserved": ".tmp/IDENT-019/red-output.txt",
+  "requirement_results": ".tmp/IDENT-019/requirement-results.json",
+  "commands": [
+    {
+      "command": "cargo fmt",
+      "exit_code": 0,
+      "output_path": null
+    },
+    {
+      "command": "cargo test -p but-api --test agent_registry",
+      "exit_code": 0,
+      "output_path": ".tmp/IDENT-019/verify-AC-1-agent-registry.txt"
+    },
+    {
+      "command": "cargo test -p but-api --test agent_registry -- commit_surface",
+      "exit_code": 0,
+      "output_path": ".tmp/IDENT-019/verify-AC-2-commit-surface.txt"
+    },
+    {
+      "command": "cargo test -p but-api --test agent_registry -- merge_surface",
+      "exit_code": 0,
+      "output_path": ".tmp/IDENT-019/verify-AC-3-merge-surface.txt"
+    },
+    {
+      "command": "cargo test -p but-api --test agent_registry -- admin_write_surface",
+      "exit_code": 0,
+      "output_path": ".tmp/IDENT-019/verify-AC-4-admin-write-surface.txt"
+    },
+    {
+      "command": "cargo test -p but-api --test agent_registry -- forge_review_surface",
+      "exit_code": 0,
+      "output_path": ".tmp/IDENT-019/verify-AC-5-forge-review-surface.txt"
+    },
+    {
+      "command": "cargo test -p but-api --test gate_registry_swap -- env_fallback_still_allowed_on_registry_miss",
+      "exit_code": 0,
+      "output_path": ".tmp/IDENT-019/verify-AC-6-env-fallback.txt"
+    },
+    {
+      "command": "cargo test -p but-api --test gate_registry_swap -- merge_gate_env_only_without_flag_denied",
+      "exit_code": 0,
+      "output_path": ".tmp/IDENT-019/verify-AC-7-merge-env-only-denied.txt"
+    },
+    {
+      "command": "cargo test -p but --test but --features legacy,but-2 -- command::commit_gate::commit_gate_operator_runtime_registry_sequence",
+      "exit_code": 0,
+      "output_path": ".tmp/IDENT-019/verify-AC-8-cli-operator-sequence.txt"
+    },
+    {
+      "command": "cargo test -p but-api --test gate_registry_swap -- expired_current_process_registry_entry_denied",
+      "exit_code": 0,
+      "output_path": ".tmp/IDENT-019/verify-AC-9-expired-gate-swap.txt"
+    },
+    {
+      "command": "cargo test -p but-api --test gate_registry_swap -- current_pid_wrong_start_time_denied_at_commit_gate",
+      "exit_code": 0,
+      "output_path": ".tmp/IDENT-019/verify-AC-10-wrong-start-time.txt"
+    },
+    {
+      "command": "cargo test -p but-api --test gate_registry_swap -- wrong_pid_current_start_time_denied_at_commit_gate",
+      "exit_code": 0,
+      "output_path": ".tmp/IDENT-019/verify-AC-11-wrong-pid.txt"
+    },
+    {
+      "command": "cargo check -p but-api --all-targets",
+      "exit_code": 0,
+      "output_path": ".tmp/IDENT-019/check-but-api.txt"
+    },
+    {
+      "command": "cargo check -p but --features legacy,but-2 --all-targets",
+      "exit_code": 0,
+      "output_path": ".tmp/IDENT-019/check-but.txt"
+    },
+    {
+      "command": "cargo clippy -p but-api --all-targets -- -D warnings",
+      "exit_code": 0,
+      "output_path": ".tmp/IDENT-019/clippy-but-api.txt"
+    },
+    {
+      "command": "cargo clippy -p but --features legacy,but-2 --all-targets -- -D warnings",
+      "exit_code": 101,
+      "output_path": ".tmp/IDENT-019/clippy-but.txt",
+      "classification": "pre_existing_failure",
+      "details": "Fails on existing clippy warnings in crates/but/src/command/agent.rs: uninlined_format_args and filter_map_bool_then. That production file is outside the allowed edit boundary for IDENT-019."
+    }
+  ],
+  "notes": [
+    "The CLI operator proof uses real but commands. Because each CLI invocation is a distinct OS process, the test starts the no-env commit process stopped, registers that exact pid/start_time via but agent register, then resumes it.",
+    "Runtime registry load now prunes expired entries before principal resolution and writes the pruned registry back through Registry::write."
+  ]
+}

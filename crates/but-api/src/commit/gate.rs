@@ -1,4 +1,8 @@
-use std::{env, io, path::PathBuf};
+use std::{
+    env, io,
+    path::PathBuf,
+    time::{SystemTime, UNIX_EPOCH},
+};
 
 use bstr::ByteSlice as _;
 use but_authz::{
@@ -185,7 +189,12 @@ fn load_runtime_registry(repo: &gix::Repository) -> anyhow::Result<but_authz::Re
         return Ok(but_authz::Registry::empty());
     };
     match but_authz::Registry::load(&path) {
-        Ok(registry) => Ok(registry),
+        Ok(mut registry) => {
+            if registry.gc(unix_time_seconds()?) > 0 {
+                registry.write(&path)?;
+            }
+            Ok(registry)
+        }
         Err(error) if registry_load_error_is_io(&error) => {
             tracing::debug!(
                 path = %path.display(),
@@ -196,6 +205,13 @@ fn load_runtime_registry(repo: &gix::Repository) -> anyhow::Result<but_authz::Re
         }
         Err(error) => Err(error),
     }
+}
+
+fn unix_time_seconds() -> anyhow::Result<u64> {
+    Ok(SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_err(|error| anyhow::anyhow!("system clock is before Unix epoch: {error}"))?
+        .as_secs())
 }
 
 fn registry_load_error_is_io(error: &anyhow::Error) -> bool {

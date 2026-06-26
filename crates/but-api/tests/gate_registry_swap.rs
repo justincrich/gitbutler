@@ -1,4 +1,9 @@
-use std::{ffi::OsStr, fs, path::Path};
+use std::{
+    ffi::OsStr,
+    fs,
+    path::Path,
+    time::{Duration, SystemTime, UNIX_EPOCH},
+};
 
 use but_api::commit::create::gate::{CommitGateTarget, enforce_commit_gate_for_target};
 use but_api::legacy::{
@@ -270,6 +275,11 @@ fn env_fallback_still_allowed_on_registry_miss() -> anyhow::Result<()> {
     let (repo, tmp) = governed_repo();
     let registry_path = tmp.path().join("agent-registry.toml");
     write_process_registry(&registry_path, false)?;
+    assert_eq!(
+        but_authz::Registry::load(&registry_path)?.len(),
+        0,
+        "env fallback fixture must use an empty runtime registry"
+    );
 
     temp_env::with_vars(
         [
@@ -283,9 +293,141 @@ fn env_fallback_still_allowed_on_registry_miss() -> anyhow::Result<()> {
                 anyhow::anyhow!(
                     "explicit env fallback should still satisfy commit gate on registry miss: {err:#}"
                 )
-            })
+            })?;
+            println!(
+                "governed commit accepted BUT_AGENT_HANDLE=dev only with BUT_AUTHZ_ALLOW_ENV_HANDLE=1 and runtime registry has 0 entries"
+            );
+            Ok(())
         },
     )
+}
+
+#[test]
+#[serial_test::serial]
+fn merge_gate_env_only_without_flag_denied() -> anyhow::Result<()> {
+    let (repo, tmp) = governed_repo();
+    let registry_path = tmp.path().join("agent-registry.toml");
+    write_process_registry(&registry_path, false)?;
+    let ctx = context_with_review(&repo)?;
+
+    temp_env::with_vars(
+        [
+            ("BUT_AGENT_REGISTRY_PATH", Some(registry_path.as_os_str())),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", None),
+            ("BUT_AGENT_HANDLE", Some(OsStr::new("maint"))),
+        ],
+        || -> anyhow::Result<()> {
+            let denial = assert_perm_denied_with_message(
+                enforce_merge_gate(&ctx, REVIEW_ID),
+                "merge env-only without flag",
+            )?;
+            assert!(
+                denial.message.contains("pid ") && denial.message.contains("start_time"),
+                "merge denial must identify the unregistered current process: {}",
+                denial.message
+            );
+            println!(
+                "merge env-only BUT_AGENT_HANDLE=maint without BUT_AUTHZ_ALLOW_ENV_HANDLE denied with literal `perm.denied`: {}",
+                denial.message
+            );
+            Ok(())
+        },
+    )
+}
+
+#[test]
+#[serial_test::serial]
+fn expired_current_process_registry_entry_denied() -> anyhow::Result<()> {
+    let (repo, tmp) = governed_repo();
+    let registry_path = tmp.path().join("agent-registry.toml");
+    let (pid, start_time) = write_expired_current_process_registry(&registry_path)?;
+
+    with_registry_only(&registry_path, || {
+        let target = CommitGateTarget::config_only(gix::refs::FullName::try_from(FEAT_REF)?);
+        let denial = assert_perm_denied_with_message(
+            enforce_commit_gate_for_target(&repo, &target),
+            "expired current process registry entry",
+        )?;
+        assert!(
+            denial.message.contains("pid ") && denial.message.contains("start_time"),
+            "expired-entry denial must identify the current process: {}",
+            denial.message
+        );
+        let loaded = but_authz::Registry::load(&registry_path)?;
+        assert_eq!(
+            loaded.len(),
+            0,
+            "runtime registry load path must prune expired entries before resolution"
+        );
+        println!(
+            "expired entry denial code is literal `perm.denied`; runtime registry load path pruned pid={pid} start_time={start_time} before resolution"
+        );
+        Ok(())
+    })
+}
+
+#[test]
+#[serial_test::serial]
+fn current_pid_wrong_start_time_denied_at_commit_gate() -> anyhow::Result<()> {
+    let (repo, tmp) = governed_repo();
+    let registry_path = tmp.path().join("agent-registry.toml");
+    let (pid, observed_start_time, registered_start_time) =
+        write_current_pid_wrong_start_time_registry(&registry_path)?;
+
+    with_registry_only(&registry_path, || {
+        let target = CommitGateTarget::config_only(gix::refs::FullName::try_from(FEAT_REF)?);
+        let denial = assert_perm_denied_with_message(
+            enforce_commit_gate_for_target(&repo, &target),
+            "current pid wrong start_time",
+        )?;
+        assert!(
+            denial.message.contains("pid ") && denial.message.contains("start_time"),
+            "wrong-start-time denial must identify the current process: {}",
+            denial.message
+        );
+        assert!(
+            denial.message.contains(&observed_start_time.to_string())
+                && denial.message.contains(&registered_start_time.to_string()),
+            "wrong-start-time denial must name observed and registered start_time values: {}",
+            denial.message
+        );
+        println!(
+            "wrong-start-time denial code is literal `perm.denied`; registry entry key uses tuple ({pid}, {registered_start_time}) while current start_time is {observed_start_time}"
+        );
+        Ok(())
+    })
+}
+
+#[test]
+#[serial_test::serial]
+fn wrong_pid_current_start_time_denied_at_commit_gate() -> anyhow::Result<()> {
+    let (repo, tmp) = governed_repo();
+    let registry_path = tmp.path().join("agent-registry.toml");
+    let (current_pid, wrong_pid, current_start_time) =
+        write_wrong_pid_current_start_time_registry(&registry_path)?;
+
+    with_registry_only(&registry_path, || {
+        let target = CommitGateTarget::config_only(gix::refs::FullName::try_from(FEAT_REF)?);
+        let denial = assert_perm_denied_with_message(
+            enforce_commit_gate_for_target(&repo, &target),
+            "wrong pid current start_time",
+        )?;
+        assert!(
+            denial.message.contains("pid ") && denial.message.contains("start_time"),
+            "wrong-pid denial must identify the current process: {}",
+            denial.message
+        );
+        assert!(
+            denial.message.contains(&current_pid.to_string())
+                && denial.message.contains(&current_start_time.to_string()),
+            "wrong-pid denial must name the current pid/start_time, not the spoofed key: {}",
+            denial.message
+        );
+        println!(
+            "wrong-pid denial code is literal `perm.denied`; registry entry key uses tuple ({wrong_pid}, {current_start_time}) while current pid is {current_pid}"
+        );
+        Ok(())
+    })
 }
 
 #[test]
@@ -675,20 +817,25 @@ fn registered_then_unregistered_denied(
 }
 
 fn assert_perm_denied(result: anyhow::Result<()>) -> anyhow::Result<()> {
+    assert_perm_denied_with_message(result, "unregistered runtime process").map(|_| ())
+}
+
+fn assert_perm_denied_with_message(
+    result: anyhow::Result<()>,
+    context: &str,
+) -> anyhow::Result<but_authz::Denial> {
     let denial = match result {
-        Ok(()) => anyhow::bail!(
-            "unregistered runtime process must be denied when env fallback is disabled"
-        ),
+        Ok(()) => anyhow::bail!("{context} must be denied when env fallback is disabled"),
         Err(err) => err
             .downcast::<but_authz::Denial>()
-            .map_err(|err| anyhow::anyhow!("gate denial should be structured: {err:#}"))?,
+            .map_err(|err| anyhow::anyhow!("{context} denial should be structured: {err:#}"))?,
     };
 
     assert_eq!(
         denial.code, "perm.denied",
-        "unregistered runtime process must deny with the stable perm.denied code"
+        "{context} must deny with the stable perm.denied code"
     );
-    Ok(())
+    Ok(denial)
 }
 
 fn rust_sources(root: &Path) -> anyhow::Result<Vec<std::path::PathBuf>> {
@@ -723,6 +870,52 @@ fn write_process_registry(path: &Path, registered: bool) -> anyhow::Result<()> {
     registry.write(path)
 }
 
+fn write_expired_current_process_registry(path: &Path) -> anyhow::Result<(u32, u64)> {
+    let mut registry = but_authz::Registry::empty();
+    let pid = but_authz::current_pid();
+    let start_time = but_authz::process_start_time(pid)?;
+    registry.register(pid, start_time, "dev", 0, "operator")?;
+    registry.write(path)?;
+    wait_until_after(start_time)?;
+    Ok((pid, start_time))
+}
+
+fn write_current_pid_wrong_start_time_registry(path: &Path) -> anyhow::Result<(u32, u64, u64)> {
+    let mut registry = but_authz::Registry::empty();
+    let pid = but_authz::current_pid();
+    let observed_start_time = but_authz::process_start_time(pid)?;
+    let registered_start_time = observed_start_time.checked_add(1).ok_or_else(|| {
+        anyhow::anyhow!("cannot construct wrong start_time for pid {pid}: u64 overflow")
+    })?;
+    registry.register(pid, registered_start_time, "dev", 14_400, "operator")?;
+    registry.write(path)?;
+    Ok((pid, observed_start_time, registered_start_time))
+}
+
+fn write_wrong_pid_current_start_time_registry(path: &Path) -> anyhow::Result<(u32, u32, u64)> {
+    let mut registry = but_authz::Registry::empty();
+    let current_pid = but_authz::current_pid();
+    let wrong_pid = current_pid
+        .checked_add(1)
+        .or_else(|| current_pid.checked_sub(1))
+        .ok_or_else(|| anyhow::anyhow!("cannot construct wrong pid for {current_pid}"))?;
+    let current_start_time = but_authz::process_start_time(current_pid)?;
+    registry.register(wrong_pid, current_start_time, "dev", 14_400, "operator")?;
+    registry.write(path)?;
+    Ok((current_pid, wrong_pid, current_start_time))
+}
+
+fn wait_until_after(timestamp: u64) -> anyhow::Result<()> {
+    while unix_time_seconds()? <= timestamp {
+        std::thread::sleep(Duration::from_millis(20));
+    }
+    Ok(())
+}
+
+fn unix_time_seconds() -> anyhow::Result<u64> {
+    Ok(SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs())
+}
+
 fn governed_repo() -> (gix::Repository, tempfile::TempDir) {
     let (repo, tmp) = but_testsupport::writable_scenario("checkout-head-info");
     but_testsupport::invoke_bash(
@@ -740,6 +933,10 @@ permissions = [
     "administration:read",
     "administration:write",
 ]
+
+[[principal]]
+id = "maint"
+permissions = ["merge"]
 EOF
 
 cat >.gitbutler/gates.toml <<'EOF'
