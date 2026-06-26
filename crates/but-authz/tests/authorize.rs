@@ -1,3 +1,5 @@
+#![allow(non_snake_case)]
+
 use but_authz::{
     Authority, AuthoritySet, Denial, GovConfig, GroupName, Principal, PrincipalId, Registry,
     authorize, current_pid, effective_authority, load_governance_config, process_start_time,
@@ -286,6 +288,31 @@ fn IDENT_003_none_registry_allows_flagged_env_fallback() -> anyhow::Result<()> {
         );
         Ok(())
     })
+}
+
+#[test]
+fn ident_017_resolve_principal_from_env_doc_marks_test_ci_only() {
+    let source = include_str!("../src/authorize.rs");
+    let function_start = source
+        .find("pub fn resolve_principal_from_env")
+        .expect("resolve_principal_from_env must remain present");
+    let doc_window_start = source[..function_start]
+        .rfind("///")
+        .expect("resolve_principal_from_env must have a doc-comment");
+    let doc_window = &source[doc_window_start..function_start];
+
+    assert!(
+        doc_window.contains("TEST/CI-ONLY"),
+        "IDENT-017 requires resolve_principal_from_env docs to contain the literal TEST/CI-ONLY marker"
+    );
+    assert!(
+        doc_window.contains("resolve_principal_with_runtime_registry"),
+        "IDENT-017 docs must direct governed but-api gates to resolve_principal_with_runtime_registry"
+    );
+    assert!(
+        doc_window.contains("resolve_principal_with_registry"),
+        "IDENT-017 docs must name resolve_principal_with_registry as the resolver-level test entrypoint"
+    );
 }
 
 fn governed_repo() -> (gix::Repository, impl std::fmt::Debug) {

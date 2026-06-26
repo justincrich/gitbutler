@@ -1,0 +1,23 @@
+    Blocking waiting for file lock on package cache
+   Compiling but-authz v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/RED-FIRST-IDENT-017/crates/but-authz)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1.13s
+     Running tests/authorize.rs (target/debug/deps/authorize-bfc7f8dd5e07578f)
+
+running 1 test
+test ident_017_resolve_principal_from_env_doc_marks_test_ci_only ... FAILED
+
+failures:
+
+---- ident_017_resolve_principal_from_env_doc_marks_test_ci_only stdout ----
+
+thread 'ident_017_resolve_principal_from_env_doc_marks_test_ci_only' (66535829) panicked at crates/but-authz/tests/authorize.rs:304:5:
+IDENT-017 requires resolve_principal_from_env docs to contain the literal TEST/CI-ONLY marker
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    ident_017_resolve_principal_from_env_doc_marks_test_ci_only
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 10 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `-p but-authz --test authorize`
