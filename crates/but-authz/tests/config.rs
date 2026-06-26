@@ -91,6 +91,7 @@ fn agents_toml_parses_same_config() -> anyhow::Result<()> {
 fn governance_present_agents_or_permissions() -> anyhow::Result<()> {
     let (agents_repo, _agents_tmp) = repo_with_agents_toml_only();
     let (permissions_repo, _permissions_tmp) = repo_with_permissions_toml_only();
+    let (gates_repo, _gates_tmp) = repo_with_gates_toml_only();
     let (neither_repo, _neither_tmp) = but_testsupport::writable_scenario("governance-base");
 
     assert!(
@@ -102,12 +103,17 @@ fn governance_present_agents_or_permissions() -> anyhow::Result<()> {
         "committed .gitbutler/permissions.toml alone must still opt the ref into governance"
     );
     assert!(
+        governance_present(&gates_repo, TARGET_REF)?,
+        "committed .gitbutler/gates.toml alone must continue to opt the ref into governance"
+    );
+    assert!(
         !governance_present(&neither_repo, TARGET_REF)?,
         "a resolvable ref with no governance files must remain ungoverned"
     );
 
     println!("governance_present agents.toml-only == true");
     println!("governance_present permissions.toml-only == true");
+    println!("governance_present gates.toml-only == true");
     println!("governance_present neither == false");
 
     Ok(())
@@ -126,8 +132,81 @@ fn both_files_prefers_agents_toml() -> anyhow::Result<()> {
         dev.contains(Authority::ContentsWrite),
         "when both files exist, agents.toml must win over the divergent permissions.toml grant"
     );
+    assert!(
+        !dev.contains(Authority::ContentsRead),
+        "when both files exist, permissions.toml must be ignored rather than merged"
+    );
 
     println!("both files present: dev effective set contains Authority::ContentsWrite");
+
+    Ok(())
+}
+
+#[test]
+fn permissions_only_deprecation_warning() -> anyhow::Result<()> {
+    if std::env::var_os("BUT_AUTHZ_DEPRECATION_WARNING_CHILD").is_some() {
+        let (repo, _tmp) = governed_repo();
+
+        let config = load_governance_config(&repo, TARGET_REF)?;
+        let dev = config
+            .principal_authorities(&PrincipalId::new("dev"))
+            .ok_or_else(|| anyhow::anyhow!("dev principal must load from permissions.toml"))?;
+        assert!(
+            dev.contains(Authority::ContentsWrite),
+            "legacy permissions.toml must still load while warning about migration"
+        );
+
+        return Ok(());
+    }
+
+    let output = std::process::Command::new(std::env::current_exe()?)
+        .arg("--exact")
+        .arg("permissions_only_deprecation_warning")
+        .arg("--nocapture")
+        .env("BUT_AUTHZ_DEPRECATION_WARNING_CHILD", "1")
+        .output()?;
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        output.status.success(),
+        "deprecation-warning child test must pass\nstdout:\n{stdout}\nstderr:\n{stderr}"
+    );
+
+    let matching_lines = stderr
+        .lines()
+        .filter(|line| line.contains("permissions.toml") || line.contains("but agent migrate"))
+        .collect::<Vec<_>>();
+    assert_eq!(
+        matching_lines.len(),
+        1,
+        "legacy-only load must emit exactly one deprecation warning line naming permissions.toml and but agent migrate; stderr was:\n{stderr}"
+    );
+    let line = matching_lines[0];
+    assert!(
+        line.contains("permissions.toml") && line.contains("but agent migrate"),
+        "deprecation warning must name permissions.toml and the but agent migrate remediation"
+    );
+
+    println!("captured deprecation warning: {line}");
+    println!("permissions.toml-only load emits exactly one but agent migrate warning");
+
+    Ok(())
+}
+
+#[test]
+fn byte_equivalent_across_formats() -> anyhow::Result<()> {
+    let (permissions_repo, _permissions_tmp) = governed_repo();
+    let (agents_repo, _agents_tmp) = agents_governed_repo();
+
+    let permissions_config = load_governance_config(&permissions_repo, TARGET_REF)?;
+    let agents_config = load_governance_config(&agents_repo, TARGET_REF)?;
+
+    assert_eq!(
+        permissions_config, agents_config,
+        "agents.toml and permissions.toml parse to byte-equivalent GovConfig; only the table header differs"
+    );
+
+    println!("byte-equivalent agents.toml and permissions.toml produce equal GovConfig values");
 
     Ok(())
 }
@@ -389,6 +468,25 @@ EOF
 
 git add .gitbutler/permissions.toml
 git commit -m "permissions governance opt in"
+"#,
+        &repo,
+    );
+    (repo, tmp)
+}
+
+fn repo_with_gates_toml_only() -> (gix::Repository, impl std::fmt::Debug) {
+    let (repo, tmp) = but_testsupport::writable_scenario("governance-base");
+    but_testsupport::invoke_bash(
+        r#"
+mkdir -p .gitbutler
+cat >.gitbutler/gates.toml <<'EOF'
+[[branch]]
+name = "main"
+protected = true
+EOF
+
+git add .gitbutler/gates.toml
+git commit -m "gates governance opt in"
 "#,
         &repo,
     );

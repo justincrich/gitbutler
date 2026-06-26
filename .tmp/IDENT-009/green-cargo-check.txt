@@ -1,0 +1,38 @@
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Checking but-authz v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-009/crates/but-authz)
+warning: function `IDENT_003_registry_hit_resolves_registered_principal` should have a snake case name
+   --> crates/but-authz/tests/authorize.rs:157:4
+    |
+157 | fn IDENT_003_registry_hit_resolves_registered_principal() -> anyhow::Result<()> {
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `ident_003_registry_hit_resolves_registered_principal`
+    |
+    = note: `#[warn(non_snake_case)]` (part of `#[warn(nonstandard_style)]`) on by default
+
+warning: function `IDENT_003_registry_miss_allows_flagged_env_fallback` should have a snake case name
+   --> crates/but-authz/tests/authorize.rs:176:4
+    |
+176 | fn IDENT_003_registry_miss_allows_flagged_env_fallback() -> anyhow::Result<()> {
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `ident_003_registry_miss_allows_flagged_env_fallback`
+
+warning: function `IDENT_003_registry_miss_without_env_flag_denies_unregistered` should have a snake case name
+   --> crates/but-authz/tests/authorize.rs:194:4
+    |
+194 | fn IDENT_003_registry_miss_without_env_flag_denies_unregistered() -> anyhow::Result<()> {
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `ident_003_registry_miss_without_env_flag_denies_unregistered`
+
+warning: function `IDENT_003_stale_registry_entry_denies_pid_reuse` should have a snake case name
+   --> crates/but-authz/tests/authorize.rs:226:4
+    |
+226 | fn IDENT_003_stale_registry_entry_denies_pid_reuse() -> anyhow::Result<()> {
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `ident_003_stale_registry_entry_denies_pid_reuse`
+
+warning: function `IDENT_003_none_registry_allows_flagged_env_fallback` should have a snake case name
+   --> crates/but-authz/tests/authorize.rs:275:4
+    |
+275 | fn IDENT_003_none_registry_allows_flagged_env_fallback() -> anyhow::Result<()> {
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `ident_003_none_registry_allows_flagged_env_fallback`
+
+warning: `but-authz` (test "authorize") generated 5 warnings
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.36s

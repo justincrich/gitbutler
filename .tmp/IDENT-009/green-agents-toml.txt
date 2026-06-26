@@ -1,0 +1,16 @@
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on artifact directory
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.67s
+     Running tests/config.rs (target/debug/deps/config-3dbe4fa9b450541c)
+
+running 1 test
+agents.toml dev effective set contains Authority::ContentsWrite
+agents.toml ro effective set excludes Authority::ContentsWrite
+agents.toml release-bot role=maintain contains Authority::Merge
+agents.toml branch main protected == true
+test agents_toml_parses_same_config ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 9 filtered out; finished in 0.05s
+
