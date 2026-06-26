@@ -1,9 +1,46 @@
-    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.29s
-     Running tests/but/main.rs (target/debug/deps/but-77794c23152c66fc)
+COMMAND: cargo test -p but --test but -- command::agent::agent_migrate
 
-running 1 test
+EXIT_STATUS: 101
 
-thread 'command::agent::agent_migrate_writes_agents_toml' (63581905) panicked at crates/but/tests/but/command/agent.rs:177:5:
+--- STDOUT ---
+
+running 3 tests
+test command::agent::agent_migrate_missing_source ... FAILED
+test command::agent::agent_migrate_idempotent ... FAILED
+test command::agent::agent_migrate_writes_agents_toml ... FAILED
+
+failures:
+
+---- command::agent::agent_migrate_missing_source stdout ----
+
+thread 'command::agent::agent_migrate_missing_source' (63656689) panicked at crates/but/tests/but/command/agent.rs:249:5:
+missing-source stderr must name .gitbutler/permissions.toml, got: error: unrecognized subcommand 'migrate'
+
+  tip: a similar subcommand exists: 'register'
+
+Usage: but agent [OPTIONS] [COMMAND]
+
+For more information, try '--help'.
+
+
+---- command::agent::agent_migrate_idempotent stdout ----
+
+thread 'command::agent::agent_migrate_idempotent' (63656688) panicked at crates/but/tests/but/command/agent.rs:216:5:
+agent migrate must succeed when agents.toml already exists; stdout:
+
+stderr:
+error: unrecognized subcommand 'migrate'
+
+  tip: a similar subcommand exists: 'register'
+
+Usage: but agent [OPTIONS] [COMMAND]
+
+For more information, try '--help'.
+
+
+---- command::agent::agent_migrate_writes_agents_toml stdout ----
+
+thread 'command::agent::agent_migrate_writes_agents_toml' (63656690) panicked at crates/but/tests/but/command/agent.rs:184:5:
 agent migrate must succeed for a permissions.toml-only working tree; stdout:
 
 stderr:
@@ -16,15 +53,18 @@ Usage: but agent [OPTIONS] [COMMAND]
 For more information, try '--help'.
 
 note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
-test command::agent::agent_migrate_writes_agents_toml ... FAILED
+
 
 failures:
-
-failures:
+    command::agent::agent_migrate_idempotent
+    command::agent::agent_migrate_missing_source
     command::agent::agent_migrate_writes_agents_toml
 
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 472 filtered out; finished in 1.87s
+test result: FAILED. 0 passed; 3 failed; 0 ignored; 0 measured; 470 filtered out; finished in 1.61s
 
+
+--- STDERR ---
+   Compiling but v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/RED-FIRST-IDENT-011/crates/but)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 9.26s
+     Running tests/but/main.rs (target/debug/deps/but-77794c23152c66fc)
 error: test failed, to rerun pass `-p but --test but`
-
-EXIT_STATUS=101

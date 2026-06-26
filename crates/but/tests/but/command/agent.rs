@@ -41,6 +41,13 @@ id = "release-bot"
 role = "maintain"
 "#;
 
+const PREEXISTING_AGENTS_TOML_SENTINEL: &str = r#"# sentinel: hand-authored agents.toml must not be regenerated
+[[agent]]
+id = "hand-authored"
+permissions = ["contents:read"]
+preserve_me = "do-not-overwrite"
+"#;
+
 const AGENT_MIGRATE_REF_PIN_CAVEAT: &str =
     "Commit the add of .gitbutler/agents.toml and the delete of .gitbutler/permissions.toml together.";
 
@@ -203,7 +210,7 @@ fn agent_migrate_writes_agents_toml() -> anyhow::Result<()> {
 fn agent_migrate_idempotent() -> anyhow::Result<()> {
     let env = permissions_only_fixture(LEGACY_PERMISSIONS_TOML)?;
     let agents_path = governance_path(&env, "agents.toml");
-    fs::write(&agents_path, MIGRATED_AGENTS_TOML)?;
+    fs::write(&agents_path, PREEXISTING_AGENTS_TOML_SENTINEL)?;
 
     let output = env.but("agent migrate").output()?;
     assert!(
@@ -220,7 +227,7 @@ fn agent_migrate_idempotent() -> anyhow::Result<()> {
     );
     assert_eq!(
         fs::read_to_string(&agents_path)?,
-        MIGRATED_AGENTS_TOML,
+        PREEXISTING_AGENTS_TOML_SENTINEL,
         "idempotent agent migrate must not rewrite an existing non-empty agents.toml"
     );
 
