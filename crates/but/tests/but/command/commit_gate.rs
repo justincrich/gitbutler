@@ -96,7 +96,8 @@ unset GIT_INDEX_FILE
         .assert()
         .failure()
         .stderr_eq(snapbox::str![[r#"
-Error: {"error":{"code":"branch.protected","message":[..]A[..]}}
+warning: .gitbutler/permissions.toml is deprecated; run: but agent migrate
+Error: {"error":{"code":"branch.protected","message":"direct commits to protected branch /"A/" are denied for principal /"dev/"; land changes through a reviewed merge","remediation_hint":"open a reviewed merge into A instead of committing directly","class":"actor_correctable","held_permissions":["contents:write"],"authorized_actions":[{"command":"but commit","effect":"create a commit on an unprotected feature branch ref"},{"command":"but perm list","effect":"list your own effective permissions (self-discovery)"}]}}
 
 "#]]);
 
@@ -116,7 +117,8 @@ fn commit_gate_denies_protected_branch() -> anyhow::Result<()> {
         .stdout_eq(snapbox::str![[r#"
 "#]])
         .stderr_eq(snapbox::str![[r#"
-Error: {"error":{"code":"branch.protected","message":"direct commits to protected branch [..]A[..] are denied for principal [..]dev[..]; land changes through a reviewed merge"}}
+warning: .gitbutler/permissions.toml is deprecated; run: but agent migrate
+Error: {"error":{"code":"branch.protected","message":"direct commits to protected branch /"A/" are denied for principal /"dev/"; land changes through a reviewed merge","remediation_hint":"open a reviewed merge into A instead of committing directly","class":"actor_correctable","held_permissions":["contents:write"],"authorized_actions":[{"command":"but commit","effect":"create a commit on an unprotected feature branch ref"},{"command":"but perm list","effect":"list your own effective permissions (self-discovery)"}]}}
 
 "#]]);
 
@@ -136,7 +138,8 @@ fn commit_gate_denies_new_branch_without_contents_write() -> anyhow::Result<()> 
         .stdout_eq(snapbox::str![[r#"
 "#]])
         .stderr_eq(snapbox::str![[r#"
-Error: {"error":{"code":"perm.denied","message":"action requires contents:write; authorization denied (held permissions: contents:read)"}}
+warning: .gitbutler/permissions.toml is deprecated; run: but agent migrate
+Error: {"error":{"code":"perm.denied","message":"action requires contents:write; authorization denied (held permissions: contents:read)","remediation_hint":"request a reviewed merge or ask a maintainer to grant contents:write","class":"actor_correctable","held_permissions":["contents:read"],"authorized_actions":[{"command":"but perm list","effect":"list your own effective permissions (self-discovery)"}]}}
 
 "#]]);
 
@@ -185,7 +188,8 @@ unset GIT_INDEX_FILE
         .stdout_eq(snapbox::str![[r#"
 "#]])
         .stderr_eq(snapbox::str![[r#"
-Error: {"error":{"code":"config.invalid","message":"invalid governance config: parsing .gitbutler/gates.toml at refs/heads/A[..]"}}
+warning: .gitbutler/permissions.toml is deprecated; run: but agent migrate
+Error: {"error":{"code":"config.invalid","message":"invalid governance config: parsing .gitbutler/gates.toml at refs/heads/A","class":"operator_required","held_permissions":[],"authorized_actions":[],"do_not":"do not retry — an operator must fix the committed .gitbutler config"}}
 
 "#]]);
 
