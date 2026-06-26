@@ -1,0 +1,27 @@
+   Compiling but v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/RED-FIRST-IDENT-014/crates/but)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 7.11s
+     Running tests/but/main.rs (target/debug/deps/but-77794c23152c66fc)
+
+running 1 test
+
+thread 'command::agent::agent_migrate_initial_writes_agents_toml_with_caveat' (64464289) panicked at crates/but/tests/but/command/agent.rs:302:10:
+
+[31m---- expected: /Users/justinrich/Projects/gitbutler/crates/but/tests/but/command/agent.rs:302:20[0m
+[32m++++ actual:   stdout[0m
+     [2m   1[0m [32m+[0m [32mmigrated: .gitbutler/permissions.toml -> .gitbutler/agents.toml; agents.toml written to the working tree; inert until committed. Commit the add of .gitbutler/agents.toml and the delete of .gitbutler/permissions.toml together.
+[0m
+[2mUpdate with SNAPSHOTS=overwrite[0m
+
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test command::agent::agent_migrate_initial_writes_agents_toml_with_caveat ... FAILED
+
+failures:
+
+failures:
+    command::agent::agent_migrate_initial_writes_agents_toml_with_caveat
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 475 filtered out; finished in 1.71s
+
+error: test failed, to rerun pass `-p but --test but`
+
+RED_EXIT_CODE=101
