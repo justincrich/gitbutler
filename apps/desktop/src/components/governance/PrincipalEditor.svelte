@@ -430,18 +430,18 @@
 	.principal-editor {
 		display: flex;
 		flex-direction: column;
-		padding: var(--clr-space-12);
-		gap: var(--clr-space-12);
-		border: 1px solid var(--clr-border-2);
+		padding: 12px;
+		gap: 12px;
+		border: 1px solid var(--border-2);
 		border-radius: var(--radius-m);
-		background: var(--clr-bg-1);
+		background: var(--bg-1);
 	}
 
 	.principal-editor__header {
 		display: flex;
 		align-items: flex-start;
 		justify-content: space-between;
-		gap: var(--clr-space-8);
+		gap: 8px;
 	}
 
 	.principal-editor__header h3,
@@ -452,13 +452,13 @@
 	.principal-editor__header p,
 	.permission-row__copy span,
 	.permission-row__source {
-		color: var(--clr-text-2);
+		color: var(--text-2);
 	}
 
 	.principal-editor__section {
 		display: flex;
 		flex-direction: column;
-		gap: var(--clr-space-6);
+		gap: 6px;
 	}
 
 	.principal-editor__label {
@@ -469,7 +469,7 @@
 		display: flex;
 		flex-direction: column;
 		overflow: hidden;
-		border: 1px solid var(--clr-border-2);
+		border: 1px solid var(--border-2);
 		border-radius: var(--radius-m);
 	}
 
@@ -477,9 +477,9 @@
 		display: grid;
 		grid-template-columns: minmax(0, 1fr) auto auto;
 		align-items: center;
-		padding: var(--clr-space-8);
-		gap: var(--clr-space-8);
-		border-bottom: 1px solid var(--clr-border-2);
+		padding: 8px;
+		gap: 8px;
+		border-bottom: 1px solid var(--border-2);
 	}
 
 	.permission-row:last-child {
@@ -487,7 +487,7 @@
 	}
 
 	.permission-row.inherited {
-		background: var(--clr-bg-2);
+		background: var(--bg-2);
 	}
 
 	.permission-row__copy {
@@ -503,6 +503,6 @@
 	.principal-editor__actions {
 		display: flex;
 		justify-content: flex-end;
-		gap: var(--clr-space-6);
+		gap: 6px;
 	}
 </style>

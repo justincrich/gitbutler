@@ -1,7 +1,7 @@
 ---
 stability: PRODUCT_CONTEXT
-last_validated: 2026-06-18
-prd_version: 1.3.0
+last_validated: 2026-06-24
+prd_version: 1.4.0
 ---
 # Functional-Permission Agent Governance for GitButler — Overview
 
@@ -38,6 +38,8 @@ The place teams *actually run* parallel agents — a rich local git client with 
 - **Governed orchestration loop** (LOOP): a demonstration that ties it together — an implementer agent (`contents:write`, no `merge`), a reviewer agent (`reviews:write`), and a human maintainer (the `merge` holder, final feature-level approver) run implement→review→merge, with **role separation emerging purely from functional permissions**. The loop's "open a PR" / "submit a review" steps gate on the governed `but pr` / `but review` actions. "Human at the feature level, AI at the code level" is expressed as three lines of `gates.toml` (`require_approval_from_group = ["code-reviewers", "maintainers"]`), not as code that knows what a human or an AI is.
 
 - **Governance management UI** (MGMT): a human surface in the **SvelteKit/Tauri desktop app** (`apps/desktop`) where an admin manages — per agent — functional permissions, group membership, branch gates, and per-agent automation rules. It is a **governed front-end** over `but-authz` (every write goes through the same admin-gated, ref-pinned, committed path via `but-api`→Tauri→`but-sdk`; pending-until-committed; read-only without `administration:write`; no self-escalation), extending GitButler's existing settings + `rules/` patterns with no new design-system work — **not a bypass**, and not a new *agent* surface (agent-facing enforcement stays CLI/action-boundary).
+
+- **Agent identity registration** (IDENT, added v1.4.0): replaces the self-asserted `BUT_AGENT_HANDLE` env var with a runtime PID registry whose identifiers are anchored in a committed `.gitbutler/agents.toml` (renamed from `permissions.toml`). Every governed `but` invocation must resolve to a registered `(pid, start_time)`; unregistered processes are denied at every gate. The static catalog is renamed (`[[principal]]` → `[[agent]]`) and a sibling runtime file (`agents-runtime.toml`, gitignored) maps live PIDs to committed agent IDs. Identity is process-level, not cryptographic; the trust root is the host OS + the orchestrator that writes the registry file. See [12-uc-agent-identity.md](./12-uc-agent-identity.md).
 
 The bet: hold discrete agentic actors to the same review/permission gates as humans by making GitButler enforce functional permissions on its own git actions — and make the governed path the cheapest path, so agents flow toward good code instead of being walled away from bad code.
 

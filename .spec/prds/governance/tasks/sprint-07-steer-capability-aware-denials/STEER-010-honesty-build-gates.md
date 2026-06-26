@@ -27,7 +27,7 @@ TASK: STEER-010 - Net-new honesty build-gates: closed-catalog grep (no `format!`
 ================================================================================
 
 TASK_TYPE:  FEATURE
-STATUS:     Backlog
+STATUS:     Completed
 PRIORITY:   P0
 EFFORT:     M  (120 min)
 AGENT:      implementer=rust-reviewer | reviewer=rust-reviewer

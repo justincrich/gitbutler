@@ -13,6 +13,7 @@ fn commit_gate_feature_ok_protected_rejected() -> anyhow::Result<()> {
 
     temp_env::with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("dev")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -96,6 +97,7 @@ fn commit_gate_readonly_and_bad_handle_denied() -> anyhow::Result<()> {
 
         temp_env::with_vars(
             [
+                ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
                 ("BUT_AGENT_HANDLE", handle),
                 ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ],
@@ -163,6 +165,7 @@ fn commit_gate_edit_cannot_unprotect() -> anyhow::Result<()> {
 
     temp_env::with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("dev")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -229,6 +232,7 @@ git commit -m "feature unprotects main"
 fn commit_gate_malformed_partial_and_dryrun() -> anyhow::Result<()> {
     temp_env::with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("dev")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -351,6 +355,7 @@ fn commit_gate_absent_config_is_ungoverned() -> anyhow::Result<()> {
         let feat_before = ref_id(&repo, FEAT_REF)?;
         temp_env::with_vars(
             [
+                ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
                 ("BUT_AGENT_HANDLE", handle),
                 ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ],
@@ -435,6 +440,7 @@ fn commit_gate_steering_fields_positive_assertions() -> anyhow::Result<()> {
     // ---- branch.protected: dev (holds contents:write) commits to main ----
     temp_env::with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("dev")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -475,6 +481,7 @@ fn commit_gate_steering_fields_positive_assertions() -> anyhow::Result<()> {
     // ---- perm.denied: ro (lacks contents:write) commits to feat ----
     temp_env::with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("ro")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -534,6 +541,7 @@ fn commit_gate_commit_relative_checks_contents_write_without_branch_protection()
 
     temp_env::with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("ro")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -567,6 +575,7 @@ fn commit_gate_commit_relative_checks_contents_write_without_branch_protection()
 
     temp_env::with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("dev")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -597,6 +606,7 @@ fn commit_gate_worktree_integrate_protected_rejected() -> anyhow::Result<()> {
 
     temp_env::with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("dev")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -649,6 +659,7 @@ fn commit_gate_apply_integrate_readonly_denied() -> anyhow::Result<()> {
 
     temp_env::with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("ro")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -697,6 +708,7 @@ fn commit_gate_apply_integrate_readonly_denied() -> anyhow::Result<()> {
 
     temp_env::with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("dev")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -734,6 +746,7 @@ fn commit_gate_apply_integrate_no_target_ungoverned() -> anyhow::Result<()> {
 
     temp_env::with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("ro")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -780,6 +793,7 @@ fn commit_gate_governed_missing_target_failclosed() -> anyhow::Result<()> {
 
     temp_env::with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("ro")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -843,6 +857,7 @@ fn commit_gate_apply_integrate_dryrun_targetref_pinned() -> anyhow::Result<()> {
 
     temp_env::with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("ro")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],

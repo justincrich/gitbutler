@@ -22,6 +22,7 @@ async fn post_comment_persists_comment_with_resolved_false() -> anyhow::Result<(
 
     temp_env::async_with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("rev")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -137,6 +138,7 @@ async fn list_comments_returns_threads_excludes_pr_meta() -> anyhow::Result<()> 
 
     let rows = temp_env::async_with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("rev")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -181,6 +183,7 @@ async fn resolve_thread_flips_whole_thread() -> anyhow::Result<()> {
 
     temp_env::async_with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("rev")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -242,6 +245,7 @@ async fn post_comment_denied_without_authority_writes_nothing() -> anyhow::Resul
 
     let err = temp_env::async_with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("impl")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -293,6 +297,7 @@ async fn post_comment_is_local_cache_only() -> anyhow::Result<()> {
 
     temp_env::async_with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("rev")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -363,6 +368,7 @@ async fn unresolved_comment_does_not_block_merge() -> anyhow::Result<()> {
     )?;
     let rows = temp_env::async_with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("reviewer")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -379,6 +385,7 @@ async fn unresolved_comment_does_not_block_merge() -> anyhow::Result<()> {
     // call), proving the gate itself passed.
     let err = temp_env::async_with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("maint")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -408,6 +415,7 @@ async fn unauthorized_resolve_rejected_and_pr_meta_guarded() -> anyhow::Result<(
     // reviewer, and NOT a reviews:write holder → must be REJECTED (R22).
     let err = temp_env::async_with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("other")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -442,6 +450,7 @@ async fn unauthorized_resolve_rejected_and_pr_meta_guarded() -> anyhow::Result<(
     // The thread author (`rev`) CAN resolve.
     temp_env::async_with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("rev")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -469,6 +478,7 @@ async fn unauthorized_resolve_rejected_and_pr_meta_guarded() -> anyhow::Result<(
     set_thread_resolved(&ctx, "feat", "t1", false)?;
     temp_env::async_with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("rev2")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -497,6 +507,7 @@ async fn unauthorized_resolve_rejected_and_pr_meta_guarded() -> anyhow::Result<(
     set_thread_resolved(&ctx, "feat", "t1", false)?;
     temp_env::async_with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("rev3")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -523,6 +534,7 @@ async fn unauthorized_resolve_rejected_and_pr_meta_guarded() -> anyhow::Result<(
     // R23: a caller cannot post to the reserved __pr_meta__ thread.
     let err = temp_env::async_with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("rev")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -548,6 +560,7 @@ async fn unauthorized_resolve_rejected_and_pr_meta_guarded() -> anyhow::Result<(
     // R23: resolve_thread also refuses the reserved thread.
     let err = temp_env::async_with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("rev")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -869,6 +882,7 @@ fn snapshot_assignments(ctx: &but_ctx::Context) -> anyhow::Result<String> {
 async fn approve_branch(ctx: &but_ctx::Context, principal_id: &str) -> anyhow::Result<()> {
     temp_env::async_with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some(principal_id)),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],

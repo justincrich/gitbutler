@@ -52,6 +52,7 @@ async fn landed_membership_clears_merge_authority_step() -> anyhow::Result<()> {
 
     temp_env::async_with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("feat-author")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],

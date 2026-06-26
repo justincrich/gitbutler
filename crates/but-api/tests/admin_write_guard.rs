@@ -12,6 +12,7 @@ fn admin_write_guard_denies_non_admin_allows_admin() -> anyhow::Result<()> {
 
     let dev_error = temp_env::with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("dev")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -30,6 +31,7 @@ fn admin_write_guard_denies_non_admin_allows_admin() -> anyhow::Result<()> {
 
     temp_env::with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("admin")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -52,6 +54,7 @@ permissions = ["administration:write", "merge"]
 
     let self_grant_error = temp_env::with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("dev")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -86,6 +89,7 @@ fn admin_write_guard_malformed_config_invalid() -> anyhow::Result<()> {
 
     let error = temp_env::with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("admin")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],

@@ -19,6 +19,7 @@ async fn confinement_reviewer_denied_other_merge_and_self_grant() -> anyhow::Res
 
     temp_env::async_with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("reviewer")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -45,6 +46,7 @@ async fn confinement_reviewer_denied_other_merge_and_self_grant() -> anyhow::Res
     let (admin_repo, _admin_tmp) = admin_write_confined_repo();
     let principal_id = temp_env::with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("reviewer")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -57,6 +59,7 @@ async fn confinement_reviewer_denied_other_merge_and_self_grant() -> anyhow::Res
 
     let admin_error = temp_env::with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("reviewer")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -81,6 +84,7 @@ async fn confinement_authority_from_config_not_claim() -> anyhow::Result<()> {
     let (admin_repo, _admin_tmp) = admin_write_confined_repo();
     temp_env::with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("reviewer")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -127,6 +131,7 @@ async fn confinement_authority_from_config_not_claim() -> anyhow::Result<()> {
 
     temp_env::async_with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("reviewer")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -277,6 +282,7 @@ fn seed_review(ctx: &mut but_ctx::Context, head: gix::ObjectId) -> anyhow::Resul
 async fn approve_branch(ctx: &but_ctx::Context, principal_id: &str) -> anyhow::Result<()> {
     temp_env::async_with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some(principal_id)),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],

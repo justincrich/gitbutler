@@ -11,6 +11,7 @@ fn perm_cli_grant_revoke_denial_and_as_rejection() -> anyhow::Result<()> {
 
     let grant = env
         .but("perm grant --principal rust-implementer reviews:write")
+        .env("BUT_AUTHZ_ALLOW_ENV_HANDLE", "1")
         .env("BUT_AGENT_HANDLE", "admin")
         .output()?;
     assert!(grant.status.success(), "admin perm grant must succeed");
@@ -36,6 +37,7 @@ fn perm_cli_grant_revoke_denial_and_as_rejection() -> anyhow::Result<()> {
 
     let list = env
         .but("perm list --principal rust-implementer")
+        .env("BUT_AUTHZ_ALLOW_ENV_HANDLE", "1")
         .env("BUT_AGENT_HANDLE", "admin")
         .output()?;
     assert!(list.status.success(), "admin perm list must succeed");
@@ -51,6 +53,7 @@ fn perm_cli_grant_revoke_denial_and_as_rejection() -> anyhow::Result<()> {
 
     let revoke = env
         .but("perm revoke --principal rust-implementer contents:write")
+        .env("BUT_AUTHZ_ALLOW_ENV_HANDLE", "1")
         .env("BUT_AGENT_HANDLE", "admin")
         .output()?;
     assert!(revoke.status.success(), "admin perm revoke must succeed");
@@ -62,6 +65,7 @@ fn perm_cli_grant_revoke_denial_and_as_rejection() -> anyhow::Result<()> {
 
     let denied = env
         .but("perm grant --principal rust-implementer administration:write")
+        .env("BUT_AUTHZ_ALLOW_ENV_HANDLE", "1")
         .env("BUT_AGENT_HANDLE", "rust-implementer")
         .output()?;
     assert!(!denied.status.success(), "non-admin grant must fail");
@@ -73,6 +77,7 @@ fn perm_cli_grant_revoke_denial_and_as_rejection() -> anyhow::Result<()> {
 
     let override_attempt = env
         .but("perm grant --as admin --principal rust-implementer reviews:write")
+        .env("BUT_AUTHZ_ALLOW_ENV_HANDLE", "1")
         .env("BUT_AGENT_HANDLE", "rust-implementer")
         .output()?;
     assert!(
@@ -100,6 +105,7 @@ fn perm_denials_include_remediation_hint() -> anyhow::Result<()> {
         (
             "perm grant",
             env.but("perm grant --principal rust-reviewer reviews:write")
+                .env("BUT_AUTHZ_ALLOW_ENV_HANDLE", "1")
                 .env("BUT_AGENT_HANDLE", "rust-implementer")
                 .output()?,
             "administration:write",
@@ -107,6 +113,7 @@ fn perm_denials_include_remediation_hint() -> anyhow::Result<()> {
         (
             "perm revoke",
             env.but("perm revoke --principal admin administration:write")
+                .env("BUT_AUTHZ_ALLOW_ENV_HANDLE", "1")
                 .env("BUT_AGENT_HANDLE", "rust-implementer")
                 .output()?,
             "administration:write",
@@ -114,6 +121,7 @@ fn perm_denials_include_remediation_hint() -> anyhow::Result<()> {
         (
             "perm list",
             env.but("perm list --principal rust-implementer")
+                .env("BUT_AUTHZ_ALLOW_ENV_HANDLE", "1")
                 .env_remove("BUT_AGENT_HANDLE")
                 .output()?,
             "BUT_AGENT_HANDLE",
@@ -166,6 +174,7 @@ fn perm_cli_uses_workspace_target_ref_not_head() -> anyhow::Result<()> {
 
     let grant = env
         .but("perm grant --principal rust-reviewer reviews:write")
+        .env("BUT_AUTHZ_ALLOW_ENV_HANDLE", "1")
         .env("BUT_AGENT_HANDLE", "admin")
         .output()?;
     assert!(

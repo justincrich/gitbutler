@@ -26,7 +26,7 @@ TASK: STEER-008 - Ship the non-enforced agent-priming reference primer (denials=
 ================================================================================
 
 TASK_TYPE:  INFRA
-STATUS:     Backlog
+STATUS:     Completed
 PRIORITY:   P2
 EFFORT:     S  (90 min)
 AGENT:      implementer=rust-implementer | reviewer=rust-reviewer

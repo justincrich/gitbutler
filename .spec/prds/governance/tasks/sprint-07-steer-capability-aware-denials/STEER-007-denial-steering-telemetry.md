@@ -29,7 +29,7 @@ TASK: STEER-007 - Denial-steering telemetry event (`code`, `class`, `had_lateral
 ================================================================================
 
 TASK_TYPE:  FEATURE
-STATUS:     Backlog
+STATUS:     Completed
 PRIORITY:   P1
 EFFORT:     S  (120 min)
 AGENT:      implementer=rust-implementer | reviewer=rust-reviewer

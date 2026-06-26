@@ -2,7 +2,7 @@
 sprint: 09
 sequence: 11
 timeline: Phase 6 — IDENT gates + migration (v1.4.0)
-status: In Progress
+status: Done
 proposed_by: rust-planner (upstream ROADMAP `--no-specialists` declaration; task expansion dispatches rust-planner per RULES.md specialist table)
 milestone: sprint-09-ident-gates-migration
 prd: ../../README.md
@@ -14,7 +14,7 @@ generated_by: but-sprint-tasks-plan
 
 **Sequence:** 11
 **Timeline:** Phase 6 — IDENT gates + migration (v1.4.0)
-**Status:** In Progress
+**Status:** Done — closed out 2026-06-26 (all 8 tasks IDENT-009–016 merged + verified; the registry-first gate swap had silently broken the legacy governance gate suites — remediated by migrating them to the spec's `BUT_AUTHZ_ALLOW_ENV_HANDLE=1` env-fallback contract; full governance gate test suite green across `but-api` / `but` / `gitbutler-tauri`)
 **Proposed by:** rust-planner (upstream ROADMAP declared `--no-specialists` for the sprint skeleton; task expansion here dispatches `rust-planner` per the RULES.md Specialist Agents table — `--no-specialists` is "never the default" per the skill NEVER-TIER, and the project resolves `rust-planner` for the `crates/` Rust backend surface)
 **Milestone:** — (`sprint-09-ident-gates-migration`)
 

@@ -42,8 +42,10 @@
 </script>
 
 <script lang="ts">
+	import GovernanceConfigHint from "$components/governance/GovernanceConfigHint.svelte";
 	import ExpandableSection from "$components/shared/ExpandableSection.svelte";
 	import { BACKEND } from "$lib/backend";
+	import { CAPABILITY_CATALOG } from "$lib/governance";
 	import { injectOptional } from "@gitbutler/core/context";
 	import {
 		Badge,
@@ -74,14 +76,6 @@
 		onRefresh?: () => void;
 		onGroupPending?: (groupName: string) => void;
 	};
-
-	const permissionRows = [
-		{ authority: "contents:read", label: "Read contents" },
-		{ authority: "contents:write", label: "Write contents" },
-		{ authority: "reviews:write", label: "Write reviews" },
-		{ authority: "merge", label: "Merge" },
-		{ authority: "administration:write", label: "Administration" },
-	];
 
 	const {
 		projectId,
@@ -137,9 +131,14 @@
 
 	function createBackendService(): GroupsListService {
 		return {
-			listGroups(projectId) {
+			listGroups(projectId, targetRef) {
 				if (!backend) throw new Error("governance.backend_unavailable");
-				return backend.invoke<GroupListOutcome>("group_list", { projectId });
+				// Read-only renderer path: the committed group roster is plaintext at the target
+				// ref, so this read is ungated — unlike the governed `group_list` CLI command.
+				return backend.invoke<GroupListOutcome>("governance_groups_list", {
+					projectId,
+					targetRef,
+				});
 			},
 			groupCreate(projectId, targetRef, group, authorities) {
 				if (!backend) throw new Error("governance.backend_unavailable");
@@ -407,6 +406,8 @@
 		</InfoMessage>
 	{/if}
 
+	<GovernanceConfigHint file="agents" {targetRef} cli="but group" />
+
 	<div class="groups-list__create">
 		<Textbox
 			testId="groups-list-create-name"
@@ -471,14 +472,20 @@
 							<div class="groups-list__content">
 								<div class="groups-list__section">
 									<span class="groups-list__label">Permissions</span>
+									<p class="groups-list__hint-text">
+										Every member of this group inherits the permissions enabled below.
+									</p>
 									<div class="groups-list__permission-table">
-										{#each permissionRows as row (row.authority)}
+										{#each CAPABILITY_CATALOG as row (row.authority)}
 											{@const rowSlug = slug(row.authority)}
 											{@const checked = group.authorities.includes(row.authority)}
 											<div class="groups-list__permission-row">
 												<div class="groups-list__permission-copy">
-													<strong>{row.authority}</strong>
-													<span>{row.label}</span>
+													<span class="groups-list__permission-name">
+														{row.label}
+														<code>{row.authority}</code>
+													</span>
+													<span class="groups-list__permission-desc">{row.description}</span>
 												</div>
 												{#key `${group.name}-${row.authority}-${checked}-${isReadOnly}`}
 													<Toggle
@@ -579,21 +586,21 @@
 	.groups-list__section {
 		display: flex;
 		flex-direction: column;
-		gap: var(--clr-space-8);
+		gap: 8px;
 	}
 
 	.groups-list__create {
 		display: grid;
 		grid-template-columns: minmax(180px, 280px) max-content;
 		align-items: end;
-		gap: var(--clr-space-6);
+		gap: 6px;
 	}
 
 	.groups-list__row {
-		padding: var(--clr-space-8);
-		border: 1px solid var(--clr-border-2);
+		padding: 8px;
+		border: 1px solid var(--border-2);
 		border-radius: var(--radius-s);
-		background: var(--clr-bg-1);
+		background: var(--bg-1);
 	}
 
 	.groups-list__label {
@@ -604,7 +611,7 @@
 		display: flex;
 		flex-direction: column;
 		overflow: hidden;
-		border: 1px solid var(--clr-border-2);
+		border: 1px solid var(--border-2);
 		border-radius: var(--radius-s);
 	}
 
@@ -612,9 +619,9 @@
 		display: grid;
 		grid-template-columns: minmax(0, 1fr) auto;
 		align-items: center;
-		padding: var(--clr-space-8);
-		gap: var(--clr-space-8);
-		border-bottom: 1px solid var(--clr-border-2);
+		padding: 8px;
+		gap: 8px;
+		border-bottom: 1px solid var(--border-2);
 	}
 
 	.groups-list__permission-row:last-child {
@@ -625,10 +632,35 @@
 		display: flex;
 		flex-direction: column;
 		min-width: 0;
+		gap: 2px;
 	}
 
-	.groups-list__permission-copy span {
-		color: var(--clr-text-2);
+	.groups-list__permission-name {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 6px;
+		font-weight: 600;
+	}
+
+	.groups-list__permission-name code {
+		padding: 0 2px;
+		border-radius: var(--radius-s);
+		background: var(--bg-2);
+		color: var(--text-2);
+		font-size: 11px;
+		font-weight: 400;
+	}
+
+	.groups-list__permission-desc {
+		color: var(--text-2);
+		font-size: 12px;
+	}
+
+	.groups-list__hint-text {
+		margin: 0;
+		color: var(--text-2);
+		font-size: 12px;
 	}
 
 	.groups-list__actions {

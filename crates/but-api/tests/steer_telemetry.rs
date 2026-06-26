@@ -179,6 +179,7 @@ fn steer_telemetry_actor_correctable_event_fields() -> anyhow::Result<()> {
 
     let (gate_result, events) = temp_env::with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("dev")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -282,6 +283,7 @@ fn steer_telemetry_actor_correctable_event_fields() -> anyhow::Result<()> {
 fn steer_telemetry_operator_required_empty_menu() -> anyhow::Result<()> {
     let (gate_result, events) = temp_env::with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("dev")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -387,6 +389,7 @@ fn steer_telemetry_discovery_only_no_lateral() -> anyhow::Result<()> {
 
     let (gate_result, events) = temp_env::with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("ro")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -480,6 +483,7 @@ fn steer_telemetry_event_is_observation_only() -> anyhow::Result<()> {
 
     let (gate_result, events) = temp_env::with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("dev")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],

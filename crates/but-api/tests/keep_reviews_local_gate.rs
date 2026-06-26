@@ -27,6 +27,7 @@ fn keep_reviews_local_false_returns_named_seam_error() -> anyhow::Result<()> {
     let runtime = tokio::runtime::Runtime::new()?;
     let err = match temp_env::with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("dev")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],

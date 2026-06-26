@@ -32,7 +32,7 @@ TASK: STEER-005 - Add the four steering fields to ALL FOUR hand-rolled CLI denia
 ================================================================================
 
 TASK_TYPE:  FEATURE
-STATUS:     Backlog
+STATUS:     Completed
 PRIORITY:   P0
 EFFORT:     S  (240 min)
 AGENT:      implementer=rust-implementer | reviewer=rust-reviewer

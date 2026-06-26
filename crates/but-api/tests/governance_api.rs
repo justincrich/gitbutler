@@ -19,6 +19,7 @@ fn governance_api_perm_grant_admin_lands_inert() -> anyhow::Result<()> {
 
     let outcome = temp_env::with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("admin")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -62,6 +63,7 @@ fn governance_api_perm_grant_non_admin_denied_with_hint() -> anyhow::Result<()> 
 
     let result = temp_env::with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("rust-implementer")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -97,6 +99,7 @@ fn governance_api_status_read_returns_own_effective_set() -> anyhow::Result<()> 
 
     let effective = temp_env::with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("rust-implementer")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -133,6 +136,7 @@ fn governance_api_group_add_member_non_admin_denied_with_hint() -> anyhow::Resul
 
     let result = temp_env::with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("rust-reviewer")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -168,6 +172,7 @@ fn governance_api_status_read_is_self_scoped_no_foreign_principal() -> anyhow::R
 
     let effective = temp_env::with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("rust-implementer")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -294,6 +299,7 @@ protected = true
 
     let outcome = temp_env::with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("admin")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -344,6 +350,7 @@ fn governance_api_commit_requires_admin_write_and_leaves_target_inert() -> anyho
 
         let result = temp_env::with_vars(
             [
+                ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
                 ("BUT_AGENT_HANDLE", handle),
                 ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ],

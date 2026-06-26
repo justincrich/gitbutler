@@ -1,5 +1,5 @@
 import type { IBackend } from "$lib/backend";
-import type { GovernanceStatus } from "@gitbutler/but-sdk";
+import type { GovernanceStatus, GroupListOutcome } from "@gitbutler/but-sdk";
 
 export const GOVERNANCE_COMMIT_MESSAGE = "chore: update governance config";
 const ADMIN_WRITE_AUTHORITY = "administration:write";
@@ -66,6 +66,7 @@ export type GovernanceCommitOutcome = {
 export type GovernanceRendererContract = {
 	readPending(target: GovernanceTarget): Promise<GovernancePending>;
 	readPrincipals(target: GovernanceTarget): Promise<GovernancePrincipalsList>;
+	readGroups(target: GovernanceTarget): Promise<GroupListOutcome>;
 	readAccess(projectId: string): Promise<GovernanceAccess>;
 	commitPending(target: GovernanceTarget): Promise<GovernanceCommitOutcome>;
 };
@@ -81,6 +82,9 @@ export function createGovernanceRendererContract(
 		},
 		async readPrincipals(target) {
 			return await backend.invoke<GovernancePrincipalsList>("governance_principals_list", target);
+		},
+		async readGroups(target) {
+			return await backend.invoke<GroupListOutcome>("governance_groups_list", target);
 		},
 		async readAccess(projectId) {
 			const status = await backend.invoke<GovernanceStatus>("governance_status_read", {

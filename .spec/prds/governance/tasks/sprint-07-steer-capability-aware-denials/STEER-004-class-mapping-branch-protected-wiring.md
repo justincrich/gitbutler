@@ -32,7 +32,7 @@ TASK: STEER-004 - Wire the payload + the exhaustive non-defaulted DenialCause en
 ================================================================================
 
 TASK_TYPE:  FEATURE
-STATUS:     Backlog
+STATUS:     Completed
 PRIORITY:   P0
 EFFORT:     M  (210 min)
 AGENT:      implementer=rust-implementer | reviewer=rust-reviewer

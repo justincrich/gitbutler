@@ -29,7 +29,7 @@ TASK: STEER-003 - Gate-state-aware authorized_actions derivation: effective_set 
 ================================================================================
 
 TASK_TYPE:  FEATURE
-STATUS:     Backlog
+STATUS:     Completed
 PRIORITY:   P0
 EFFORT:     L  (240 min)
 AGENT:      implementer=rust-implementer | reviewer=rust-reviewer

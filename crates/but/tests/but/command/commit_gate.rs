@@ -91,6 +91,7 @@ unset GIT_INDEX_FILE
     env.file("after-governance.txt", "after");
     env.but("--format json commit2 -m after-governance")
         .allow_json()
+        .env("BUT_AUTHZ_ALLOW_ENV_HANDLE", "1")
         .env("BUT_AGENT_HANDLE", "dev")
         .assert()
         .failure()
@@ -109,7 +110,7 @@ fn commit_gate_denies_protected_branch() -> anyhow::Result<()> {
     env.file("protected.txt", "protected");
     env.but("--format json commit2 -m protected")
         .allow_json()
-        .env("BUT_AGENT_HANDLE", "dev")
+        .env("BUT_AUTHZ_ALLOW_ENV_HANDLE", "1").env("BUT_AGENT_HANDLE", "dev")
         .assert()
         .failure()
         .stdout_eq(snapbox::str![[r#"
@@ -129,7 +130,7 @@ fn commit_gate_denies_new_branch_without_contents_write() -> anyhow::Result<()> 
     env.file("readonly.txt", "readonly");
     env.but("--format json commit2 -m readonly -b")
         .allow_json()
-        .env("BUT_AGENT_HANDLE", "ro")
+        .env("BUT_AUTHZ_ALLOW_ENV_HANDLE", "1").env("BUT_AGENT_HANDLE", "ro")
         .assert()
         .failure()
         .stdout_eq(snapbox::str![[r#"
@@ -178,7 +179,7 @@ unset GIT_INDEX_FILE
     env.file("invalid.txt", "invalid");
     env.but("--format json commit2 -m invalid --above fe")
         .allow_json()
-        .env("BUT_AGENT_HANDLE", "dev")
+        .env("BUT_AUTHZ_ALLOW_ENV_HANDLE", "1").env("BUT_AGENT_HANDLE", "dev")
         .assert()
         .failure()
         .stdout_eq(snapbox::str![[r#"
@@ -201,6 +202,7 @@ fn commit_gate_operator_runtime_registry_sequence() -> anyhow::Result<()> {
     env.but("--format json commit feat -m env-only-denied")
         .allow_json()
         .env("BUT_AGENT_REGISTRY_PATH", &registry_path)
+        .env("BUT_AUTHZ_ALLOW_ENV_HANDLE", "1")
         .env("BUT_AGENT_HANDLE", "dev")
         .env_remove("BUT_AUTHZ_ALLOW_ENV_HANDLE")
         .assert()
@@ -213,6 +215,7 @@ fn commit_gate_operator_runtime_registry_sequence() -> anyhow::Result<()> {
     env.but("--format json commit feat -m flag-fallback")
         .allow_json()
         .env("BUT_AGENT_REGISTRY_PATH", &registry_path)
+        .env("BUT_AUTHZ_ALLOW_ENV_HANDLE", "1")
         .env("BUT_AGENT_HANDLE", "dev")
         .env("BUT_AUTHZ_ALLOW_ENV_HANDLE", "1")
         .assert()
@@ -269,6 +272,7 @@ removed: pid=[..] start_time=[..]
     env.but("--format json commit feat -m post-unregister-denied")
         .allow_json()
         .env("BUT_AGENT_REGISTRY_PATH", &registry_path)
+        .env("BUT_AUTHZ_ALLOW_ENV_HANDLE", "1")
         .env("BUT_AGENT_HANDLE", "dev")
         .env_remove("BUT_AUTHZ_ALLOW_ENV_HANDLE")
         .assert()
@@ -418,6 +422,7 @@ exec "$BUT_BIN" --format json commit feat -m "$COMMIT_MESSAGE"
         .env("BUT_BIN", but_bin)
         .env("COMMIT_MESSAGE", message)
         .env("BUT_AGENT_REGISTRY_PATH", registry_path)
+        .env("BUT_AUTHZ_ALLOW_ENV_HANDLE", "1")
         .env_remove("BUT_AGENT_HANDLE")
         .env_remove("BUT_AUTHZ_ALLOW_ENV_HANDLE")
         .env_remove("BUT_OUTPUT_FORMAT")

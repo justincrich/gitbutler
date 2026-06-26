@@ -2,7 +2,7 @@
 //!
 //! Mirrors the `forge_guard` hand-assertion idiom: a governed scenario repo
 //! (committed `.gitbutler/permissions.toml` + `.gitbutler/gates.toml`),
-//! `temp_env::with_var("BUT_AGENT_HANDLE", ...)` to switch principals, drive
+//! `temp_env::with_var("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")), ("BUT_AGENT_HANDLE", ...)` to switch principals, drive
 //! the real `but_api::legacy::forge::{request_review, assign_reviewer,
 //! request_changes_review}` verbs, and assert directly against
 //! `local_review_assignments` / `local_review_meta` / `local_review_verdicts`.
@@ -33,6 +33,7 @@ fn request_review_persists_pending_assignment_without_touching_verdicts() -> any
     // `dev` holds pull_requests:write — the open-PR authority.
     temp_env::with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("dev")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -100,6 +101,7 @@ fn assign_reviewer_distinct_from_author_upserts_idempotent() -> anyhow::Result<(
     // boundary). `dev` opens the review on PullRequestsWrite.
     temp_env::with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("auth")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -117,6 +119,7 @@ fn assign_reviewer_distinct_from_author_upserts_idempotent() -> anyhow::Result<(
     let assign = |reviewer: &str| {
         temp_env::with_vars(
             [
+                ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
                 ("BUT_AGENT_HANDLE", Some("rev")),
                 ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ],
@@ -193,6 +196,7 @@ fn request_changes_review_implements_changes_requested_write() -> anyhow::Result
     // `auth` opener, so the assign succeeds.
     temp_env::with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("auth")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -208,6 +212,7 @@ fn request_changes_review_implements_changes_requested_write() -> anyhow::Result
 
     temp_env::with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("auth")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -232,6 +237,7 @@ fn request_changes_review_implements_changes_requested_write() -> anyhow::Result
 
     let result = temp_env::with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("rev")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -309,6 +315,7 @@ fn request_review_denied_without_authority_writes_nothing() -> anyhow::Result<()
     // `impl` holds contents:write ONLY — no pull_requests:write, no reviews:write.
     let request_err = match temp_env::with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("impl")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -337,6 +344,7 @@ fn request_review_denied_without_authority_writes_nothing() -> anyhow::Result<()
 
     let changes_err = match temp_env::with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("impl")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -398,6 +406,7 @@ fn request_review_is_local_cache_only_no_ref_mutation() -> anyhow::Result<()> {
 
     temp_env::with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("dev")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],

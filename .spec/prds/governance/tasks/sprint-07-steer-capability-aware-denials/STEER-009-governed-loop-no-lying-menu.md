@@ -27,7 +27,7 @@ TASK: STEER-009 - Extend `governed_loop` for gate-state-aware no-lying-menu — 
 ================================================================================
 
 TASK_TYPE:  FEATURE
-STATUS:     Backlog
+STATUS:     Completed
 PRIORITY:   P0
 EFFORT:     XL  (300 min)
 AGENT:      implementer=rust-implementer | reviewer=rust-reviewer

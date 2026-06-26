@@ -17,6 +17,7 @@ fn perm_grant_writes_worktree_inert_until_committed() -> anyhow::Result<()> {
 
     let grant = temp_env::with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("admin")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -65,6 +66,7 @@ fn perm_grant_preserves_unrelated_entries_and_role_sugar() -> anyhow::Result<()>
 
     temp_env::with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("admin")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -108,6 +110,7 @@ fn perm_first_grant_seeds_principal_and_authorizes_when_committed() -> anyhow::R
 
     let grant = temp_env::with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("admin")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -155,6 +158,7 @@ fn perm_revoke_removes_token_and_idempotent_noop() -> anyhow::Result<()> {
 
     let revoke = temp_env::with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("admin")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -186,6 +190,7 @@ fn perm_revoke_removes_token_and_idempotent_noop() -> anyhow::Result<()> {
     let before_noop = worktree_permissions(&repo)?;
     temp_env::with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("admin")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -209,6 +214,7 @@ fn perm_grant_revoke_non_admin_denied() -> anyhow::Result<()> {
 
     let grant_error = temp_env::with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("rust-implementer")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -230,6 +236,7 @@ fn perm_grant_revoke_non_admin_denied() -> anyhow::Result<()> {
 
     let revoke_error = temp_env::with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("rust-implementer")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -260,6 +267,7 @@ fn perm_grant_fail_closed_bad_token_and_unset_handle() -> anyhow::Result<()> {
     let before_bad_token = worktree_permissions(&repo)?;
     let bad_token = temp_env::with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("admin")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -278,6 +286,7 @@ fn perm_grant_fail_closed_bad_token_and_unset_handle() -> anyhow::Result<()> {
     let before_unset_handle = worktree_permissions(&repo)?;
     let unset_handle_error = temp_env::with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", None::<&str>),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -312,6 +321,7 @@ fn perm_revoke_fail_closed_bad_token() -> anyhow::Result<()> {
 
     let error = temp_env::with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("admin")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -353,6 +363,7 @@ fn perm_revoke_fail_closed_unset_handle() -> anyhow::Result<()> {
 
     let denial = temp_env::with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", None::<&str>),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -388,6 +399,7 @@ fn perm_list_fail_closed_unset_handle() -> anyhow::Result<()> {
 
     let denial = temp_env::with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", None::<&str>),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -423,6 +435,7 @@ fn perm_denials_include_remediation_hint() -> anyhow::Result<()> {
 
     let grant = temp_env::with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("rust-implementer")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -435,6 +448,7 @@ fn perm_denials_include_remediation_hint() -> anyhow::Result<()> {
     )?;
     let revoke = temp_env::with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("rust-implementer")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -447,6 +461,7 @@ fn perm_denials_include_remediation_hint() -> anyhow::Result<()> {
     )?;
     let list = temp_env::with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("rust-implementer")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -484,6 +499,7 @@ fn perm_list_cross_principal_scoping() -> anyhow::Result<()> {
 
     let self_list = temp_env::with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("rust-implementer")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -497,6 +513,7 @@ fn perm_list_cross_principal_scoping() -> anyhow::Result<()> {
 
     let cross_error = temp_env::with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("rust-implementer")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -513,6 +530,7 @@ fn perm_list_cross_principal_scoping() -> anyhow::Result<()> {
 
     let admin_list = temp_env::with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("admin-reader")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -534,6 +552,7 @@ fn perm_list_pending_marks_uncommitted_grant() -> anyhow::Result<()> {
 
     temp_env::with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("admin")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -541,6 +560,7 @@ fn perm_list_pending_marks_uncommitted_grant() -> anyhow::Result<()> {
     )?;
     let list = temp_env::with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("admin")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],

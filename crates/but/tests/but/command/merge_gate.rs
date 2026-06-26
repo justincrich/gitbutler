@@ -13,7 +13,7 @@ fn merge_gate_auto_merge_denial_is_structured() -> anyhow::Result<()> {
 
     env.but("--format json pr auto-merge 1")
         .allow_json()
-        .env("BUT_AGENT_HANDLE", "impl")
+        .env("BUT_AUTHZ_ALLOW_ENV_HANDLE", "1").env("BUT_AGENT_HANDLE", "impl")
         .assert()
         .failure()
         .stdout_eq(snapbox::str![[r#"
@@ -22,7 +22,7 @@ fn merge_gate_auto_merge_denial_is_structured() -> anyhow::Result<()> {
 Error: Failed to set the auto-merge state.
 
 Caused by:
-    {"error":{"code":"perm.denied","message":"action requires merge; authorization denied (held permissions: contents:write, pull_requests:write)","remediation_hint":"request a reviewed merge or ask a maintainer to grant merge","unmet":[]}}
+    {"error":{"code":"perm.denied","message":"action requires merge; authorization denied (held permissions: contents:write, pull_requests:write)","remediation_hint":"request a reviewed merge or ask a maintainer to grant merge","class":"actor_correctable","held_permissions":["contents:write","pull_requests:write"],"authorized_actions":[{"command":"but review new","effect":"open a local review for a branch to hand off for review"},{"command":"but perm list","effect":"list your own effective permissions (self-discovery)"}],"unmet":[]}}
 
 "#]]);
 

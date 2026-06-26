@@ -16,6 +16,7 @@ async fn merge_gate_self_and_stale_dismissed() -> anyhow::Result<()> {
     approve_branch(&ctx, "impl").await?;
     temp_env::async_with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("maint")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -52,6 +53,7 @@ async fn merge_gate_self_and_stale_dismissed() -> anyhow::Result<()> {
 
     temp_env::async_with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("maint")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -75,6 +77,7 @@ async fn merge_gate_self_and_stale_dismissed() -> anyhow::Result<()> {
     approve_branch(&ctx, "reviewer").await?;
     temp_env::async_with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("maint")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -107,6 +110,7 @@ async fn merge_gate_distinct_current_head_satisfies() -> anyhow::Result<()> {
 
     temp_env::async_with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("maint")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -139,6 +143,7 @@ async fn merge_gate_authorize_and_review_requirement() -> anyhow::Result<()> {
 
     temp_env::async_with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("impl")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -168,6 +173,7 @@ async fn merge_gate_authorize_and_review_requirement() -> anyhow::Result<()> {
 
     temp_env::async_with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("maint")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -204,6 +210,7 @@ async fn merge_gate_below_min_approvals_blocked() -> anyhow::Result<()> {
 
     temp_env::async_with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("maint")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -292,6 +299,7 @@ async fn merge_gate_two_group_both_present_proceeds() -> anyhow::Result<()> {
 
     temp_env::async_with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("maint")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -314,6 +322,7 @@ async fn merge_gate_two_group_both_present_proceeds() -> anyhow::Result<()> {
 
     temp_env::async_with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("maint")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -346,6 +355,7 @@ async fn merge_gate_two_required_groups_require_each_group() -> anyhow::Result<(
 
     temp_env::async_with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("maint")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -368,6 +378,7 @@ async fn merge_gate_two_required_groups_require_each_group() -> anyhow::Result<(
 
     temp_env::async_with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("maint")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -400,6 +411,7 @@ async fn merge_gate_overlapping_required_groups_policy() -> anyhow::Result<()> {
 
     temp_env::async_with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("maint")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -442,6 +454,7 @@ async fn merge_gate_two_group_only_one_blocked() -> anyhow::Result<()> {
 
     temp_env::async_with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("maint")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -482,6 +495,7 @@ async fn merge_gate_two_group_only_one_blocked() -> anyhow::Result<()> {
 
     temp_env::async_with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("maint")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -528,6 +542,7 @@ async fn merge_gate_dryrun_and_malformed_failclosed() -> anyhow::Result<()> {
 
     temp_env::async_with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("impl")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -561,6 +576,7 @@ async fn merge_gate_dryrun_and_malformed_failclosed() -> anyhow::Result<()> {
 
     temp_env::async_with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("maint")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -587,6 +603,7 @@ async fn merge_gate_unknown_and_no_handle_failclosed() -> anyhow::Result<()> {
 
     temp_env::async_with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("ghost")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -617,6 +634,7 @@ async fn merge_gate_unknown_and_no_handle_failclosed() -> anyhow::Result<()> {
 
     temp_env::async_with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", None::<&str>),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -657,6 +675,7 @@ async fn merge_gate_malformed_config_is_config_invalid() -> anyhow::Result<()> {
 
     temp_env::async_with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("maint")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -681,6 +700,7 @@ async fn merge_gate_malformed_config_is_config_invalid() -> anyhow::Result<()> {
 
     temp_env::async_with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("ghost")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -716,6 +736,7 @@ async fn merge_gate_undefined_required_group_denied() -> anyhow::Result<()> {
 
     temp_env::async_with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("maint")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -760,6 +781,7 @@ async fn merge_gate_dryrun_unknown_failclosed_persists_nothing() -> anyhow::Resu
 
     temp_env::async_with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("ghost")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -813,6 +835,7 @@ async fn merge_gate_steering_fields_positive_assertions() -> anyhow::Result<()> 
 
     let review_required_err = temp_env::async_with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("maint")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -865,6 +888,7 @@ async fn merge_gate_steering_fields_positive_assertions() -> anyhow::Result<()> 
 
     let perm_denied_err = temp_env::async_with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("impl")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -1184,6 +1208,7 @@ fn verdict_count(ctx: &but_ctx::Context) -> anyhow::Result<usize> {
 async fn approve_branch(ctx: &but_ctx::Context, principal_id: &str) -> anyhow::Result<()> {
     temp_env::async_with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some(principal_id)),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],

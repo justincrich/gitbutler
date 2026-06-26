@@ -44,6 +44,7 @@ fn steer_class_per_code_and_resolution() -> anyhow::Result<()> {
 
     temp_env::with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("ro")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -111,6 +112,7 @@ fn steer_class_per_code_and_resolution() -> anyhow::Result<()> {
 fn steer_operator_required_empty_menu_do_not() -> anyhow::Result<()> {
     temp_env::with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("dev")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -206,6 +208,7 @@ fn steer_branch_protected_threads_cfg() -> anyhow::Result<()> {
 
     temp_env::with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("dev")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -297,6 +300,7 @@ fn steer_degrade_vertical_and_do_not_positive() -> anyhow::Result<()> {
 
     temp_env::with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("ro")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -397,6 +401,7 @@ fn steer_dryrun_full_payload_no_mutation() -> anyhow::Result<()> {
 
     temp_env::with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("dev")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],

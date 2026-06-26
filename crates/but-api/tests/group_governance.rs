@@ -24,6 +24,7 @@ fn group_ops_non_admin_denied_all_mutating_verbs() -> anyhow::Result<()> {
             "group_create",
             temp_env::with_vars(
                 [
+                    ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
                     ("BUT_AGENT_HANDLE", Some("rust-reviewer")),
                     ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
                 ],
@@ -34,6 +35,7 @@ fn group_ops_non_admin_denied_all_mutating_verbs() -> anyhow::Result<()> {
             "group_grant",
             temp_env::with_vars(
                 [
+                    ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
                     ("BUT_AGENT_HANDLE", Some("rust-reviewer")),
                     ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
                 ],
@@ -44,6 +46,7 @@ fn group_ops_non_admin_denied_all_mutating_verbs() -> anyhow::Result<()> {
             "group_add_member",
             temp_env::with_vars(
                 [
+                    ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
                     ("BUT_AGENT_HANDLE", Some("rust-reviewer")),
                     ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
                 ],
@@ -54,6 +57,7 @@ fn group_ops_non_admin_denied_all_mutating_verbs() -> anyhow::Result<()> {
             "group_revoke",
             temp_env::with_vars(
                 [
+                    ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
                     ("BUT_AGENT_HANDLE", Some("rust-reviewer")),
                     ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
                 ],
@@ -64,6 +68,7 @@ fn group_ops_non_admin_denied_all_mutating_verbs() -> anyhow::Result<()> {
             "group_remove_member",
             temp_env::with_vars(
                 [
+                    ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
                     ("BUT_AGENT_HANDLE", Some("rust-reviewer")),
                     ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
                 ],
@@ -113,6 +118,7 @@ fn group_denials_include_remediation_hint() -> anyhow::Result<()> {
             "group_create",
             temp_env::with_vars(
                 [
+                    ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
                     ("BUT_AGENT_HANDLE", Some("rust-reviewer")),
                     ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
                 ],
@@ -123,6 +129,7 @@ fn group_denials_include_remediation_hint() -> anyhow::Result<()> {
             "group_grant",
             temp_env::with_vars(
                 [
+                    ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
                     ("BUT_AGENT_HANDLE", Some("rust-reviewer")),
                     ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
                 ],
@@ -133,6 +140,7 @@ fn group_denials_include_remediation_hint() -> anyhow::Result<()> {
             "group_add_member",
             temp_env::with_vars(
                 [
+                    ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
                     ("BUT_AGENT_HANDLE", Some("rust-reviewer")),
                     ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
                 ],
@@ -143,6 +151,7 @@ fn group_denials_include_remediation_hint() -> anyhow::Result<()> {
             "group_revoke",
             temp_env::with_vars(
                 [
+                    ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
                     ("BUT_AGENT_HANDLE", Some("rust-reviewer")),
                     ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
                 ],
@@ -153,6 +162,7 @@ fn group_denials_include_remediation_hint() -> anyhow::Result<()> {
             "group_remove_member",
             temp_env::with_vars(
                 [
+                    ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
                     ("BUT_AGENT_HANDLE", Some("rust-reviewer")),
                     ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
                 ],
@@ -198,6 +208,7 @@ fn group_remove_member_writes_worktree_inert_until_committed() -> anyhow::Result
 
     let remove = temp_env::with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("admin")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -248,6 +259,7 @@ fn group_grant_administration_write_delegates_admin_inert_until_committed() -> a
 
     temp_env::with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("admin")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -287,6 +299,7 @@ fn group_revoke_removes_direct_authority_and_preserves_members() -> anyhow::Resu
 
     let outcome = temp_env::with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("admin")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -329,6 +342,7 @@ fn group_create_duplicate_errs_without_overwrite() -> anyhow::Result<()> {
 
     let result = temp_env::with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("admin")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -382,6 +396,7 @@ fn group_add_member_writes_worktree_inert_until_committed() -> anyhow::Result<()
 
     let add = temp_env::with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("admin")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -439,6 +454,7 @@ fn group_create_grant_writes_worktree() -> anyhow::Result<()> {
 
     let create = temp_env::with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("admin")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -461,6 +477,7 @@ fn group_create_grant_writes_worktree() -> anyhow::Result<()> {
 
     temp_env::with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("admin")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -479,6 +496,7 @@ fn group_create_grant_writes_worktree() -> anyhow::Result<()> {
     );
     let duplicate_create = temp_env::with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("admin")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -514,6 +532,7 @@ fn group_ops_non_admin_denied() -> anyhow::Result<()> {
 
     let create_error = temp_env::with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("rust-implementer")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -535,6 +554,7 @@ fn group_ops_non_admin_denied() -> anyhow::Result<()> {
 
     let grant_error = temp_env::with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("rust-implementer")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -556,6 +576,7 @@ fn group_ops_non_admin_denied() -> anyhow::Result<()> {
 
     let add_error = temp_env::with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("rust-implementer")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -577,6 +598,7 @@ fn group_ops_non_admin_denied() -> anyhow::Result<()> {
 
     let revoke_error = temp_env::with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("rust-implementer")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -598,6 +620,7 @@ fn group_ops_non_admin_denied() -> anyhow::Result<()> {
 
     let remove_error = temp_env::with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("rust-implementer")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -628,6 +651,7 @@ fn group_grant_fail_closed_undefined_group_bad_token_and_unset_handle() -> anyho
     let before_undefined = worktree_permissions(&repo)?;
     let undefined = temp_env::with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("admin")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -646,6 +670,7 @@ fn group_grant_fail_closed_undefined_group_bad_token_and_unset_handle() -> anyho
     let before_bad_token = worktree_permissions(&repo)?;
     let bad_token = temp_env::with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("admin")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -664,6 +689,7 @@ fn group_grant_fail_closed_undefined_group_bad_token_and_unset_handle() -> anyho
     let before_unset_handle = worktree_permissions(&repo)?;
     let unset_handle_error = temp_env::with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", None::<&str>),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -697,6 +723,7 @@ fn group_list_under_admin_read() -> anyhow::Result<()> {
 
     let list = temp_env::with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("admin-reader")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -718,6 +745,7 @@ fn group_list_under_admin_read() -> anyhow::Result<()> {
 
     let denied = temp_env::with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("rust-implementer")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -744,6 +772,7 @@ fn group_delete_removes_group_under_admin_write() -> anyhow::Result<()> {
 
     let outcome = temp_env::with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("admin")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -789,6 +818,7 @@ fn group_delete_non_admin_denied_writes_nothing() -> anyhow::Result<()> {
 
     let result = temp_env::with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("rust-reviewer")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -827,6 +857,7 @@ fn group_delete_missing_group_is_idempotent_noop() -> anyhow::Result<()> {
 
     let outcome = temp_env::with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("admin")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],

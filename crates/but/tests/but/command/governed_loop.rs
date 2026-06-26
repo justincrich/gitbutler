@@ -22,6 +22,7 @@ fn governed_loop_reference_flow_full_loop() -> anyhow::Result<()> {
     env.file("feature.txt", "feature work\n");
     env.but("--format json commit feat -m feature-work")
         .allow_json()
+        .env("BUT_AUTHZ_ALLOW_ENV_HANDLE", "1")
         .env("BUT_AGENT_HANDLE", "implementer")
         .assert()
         .success();
@@ -35,6 +36,7 @@ fn governed_loop_reference_flow_full_loop() -> anyhow::Result<()> {
     let pr_new = env
         .but("--format json pr new feat -m 'Feature work'")
         .allow_json()
+        .env("BUT_AUTHZ_ALLOW_ENV_HANDLE", "1")
         .env("BUT_AGENT_HANDLE", "implementer")
         .output()?;
     assert_pr_new_reaches_forge_boundary(&pr_new, "reference-loop PR creation");
@@ -51,6 +53,7 @@ fn governed_loop_reference_flow_full_loop() -> anyhow::Result<()> {
     let reviewer_commit = env
         .but("--format json commit feat -m reviewer-change")
         .allow_json()
+        .env("BUT_AUTHZ_ALLOW_ENV_HANDLE", "1")
         .env("BUT_AGENT_HANDLE", "reviewer")
         .output()?;
     assert_denial(
@@ -69,6 +72,7 @@ fn governed_loop_reference_flow_full_loop() -> anyhow::Result<()> {
     let zero_approval_merge = env
         .but("--format json pr merge 77 --method squash")
         .allow_json()
+        .env("BUT_AUTHZ_ALLOW_ENV_HANDLE", "1")
         .env("BUT_AGENT_HANDLE", "maintainer")
         .output()?;
     assert_denial(
@@ -86,6 +90,7 @@ fn governed_loop_reference_flow_full_loop() -> anyhow::Result<()> {
 
     env.but("--format json review approve feat")
         .allow_json()
+        .env("BUT_AUTHZ_ALLOW_ENV_HANDLE", "1")
         .env("BUT_AGENT_HANDLE", "reviewer")
         .assert()
         .success();
@@ -93,6 +98,7 @@ fn governed_loop_reference_flow_full_loop() -> anyhow::Result<()> {
     let maintainer_merge = env
         .but("--format json pr merge 77 --method squash")
         .allow_json()
+        .env("BUT_AUTHZ_ALLOW_ENV_HANDLE", "1")
         .env("BUT_AGENT_HANDLE", "maintainer")
         .output()?;
     assert_forge_boundary_after_gate(&maintainer_merge, REVIEW_ID);
@@ -115,6 +121,7 @@ fn governed_loop_remediation_traversable() -> anyhow::Result<()> {
     let denied_merge = env
         .but("--format json pr merge 77 --method squash")
         .allow_json()
+        .env("BUT_AUTHZ_ALLOW_ENV_HANDLE", "1")
         .env("BUT_AGENT_HANDLE", "implementer")
         .output()?;
     let denial = assert_denial(
@@ -133,6 +140,7 @@ fn governed_loop_remediation_traversable() -> anyhow::Result<()> {
     env.file("remediated.txt", "remediated feature\n");
     env.but("--format json commit feat -m remediated-feature")
         .allow_json()
+        .env("BUT_AUTHZ_ALLOW_ENV_HANDLE", "1")
         .env("BUT_AGENT_HANDLE", "implementer")
         .assert()
         .success();
@@ -141,12 +149,14 @@ fn governed_loop_remediation_traversable() -> anyhow::Result<()> {
     let pr_new = env
         .but("--format json pr new feat -m 'Remediated feature'")
         .allow_json()
+        .env("BUT_AUTHZ_ALLOW_ENV_HANDLE", "1")
         .env("BUT_AGENT_HANDLE", "implementer")
         .output()?;
     assert_pr_new_reaches_forge_boundary(&pr_new, "remediation PR creation");
 
     env.but("--format json review approve feat")
         .allow_json()
+        .env("BUT_AUTHZ_ALLOW_ENV_HANDLE", "1")
         .env("BUT_AGENT_HANDLE", "reviewer")
         .assert()
         .success();
@@ -154,6 +164,7 @@ fn governed_loop_remediation_traversable() -> anyhow::Result<()> {
     let maintainer_merge = env
         .but("--format json pr merge 77 --method squash")
         .allow_json()
+        .env("BUT_AUTHZ_ALLOW_ENV_HANDLE", "1")
         .env("BUT_AGENT_HANDLE", "maintainer")
         .output()?;
     assert_forge_boundary_after_gate(&maintainer_merge, REVIEW_ID);
@@ -178,6 +189,7 @@ fn governed_loop_dryrun_no_bypass() -> anyhow::Result<()> {
     let dry_run = env
         .but("--format json pr merge 77 --dry-run")
         .allow_json()
+        .env("BUT_AUTHZ_ALLOW_ENV_HANDLE", "1")
         .env("BUT_AGENT_HANDLE", "implementer")
         .output()?;
     assert_denial(
@@ -216,6 +228,7 @@ fn governed_loop_auto_merge_denied() -> anyhow::Result<()> {
     let auto_merge = env
         .but("--format json pr auto-merge 77")
         .allow_json()
+        .env("BUT_AUTHZ_ALLOW_ENV_HANDLE", "1")
         .env("BUT_AGENT_HANDLE", "implementer")
         .output()?;
     assert_denial(
@@ -244,8 +257,12 @@ fn governed_loop_unset_handle_failclosed() -> anyhow::Result<()> {
     for (label, handle) in [("unset", None), ("empty", Some(""))] {
         let mut cmd = env.but("--format json pr merge 77 --dry-run").allow_json();
         cmd = match handle {
-            Some(value) => cmd.env("BUT_AGENT_HANDLE", value),
-            None => cmd.env_remove("BUT_AGENT_HANDLE"),
+            Some(value) => cmd
+                .env("BUT_AUTHZ_ALLOW_ENV_HANDLE", "1")
+                .env("BUT_AGENT_HANDLE", value),
+            None => cmd
+                .env("BUT_AUTHZ_ALLOW_ENV_HANDLE", "1")
+                .env_remove("BUT_AGENT_HANDLE"),
         };
         let output = cmd.output()?;
         assert_denial(
@@ -318,6 +335,7 @@ fn governed_loop_steer_class_matrix() -> anyhow::Result<()> {
     let imp_merge = env
         .but("--format json pr merge 77 --method squash")
         .allow_json()
+        .env("BUT_AUTHZ_ALLOW_ENV_HANDLE", "1")
         .env("BUT_AGENT_HANDLE", "implementer")
         .output()?;
     assert_denial(
@@ -344,6 +362,7 @@ fn governed_loop_steer_class_matrix() -> anyhow::Result<()> {
     let unset_merge = env
         .but("--format json pr merge 77 --dry-run")
         .allow_json()
+        .env("BUT_AUTHZ_ALLOW_ENV_HANDLE", "1")
         .env_remove("BUT_AGENT_HANDLE")
         .output()?;
     assert_denial(
@@ -482,6 +501,7 @@ fn governed_loop_steer_reviewer_menu_runnable_no_self_approve() -> anyhow::Resul
     let reviewer_commit = env
         .but("--format json commit feat -m reviewer-change")
         .allow_json()
+        .env("BUT_AUTHZ_ALLOW_ENV_HANDLE", "1")
         .env("BUT_AGENT_HANDLE", "reviewer")
         .output()?;
     assert_denial(
@@ -540,6 +560,7 @@ fn governed_loop_steer_reviewer_menu_runnable_no_self_approve() -> anyhow::Resul
     let request_changes = env
         .but("--format json review request-changes feat -m 'please fix the tests'")
         .allow_json()
+        .env("BUT_AUTHZ_ALLOW_ENV_HANDLE", "1")
         .env("BUT_AGENT_HANDLE", "reviewer")
         .output()?;
     assert!(
@@ -579,6 +600,7 @@ fn governed_loop_steer_menu_includes_discovery() -> anyhow::Result<()> {
     let discovery = env
         .but("--format json perm list")
         .allow_json()
+        .env("BUT_AUTHZ_ALLOW_ENV_HANDLE", "1")
         .env("BUT_AGENT_HANDLE", "implementer")
         .output()?;
     let stderr = String::from_utf8_lossy(&discovery.stderr);
@@ -729,6 +751,7 @@ fn steer_cli_serde_commit_gate_carries_class_held_menu_do_not() -> anyhow::Resul
     let output = env
         .but("--format json commit feat -m steer-commit-test")
         .allow_json()
+        .env("BUT_AUTHZ_ALLOW_ENV_HANDLE", "1")
         .env("BUT_AGENT_HANDLE", "reviewer")
         .output()?;
 
@@ -800,6 +823,7 @@ fn steer_cli_serde_review_gate_carries_steering_fields() -> anyhow::Result<()> {
     let output = env
         .but("--format json review request-changes feat -m 'please fix'")
         .allow_json()
+        .env("BUT_AUTHZ_ALLOW_ENV_HANDLE", "1")
         .env("BUT_AGENT_HANDLE", "implementer")
         .output()?;
 
@@ -858,6 +882,7 @@ fn steer_cli_serde_merge_gate_carries_unmet_and_steering() -> anyhow::Result<()>
     let output = env
         .but("--format json pr merge 77 --method squash")
         .allow_json()
+        .env("BUT_AUTHZ_ALLOW_ENV_HANDLE", "1")
         .env("BUT_AGENT_HANDLE", "implementer")
         .output()?;
 
@@ -924,6 +949,7 @@ fn steer_cli_serde_governance_carries_admin_steering() -> anyhow::Result<()> {
     // Implementer (lacks administration:write) tries to grant a permission.
     let output = env
         .but("perm grant --principal reviewer reviews:write")
+        .env("BUT_AUTHZ_ALLOW_ENV_HANDLE", "1")
         .env("BUT_AGENT_HANDLE", "implementer")
         .output()?;
 
@@ -1021,6 +1047,7 @@ fn steer_cli_serde_class_token_branchable() -> anyhow::Result<()> {
     let actor_output = env
         .but("--format json commit feat -m class-token-actor")
         .allow_json()
+        .env("BUT_AUTHZ_ALLOW_ENV_HANDLE", "1")
         .env("BUT_AGENT_HANDLE", "reviewer")
         .output()?;
     assert_eq!(
@@ -1042,6 +1069,7 @@ fn steer_cli_serde_class_token_branchable() -> anyhow::Result<()> {
     let operator_output = env
         .but("--format json commit feat -m class-token-operator")
         .allow_json()
+        .env("BUT_AUTHZ_ALLOW_ENV_HANDLE", "1")
         .env_remove("BUT_AGENT_HANDLE")
         .output()?;
     // The ghost-handle denial should exit 1 with operator_required class.
@@ -1083,6 +1111,7 @@ fn steer_cli_serde_fault_still_emits_code_message_exit1() -> anyhow::Result<()> 
     let output = env
         .but("--format json commit feat -m fault-test")
         .allow_json()
+        .env("BUT_AUTHZ_ALLOW_ENV_HANDLE", "1")
         .env("BUT_AGENT_HANDLE", "reviewer")
         .env("BUT_STEER_FORCE_SERIALIZATION_FAULT", "1")
         .output()?;
@@ -1296,6 +1325,7 @@ fn governed_loop_no_lying_menu_replay() -> anyhow::Result<()> {
         let output = env
             .but(&cli)
             .allow_json()
+            .env("BUT_AUTHZ_ALLOW_ENV_HANDLE", "1")
             .env("BUT_AGENT_HANDLE", "implementer")
             .output()?;
 
@@ -1403,6 +1433,7 @@ unset GIT_INDEX_FILE
     let denied = env
         .but("--format json pr merge 77 --method squash")
         .allow_json()
+        .env("BUT_AUTHZ_ALLOW_ENV_HANDLE", "1")
         .env("BUT_AGENT_HANDLE", "maintainer")
         .output()?;
 
@@ -1431,6 +1462,7 @@ unset GIT_INDEX_FILE
         let output = env
             .but(&cli)
             .allow_json()
+            .env("BUT_AUTHZ_ALLOW_ENV_HANDLE", "1")
             .env("BUT_AGENT_HANDLE", "maintainer")
             .output()?;
 
@@ -1474,6 +1506,7 @@ fn governed_loop_perm_denied_menu_replay() -> anyhow::Result<()> {
     let denied = env
         .but("--format json commit feat -m perm-denied-trigger")
         .allow_json()
+        .env("BUT_AUTHZ_ALLOW_ENV_HANDLE", "1")
         .env("BUT_AGENT_HANDLE", "reviewer")
         .output()?;
 
@@ -1502,6 +1535,7 @@ fn governed_loop_perm_denied_menu_replay() -> anyhow::Result<()> {
         let output = env
             .but(&cli)
             .allow_json()
+            .env("BUT_AUTHZ_ALLOW_ENV_HANDLE", "1")
             .env("BUT_AGENT_HANDLE", "reviewer")
             .output()?;
 
@@ -1540,6 +1574,7 @@ fn governed_loop_concurrent_ref_advance_clean_redenial() -> anyhow::Result<()> {
     let denied = env
         .but("--format json pr merge 77 --method squash")
         .allow_json()
+        .env("BUT_AUTHZ_ALLOW_ENV_HANDLE", "1")
         .env("BUT_AGENT_HANDLE", "implementer")
         .output()?;
     let envelope = parse_steering_envelope(&denied, "AC-4 initial denial");
@@ -1623,6 +1658,7 @@ unset GIT_INDEX_FILE
     let replay = env
         .but("--format json pr merge 77 --method squash")
         .allow_json()
+        .env("BUT_AUTHZ_ALLOW_ENV_HANDLE", "1")
         .env("BUT_AGENT_HANDLE", "implementer")
         .output()?;
 
@@ -1676,6 +1712,7 @@ fn governed_loop_serialization_fault_failclosed() -> anyhow::Result<()> {
     let output = env
         .but("--format json pr merge 77 --method squash")
         .allow_json()
+        .env("BUT_AUTHZ_ALLOW_ENV_HANDLE", "1")
         .env("BUT_AGENT_HANDLE", "implementer")
         .env("BUT_STEER_FORCE_SERIALIZATION_FAULT", "1")
         .output()?;
@@ -1750,6 +1787,7 @@ fn governed_loop_dryrun_serialization_fault_failclosed() -> anyhow::Result<()> {
     let output = env
         .but("--format json pr merge 77 --dry-run")
         .allow_json()
+        .env("BUT_AUTHZ_ALLOW_ENV_HANDLE", "1")
         .env("BUT_AGENT_HANDLE", "implementer")
         .env("BUT_STEER_FORCE_SERIALIZATION_FAULT", "1")
         .output()?;
@@ -1912,6 +1950,7 @@ fn assert_merge_denied_for_implementer(env: &Sandbox) -> anyhow::Result<()> {
     let output = env
         .but("--format json pr merge 77 --method squash")
         .allow_json()
+        .env("BUT_AUTHZ_ALLOW_ENV_HANDLE", "1")
         .env("BUT_AGENT_HANDLE", "implementer")
         .output()?;
     assert_denial(

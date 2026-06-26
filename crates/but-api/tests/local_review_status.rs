@@ -24,6 +24,7 @@ async fn review_status_derives_lifecycle_and_agent_tag() -> anyhow::Result<()> {
     // It opens the review and seeds a pending reviewer assignment for `rev`.
     temp_env::async_with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("agent_opener")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -41,6 +42,7 @@ async fn review_status_derives_lifecycle_and_agent_tag() -> anyhow::Result<()> {
 
     let status = temp_env::async_with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("rev")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -94,6 +96,7 @@ async fn review_status_reflects_approval() -> anyhow::Result<()> {
     // `human_opener` opens the review (default-human — no `kind` declared).
     temp_env::async_with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("human_opener")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -110,6 +113,7 @@ async fn review_status_reflects_approval() -> anyhow::Result<()> {
     // `rev` approves the current HEAD.
     temp_env::async_with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("rev")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -143,6 +147,7 @@ async fn review_status_reflects_changes_requested() -> anyhow::Result<()> {
 
     temp_env::async_with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("human_opener")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -158,6 +163,7 @@ async fn review_status_reflects_changes_requested() -> anyhow::Result<()> {
     .await?;
     temp_env::async_with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("rev")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -191,6 +197,7 @@ async fn review_status_two_read_convergence() -> anyhow::Result<()> {
     // assignment + an unresolved comment thread.
     temp_env::async_with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("agent_opener")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],

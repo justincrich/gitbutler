@@ -1,9 +1,10 @@
 ---
 roadmap: 1
 project: Functional-Permission Agent Governance for GitButler (POC)
-generated: 2026-06-18
+generated: 2026-06-24
 prd: .spec/prds/governance/README.md
-sprint_count: 8
+sprint_count: 13
+prd_version: 1.4.0
 pr_sequencing: false
 ---
 
@@ -11,8 +12,8 @@ pr_sequencing: false
 
 ## Overview
 
-**Sprints:** 8
-**Total Tasks:** 35 (24 backend/CLI · 11 MGMT backend/IPC + 12 MGMT UI + 8 MGMT design across the two MGMT halves)
+**Sprints:** 13 (8 v1.3.0 + 1 STEER enrichment + 4 IDENT v1.4.0)
+**Total Tasks:** 35 (v1.3.0) + 10 (STEER) + 28 (IDENT) = 73
 **Current Sprint:** 1 — AUTHZ primitive + commit-gate skeleton (Planned)
 
 This roadmap turns GitButler into a commit/merge **policy-enforcement layer** for orchestrated agents: a new
@@ -27,6 +28,10 @@ The product is **headless/CLI** for the AUTHZ · GRPS · GATES · LOOP groups (g
 `but` command and observing the structured denial `{code, message, remediation_hint}` + exit code) and a
 **desktop UI** for the MGMT group (verified by using the Governance settings page).
 
+The **v1.4.0 IDENT sprints (08–11)** add agent-identity registration: `permissions.toml` → `agents.toml`,
+runtime PID registry, enforced resolution at every gate, `but agent` CLI, and skill/doc migration. See
+[`12-uc-agent-identity.md`](./12-uc-agent-identity.md) for the authoritative scope.
+
 > **Planning provenance.** Sprint content was authored by the dispatched specialist set — `rust-planner`
 > (backend/CLI), `tauri-planner` (IPC seam), `sveltekit-planner` (UI), `frontend-designer` (design) — then
 > hardened through one red-hat review cycle (`rust-reviewer` + `sveltekit-reviewer` + `security-auditor`),
@@ -34,6 +39,12 @@ The product is **headless/CLI** for the AUTHZ · GRPS · GATES · LOOP groups (g
 > ref-advancing paths, an unowned `gates.toml` writer, the `isAdmin` wiring gap, DryRun/commit-gate
 > target-ref proofs, and the missing T-LOOP-013 traversability proof) — all remediated by the original
 > writers. The orchestrator consolidated; it did not author sprint content.
+>
+> **v1.4.0 additions (STEER + IDENT).** Sprint 07 (STEER — capability-aware denials) was authored by
+> `rust-planner` and appended after Sprint 06b. Sprints 08–11 (IDENT — agent identity registration) were
+> added in `--no-specialists` mode (per but-sprint-plan's escape hatch for mechanical/pure-infra plans)
+> because the upstream design had already fixed file paths, callsites, and CLI verb shapes; provenance is
+> documented per-sprint. Re-run `/but-sprint-plan --delta-replan` to refresh.
 
 ## Sprint Sequence
 
@@ -47,16 +58,23 @@ The product is **headless/CLI** for the AUTHZ · GRPS · GATES · LOOP groups (g
 | 6 | — | [Sprint 05: CLI `but perm` / `but group`](#sprint-05-cli-but-perm--but-group) | Admin grants/groups/lists via CLI with ref-pin caveat; non-admin denied | 2 | Sprint 02, 03, 04 | In Progress |
 | 7 | — | [Sprint 06a: Governance UI — Scaffold + Principals + Groups](#sprint-06a-governance-ui--scaffold--principals--groups) | Admin edits principal & group permissions on the Governance page; pending until commit | 16 | Sprint 02, Sprint 05 | In Progress |
 | 8 | — | [Sprint 06b: Governance UI — Branch Gates + Rules + Safety](#sprint-06b-governance-ui--branch-gates--rules--safety) | Branch-gate edit pending; rules scoped; read-only + denial-no-flip safety | 11 | Sprint 06a, Sprint 04 | In Progress |
+| 9 | — | [Sprint 07: STEER — Capability-Aware Denials](./tasks/sprint-07-steer-capability-aware-denials/SPRINT.md) | Denials carry class + held_permissions + authorized_actions + do_not; agent-correctable paths steer laterally | 10 | Sprint 06b | In Progress |
+| 10 | — | [Sprint 08: IDENT Engine + `but agent` CLI](#sprint-08-ident-engine--but-agent-cli) | Register a live PID via `but agent register`; `whoami` returns it; unknown id rejected | 8 | Sprint 07 | In Progress |
+| 11 | — | [Sprint 09: IDENT Gates + `agents.toml` Migration](#sprint-09-ident-gates--agentstoml-migration) | Registered agent commits; unregistered denied; `but agent migrate` produces byte-equivalent `agents.toml` | 8 | Sprint 08 | Done |
+| 12 | — | [Sprint 10: IDENT Deprecation Hardening](#sprint-10-ident-deprecation-hardening) | Env-only path on governed repo denied without `BUT_AUTHZ_ALLOW_ENV_HANDLE=1`; invariant test guards it | 5 | Sprint 09 | Done |
+| 13 | — | [Sprint 11: IDENT Skills + Docs + Repo Migration](#sprint-11-ident-skills--docs--repo-migration) | `but-init` writes `agents.toml`; `but-run-sprint` dispatches via `but agent register` (no env self-assert) | 7 | Sprint 10 | In Progress |
 
 *Milestone cells are `—` until the sprints are materialized as GitHub Milestones.*
 
 ### Dependency graph
 
 ```
-01a → 01b → ┬→ 02 ─────────┬→ 05 → 06a → 06b
-            ├→ 03 ──┬───────┤        ↑(also 04)
-            └→ 04 ◄─┘       │
-               04 ──────────┘
+01a → 01b → ┬→ 02 ─────────┬→ 05 → 06a → 06b → 07 → ┌→ 08 → 09 → 10 → 11
+            ├→ 03 ──┬───────┤        ↑(also 04)      │
+            └→ 04 ◄─┘       │                         │
+               04 ──────────┘                         │
+                                                       │
+                            (IDENT chain is sequential; STEER is the parent)
 ```
 
 ---
@@ -587,6 +605,225 @@ Expanded by `/kb-sprint-tasks-plan` on 2026-06-19 (11/11 tasks fakeability-CLEAN
 
 ---
 
+### Sprint 08: IDENT Engine + `but agent` CLI
+
+**Sequence:** 10
+**Timeline:** Phase 6 — IDENT engine core + CLI (v1.4.0; appended after Sprint 07 STEER)
+**Status:** In Progress
+**Proposed by:** rust-planner (`--no-specialists` mode — mechanical scope, upstream design fixed file paths + CLI shapes)
+**Milestone:** — (`sprint-08-ident-engine-cli`)
+
+#### Human Testing Gate
+
+**Gate:** Registering a live PID via `but agent register --as <existing-agent>` succeeds and prints the resolved `(pid, start_time, agent_id, expires_at)` tuple, while `but agent register --as <unknown>` exits 1 naming the missing id, and `but agent whoami` from the registered shell returns the agent_id.
+
+**Test Steps:**
+1. Seed `.gitbutler/agents.toml` with a `rust-implementer` agent + commit it
+2. Run `but agent register --pid $$ --as rust-implementer` → exit 0, observe the resolved tuple printed
+3. Run `but agent whoami` → observe `rust-implementer` echoed
+4. Run `but agent list` → observe the registered PID row
+5. Run `but agent register --as ghost` → exit 1, observe the missing-id message
+6. Run `but agent unregister --pid $$` → exit 0; subsequent `but agent list` shows the PID absent
+
+#### Tasks
+
+| ID | Title | Agent | Estimate |
+|----|-------|-------|----------|
+| IDENT-001 | `crates/but-authz/src/registry.rs` — `Registry` struct + `load`/`write`/`register`/`unregister`/`resolve`/`gc` (atomic write, TTL, PID-reuse defense) | rust-implementer | 240 min |
+| IDENT-002 | `crates/but-authz/src/process.rs` — `current_pid()` + `process_start_time(pid)` (Linux procfs field 22; macOS `libproc` `proc_pidinfo`) | rust-implementer | 180 min |
+| IDENT-003 | `crates/but-authz/src/authorize.rs` — `resolve_principal_with_registry(reg, cfg)` + `Denial::unregistered`/`stale_registration` (registry → env fallback policy) | rust-implementer | 180 min |
+| IDENT-004 | `crates/but-authz/tests/registry.rs` + `tests/process.rs` — register/unregister/TTL/PID-reuse/concurrent-writes + monotonic start_time | rust-implementer | 180 min |
+| IDENT-005 | `crates/but/src/args/agent.rs` + `crates/but/src/command/agent.rs` — clap subcommands + handler mirroring `perm.rs` shape (register/unregister/list/whoami; migrate stubbed to Sprint 09) | rust-implementer | 240 min |
+| IDENT-006 | Wire `Subcommands::Agent(args::agent::Platform { cmd })` into `crates/but/src/lib.rs` (variant + dispatch arm, mirroring `perm`/`group`) | rust-implementer | 60 min |
+| IDENT-007 | `crates/but/tests/but/command/agent.rs` — snapbox snapshots for register/whoami/list/unregister/unknown-id (happy path + fail-fast) | rust-reviewer | 180 min |
+| IDENT-008 | Add `libc` to `crates/but-authz/Cargo.toml` `[dependencies]`; document the per-OS `process_start_time` source choice in module docs | rust-implementer | 30 min |
+
+#### Dependencies
+- Blocks: Sprint 09 (gates + migration verb need the registry + CLI shape)
+- Dependent on: Sprint 07 (STEER — denials carry the structured fields the new `Denial::unregistered` reuses)
+
+#### PRD Coverage
+- UC-IDENT-02 (registry), UC-IDENT-04 (CLI verbs except `migrate`)
+- Criteria: T-IDENT-009..015, T-IDENT-023..028, T-IDENT-030 (partial — `migrate` in Sprint 09), T-IDENT-031
+
+#### Next Sprint Tasks
+
+Expanded by `/but-sprint-tasks-plan` on 2026-06-24 (`--no-specialists` mode, `--skip-review` first pass — provenance documented per-task; re-run `/but-sprint-tasks-plan --only IDENT-XXX` for a fresh red-hat pass on any specific task). Detail files in [`tasks/sprint-08-ident-engine-cli/`](./tasks/sprint-08-ident-engine-cli/):
+
+- `IDENT-001-registry-module.md`
+- `IDENT-002-process-module.md`
+- `IDENT-003-resolve-principal-with-registry.md`
+- `IDENT-004-registry-process-unit-tests.md`
+- `IDENT-005-agent-cli-args-and-handler.md`
+- `IDENT-006-subcommands-agent-wiring.md`
+- `IDENT-007-cli-snapshot-tests.md`
+- `IDENT-008-libc-dep-and-module-docs.md`
+
+---
+
+### Sprint 09: IDENT Gates + `agents.toml` Migration
+
+**Sequence:** 11
+**Timeline:** Phase 6 — IDENT gates + migration (v1.4.0)
+**Status:** Done — closed out 2026-06-26 (IDENT-009–016 merged + green; the registry-first gate swap's regression across the legacy governance gate suites was remediated by migrating them to the spec's `BUT_AUTHZ_ALLOW_ENV_HANDLE=1` env-fallback contract — all `but-api` / `but` / `gitbutler-tauri` governance gate tests green, `cargo doc -p but-authz` clean)
+**Proposed by:** rust-planner (`--no-specialists` mode — mechanical 8-callsite swap + file rename)
+**Milestone:** — (`sprint-09-ident-gates-migration`)
+
+#### Human Testing Gate
+
+**Gate:** A process registered via `but agent register --as <contents-write-agent>` commits successfully through the governed commit gate, while unregistering it makes the next commit fail with `perm.denied`, and `but agent migrate` against a `permissions.toml`-only repo produces a byte-equivalent `agents.toml` that loads to the same `GovConfig`.
+
+**Test Steps:**
+1. Seed `permissions.toml` (legacy) + `gates.toml`, commit them at the target ref
+2. Run `but agent migrate` → observe `agents.toml` written; load both files and observe equal `GovConfig`s
+3. Run `but agent migrate` again → exit 0, no file change (idempotent)
+4. Register a `dev` agent (`contents:write`); run `but commit` on a feature branch → exit 0, ref advances
+5. Unregister the agent; run another `but commit` → denied with `perm.denied` naming the missing pid (env fallback still allowed because Sprint 10 hasn't hardened the flag yet)
+6. Set `BUT_AUTHZ_ALLOW_ENV_HANDLE=1` + `BUT_AGENT_HANDLE=dev`; re-run the commit → succeeds (env fallback works during migration window)
+
+#### Tasks
+
+| ID | Title | Agent | Estimate |
+|----|-------|-------|----------|
+| IDENT-009 | `crates/but-authz/src/config.rs` — `AGENTS_PATH` constant + `AgentWire`/`AgentsWire` + `governance_present` recognizes either file + `load_governance_config` prefers `agents.toml` with deprecation warning | rust-implementer | 240 min |
+| IDENT-010 | Update the 8 gate callsites in `but-api` (`commit/gate.rs:72`, `legacy/merge_gate.rs:114`, `legacy/governance.rs:{347,378,448,750}`, `legacy/forge.rs:58`, `legacy/config_mutate.rs:23`) to `resolve_principal_with_registry` | rust-implementer | 180 min |
+| IDENT-011 | `crates/but/src/command/agent.rs` — add `migrate` verb: read working-tree `permissions.toml`, rewrite as `agents.toml` (`[[principal]]` → `[[agent]]`), print ref-pin caveat, idempotent | rust-implementer | 180 min |
+| IDENT-012 | `crates/but-api/tests/agent_registry.rs` — register→commit→unregister→commit-denied for each of the 4 gate surfaces (commit, merge, admin-write, forge review) | rust-implementer | 240 min |
+| IDENT-013 | `crates/but-api/tests/agents_toml_migration.rs` — `permissions.toml` → `but agent migrate` → `agents.toml` byte-equivalent round-trip; legacy-only repo still authorizes | rust-implementer | 120 min |
+| IDENT-014 | `crates/but/tests/but/command/agent.rs` — extend with `migrate` snapshots (initial + idempotent re-run + dual-file warning) | rust-reviewer | 120 min |
+| IDENT-015 | `crates/but-authz/tests/config.rs` — extend with `agents.toml` parse + both-formats-prefer-`agents.toml` + deprecation warning emission | rust-reviewer | 90 min |
+| IDENT-016 | `crates/but-authz/src/lib.rs` + `src/authorize.rs` doc-comments — export `agents_path`, `Registry`, `resolve_principal_with_registry`; rustdoc the resolution order | rust-implementer | 60 min |
+
+#### Dependencies
+- Blocks: Sprint 10 (deprecation hardening requires both file formats + migration verb landed)
+- Dependent on: Sprint 08
+
+#### PRD Coverage
+- UC-IDENT-01 (agents.toml format + migration), UC-IDENT-03 (enforced resolution at gates)
+- Criteria: T-IDENT-001..008, T-IDENT-016..022, T-IDENT-029
+
+#### Next Sprint Tasks
+
+Expanded by `/but-sprint-tasks-plan` on 2026-06-24 (default mode per the skill NEVER-TIER — dispatched the `rust-planner` surface from the RULES.md Specialist Agents table; the `rust-planner` agent was unavailable in this environment so the same-surface `rust-implementer` was used as the fallback specialist. 8/8 tasks fakeability-clean · `proposed_by` tripwire 8/8 · avg rubric ≈112/115 · **red-hat first pass deferred** — re-invoke `/but-sprint-tasks-plan --only IDENT-XXX` for a fresh `rust-reviewer` + `security-auditor` red-hat cycle on any specific task). Detail files in [`tasks/sprint-09-ident-gates-agents-toml-migration/`](./tasks/sprint-09-ident-gates-agents-toml-migration/):
+
+- `IDENT-009-config-agents-toml-loader.md`
+- `IDENT-010-gate-callsites-registry-swap.md`
+- `IDENT-011-but-agent-migrate-verb.md`
+- `IDENT-012-agent-registry-surface-tests.md`
+- `IDENT-013-agents-toml-migration-test.md`
+- `IDENT-014-but-agent-migrate-snapshots.md`
+- `IDENT-015-config-tests-agents-toml.md`
+- `IDENT-016-authz-exports-and-resolution-order-rustdoc.md`
+
+---
+
+### Sprint 10: IDENT Deprecation Hardening
+
+**Sequence:** 12
+**Timeline:** Phase 6 — IDENT hardening (v1.4.0)
+**Status:** Done — closed out 2026-06-26 (all 5 tasks merged: IDENT-017..021)
+**Proposed by:** rust-planner (`--no-specialists` mode — policy flip + grep-audit extension)
+**Milestone:** — (`sprint-10-ident-deprecation`)
+
+#### Human Testing Gate
+
+**Gate:** On a governed repo, a commit attempted via `BUT_AGENT_HANDLE=dev` alone (no registry hit, no `BUT_AUTHZ_ALLOW_ENV_HANDLE=1`) is denied `perm.denied` naming the unregistered pid, while the same call with the flag set succeeds, and the same call with the agent registered (no flag, no env var) also succeeds.
+
+**Test Steps:**
+1. On a governed repo, run `BUT_AGENT_HANDLE=dev but commit` with NO registry hit and flag unset → denied `perm.denied` with the unregistered-pid message
+2. Run the same command with `BUT_AUTHZ_ALLOW_ENV_HANDLE=1` prefixed → succeeds (test/CI escape hatch)
+3. Register the agent via `but agent register --as dev` (no flag, no env var); re-run `but commit` → succeeds (registry path is the default)
+4. Unregister; re-run `BUT_AGENT_HANDLE=dev but commit` without the flag → denied again
+5. Trigger a merge attempt via `BUT_AGENT_HANDLE=maint` (no flag, no registry) → denied `perm.denied` (every gate surface, not just commit)
+
+#### Tasks
+
+| ID | Title | Agent | Estimate |
+|----|-------|-------|----------|
+| IDENT-017 | `crates/but-authz/src/authorize.rs` — flip default: env-var path on governed repos requires `BUT_AUTHZ_ALLOW_ENV_HANDLE=1`; absent flag + registry miss → `Denial::unregistered` | rust-implementer | 90 min |
+| IDENT-018 | Mechanical update of the 80+ `but-api` tests using `temp_env::with_var("BUT_AGENT_HANDLE", ...)` to set `BUT_AUTHZ_ALLOW_ENV_HANDLE=1` in their helpers (Track A — no churn, keep working) | rust-implementer | 180 min |
+| IDENT-019 | Add `with_registered_agent(reg, agent_id, || ...)` helper to `but-api` dev-deps; new Track B tests under `tests/agent_registry.rs` use it for the registry-exercising path | rust-implementer | 180 min |
+| IDENT-020 | Extend `crates/but-authz/tests/invariant_build_gates.rs`: add `registry.rs` + `process.rs` to `ENFORCEMENT_PATHS`; positive grep on `resolve_principal_with_registry`; negative grep on direct `BUT_AGENT_HANDLE` reads outside `authorize.rs`; `AGENTS_PATH` constant required; `PERMISSIONS_PATH` `#[deprecated]` | rust-reviewer | 180 min |
+| IDENT-021 | Audit doc-comments across the 8 gate callsites — each names the resolution order (registry → flag-gated env → denial) so the invariant is documented in code, not just tested | rust-reviewer | 90 min |
+
+#### Dependencies
+- Blocks: Sprint 11 (skills need the final policy)
+- Dependent on: Sprint 09
+
+#### PRD Coverage
+- UC-IDENT-03 (full enforcement default); also closes the deprecation arc of UC-IDENT-01
+- Criteria: T-IDENT-018 (flag-unset denial) + the invariant suite (T-IDENT-020 enforcement)
+
+#### Next Sprint Tasks
+
+Expanded by `/kb-sprint-tasks-plan` on 2026-06-25 (dispatched `rust-planner` per RULES.md Specialist Agents — `--no-specialists` is never the default; single-surface Rust sprint, no design planner · 5/5 tasks fakeability-CLEAN via embedded REQUIREMENT-CONTRACT · `proposed_by` tripwire 5/5 · avg rubric ≈110/115 · 1 red-hat cycle — fresh `rust-reviewer` + `security-auditor`, R1 grounding-precision + S4 coverage-split remediated and re-validated; residual blockers are the inherent Sprint-09-hasn't-landed sequencing advisory, documented in the task files as `BLOCKED-UNTIL Sprint-09`, not faked clean). Detail files in [`tasks/sprint-10-ident-deprecation-hardening/`](./tasks/sprint-10-ident-deprecation-hardening/):
+
+- `IDENT-017-resolver-deny-default-lock-verify.md`
+- `IDENT-018-track-a-env-flag-test-migration.md`
+- `IDENT-019-track-b-registered-agent-helper.md`
+- `IDENT-020-invariant-build-gates-extension.md`
+- `IDENT-021-gate-callsite-doc-audit.md`
+
+> **Grounding note (verified 2026-06-25).** `crates/but-authz/src/authorize.rs` `resolve_principal_with_registry` **already** implements the Sprint-10-final flag-gated policy (Sprint-08 IDENT-003), so IDENT-017's "flip the default" is a verify+lock+doc task, not an `authorize.rs` code change. The flip only becomes observable at the gates once Sprint-09 IDENT-010 (the 8-callsite swap off `resolve_principal_from_env`) lands — every Sprint-10 task carries that as `BLOCKED-UNTIL Sprint-09`. The 110 `temp_env::with_var("BUT_AGENT_HANDLE"` callsites across 13 `but-api/tests/` files (IDENT-018) are grep-verified accurate.
+
+---
+
+### Sprint 11: IDENT Skills + Docs + Repo Migration
+
+**Sequence:** 13
+**Timeline:** Phase 6 — IDENT skills + docs (v1.4.0)
+**Status:** In Progress
+**Proposed by:** rust-planner (`--no-specialists` mode — doc edits + skill updates coordinated via `skill-plan-brain`)
+**Milestone:** — (`sprint-11-ident-skills-docs`)
+
+#### Human Testing Gate
+
+**Gate:** Re-running `/but-init` on a fresh fixture repo commits `.gitbutler/agents.toml` (not `permissions.toml`) and `but agent list --committed` shows the roster, while `/but-run-sprint` on a single-task sprint shows the implementer registered by the orchestrator via `but agent register` (no `BUT_AGENT_HANDLE` consumed by the implementer's `but` calls), and `/but-migrate` against a `permissions.toml`-only repo converts and commits the rename in one step.
+
+**Test Steps:**
+1. Run `/but-init` on a fresh fixture repo → observe `.gitbutler/agents.toml` committed at the target ref (no `permissions.toml` written)
+2. Run `but agent list --committed` → observe the full specialist roster with expected groups
+3. Run `/but-migrate` against a fixture with committed `permissions.toml` → observe `agents.toml` written + `permissions.toml` deleted in the same commit
+4. Run `/but-run-sprint` on a single-task sprint → observe `but agent register --pid <child> --as <implementer>` called by the orchestrator after spawning the implementer subagent
+5. From inside the implementer's process, run `but agent whoami` → observe the registered agent_id (no `BUT_AGENT_HANDLE` env var set in the implementer's shell)
+6. Run `but-init` against the `agent-intel` repo → observe `agents.toml` migration committed end-to-end and a sample governed `but commit` succeed via the registry path
+
+#### Tasks
+
+| ID | Title | Agent | Estimate |
+|----|-------|-------|----------|
+| IDENT-022 | `RULES.md` — add "Agent identity" subsection under Conventions (governed repos require `but agent register`; env var is test-only) | rust-implementer | 30 min |
+| IDENT-023 | `crates/but-authz/README.md` (NEW) — threat model, file layout, migration path, env-var deprecation timeline, examples | rust-implementer | 120 min |
+| IDENT-024 | `crates/AGENTS.md` + `crates/but/AGENTS.md` + `DEVELOPMENT.md` "Code Hitlist" + `crates/WORKSPACE_MODEL.md` — cross-reference the identity README, document `but agent` noun, track the rename | rust-implementer | 60 min |
+| IDENT-025 | `but-init` skill (brain) — `scripts/seed-governance.py` emits `[[agent]]` blocks; step [4] writes `agents.toml`; step [4.6] NEW registers specialists via `but agent register`; acceptance changes `but perm list` → `but agent list --committed` | rust-planner | 180 min |
+| IDENT-026 | `but-migrate` skill (brain) — detect `permissions.toml`, run `but agent migrate`, commit the rename; idempotent no-op once `agents.toml` exists | rust-planner | 120 min |
+| IDENT-027 | `but-run-sprint` + `but-orchestrate` + `but-sprint-tasks-plan` + `but-sprint-plan` skills (brain) — drop `export BUT_AGENT_HANDLE=...` from dispatch templates; orchestrator calls `but agent register --pid <child> --as <agent>` after spawn; `BUT-SKILL-CONVENTIONS.md` §9 documents the new model | rust-planner | 240 min |
+| IDENT-028 | Migrate `agent-intel` (and any second governed repo) via `but agent migrate`; verify end-to-end governed action post-migration | rust-implementer | 60 min |
+
+#### Dependencies
+- Blocks: None (terminal sprint in the IDENT chain)
+- Dependent on: Sprint 10 (skills/docs reflect the final policy)
+
+#### PRD Coverage
+- UC-IDENT-05 (skills + docs + repo migration)
+- Criteria: T-IDENT-032..038
+
+#### Next Sprint Tasks
+
+Expanded by `/kb-sprint-tasks-plan` on 2026-06-26 (dispatched `rust-planner` per RULES.md Specialist Agents — `--no-specialists` is never the default; single-surface Rust + repo-docs + brain-skill sprint, no design planner · 7/7 tasks fakeability-CLEAN (`validate_scenario` exit 0) · `proposed_by` tripwire 7/7 · avg rubric 115/115 · **full red-hat goal loop, 3 cycles** — fresh `rust-reviewer` + `security-auditor` each cycle, 13 blocking findings (5 CRITICAL + 8 MEDIUM) resolved by the retained writer + 10 advisory folded in, 0 upstream escalations, both panels APPROVE at cycle 3). Detail files in [`tasks/sprint-11-ident-skills-docs/`](./tasks/sprint-11-ident-skills-docs/):
+
+- `IDENT-022-rules-agent-identity-subsection.md`
+- `IDENT-023-but-authz-readme.md`
+- `IDENT-024-cross-reference-docs-hitlist.md`
+- `IDENT-025-but-init-agents-toml-register.md`
+- `IDENT-026-but-migrate-rename.md`
+- `IDENT-027-skills-drop-env-handle-register-after-spawn.md`
+- `IDENT-028-agent-intel-field-migration.md`
+
+> **Red-hat highlights (caught by the loop, invisible to the rubric/fakeability floor alone):** an inverted `!` denial check (IDENT-028 AC-3 would have passed when the unregistered commit *succeeded*); agent-intel's committed roster has no `rust-*` ids (hardcoded oracles failed even on a perfect migration → now runtime-resolved to a real id); `but agent migrate` is an admin-gated callsite needing bootstrap-wrapping (IDENT-028 AC-1); and merge-phase self-registration test-theatre (IDENT-027 AC-6 superset grep that proved nothing). **Scope honesty:** skill e2e criteria T-IDENT-036/037/038 are brain-repo-owned; in-repo build-gate ACs (T-IDENT-032..035) are provable here. Every task carries `BLOCKED-UNTIL Sprint-10`.
+
+---
+
 ## Red-Hat Review Summary
 
 | | Value |
@@ -597,17 +834,19 @@ Expanded by `/kb-sprint-tasks-plan` on 2026-06-19 (11/11 tasks fakeability-CLEAN
 | Convergence | Deterministic [5.4] re-validation of the remediated structure: 0 banned-pattern violations · all step counts 3–8 · acyclic graph · 17/17 UCs covered · both capability chains owned (incl. the new DryRun + commit-gate-target-ref + T-LOOP-013 proofs) |
 | Residual | A second fresh-panel re-review was bounded to deterministic re-validation for cost (planning artifact). Advisory follow-ups carried into task briefs: governance sidebar icon-name verification; Svelte 5 `svelte:boundary` mechanism choice. |
 
+> **v1.4.0 additions (STEER + IDENT).** Sprint 07 (STEER) and Sprints 08–11 (IDENT) were appended after the v1.3.0 review cycle. Sprint 07 went through its own `kb-sprint-tasks-plan` red-hat loop (see `tasks/sprint-07-.../SPRINT.md`). Sprints 08–11 (IDENT) were added in `--no-specialists` mode — the upstream design plan had already fixed every file path, callsite line number, and CLI verb shape, satisfying the but-sprint-plan escape hatch for mechanical/pure-infra plans. The orchestrator-authored gate sentences + test steps above are deterministic translations of the upstream plan's per-sprint exit criteria into the ROADMAP template; re-run `/but-sprint-plan --delta-replan` to refresh against any PRD drift, or `/but-sprint-tasks-plan` on a specific IDENT sprint to materialize per-task files with full AC/TC criteria + a fresh red-hat review.
+
 ## Next Steps
 
-1. Expand the first sprint's tasks when ready to execute:
+1. Expand the first IDENT sprint's tasks when ready to execute:
    ```
-   /kb-sprint-tasks-plan .spec/prds/governance/ROADMAP.md
+   /but-sprint-tasks-plan .spec/prds/governance/ROADMAP.md
    ```
 2. Run a sprint:
    ```
-   /kb-run-sprint sprint-01a-authz-primitive-commit-gate
+   /but-run-sprint sprint-08-ident-engine-cli
    ```
 3. Re-plan after PRD edits (updates ROADMAP.md in place):
    ```
-   /kb-sprint-plan .spec/prds/governance --delta-replan
+   /but-sprint-plan .spec/prds/governance/README.md --delta-replan
    ```

@@ -34,7 +34,7 @@ TASK: STEER-006 - `but whoami` / `but can-i` self-scoped discovery (effective pe
 ================================================================================
 
 TASK_TYPE:  FEATURE
-STATUS:     Backlog
+STATUS:     Completed
 PRIORITY:   P0
 EFFORT:     L  (210 min)
 AGENT:      implementer=rust-implementer | reviewer=rust-reviewer

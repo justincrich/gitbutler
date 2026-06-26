@@ -34,7 +34,7 @@ TASK: STEER-001 - Steering fields (class/held_permissions/authorized_actions/do_
 ================================================================================
 
 TASK_TYPE:  FEATURE
-STATUS:     Backlog
+STATUS:     Completed
 PRIORITY:   P0
 EFFORT:     M  (255 min)
 AGENT:      implementer=rust-implementer | reviewer=rust-reviewer
@@ -72,13 +72,13 @@ Every one of the six carriers carries the four fields and serializes to a JSON o
 --------------------------------------------------------------------------------
 DONE WHEN
 --------------------------------------------------------------------------------
-- [ ] AC-1 [PRIMARY]: All four carriers serialize the additive superset alongside legacy keys
-- [ ] AC-2: Back-compat: legacy keys + exit code unchanged relative to each carrier's current output
-- [ ] AC-3: held_permissions serializes as a stably-ordered array of `:` tokens matching Authority::name()
-- [ ] AC-4: do_not is omitted when None (skip_serializing_if)
-- [ ] AC-5: DenialClass/AuthorizedAction derives keep all carriers' derives intact (compile + value-equality)
-- [ ] AC-6: ForgeGateError and AdminWriteGateError carry the four steering fields (classify_error copies them off the underlying Denial/ConfigError)
-- [ ] All verification gates pass; only write_allowed files modified
+- [x] AC-1 [PRIMARY]: All four carriers serialize the additive superset alongside legacy keys
+- [x] AC-2: Back-compat: legacy keys + exit code unchanged relative to each carrier's current output
+- [x] AC-3: held_permissions serializes as a stably-ordered array of `:` tokens matching Authority::name()
+- [x] AC-4: do_not is omitted when None (skip_serializing_if)
+- [x] AC-5: DenialClass/AuthorizedAction derives keep all carriers' derives intact (compile + value-equality)
+- [x] AC-6: ForgeGateError and AdminWriteGateError carry the four steering fields (classify_error copies them off the underlying Denial/ConfigError)
+- [x] All verification gates pass; only write_allowed files modified
 
 --------------------------------------------------------------------------------
 ACCEPTANCE CRITERIA (TDD beads — happy-path first)

@@ -17,6 +17,7 @@ fn branch_gates_read_returns_working_tree_gates_under_admin_read() -> anyhow::Re
 
     let outcome = temp_env::with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("admin-reader")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -41,6 +42,7 @@ fn branch_gates_read_non_admin_denied() -> anyhow::Result<()> {
 
     let result = temp_env::with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("rust-implementer")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -72,6 +74,7 @@ fn branch_gates_update_upserts_under_admin_write() -> anyhow::Result<()> {
 
     let updated = temp_env::with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("admin")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -94,6 +97,7 @@ fn branch_gates_update_upserts_under_admin_write() -> anyhow::Result<()> {
 
     let inserted = temp_env::with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("admin")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -126,6 +130,7 @@ fn branch_gates_update_non_admin_denied_writes_nothing() -> anyhow::Result<()> {
 
     let result = temp_env::with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("rust-implementer")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],

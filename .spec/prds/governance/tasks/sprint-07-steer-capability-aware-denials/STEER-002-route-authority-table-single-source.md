@@ -31,7 +31,7 @@ TASK: STEER-002 - Route enum + single-source ROUTE_AUTHORITY_TABLE in but-authz;
 ================================================================================
 
 TASK_TYPE:  FEATURE
-STATUS:     Backlog
+STATUS:     Completed
 PRIORITY:   P0
 EFFORT:     L  (270 min)
 AGENT:      implementer=rust-implementer | reviewer=rust-reviewer

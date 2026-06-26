@@ -103,6 +103,7 @@ fn forge_guard_authorizes_comments_and_records_approval() -> anyhow::Result<()> 
 
     temp_env::with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("ro")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -129,6 +130,7 @@ fn forge_guard_authorizes_comments_and_records_approval() -> anyhow::Result<()> 
 
     temp_env::with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("reviewer")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -178,6 +180,7 @@ fn forge_guard_no_stub_success_for_unimplemented_review_actions() -> anyhow::Res
 
     temp_env::with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("reviewer")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -206,6 +209,7 @@ fn forge_guard_no_stub_success_for_unimplemented_review_actions() -> anyhow::Res
 
     temp_env::with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("dev")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -241,6 +245,7 @@ fn approve_feat_as(
 ) -> anyhow::Result<()> {
     temp_env::with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some(handle)),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],

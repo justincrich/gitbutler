@@ -1,7 +1,7 @@
 ---
 stability: TEST_SPEC
-last_validated: 2026-06-18
-prd_version: 1.3.0
+last_validated: 2026-06-24
+prd_version: 1.4.0
 ---
 # E2E / Integration Testing Criteria — Functional-Permission Agent Governance for GitButler
 
@@ -240,16 +240,84 @@ UI criteria use Playwright **component tests** (`pnpm test:ct`) over the **real*
 
 ---
 
+## IDENT: Agent Identity Registration (v1.4.0)
+
+Per-UC test criteria for the agent-identity initiative. **Verification bar: real `but-authz` + real `but-api` + real git, no mocks.** Every AC is covered by ≥1 criterion. Types: `[integration-test]`, `[unit-test]`, `[build-gate]`, `[cli-test]` (snapshot via snapbox), `[e2e-automated]`.
+
+### UC-IDENT-01: `agents.toml` replaces `permissions.toml`
+| # | Criterion | AC Ref | Type | Setup | Pass/Fail |
+|---|---|---|---|---|---|
+| T-IDENT-001 | parse `agents.toml` (new format) into `GovConfig` | AC-1 | integration-test | `but-authz` + real git | `[[agent]]` blocks load to same shape as legacy `[[principal]]` |
+| T-IDENT-002 | `agents.toml` read at target ref (ref-pin preserved) | AC-2 | integration-test | real git | blob read at target ref; working-tree ignored |
+| T-IDENT-003 | `governance_present` true if EITHER file present | AC-3 | integration-test | real git | either file alone → governed; neither → ungoverned |
+| T-IDENT-004 | both files present → prefer `agents.toml` + deprecation warning | AC-4 | integration-test | real git | config matches `agents.toml`; stderr warns about `permissions.toml` |
+| T-IDENT-005 | `but agent migrate` round-trips byte-equivalent | AC-5 | cli-test | working-tree `permissions.toml` | `agents.toml` parses to same `GovConfig`; ref-pin caveat printed |
+| T-IDENT-006 | `but agent migrate` idempotent | AC-6 | cli-test | existing `agents.toml` | exit 0, no file change |
+| T-IDENT-007 | legacy-only repo still authorizes (migration window) | AC-7 | integration-test | `permissions.toml`-only | governed actions work unchanged |
+| T-IDENT-008 | both-formats integration test (parse + migrate + present) | AC-8 | integration-test | real `but-authz`+git | all sub-assertions hold |
+
+### UC-IDENT-02: Runtime PID registry
+| # | Criterion | AC Ref | Type | Setup | Pass/Fail |
+|---|---|---|---|---|---|
+| T-IDENT-009 | `Registry::load/write` round-trip + atomic write | AC-1 | unit-test | `but-authz::registry` | parse/persist; file always parseable post-crash |
+| T-IDENT-010 | `register`/`unregister` round-trip | AC-2 | unit-test | `but-authz::registry` | add+remove entries; load→write→load stable |
+| T-IDENT-011 | `resolve` returns Some on hit, None on miss/stale/expired | AC-3 | unit-test | `but-authz::registry` | fresh hit; missing/stale/expired → None |
+| T-IDENT-012 | `gc(now)` drops expired | AC-4 | unit-test | `but-authz::registry` | expired entries removed; not resolvable post-GC |
+| T-IDENT-013 | `current_pid` + `process_start_time` monotonic | AC-5 | unit-test | `but-authz::process` | pid matches `std::process::id`; start_time non-decreasing |
+| T-IDENT-014 | per-OS start_time source (Linux procfs / macOS libproc) | AC-6 | unit-test | `but-authz::process` | returns sane unix seconds on the host platform |
+| T-IDENT-015 | registry unit suite (round-trip + TTL + PID-reuse + concurrent) | AC-7 | unit-test | `but-authz::registry` | all sub-assertions hold |
+
+### UC-IDENT-03: Enforced resolution at every gate
+| # | Criterion | AC Ref | Type | Setup | Pass/Fail |
+|---|---|---|---|---|---|
+| T-IDENT-016 | registry hit → registered principal returned | AC-1 | integration-test | `but-authz` + registry | `(pid, start)` → expected `Principal` |
+| T-IDENT-017 | `BUT_AUTHZ_ALLOW_ENV_HANDLE=1` falls through to env | AC-2 | integration-test | `but-authz` | env handle honored when flag set, registry miss |
+| T-IDENT-018 | flag unset + registry miss → `Denial::unregistered` | AC-3 | integration-test | `but-authz` | `code = perm.denied`, names missing pid |
+| T-IDENT-019 | stale registration → `Denial::stale_registration` | AC-4 | integration-test | `but-authz` | `code = perm.denied`, names start_time mismatch |
+| T-IDENT-020 | all 8 gate callsites call `resolve_principal_with_registry` | AC-5 | build-gate | source | grep-audit: each gate uses the new resolver; only `authorize.rs` reads `BUT_AGENT_HANDLE` |
+| T-IDENT-021 | unregistered process denied at every gate | AC-6 | integration-test | real `but-api`+git | commit/merge/admin-write/forge all deny with `perm.denied` |
+| T-IDENT-022 | register→commit→unregister→commit-denied integration | AC-7 | integration-test | real `but-api`+git | registered commit succeeds; post-unregister commit denied |
+
+### UC-IDENT-04: `but agent` CLI surface
+| # | Criterion | AC Ref | Type | Setup | Pass/Fail |
+|---|---|---|---|---|---|
+| T-IDENT-023 | `but agent register` writes registration, prints tuple, exit 0 | AC-1 | cli-test | runtime registry file | resolved `(pid, start, agent, expires)` printed |
+| T-IDENT-024 | `register --as <unknown>` exits 1 naming missing id | AC-2 | cli-test | `agents.toml` w/o id | fail-fast before any write |
+| T-IDENT-025 | `register` to unwritable path exits 2 | AC-3 | cli-test | bad registry path | message names path |
+| T-IDENT-026 | `unregister --pid` idempotent | AC-4 | cli-test | runtime registry | unknown pid → exit 0 |
+| T-IDENT-027 | `list` + `list --committed` shape | AC-5 | cli-test | runtime + committed files | live registrations vs committed `[[agent]]` blocks |
+| T-IDENT-028 | `whoami` round-trip; unregistered → exit 1 | AC-6 | cli-test | runtime registry | registered → own id; unregistered → `Denial::unregistered` |
+| T-IDENT-029 | `migrate` produces byte-equivalent `agents.toml` | AC-7 | cli-test | `permissions.toml` source | matches T-IDENT-005 |
+| T-IDENT-030 | `Subcommands::Agent` wired + dispatched like `perm`/`group` | AC-8 | build-gate | source | variant in `args::mod` + dispatch arm in `lib.rs` |
+| T-IDENT-031 | CLI snapshot suite (`agent.rs` modeled on `commit_gate.rs`) | AC-9 | cli-test | snapbox | happy path + unknown-id + whoami + migrate snapshots |
+
+### UC-IDENT-05: Skill + documentation migration
+| # | Criterion | AC Ref | Type | Setup | Pass/Fail |
+|---|---|---|---|---|---|
+| T-IDENT-032 | `RULES.md` adds "Agent identity" subsection | AC-1 | build-gate | source | new subsection names `but agent register` + env-var test-only gate |
+| T-IDENT-033 | `crates/but-authz/README.md` (NEW) documents model | AC-2 | build-gate | source | threat model + file layout + migration path + env-var deprecation present |
+| T-IDENT-034 | `crates/AGENTS.md` cross-references identity README | AC-3 | build-gate | source | link to `but-authz/README.md` present |
+| T-IDENT-035 | `DEVELOPMENT.md` Hitlist tracks rename | AC-4 | build-gate | source | `permissions.toml → agents.toml` migration listed |
+| T-IDENT-036 | `but-init` skill writes `agents.toml` + registers specialists | AC-5 | e2e-automated | fresh fixture repo | `.gitbutler/agents.toml` committed; `but agent list --committed` shows roster |
+| T-IDENT-037 | `but-migrate` skill migrates + commits rename | AC-6 | e2e-automated | fixture w/ `permissions.toml` | migration committed; `permissions.toml` removed |
+| T-IDENT-038 | `but-run-sprint` skill dispatches via `but agent register` (no env self-assert) | AC-7 | e2e-automated | single-task sprint | implementer registered by orchestrator; zero `BUT_AGENT_HANDLE` refs in dispatch templates |
+
+> IDENT note: 38 ACs / 38 criteria. Type breakdown: 13 integration-test · 7 unit-test · 6 cli-test · 7 build-gate · 5 e2e-automated (skill tests live in the brain repo but are gated from this PRD). T-IDENT-020 and T-IDENT-030 extend `invariant_build_gates.rs` (Layer 2 of the test strategy). The skill e2e criteria (T-IDENT-036/037/038) are owned by the brain repo's skill tests and reported here as the contract this repo expects.
+
+---
+
 ## Summary
 
 | Type | Count |
 |---|---|
-| `[integration-test]` | 67 |
+| `[integration-test]` | 80 |
+| `[unit-test]` | 7 |
 | `[component-test]` | 38 |
 | `[api-contract]` | 7 |
-| `[build-gate]` | 15 |
-| `[e2e-automated]` | 2 |
-| **Total** | **129** |
+| `[build-gate]` | 22 |
+| `[cli-test]` | 6 |
+| `[e2e-automated]` | 7 |
+| **Total** | **167** |
 
 | Group | UCs | ACs | Criteria |
 |---|---|---|---|
@@ -258,9 +326,10 @@ UI criteria use Playwright **component tests** (`pnpm test:ct`) over the **real*
 | GATES | 2 | 19 | 19 |
 | LOOP | 2 | 14 | 14 |
 | MGMT | 7 | 49 | 49 |
-| **Total** | **17** | **129** | **129** |
+| IDENT | 5 | 38 | 38 |
+| **Total** | **22** | **167** | **167** |
 
-**AC coverage: 129/129 (100%).** The headline gate is **T-LOOP-006** (the proven-reference-flow): it must be green before the deep build proceeds. The `[build-gate]` honesty invariants — no role name in enforcement (T-AUTHZ-016, T-LOOP-005), no `Permission` lock overload (asserted structurally), the **N-API audit** (T-AUTHZ-016b, R14), and the **desktop-CT-config** (T-MGMT-000, B14) — block the slice regardless of the other lanes.
+**AC coverage: 167/167 (100%).** The headline gate is **T-LOOP-006** (the proven-reference-flow): it must be green before the deep build proceeds. The v1.4.0 **IDENT** group adds 38 criteria for the agent-identity initiative (`agents.toml` rename + runtime PID registry + enforced resolver + `but agent` CLI + skill/doc migration). The `[build-gate]` honesty invariants — no role name in enforcement (T-AUTHZ-016, T-LOOP-005), no `Permission` lock overload (asserted structurally), the **N-API audit** (T-AUTHZ-016b, R14), the **desktop-CT-config** (T-MGMT-000, B14), and the **all-gates-use-registry** audit (T-IDENT-020) — block the slice regardless of the other lanes.
 
 ## Maintenance notes
 - Adding a UC/AC: add a `T-{PREFIX}-NNN` row referencing the new AC; keep IDs stable.

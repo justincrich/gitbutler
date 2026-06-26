@@ -370,7 +370,10 @@ Other Commands:
   update       Manage GitButler CLI and app updates
   alias        Manage command aliases
   config       View and manage GitButler configuration
+  agent        Manage runtime agent registrations
   perm         Manage governed functional permissions
+  whoami       Show your effective permissions, own group memberships, and aut…
+  can-i        Check whether you hold a functional authority (e.g. but can-i m…
   group        Manage governed groups
   skill        Manage AI agent skills for GitButler
 

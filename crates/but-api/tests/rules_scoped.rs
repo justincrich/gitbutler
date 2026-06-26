@@ -88,6 +88,7 @@ fn list_workspace_rules_scoped_cross_principal_not_disclosed() -> anyhow::Result
 
     let self_scoped = temp_env::with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("agent-A")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -101,6 +102,7 @@ fn list_workspace_rules_scoped_cross_principal_not_disclosed() -> anyhow::Result
 
     let cross_scoped = temp_env::with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("agent-A")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
@@ -113,6 +115,7 @@ fn list_workspace_rules_scoped_cross_principal_not_disclosed() -> anyhow::Result
 
     let admin_scoped = temp_env::with_vars(
         [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
             ("BUT_AGENT_HANDLE", Some("admin-reader")),
             ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
         ],
