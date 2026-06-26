@@ -1,5 +1,6 @@
 use but_api::commit::create::gate::{CommitGateTarget, enforce_commit_gate_for_target};
 use but_authz::{Authority, PrincipalId, load_governance_config};
+use serde::Serialize;
 
 const MAIN_REF: &str = "refs/heads/main";
 const FEAT_REF: &str = "refs/heads/feat";
@@ -10,11 +11,11 @@ const AGENTS_FORMAT_REF: &str = "refs/heads/agents-format";
 fn migrate_round_trip_is_byte_equivalent_gov_config() -> anyhow::Result<()> {
     let (repo, _tmp) = governed_repo();
     let permissions_commit = ref_id(&repo, MAIN_REF)?;
+    write_agents_toml_from_permissions_wire(&repo)?;
 
     but_testsupport::invoke_bash(
         r#"
 git update-ref refs/heads/permissions-format HEAD
-sed 's/\[\[principal\]\]/[[agent]]/g' .gitbutler/permissions.toml >.gitbutler/agents.toml
 git add .gitbutler/agents.toml
 git rm .gitbutler/permissions.toml
 git commit -m "migrate governance agents"
@@ -88,6 +89,8 @@ fn legacy_permissions_only_repo_authorizes_via_env_fallback() -> anyhow::Result<
 }
 
 fn governed_repo() -> (gix::Repository, tempfile::TempDir) {
+    // checkout-head-info is the existing writable fixture; this helper seeds it
+    // into the agents-toml-migration scenario needed by these RED tests.
     let (repo, tmp) = but_testsupport::writable_scenario("checkout-head-info");
     but_testsupport::invoke_bash(
         r#"
@@ -117,6 +120,8 @@ git commit -m "permissions governance config"
 }
 
 fn legacy_permissions_only_repo() -> (gix::Repository, tempfile::TempDir) {
+    // checkout-head-info is the existing writable fixture; this helper seeds it
+    // into the agents-toml-migration scenario needed by these RED tests.
     let (repo, tmp) = but_testsupport::writable_scenario("checkout-head-info");
     but_testsupport::invoke_bash(
         r#"
@@ -152,6 +157,59 @@ git checkout main
         &repo,
     );
     (repo, tmp)
+}
+
+fn write_agents_toml_from_permissions_wire(repo: &gix::Repository) -> anyhow::Result<()> {
+    let workdir = repo
+        .workdir()
+        .ok_or_else(|| anyhow::anyhow!("test repository must have a working tree"))?;
+    let permissions_path = workdir.join(".gitbutler/permissions.toml");
+    let permissions_text = std::fs::read_to_string(&permissions_path)?;
+    let permissions = toml::from_str::<but_authz::PermissionsWire>(&permissions_text)?;
+    let agents = AgentsWireForMigration::from(permissions);
+    let agents_text = toml::to_string(&agents)?;
+
+    std::fs::write(workdir.join(".gitbutler/agents.toml"), agents_text)?;
+    Ok(())
+}
+
+#[derive(Serialize)]
+struct AgentsWireForMigration {
+    agent: Vec<AgentWireForMigration>,
+    group: Vec<but_authz::GroupWire>,
+}
+
+impl From<but_authz::PermissionsWire> for AgentsWireForMigration {
+    fn from(permissions: but_authz::PermissionsWire) -> Self {
+        Self {
+            agent: permissions
+                .principal
+                .into_iter()
+                .map(AgentWireForMigration::from)
+                .collect(),
+            group: permissions.group,
+        }
+    }
+}
+
+#[derive(Serialize)]
+struct AgentWireForMigration {
+    id: String,
+    permissions: Vec<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    role: Option<String>,
+    groups: Vec<String>,
+}
+
+impl From<but_authz::PrincipalWire> for AgentWireForMigration {
+    fn from(principal: but_authz::PrincipalWire) -> Self {
+        Self {
+            id: principal.id,
+            permissions: principal.permissions,
+            role: principal.role,
+            groups: principal.groups,
+        }
+    }
 }
 
 fn assert_contents_write(config: &but_authz::GovConfig, principal_id: &str) -> anyhow::Result<()> {
