@@ -1,0 +1,84 @@
+{
+  "commands": [
+    {
+      "command": "cargo fmt -p but-authz --test invariant_build_gates",
+      "exit_code": 2,
+      "purpose": "Initial narrow formatter attempt; cargo fmt does not support --test."
+    },
+    {
+      "command": "cargo fmt -p but-authz",
+      "exit_code": 0,
+      "purpose": "Format Rust test changes."
+    },
+    {
+      "command": "cargo test -p but-authz --test invariant_build_gates -- test_resolution_order_documented --nocapture",
+      "exit_code": 101,
+      "output": ".tmp/IDENT-021/red-output.txt",
+      "purpose": "Focused RED evidence for IDENT-021 resolution-order doc invariant."
+    }
+  ],
+  "changed_files": [
+    "crates/but-authz/tests/invariant_build_gates.rs",
+    ".tmp/IDENT-021/red-output.txt",
+    ".tmp/IDENT-021/verify-manifest.json"
+  ],
+  "coverage": {
+    "acceptance_criteria": [
+      {
+        "id": "IDENT-021 runtime-registry identity surfaces",
+        "covered_by": [
+          "test_commit_gate_resolution_order_doc_precedes_function",
+          "test_merge_gate_resolution_order_doc_precedes_function",
+          "test_governance_resolution_order_docs_precede_functions",
+          "test_forge_resolution_order_doc_precedes_function",
+          "test_config_mutate_resolution_order_doc_precedes_function",
+          "test_rules_resolution_order_doc_precedes_function",
+          "test_resolution_order_documented"
+        ]
+      },
+      {
+        "id": "governance exactly six surfaces including whoami_with_repo and can_i_with_repo",
+        "covered_by": [
+          "test_governance_resolution_order_docs_precede_functions",
+          "test_resolution_order_documented"
+        ],
+        "surfaces": [
+          "governance_status_read",
+          "branch_gates_read_with_repo",
+          "group_list_with_repo",
+          "perm_list_with_repo",
+          "whoami_with_repo",
+          "can_i_with_repo"
+        ]
+      },
+      {
+        "id": "rules surface includes list_workspace_rules_scoped_for_caller",
+        "covered_by": [
+          "test_rules_resolution_order_doc_precedes_function",
+          "test_resolution_order_documented"
+        ]
+      },
+      {
+        "id": "required resolution-order literals",
+        "covered_by": [
+          "RESOLUTION_ORDER_DOC_LITERALS"
+        ],
+        "literals": [
+          "resolve_principal_with_runtime_registry",
+          "but_authz::resolve_principal_with_registry",
+          "BUT_AUTHZ_ALLOW_ENV_HANDLE",
+          "Denial::unregistered"
+        ]
+      }
+    ],
+    "test_cases": [
+      "test_commit_gate_resolution_order_doc_precedes_function",
+      "test_merge_gate_resolution_order_doc_precedes_function",
+      "test_governance_resolution_order_docs_precede_functions",
+      "test_forge_resolution_order_doc_precedes_function",
+      "test_config_mutate_resolution_order_doc_precedes_function",
+      "test_rules_resolution_order_doc_precedes_function",
+      "test_resolution_order_documented"
+    ]
+  }
+}

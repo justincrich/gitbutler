@@ -23,6 +23,7 @@ const MERGE_GATE: &str = "crates/but-api/src/legacy/merge_gate.rs";
 const CONFIG_MUTATE: &str = "crates/but-api/src/legacy/config_mutate.rs";
 const GOVERNANCE: &str = "crates/but-api/src/legacy/governance.rs";
 const FORGE_GUARD: &str = "crates/but-api/src/legacy/forge.rs";
+const RULES: &str = "crates/but-api/src/legacy/rules.rs";
 const ENFORCEMENT_PATHS: &[&str] = &[
     AUTHZ_AUTHORIZE,
     AUTHZ_CONFIG,
@@ -103,6 +104,20 @@ const ENGINE_SOURCE_TREES: &[&str] = &["crates/but-authz/src", "crates/but-api/s
 // distinctive header phrases.
 const PRIMER_REFERENCE_PATTERN: &str =
     r#"governance-denial-primer|options, not orders|denials are redirects, not"#;
+const RESOLUTION_ORDER_DOC_LITERALS: &[&str] = &[
+    "resolve_principal_with_runtime_registry",
+    "but_authz::resolve_principal_with_registry",
+    "BUT_AUTHZ_ALLOW_ENV_HANDLE",
+    "Denial::unregistered",
+];
+const GOVERNANCE_RESOLUTION_ORDER_SURFACES: &[&str] = &[
+    "governance_status_read",
+    "branch_gates_read_with_repo",
+    "group_list_with_repo",
+    "perm_list_with_repo",
+    "whoami_with_repo",
+    "can_i_with_repo",
+];
 
 #[test]
 fn invariant_build_gates() -> anyhow::Result<()> {
@@ -297,6 +312,76 @@ fn test_runtime_registry_wrapper_callsite_set_is_authoritative() -> anyhow::Resu
         "authoritative runtime wrapper callsite set changed"
     );
     Ok(())
+}
+
+#[test]
+fn test_commit_gate_resolution_order_doc_precedes_function() -> anyhow::Result<()> {
+    assert_resolution_order_docs_for_targets(&[(COMMIT_GATE, "enforce_commit_gate_for_target")])
+}
+
+#[test]
+fn test_merge_gate_resolution_order_doc_precedes_function() -> anyhow::Result<()> {
+    assert_resolution_order_docs_for_targets(&[(MERGE_GATE, "enforce_merge_gate")])
+}
+
+#[test]
+fn test_governance_resolution_order_docs_precede_functions() -> anyhow::Result<()> {
+    assert_eq!(
+        GOVERNANCE_RESOLUTION_ORDER_SURFACES.len(),
+        6,
+        "IDENT-021 governance coverage must include exactly six target surfaces"
+    );
+    assert!(
+        GOVERNANCE_RESOLUTION_ORDER_SURFACES.contains(&"whoami_with_repo")
+            && GOVERNANCE_RESOLUTION_ORDER_SURFACES.contains(&"can_i_with_repo"),
+        "IDENT-021 governance coverage must include whoami_with_repo and can_i_with_repo"
+    );
+
+    let targets = GOVERNANCE_RESOLUTION_ORDER_SURFACES
+        .iter()
+        .map(|function| (GOVERNANCE, *function))
+        .collect::<Vec<_>>();
+    assert_resolution_order_docs_for_targets(&targets)
+}
+
+#[test]
+fn test_forge_resolution_order_doc_precedes_function() -> anyhow::Result<()> {
+    assert_resolution_order_docs_for_targets(&[(FORGE_GUARD, "authorize_branch_action")])
+}
+
+#[test]
+fn test_config_mutate_resolution_order_doc_precedes_function() -> anyhow::Result<()> {
+    assert_resolution_order_docs_for_targets(&[(
+        CONFIG_MUTATE,
+        "enforce_administration_write_gate",
+    )])
+}
+
+#[test]
+fn test_rules_resolution_order_doc_precedes_function() -> anyhow::Result<()> {
+    assert_resolution_order_docs_for_targets(&[(RULES, "list_workspace_rules_scoped_for_caller")])
+}
+
+#[test]
+fn test_resolution_order_documented() -> anyhow::Result<()> {
+    let mut targets = vec![
+        (COMMIT_GATE, "enforce_commit_gate_for_target"),
+        (MERGE_GATE, "enforce_merge_gate"),
+        (FORGE_GUARD, "authorize_branch_action"),
+        (CONFIG_MUTATE, "enforce_administration_write_gate"),
+        (RULES, "list_workspace_rules_scoped_for_caller"),
+    ];
+    targets.extend(
+        GOVERNANCE_RESOLUTION_ORDER_SURFACES
+            .iter()
+            .map(|function| (GOVERNANCE, *function)),
+    );
+    assert_eq!(
+        targets.len(),
+        11,
+        "IDENT-021 must cover all 11 runtime-registry identity surfaces"
+    );
+    assert_resolution_order_docs_for_targets(&targets)
 }
 
 #[test]
@@ -704,6 +789,78 @@ fn assert_paths_exist_and_non_empty(root: &Path, relative_paths: &[&str]) -> any
         }
     }
     Ok(())
+}
+
+fn assert_resolution_order_docs_for_targets(targets: &[(&str, &str)]) -> anyhow::Result<()> {
+    let workspace_root = workspace_root()?;
+    let mut failures = Vec::new();
+    for (relative_path, function_name) in targets {
+        let source = fs::read_to_string(workspace_root.join(relative_path))
+            .with_context(|| format!("read {relative_path}"))?;
+        let doc_block = match preceding_doc_block(&source, function_name) {
+            Ok(doc_block) => doc_block,
+            Err(error) => {
+                failures.push(format!(
+                    "{relative_path}::{function_name} missing preceding /// doc block: {error:#}"
+                ));
+                continue;
+            }
+        };
+        for literal in RESOLUTION_ORDER_DOC_LITERALS {
+            if !doc_block.contains(literal) {
+                failures.push(format!(
+                    "{relative_path}::{function_name} doc block missing {literal:?}"
+                ));
+            }
+        }
+    }
+
+    if failures.is_empty() {
+        Ok(())
+    } else {
+        bail!(
+            "IDENT-021 resolution-order docs must name the runtime-registry resolver chain and denial order:\n{}",
+            failures.join("\n")
+        )
+    }
+}
+
+fn preceding_doc_block(source: &str, function_name: &str) -> anyhow::Result<String> {
+    let function_line = source
+        .lines()
+        .position(|line| {
+            let trimmed = line.trim_start();
+            trimmed.starts_with(&format!("pub fn {function_name}("))
+                || trimmed.starts_with(&format!("pub async fn {function_name}("))
+                || trimmed.starts_with(&format!("pub(crate) fn {function_name}("))
+        })
+        .with_context(|| format!("function {function_name} not found"))?;
+    let lines = source.lines().collect::<Vec<_>>();
+    let mut cursor = function_line;
+    while cursor > 0 {
+        let previous = lines[cursor - 1].trim_start();
+        if previous.is_empty() || previous.starts_with("#[") {
+            cursor -= 1;
+            continue;
+        }
+        break;
+    }
+
+    let mut doc_lines = Vec::new();
+    while cursor > 0 {
+        let previous = lines[cursor - 1].trim_start();
+        if let Some(doc) = previous.strip_prefix("///") {
+            doc_lines.push(doc.trim_start());
+            cursor -= 1;
+        } else {
+            break;
+        }
+    }
+    doc_lines.reverse();
+    if doc_lines.is_empty() {
+        bail!("function {function_name} has no immediately preceding /// doc block");
+    }
+    Ok(doc_lines.join("\n"))
 }
 
 fn assert_grep_has_no_matches(
