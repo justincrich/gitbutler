@@ -177,26 +177,32 @@ fn steer_telemetry_actor_correctable_event_fields() -> anyhow::Result<()> {
     let (repo, _tmp) = governed_repo();
     let main_before = ref_id(&repo, MAIN_REF)?;
 
-    let (gate_result, events) = temp_env::with_var("BUT_AGENT_HANDLE", Some("dev"), || {
-        capture_events(|| -> anyhow::Result<()> {
-            checkout(&repo, "main");
-            write_file(&repo, "main.txt", "main\n")?;
-            let mut ctx = but_ctx::Context::from_repo(repo.clone())?.with_memory_app_cache();
-            match commit_to_ref(&mut ctx, MAIN_REF, "direct main commit", DryRun::No) {
-                Ok(_) => anyhow::bail!("protected main direct commit should be denied"),
-                Err(err) => {
-                    assert_eq!(
-                        but_api::commit::create::gate::classify_error(&err)
-                            .expect("denial should classify")
-                            .code,
-                        "branch.protected",
-                        "branch.protected code must remain unchanged"
-                    );
+    let (gate_result, events) = temp_env::with_vars(
+        [
+            ("BUT_AGENT_HANDLE", Some("dev")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        || {
+            capture_events(|| -> anyhow::Result<()> {
+                checkout(&repo, "main");
+                write_file(&repo, "main.txt", "main\n")?;
+                let mut ctx = but_ctx::Context::from_repo(repo.clone())?.with_memory_app_cache();
+                match commit_to_ref(&mut ctx, MAIN_REF, "direct main commit", DryRun::No) {
+                    Ok(_) => anyhow::bail!("protected main direct commit should be denied"),
+                    Err(err) => {
+                        assert_eq!(
+                            but_api::commit::create::gate::classify_error(&err)
+                                .expect("denial should classify")
+                                .code,
+                            "branch.protected",
+                            "branch.protected code must remain unchanged"
+                        );
+                    }
                 }
-            }
-            Ok(())
-        })
-    });
+                Ok(())
+            })
+        },
+    );
     gate_result?;
 
     let steering_events = denial_steering_events(&events);
@@ -274,12 +280,17 @@ fn steer_telemetry_actor_correctable_event_fields() -> anyhow::Result<()> {
 #[test]
 #[serial_test::serial]
 fn steer_telemetry_operator_required_empty_menu() -> anyhow::Result<()> {
-    let (gate_result, events) = temp_env::with_var("BUT_AGENT_HANDLE", Some("dev"), || {
-        capture_events(|| -> anyhow::Result<()> {
-            let (repo, _tmp) = governed_repo();
-            checkout(&repo, "feat");
-            but_testsupport::invoke_bash(
-                r#"
+    let (gate_result, events) = temp_env::with_vars(
+        [
+            ("BUT_AGENT_HANDLE", Some("dev")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        || {
+            capture_events(|| -> anyhow::Result<()> {
+                let (repo, _tmp) = governed_repo();
+                checkout(&repo, "feat");
+                but_testsupport::invoke_bash(
+                    r#"
 cat >.gitbutler/gates.toml <<'EOF'
 [[branch]
 name = "feat"
@@ -288,31 +299,32 @@ EOF
 git add .gitbutler/gates.toml
 git commit -m "malformed feat gates"
 "#,
-                &repo,
-            );
-            write_file(&repo, "malformed.txt", "malformed\n")?;
-            let feat_before = ref_id(&repo, FEAT_REF)?;
-            let mut ctx = but_ctx::Context::from_repo(repo.clone())?.with_memory_app_cache();
-            match commit_to_ref(&mut ctx, FEAT_REF, "malformed config", DryRun::No) {
-                Ok(_) => anyhow::bail!("malformed-config commit should be denied"),
-                Err(err) => {
-                    assert_eq!(
-                        but_api::commit::create::gate::classify_error(&err)
-                            .expect("config.invalid should classify")
-                            .code,
-                        "config.invalid",
-                        "config.invalid code must be surfaced"
-                    );
+                    &repo,
+                );
+                write_file(&repo, "malformed.txt", "malformed\n")?;
+                let feat_before = ref_id(&repo, FEAT_REF)?;
+                let mut ctx = but_ctx::Context::from_repo(repo.clone())?.with_memory_app_cache();
+                match commit_to_ref(&mut ctx, FEAT_REF, "malformed config", DryRun::No) {
+                    Ok(_) => anyhow::bail!("malformed-config commit should be denied"),
+                    Err(err) => {
+                        assert_eq!(
+                            but_api::commit::create::gate::classify_error(&err)
+                                .expect("config.invalid should classify")
+                                .code,
+                            "config.invalid",
+                            "config.invalid code must be surfaced"
+                        );
+                    }
                 }
-            }
-            assert_eq!(
-                ref_id(&repo, FEAT_REF)?,
-                feat_before,
-                "config.invalid must leave feat unchanged"
-            );
-            Ok(())
-        })
-    });
+                assert_eq!(
+                    ref_id(&repo, FEAT_REF)?,
+                    feat_before,
+                    "config.invalid must leave feat unchanged"
+                );
+                Ok(())
+            })
+        },
+    );
     gate_result?;
 
     let steering_events = denial_steering_events(&events);
@@ -373,38 +385,44 @@ fn steer_telemetry_discovery_only_no_lateral() -> anyhow::Result<()> {
     let (repo, _tmp) = governed_repo();
     let feat_before = ref_id(&repo, FEAT_REF)?;
 
-    let (gate_result, events) = temp_env::with_var("BUT_AGENT_HANDLE", Some("ro"), || {
-        capture_events(|| -> anyhow::Result<()> {
-            checkout(&repo, "feat");
-            write_file(&repo, "ro-discovery.txt", "ro\n")?;
-            let mut ctx = but_ctx::Context::from_repo(repo.clone())?.with_memory_app_cache();
-            match commit_to_ref(&mut ctx, FEAT_REF, "ro discovery-only", DryRun::No) {
-                Ok(_) => anyhow::bail!("ro commit should be denied with perm.denied"),
-                Err(err) => {
-                    let gate_error = but_api::commit::create::gate::classify_error(&err)
-                        .expect("perm.denied should classify");
-                    assert_eq!(
-                        gate_error.code, "perm.denied",
-                        "ro commit MUST deny with perm.denied"
-                    );
-                    // Sanity: the menu really is discovery-only so the AC-3
-                    // assertion below is meaningful (proves the metric is not
-                    // merely `menu_length > 0`).
-                    let commands: Vec<&str> = gate_error
-                        .authorized_actions
-                        .iter()
-                        .map(|a| a.command)
-                        .collect();
-                    assert_eq!(
-                        commands,
-                        &["but perm list"],
-                        "AC-3 setup: ro menu MUST be discovery-only (got {commands:?})"
-                    );
+    let (gate_result, events) = temp_env::with_vars(
+        [
+            ("BUT_AGENT_HANDLE", Some("ro")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        || {
+            capture_events(|| -> anyhow::Result<()> {
+                checkout(&repo, "feat");
+                write_file(&repo, "ro-discovery.txt", "ro\n")?;
+                let mut ctx = but_ctx::Context::from_repo(repo.clone())?.with_memory_app_cache();
+                match commit_to_ref(&mut ctx, FEAT_REF, "ro discovery-only", DryRun::No) {
+                    Ok(_) => anyhow::bail!("ro commit should be denied with perm.denied"),
+                    Err(err) => {
+                        let gate_error = but_api::commit::create::gate::classify_error(&err)
+                            .expect("perm.denied should classify");
+                        assert_eq!(
+                            gate_error.code, "perm.denied",
+                            "ro commit MUST deny with perm.denied"
+                        );
+                        // Sanity: the menu really is discovery-only so the AC-3
+                        // assertion below is meaningful (proves the metric is not
+                        // merely `menu_length > 0`).
+                        let commands: Vec<&str> = gate_error
+                            .authorized_actions
+                            .iter()
+                            .map(|a| a.command)
+                            .collect();
+                        assert_eq!(
+                            commands,
+                            &["but perm list"],
+                            "AC-3 setup: ro menu MUST be discovery-only (got {commands:?})"
+                        );
+                    }
                 }
-            }
-            Ok(())
-        })
-    });
+                Ok(())
+            })
+        },
+    );
     gate_result?;
 
     assert_eq!(
@@ -460,36 +478,42 @@ fn steer_telemetry_event_is_observation_only() -> anyhow::Result<()> {
     let (repo, _tmp) = governed_repo();
     let main_before = ref_id(&repo, MAIN_REF)?;
 
-    let (gate_result, events) = temp_env::with_var("BUT_AGENT_HANDLE", Some("dev"), || {
-        capture_events(|| -> anyhow::Result<()> {
-            checkout(&repo, "main");
-            write_file(&repo, "observation-only.txt", "denied\n")?;
-            let mut ctx = but_ctx::Context::from_repo(repo.clone())?.with_memory_app_cache();
-            let result = commit_to_ref(&mut ctx, MAIN_REF, "observation only", DryRun::No);
-            let err = match result {
-                Ok(_) => anyhow::bail!(
-                    "commit to protected main MUST be denied (no deny->allow flip from telemetry)"
-                ),
-                Err(err) => err,
-            };
-            let gate_error = but_api::commit::create::gate::classify_error(&err)
-                .expect("denial must still classify after telemetry fires");
-            assert_eq!(
-                gate_error.code, "branch.protected",
-                "telemetry MUST NOT change the stable denial code"
-            );
-            assert_eq!(
-                gate_error.class,
-                but_authz::DenialClass::ActorCorrectable,
-                "telemetry MUST NOT change the class"
-            );
-            assert!(
-                !gate_error.authorized_actions.is_empty(),
-                "telemetry MUST NOT drop the authorized_actions menu"
-            );
-            Ok(())
-        })
-    });
+    let (gate_result, events) = temp_env::with_vars(
+        [
+            ("BUT_AGENT_HANDLE", Some("dev")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        || {
+            capture_events(|| -> anyhow::Result<()> {
+                checkout(&repo, "main");
+                write_file(&repo, "observation-only.txt", "denied\n")?;
+                let mut ctx = but_ctx::Context::from_repo(repo.clone())?.with_memory_app_cache();
+                let result = commit_to_ref(&mut ctx, MAIN_REF, "observation only", DryRun::No);
+                let err = match result {
+                    Ok(_) => anyhow::bail!(
+                        "commit to protected main MUST be denied (no deny->allow flip from telemetry)"
+                    ),
+                    Err(err) => err,
+                };
+                let gate_error = but_api::commit::create::gate::classify_error(&err)
+                    .expect("denial must still classify after telemetry fires");
+                assert_eq!(
+                    gate_error.code, "branch.protected",
+                    "telemetry MUST NOT change the stable denial code"
+                );
+                assert_eq!(
+                    gate_error.class,
+                    but_authz::DenialClass::ActorCorrectable,
+                    "telemetry MUST NOT change the class"
+                );
+                assert!(
+                    !gate_error.authorized_actions.is_empty(),
+                    "telemetry MUST NOT drop the authorized_actions menu"
+                );
+                Ok(())
+            })
+        },
+    );
     gate_result?;
 
     // The ref must NOT advance — observation-only.

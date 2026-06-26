@@ -1,0 +1,15 @@
+AC-1 seeded evidence
+
+Red evidence:
+- .tmp/IDENT-018/AC-1-red-against-start.txt
+- Command exited nonzero before the migration and listed unpaired temp_env helper scopes by file:line.
+
+Green evidence:
+- .tmp/IDENT-018/AC-1-green.txt
+- Structural invariant command exited 0.
+- Full command `cargo test -p but-api --tests` exited 0.
+
+Observed values:
+- all_scopes_paired=true
+- unpaired helper scope count == 0
+- all but-api tests pass == true

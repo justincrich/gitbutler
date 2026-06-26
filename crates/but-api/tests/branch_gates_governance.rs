@@ -15,9 +15,13 @@ const GATES_PATH: &str = ".gitbutler/gates.toml";
 fn branch_gates_read_returns_working_tree_gates_under_admin_read() -> anyhow::Result<()> {
     let (repo, _tmp) = branch_gates_base();
 
-    let outcome = temp_env::with_var("BUT_AGENT_HANDLE", Some("admin-reader"), || {
-        branch_gates_read_with_repo(&repo, MAIN_REF)
-    })?;
+    let outcome = temp_env::with_vars(
+        [
+            ("BUT_AGENT_HANDLE", Some("admin-reader")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        || branch_gates_read_with_repo(&repo, MAIN_REF),
+    )?;
 
     assert_gates_entry(&outcome, "main", true);
     assert_gates_entry(&outcome, "release", false);
@@ -35,9 +39,13 @@ fn branch_gates_read_non_admin_denied() -> anyhow::Result<()> {
     let (repo, _tmp) = branch_gates_base();
     let before = worktree_gates_bytes(&repo)?;
 
-    let result = temp_env::with_var("BUT_AGENT_HANDLE", Some("rust-implementer"), || {
-        branch_gates_read_with_repo(&repo, MAIN_REF)
-    });
+    let result = temp_env::with_vars(
+        [
+            ("BUT_AGENT_HANDLE", Some("rust-implementer")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        || branch_gates_read_with_repo(&repo, MAIN_REF),
+    );
 
     let denial = structured_denial(result, "branch_gates_read non-admin")?;
     assert_eq!(
@@ -62,14 +70,20 @@ fn branch_gates_read_non_admin_denied() -> anyhow::Result<()> {
 fn branch_gates_update_upserts_under_admin_write() -> anyhow::Result<()> {
     let (repo, _tmp) = branch_gates_base();
 
-    let updated = temp_env::with_var("BUT_AGENT_HANDLE", Some("admin"), || {
-        branch_gates_update_with_repo(
-            &repo,
-            MAIN_REF,
-            "main",
-            BranchProtectionInput { protected: false },
-        )
-    })?;
+    let updated = temp_env::with_vars(
+        [
+            ("BUT_AGENT_HANDLE", Some("admin")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        || {
+            branch_gates_update_with_repo(
+                &repo,
+                MAIN_REF,
+                "main",
+                BranchProtectionInput { protected: false },
+            )
+        },
+    )?;
     assert_gates_entry(&updated, "main", false);
     assert_gates_entry(&updated, "release", false);
     let after_update = worktree_gates(&repo)?;
@@ -78,14 +92,20 @@ fn branch_gates_update_upserts_under_admin_write() -> anyhow::Result<()> {
         "branch_gates_update must write protected=false for main to gates.toml"
     );
 
-    let inserted = temp_env::with_var("BUT_AGENT_HANDLE", Some("admin"), || {
-        branch_gates_update_with_repo(
-            &repo,
-            MAIN_REF,
-            "featureBranch",
-            BranchProtectionInput { protected: true },
-        )
-    })?;
+    let inserted = temp_env::with_vars(
+        [
+            ("BUT_AGENT_HANDLE", Some("admin")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        || {
+            branch_gates_update_with_repo(
+                &repo,
+                MAIN_REF,
+                "featureBranch",
+                BranchProtectionInput { protected: true },
+            )
+        },
+    )?;
     assert_gates_entry(&inserted, "featureBranch", true);
     let after_insert = worktree_gates(&repo)?;
     assert!(
@@ -104,14 +124,20 @@ fn branch_gates_update_non_admin_denied_writes_nothing() -> anyhow::Result<()> {
     let (repo, _tmp) = branch_gates_base();
     let before = worktree_gates_bytes(&repo)?;
 
-    let result = temp_env::with_var("BUT_AGENT_HANDLE", Some("rust-implementer"), || {
-        branch_gates_update_with_repo(
-            &repo,
-            MAIN_REF,
-            "main",
-            BranchProtectionInput { protected: false },
-        )
-    });
+    let result = temp_env::with_vars(
+        [
+            ("BUT_AGENT_HANDLE", Some("rust-implementer")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        || {
+            branch_gates_update_with_repo(
+                &repo,
+                MAIN_REF,
+                "main",
+                BranchProtectionInput { protected: false },
+            )
+        },
+    );
 
     let error = classified_error(result)?;
     assert_eq!(

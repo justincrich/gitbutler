@@ -1,0 +1,227 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.23s
+     Running tests/admin_write_guard.rs (target/debug/deps/admin_write_guard-a6311b2e1aa667da)
+
+running 2 tests
+test admin_write_guard_malformed_config_invalid ... ok
+test admin_write_guard_denies_non_admin_allows_admin ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.09s
+
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.23s
+     Running tests/branch_gates_governance.rs (target/debug/deps/branch_gates_governance-d435593780f9876a)
+
+running 4 tests
+test branch_gates_read_returns_working_tree_gates_under_admin_read ... ok
+test branch_gates_update_non_admin_denied_writes_nothing ... ok
+test branch_gates_read_non_admin_denied ... ok
+test branch_gates_update_upserts_under_admin_write ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.18s
+
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.23s
+     Running tests/confinement.rs (target/debug/deps/confinement-25217964e4b958f7)
+
+running 2 tests
+test confinement_authority_from_config_not_claim ... ok
+test confinement_reviewer_denied_other_merge_and_self_grant ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.30s
+
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.23s
+     Running tests/commit_gate.rs (target/debug/deps/commit_gate-ded9b7efeaced99c)
+
+running 14 tests
+test commit_gate_generated_entrypoint_authorizes_before_exclusive_guard ... ok
+test commit_gate_apply_integrate_readonly_denied ... ok
+test governance_fixtures_are_structurally_distinct ... ok
+test commit_gate_apply_integrate_dryrun_targetref_pinned ... ok
+test commit_gate_apply_integrate_no_target_ungoverned ... ok
+test commit_gate_commit_relative_checks_contents_write_without_branch_protection ... ok
+test commit_gate_edit_cannot_unprotect ... ok
+test commit_gate_governed_missing_target_failclosed ... ok
+test commit_gate_absent_config_is_ungoverned ... ok
+test commit_gate_worktree_integrate_protected_rejected ... ok
+test commit_gate_malformed_partial_and_dryrun ... ok
+test commit_gate_steering_fields_positive_assertions ... ok
+test commit_gate_feature_ok_protected_rejected ... ok
+test commit_gate_readonly_and_bad_handle_denied ... ok
+
+test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.14s
+
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.22s
+     Running tests/forge_guard.rs (target/debug/deps/forge_guard-66ada1be0e9cfbf3)
+
+running 4 tests
+test forge_guard_permissions_and_both_still_governed ... ok
+test forge_guard_authorizes_comments_and_records_approval ... ok
+test forge_guard_gates_toml_only_repo_is_governed ... ok
+test forge_guard_no_stub_success_for_unimplemented_review_actions ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.53s
+
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.22s
+     Running tests/governance_api.rs (target/debug/deps/governance_api-3c6ed1ab323695c0)
+
+running 10 tests
+test governance_api_invariant_build_gate_covers_governance_boundary ... ok
+test governance_api_commit_commits_only_pending_governance_files ... ok
+test governance_api_pending_reports_uncommitted_grant ... ok
+test governance_api_commit_requires_admin_write_and_leaves_target_inert ... ok
+test governance_api_group_add_member_non_admin_denied_with_hint ... ok
+test governance_api_perm_grant_non_admin_denied_with_hint ... ok
+test governance_api_status_read_is_self_scoped_no_foreign_principal ... ok
+test governance_api_principals_list_keeps_committed_display_with_direct_pending ... ok
+test governance_api_status_read_returns_own_effective_set ... ok
+test governance_api_perm_grant_admin_lands_inert ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.62s
+
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.23s
+     Running tests/keep_reviews_local_gate.rs (target/debug/deps/keep_reviews_local_gate-6cbf753991664ad0)
+
+running 1 test
+test keep_reviews_local_false_returns_named_seam_error ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.10s
+
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.24s
+     Running tests/local_review_assignments.rs (target/debug/deps/local_review_assignments-06cda4dfda023534)
+
+running 5 tests
+test request_review_denied_without_authority_writes_nothing ... ok
+test request_review_persists_pending_assignment_without_touching_verdicts ... ok
+test assign_reviewer_distinct_from_author_upserts_idempotent ... ok
+test request_review_is_local_cache_only_no_ref_mutation ... ok
+test request_changes_review_implements_changes_requested_write ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.50s
+
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.23s
+     Running tests/local_review_comments_verbs.rs (target/debug/deps/local_review_comments_verbs-d8a434e36e79a3b6)
+
+running 7 tests
+test post_comment_is_local_cache_only ... ok
+test post_comment_persists_comment_with_resolved_false ... ok
+test list_comments_returns_threads_excludes_pr_meta ... ok
+test post_comment_denied_without_authority_writes_nothing ... ok
+test resolve_thread_flips_whole_thread ... ok
+test unresolved_comment_does_not_block_merge ... ok
+test unauthorized_resolve_rejected_and_pr_meta_guarded ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.73s
+
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.23s
+     Running tests/local_review_status.rs (target/debug/deps/local_review_status-9327286f576f44d7)
+
+running 4 tests
+test review_status_derives_lifecycle_and_agent_tag ... ok
+test review_status_reflects_changes_requested ... ok
+test review_status_reflects_approval ... ok
+test review_status_two_read_convergence ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.41s
+
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.23s
+     Running tests/merge_gate.rs (target/debug/deps/merge_gate-be884b806f6ad30e)
+
+running 15 tests
+test merge_gate_self_and_stale_dismissed ... ok
+test merge_gate_dryrun_and_malformed_failclosed ... ok
+test merge_gate_steering_fields_positive_assertions ... ok
+test merge_gate_malformed_config_is_config_invalid ... ok
+test merge_gate_dryrun_unknown_failclosed_persists_nothing ... ok
+test merge_gate_two_group_both_present_proceeds ... ok
+test merge_gate_distinct_current_head_satisfies ... ok
+test merge_gate_two_group_only_one_blocked ... ok
+test merge_gate_below_min_approvals_blocked ... ok
+test merge_gate_authorize_and_review_requirement ... ok
+test merge_gate_unknown_and_no_handle_failclosed ... ok
+test merge_gate_undefined_required_group_denied ... ok
+test merge_gate_overlapping_required_groups_policy ... ok
+test merge_gate_targetref_only_feature_head_drop_ignored ... ok
+test merge_gate_two_required_groups_require_each_group ... ok
+
+test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.12s
+
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.25s
+     Running tests/merge_gate_self_escalation.rs (target/debug/deps/merge_gate_self_escalation-321efc8e189760e3)
+
+running 2 tests
+test landed_membership_clears_merge_authority_step ... ok
+test self_add_to_maintainers_on_feature_head_still_denied_merge ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.24s
+
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.23s
+     Running tests/group_governance.rs (target/debug/deps/group_governance-0ddbf99218e334fc)
+
+running 14 tests
+test group_create_duplicate_errs_without_overwrite ... ok
+test group_denials_include_remediation_hint ... ok
+test group_delete_non_admin_denied_writes_nothing ... ok
+test group_ops_non_admin_denied ... ok
+test group_delete_missing_group_is_idempotent_noop ... ok
+test group_add_member_writes_worktree_inert_until_committed ... ok
+test group_create_grant_writes_worktree ... ok
+test group_revoke_removes_direct_authority_and_preserves_members ... ok
+test group_list_under_admin_read ... ok
+test group_grant_fail_closed_undefined_group_bad_token_and_unset_handle ... ok
+test group_grant_administration_write_delegates_admin_inert_until_committed ... ok
+test group_ops_non_admin_denied_all_mutating_verbs ... ok
+test group_delete_removes_group_under_admin_write ... ok
+test group_remove_member_writes_worktree_inert_until_committed ... ok
+
+test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.62s
+
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.23s
+     Running tests/perm_governance.rs (target/debug/deps/perm_governance-1b02889f78cbd8fa)
+
+running 12 tests
+test perm_denials_include_remediation_hint ... ok
+test perm_list_cross_principal_scoping ... ok
+test perm_grant_writes_worktree_inert_until_committed ... ok
+test perm_list_fail_closed_unset_handle ... ok
+test perm_first_grant_seeds_principal_and_authorizes_when_committed ... ok
+test perm_grant_revoke_non_admin_denied ... ok
+test perm_grant_fail_closed_bad_token_and_unset_handle ... ok
+test perm_revoke_fail_closed_bad_token ... ok
+test perm_revoke_removes_token_and_idempotent_noop ... ok
+test perm_list_pending_marks_uncommitted_grant ... ok
+test perm_grant_preserves_unrelated_entries_and_role_sugar ... ok
+test perm_revoke_fail_closed_unset_handle ... ok
+
+test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.55s
+
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.23s
+     Running tests/steer_class_wiring.rs (target/debug/deps/steer_class_wiring-a86e87cacb2df844)
+
+running 5 tests
+test steer_class_per_code_and_resolution ... ok
+test steer_degrade_vertical_and_do_not_positive ... ok
+test steer_operator_required_empty_menu_do_not ... ok
+test steer_dryrun_full_payload_no_mutation ... ok
+test steer_branch_protected_threads_cfg ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.55s
+
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.23s
+     Running tests/rules_scoped.rs (target/debug/deps/rules_scoped-15a77f2b6afd522b)
+
+running 4 tests
+test list_workspace_rules_scoped_unknown_principal_empty ... ok
+test list_workspace_rules_scoped_none_equals_existing ... ok
+test list_workspace_rules_scoped_some_narrows_to_principal ... ok
+test list_workspace_rules_scoped_cross_principal_not_disclosed ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.09s
+
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.23s
+     Running tests/steer_telemetry.rs (target/debug/deps/steer_telemetry-1a9cfb3fc26e1803)
+
+running 4 tests
+test steer_telemetry_actor_correctable_event_fields ... ok
+test steer_telemetry_discovery_only_no_lateral ... ok
+test steer_telemetry_operator_required_empty_menu ... ok
+test steer_telemetry_event_is_observation_only ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.43s

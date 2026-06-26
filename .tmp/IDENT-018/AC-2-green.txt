@@ -1,0 +1,75 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.23s
+     Running tests/gate_registry_swap.rs (target/debug/deps/gate_registry_swap-db23272148eb0f78)
+
+running 1 test
+test all_but_agent_handle_env_helpers_are_flag_gated ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 17 filtered out; finished in 0.01s
+
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.21s
+     Running tests/commit_gate.rs (target/debug/deps/commit_gate-ded9b7efeaced99c)
+
+running 14 tests
+test commit_gate_generated_entrypoint_authorizes_before_exclusive_guard ... ok
+test commit_gate_edit_cannot_unprotect ... ok
+test governance_fixtures_are_structurally_distinct ... ok
+test commit_gate_feature_ok_protected_rejected ... ok
+test commit_gate_apply_integrate_dryrun_targetref_pinned ... ok
+test commit_gate_absent_config_is_ungoverned ... ok
+test commit_gate_commit_relative_checks_contents_write_without_branch_protection ... ok
+test commit_gate_governed_missing_target_failclosed ... ok
+test commit_gate_steering_fields_positive_assertions ... ok
+test commit_gate_malformed_partial_and_dryrun ... ok
+test commit_gate_readonly_and_bad_handle_denied ... ok
+test commit_gate_apply_integrate_readonly_denied ... ok
+test commit_gate_worktree_integrate_protected_rejected ... ok
+test commit_gate_apply_integrate_no_target_ungoverned ... ok
+
+test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.26s
+
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.23s
+     Running tests/gate_registry_swap.rs (target/debug/deps/gate_registry_swap-db23272148eb0f78)
+
+running 1 test
+test all_but_agent_handle_env_helpers_are_flag_gated ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 17 filtered out; finished in 0.01s
+
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.22s
+     Running tests/perm_governance.rs (target/debug/deps/perm_governance-1b02889f78cbd8fa)
+
+running 12 tests
+test perm_grant_revoke_non_admin_denied ... ok
+test perm_grant_preserves_unrelated_entries_and_role_sugar ... ok
+test perm_list_fail_closed_unset_handle ... ok
+test perm_first_grant_seeds_principal_and_authorizes_when_committed ... ok
+test perm_denials_include_remediation_hint ... ok
+test perm_grant_fail_closed_bad_token_and_unset_handle ... ok
+test perm_list_pending_marks_uncommitted_grant ... ok
+test perm_grant_writes_worktree_inert_until_committed ... ok
+test perm_revoke_fail_closed_unset_handle ... ok
+test perm_revoke_fail_closed_bad_token ... ok
+test perm_list_cross_principal_scoping ... ok
+test perm_revoke_removes_token_and_idempotent_noop ... ok
+
+test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.55s
+
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.23s
+     Running tests/gate_registry_swap.rs (target/debug/deps/gate_registry_swap-db23272148eb0f78)
+
+running 1 test
+test all_but_agent_handle_env_helpers_are_flag_gated ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 17 filtered out; finished in 0.01s
+
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.22s
+     Running tests/local_review_assignments.rs (target/debug/deps/local_review_assignments-06cda4dfda023534)
+
+running 5 tests
+test request_changes_review_implements_changes_requested_write ... ok
+test request_review_persists_pending_assignment_without_touching_verdicts ... ok
+test request_review_is_local_cache_only_no_ref_mutation ... ok
+test request_review_denied_without_authority_writes_nothing ... ok
+test assign_reviewer_distinct_from_author_upserts_idempotent ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.48s

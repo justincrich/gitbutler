@@ -11,67 +11,73 @@ fn commit_gate_feature_ok_protected_rejected() -> anyhow::Result<()> {
     let main_before = ref_id(&repo, MAIN_REF)?;
     let feat_before = ref_id(&repo, FEAT_REF)?;
 
-    temp_env::with_var("BUT_AGENT_HANDLE", Some("dev"), || -> anyhow::Result<()> {
-        checkout(&repo, "feat");
-        write_file(&repo, "feature.txt", "feature\n")?;
-        let mut ctx = but_ctx::Context::from_repo(repo.clone())?.with_memory_app_cache();
-        let feature = commit_to_ref(&mut ctx, FEAT_REF, "feature commit", DryRun::No)?;
-        assert!(
-            feature.new_commit.is_some(),
-            "contents:write principal should create a feature commit"
-        );
-        assert_ne!(
-            ref_id(&repo, FEAT_REF)?,
-            feat_before,
-            "feature ref should advance after an allowed commit"
-        );
+    temp_env::with_vars(
+        [
+            ("BUT_AGENT_HANDLE", Some("dev")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        || -> anyhow::Result<()> {
+            checkout(&repo, "feat");
+            write_file(&repo, "feature.txt", "feature\n")?;
+            let mut ctx = but_ctx::Context::from_repo(repo.clone())?.with_memory_app_cache();
+            let feature = commit_to_ref(&mut ctx, FEAT_REF, "feature commit", DryRun::No)?;
+            assert!(
+                feature.new_commit.is_some(),
+                "contents:write principal should create a feature commit"
+            );
+            assert_ne!(
+                ref_id(&repo, FEAT_REF)?,
+                feat_before,
+                "feature ref should advance after an allowed commit"
+            );
 
-        checkout(&repo, "main");
-        write_file(&repo, "main.txt", "main\n")?;
-        let mut ctx = but_ctx::Context::from_repo(repo.clone())?.with_memory_app_cache();
-        let err = match commit_to_ref(&mut ctx, MAIN_REF, "direct main commit", DryRun::No) {
-            Ok(_) => anyhow::bail!("protected main direct commit should be denied"),
-            Err(err) => err,
-        };
-        let denial = err
-            .downcast_ref::<but_authz::Denial>()
-            .expect("protected branch rejection should be a structured authz denial");
-        assert_eq!(
-            denial.code, "branch.protected",
-            "protected branch denial must use the stable branch.protected code"
-        );
-        assert!(
-            denial.message.contains("main"),
-            "branch.protected message should name the rejected main branch"
-        );
-        // STEER-004: branch.protected carries ActorCorrectable + re-derived
-        // held_permissions (contents:write for dev).
-        assert_eq!(
-            denial.class,
-            but_authz::DenialClass::ActorCorrectable,
-            "branch.protected MUST be actor_correctable"
-        );
-        assert!(
-            denial
-                .held_permissions
-                .contains(&but_authz::Authority::ContentsWrite),
-            "branch.protected held_permissions MUST include contents:write (re-derived via &cfg): {:?}",
-            denial.held_permissions
-        );
-        assert!(
-            !denial.authorized_actions.is_empty(),
-            "branch.protected MUST carry a non-empty gate-state-aware menu"
-        );
-        assert_eq!(
-            ref_id(&repo, MAIN_REF)?,
-            main_before,
-            "main ref must remain unchanged after protected branch denial"
-        );
-        println!("`feat` HEAD sha advanced from {feat_before}");
-        println!("`error.code == \"branch.protected\"` and message names `main`");
-        println!("`main` HEAD sha == seeded base sha");
-        Ok(())
-    })?;
+            checkout(&repo, "main");
+            write_file(&repo, "main.txt", "main\n")?;
+            let mut ctx = but_ctx::Context::from_repo(repo.clone())?.with_memory_app_cache();
+            let err = match commit_to_ref(&mut ctx, MAIN_REF, "direct main commit", DryRun::No) {
+                Ok(_) => anyhow::bail!("protected main direct commit should be denied"),
+                Err(err) => err,
+            };
+            let denial = err
+                .downcast_ref::<but_authz::Denial>()
+                .expect("protected branch rejection should be a structured authz denial");
+            assert_eq!(
+                denial.code, "branch.protected",
+                "protected branch denial must use the stable branch.protected code"
+            );
+            assert!(
+                denial.message.contains("main"),
+                "branch.protected message should name the rejected main branch"
+            );
+            // STEER-004: branch.protected carries ActorCorrectable + re-derived
+            // held_permissions (contents:write for dev).
+            assert_eq!(
+                denial.class,
+                but_authz::DenialClass::ActorCorrectable,
+                "branch.protected MUST be actor_correctable"
+            );
+            assert!(
+                denial
+                    .held_permissions
+                    .contains(&but_authz::Authority::ContentsWrite),
+                "branch.protected held_permissions MUST include contents:write (re-derived via &cfg): {:?}",
+                denial.held_permissions
+            );
+            assert!(
+                !denial.authorized_actions.is_empty(),
+                "branch.protected MUST carry a non-empty gate-state-aware menu"
+            );
+            assert_eq!(
+                ref_id(&repo, MAIN_REF)?,
+                main_before,
+                "main ref must remain unchanged after protected branch denial"
+            );
+            println!("`feat` HEAD sha advanced from {feat_before}");
+            println!("`error.code == \"branch.protected\"` and message names `main`");
+            println!("`main` HEAD sha == seeded base sha");
+            Ok(())
+        },
+    )?;
 
     Ok(())
 }
@@ -88,56 +94,62 @@ fn commit_gate_readonly_and_bad_handle_denied() -> anyhow::Result<()> {
         let (repo, _tmp) = governed_repo();
         let feat_before = ref_id(&repo, FEAT_REF)?;
 
-        temp_env::with_var("BUT_AGENT_HANDLE", handle, || -> anyhow::Result<()> {
-            checkout(&repo, "feat");
-            write_file(&repo, &format!("{label}.txt"), label)?;
-            let mut ctx = but_ctx::Context::from_repo(repo.clone())?.with_memory_app_cache();
-            let err = assert_commit_denied(
-                commit_to_ref(&mut ctx, FEAT_REF, &format!("{label} commit"), DryRun::No),
-                "perm.denied",
-            );
-            assert!(
-                err.message.contains("contents:write")
-                    || err.message.contains("BUT_AGENT_HANDLE")
-                    || err.message.contains("ghost"),
-                "perm.denied message should explain the rejected handle or missing contents:write"
-            );
-            // STEER-004: class is correct per (code, principal-resolution).
-            // read-only (ro) is a resolved principal → actor_correctable;
-            // unset/empty/ghost are unresolved → operator_required.
-            match handle {
-                Some("ro") => {
-                    assert_eq!(
-                        err.class,
-                        but_authz::DenialClass::ActorCorrectable,
-                        "read-only (resolved) perm.denied MUST be actor_correctable"
-                    );
+        temp_env::with_vars(
+            [
+                ("BUT_AGENT_HANDLE", handle),
+                ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+            ],
+            || -> anyhow::Result<()> {
+                checkout(&repo, "feat");
+                write_file(&repo, &format!("{label}.txt"), label)?;
+                let mut ctx = but_ctx::Context::from_repo(repo.clone())?.with_memory_app_cache();
+                let err = assert_commit_denied(
+                    commit_to_ref(&mut ctx, FEAT_REF, &format!("{label} commit"), DryRun::No),
+                    "perm.denied",
+                );
+                assert!(
+                    err.message.contains("contents:write")
+                        || err.message.contains("BUT_AGENT_HANDLE")
+                        || err.message.contains("ghost"),
+                    "perm.denied message should explain the rejected handle or missing contents:write"
+                );
+                // STEER-004: class is correct per (code, principal-resolution).
+                // read-only (ro) is a resolved principal → actor_correctable;
+                // unset/empty/ghost are unresolved → operator_required.
+                match handle {
+                    Some("ro") => {
+                        assert_eq!(
+                            err.class,
+                            but_authz::DenialClass::ActorCorrectable,
+                            "read-only (resolved) perm.denied MUST be actor_correctable"
+                        );
+                    }
+                    None | Some("") | Some("ghost") => {
+                        assert_eq!(
+                            err.class,
+                            but_authz::DenialClass::OperatorRequired,
+                            "{label} (unresolved principal) perm.denied MUST be operator_required"
+                        );
+                        assert!(
+                            err.do_not.is_some(),
+                            "{label} (unresolved) denial MUST carry a do_not"
+                        );
+                        assert!(
+                            err.authorized_actions.is_empty(),
+                            "{label} (unresolved) denial MUST have an empty menu"
+                        );
+                    }
+                    _ => {}
                 }
-                None | Some("") | Some("ghost") => {
-                    assert_eq!(
-                        err.class,
-                        but_authz::DenialClass::OperatorRequired,
-                        "{label} (unresolved principal) perm.denied MUST be operator_required"
-                    );
-                    assert!(
-                        err.do_not.is_some(),
-                        "{label} (unresolved) denial MUST carry a do_not"
-                    );
-                    assert!(
-                        err.authorized_actions.is_empty(),
-                        "{label} (unresolved) denial MUST have an empty menu"
-                    );
-                }
-                _ => {}
-            }
-            assert_eq!(
-                ref_id(&repo, FEAT_REF)?,
-                feat_before,
-                "{label} denial must leave feat unchanged"
-            );
-            println!("`{label}` commit denied with `error.code == \"perm.denied\"`");
-            Ok(())
-        })?;
+                assert_eq!(
+                    ref_id(&repo, FEAT_REF)?,
+                    feat_before,
+                    "{label} denial must leave feat unchanged"
+                );
+                println!("`{label}` commit denied with `error.code == \"perm.denied\"`");
+                Ok(())
+            },
+        )?;
     }
 
     Ok(())
@@ -149,34 +161,39 @@ fn commit_gate_edit_cannot_unprotect() -> anyhow::Result<()> {
     let (repo, _tmp) = governed_repo();
     let main_before = ref_id(&repo, MAIN_REF)?;
 
-    temp_env::with_var("BUT_AGENT_HANDLE", Some("dev"), || -> anyhow::Result<()> {
-        checkout(&repo, "main");
-        but_testsupport::invoke_bash(
-            r#"
+    temp_env::with_vars(
+        [
+            ("BUT_AGENT_HANDLE", Some("dev")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        || -> anyhow::Result<()> {
+            checkout(&repo, "main");
+            but_testsupport::invoke_bash(
+                r#"
 cat >.gitbutler/gates.toml <<'EOF'
 [[branch]]
 name = "main"
 protected = false
 EOF
 "#,
-            &repo,
-        );
-        write_file(&repo, "working-tree-unprotect.txt", "still denied\n")?;
-        let mut ctx = but_ctx::Context::from_repo(repo.clone())?.with_memory_app_cache();
-        assert_commit_denied(
-            commit_to_ref(&mut ctx, MAIN_REF, "working tree unprotect", DryRun::No),
-            "branch.protected",
-        );
-        assert_eq!(
-            ref_id(&repo, MAIN_REF)?,
-            main_before,
-            "uncommitted gates.toml edits must not unprotect main"
-        );
+                &repo,
+            );
+            write_file(&repo, "working-tree-unprotect.txt", "still denied\n")?;
+            let mut ctx = but_ctx::Context::from_repo(repo.clone())?.with_memory_app_cache();
+            assert_commit_denied(
+                commit_to_ref(&mut ctx, MAIN_REF, "working tree unprotect", DryRun::No),
+                "branch.protected",
+            );
+            assert_eq!(
+                ref_id(&repo, MAIN_REF)?,
+                main_before,
+                "uncommitted gates.toml edits must not unprotect main"
+            );
 
-        reset_worktree(&repo);
-        checkout(&repo, "feat");
-        but_testsupport::invoke_bash(
-            r#"
+            reset_worktree(&repo);
+            checkout(&repo, "feat");
+            but_testsupport::invoke_bash(
+                r#"
 cat >.gitbutler/gates.toml <<'EOF'
 [[branch]]
 name = "main"
@@ -185,23 +202,24 @@ EOF
 git add .gitbutler/gates.toml
 git commit -m "feature unprotects main"
 "#,
-            &repo,
-        );
-        checkout(&repo, "main");
-        write_file(&repo, "feature-head-unprotect.txt", "still denied\n")?;
-        let mut ctx = but_ctx::Context::from_repo(repo.clone())?.with_memory_app_cache();
-        assert_commit_denied(
-            commit_to_ref(&mut ctx, MAIN_REF, "feature head unprotect", DryRun::No),
-            "branch.protected",
-        );
-        assert_eq!(
-            ref_id(&repo, MAIN_REF)?,
-            main_before,
-            "feature-head gates.toml must not unprotect target ref main"
-        );
-        println!("target-ref `main` gates.toml controls protection in both unprotect attempts");
-        Ok(())
-    })?;
+                &repo,
+            );
+            checkout(&repo, "main");
+            write_file(&repo, "feature-head-unprotect.txt", "still denied\n")?;
+            let mut ctx = but_ctx::Context::from_repo(repo.clone())?.with_memory_app_cache();
+            assert_commit_denied(
+                commit_to_ref(&mut ctx, MAIN_REF, "feature head unprotect", DryRun::No),
+                "branch.protected",
+            );
+            assert_eq!(
+                ref_id(&repo, MAIN_REF)?,
+                main_before,
+                "feature-head gates.toml must not unprotect target ref main"
+            );
+            println!("target-ref `main` gates.toml controls protection in both unprotect attempts");
+            Ok(())
+        },
+    )?;
 
     Ok(())
 }
@@ -209,12 +227,17 @@ git commit -m "feature unprotects main"
 #[test]
 #[serial_test::serial]
 fn commit_gate_malformed_partial_and_dryrun() -> anyhow::Result<()> {
-    temp_env::with_var("BUT_AGENT_HANDLE", Some("dev"), || -> anyhow::Result<()> {
-        // Malformed governance file at the target ref -> config.invalid (fail closed).
-        let (repo, _tmp) = governed_repo();
-        checkout(&repo, "feat");
-        but_testsupport::invoke_bash(
-            r#"
+    temp_env::with_vars(
+        [
+            ("BUT_AGENT_HANDLE", Some("dev")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        || -> anyhow::Result<()> {
+            // Malformed governance file at the target ref -> config.invalid (fail closed).
+            let (repo, _tmp) = governed_repo();
+            checkout(&repo, "feat");
+            but_testsupport::invoke_bash(
+                r#"
 cat >.gitbutler/gates.toml <<'EOF'
 [[branch]
 name = "feat"
@@ -223,91 +246,92 @@ EOF
 git add .gitbutler/gates.toml
 git commit -m "malformed feat gates"
 "#,
-            &repo,
-        );
-        write_file(&repo, "malformed.txt", "malformed\n")?;
-        let feat_before = ref_id(&repo, FEAT_REF)?;
-        let mut ctx = but_ctx::Context::from_repo(repo.clone())?.with_memory_app_cache();
-        assert_commit_denied(
-            commit_to_ref(&mut ctx, FEAT_REF, "malformed config", DryRun::No),
-            "config.invalid",
-        );
-        assert_eq!(ref_id(&repo, FEAT_REF)?, feat_before);
+                &repo,
+            );
+            write_file(&repo, "malformed.txt", "malformed\n")?;
+            let feat_before = ref_id(&repo, FEAT_REF)?;
+            let mut ctx = but_ctx::Context::from_repo(repo.clone())?.with_memory_app_cache();
+            assert_commit_denied(
+                commit_to_ref(&mut ctx, FEAT_REF, "malformed config", DryRun::No),
+                "config.invalid",
+            );
+            assert_eq!(ref_id(&repo, FEAT_REF)?, feat_before);
 
-        // PARTIAL (incomplete) governance: governance is opted-in (permissions.toml
-        // committed) but the companion gates.toml is missing -> config.invalid (fail
-        // closed on incomplete governance). This is DISTINCT from the fully-absent
-        // case (zero files), which is ungoverned and allowed -- see
-        // `commit_gate_absent_config_is_ungoverned`.
-        let (repo, _tmp) = repo_with_partial_governance_config();
-        checkout(&repo, "feat");
-        write_file(&repo, "partial.txt", "partial\n")?;
-        let feat_before = ref_id(&repo, FEAT_REF)?;
-        let mut ctx = but_ctx::Context::from_repo(repo.clone())?.with_memory_app_cache();
-        assert_commit_denied(
-            commit_to_ref(&mut ctx, FEAT_REF, "partial config", DryRun::No),
-            "config.invalid",
-        );
-        assert_eq!(ref_id(&repo, FEAT_REF)?, feat_before);
+            // PARTIAL (incomplete) governance: governance is opted-in (permissions.toml
+            // committed) but the companion gates.toml is missing -> config.invalid (fail
+            // closed on incomplete governance). This is DISTINCT from the fully-absent
+            // case (zero files), which is ungoverned and allowed -- see
+            // `commit_gate_absent_config_is_ungoverned`.
+            let (repo, _tmp) = repo_with_partial_governance_config();
+            checkout(&repo, "feat");
+            write_file(&repo, "partial.txt", "partial\n")?;
+            let feat_before = ref_id(&repo, FEAT_REF)?;
+            let mut ctx = but_ctx::Context::from_repo(repo.clone())?.with_memory_app_cache();
+            assert_commit_denied(
+                commit_to_ref(&mut ctx, FEAT_REF, "partial config", DryRun::No),
+                "config.invalid",
+            );
+            assert_eq!(ref_id(&repo, FEAT_REF)?, feat_before);
 
-        // DryRun does not bypass the gate: a denied protected-branch commit still
-        // denies and persists nothing.
-        let (repo, _tmp) = governed_repo();
-        checkout(&repo, "main");
-        write_file(&repo, "denied-dryrun.txt", "denied dry run\n")?;
-        let main_before = ref_id(&repo, MAIN_REF)?;
-        let mut ctx = but_ctx::Context::from_repo(repo.clone())?.with_memory_app_cache();
-        let dryrun_err = assert_commit_denied(
-            commit_to_ref(&mut ctx, MAIN_REF, "denied dry run", DryRun::Yes),
-            "branch.protected",
-        );
-        // STEER-004: DryRun carries the full steering payload.
-        assert_eq!(
-            dryrun_err.class,
-            but_authz::DenialClass::ActorCorrectable,
-            "DryRun branch.protected MUST carry class=ActorCorrectable"
-        );
-        assert!(
-            dryrun_err
-                .held_permissions
-                .contains(&but_authz::Authority::ContentsWrite),
-            "DryRun branch.protected MUST carry held_permissions (contents:write)"
-        );
-        assert!(
-            !dryrun_err.authorized_actions.is_empty(),
-            "DryRun branch.protected MUST carry authorized_actions"
-        );
-        assert_eq!(
-            ref_id(&repo, MAIN_REF)?,
-            main_before,
-            "denied dry run must leave main unchanged"
-        );
+            // DryRun does not bypass the gate: a denied protected-branch commit still
+            // denies and persists nothing.
+            let (repo, _tmp) = governed_repo();
+            checkout(&repo, "main");
+            write_file(&repo, "denied-dryrun.txt", "denied dry run\n")?;
+            let main_before = ref_id(&repo, MAIN_REF)?;
+            let mut ctx = but_ctx::Context::from_repo(repo.clone())?.with_memory_app_cache();
+            let dryrun_err = assert_commit_denied(
+                commit_to_ref(&mut ctx, MAIN_REF, "denied dry run", DryRun::Yes),
+                "branch.protected",
+            );
+            // STEER-004: DryRun carries the full steering payload.
+            assert_eq!(
+                dryrun_err.class,
+                but_authz::DenialClass::ActorCorrectable,
+                "DryRun branch.protected MUST carry class=ActorCorrectable"
+            );
+            assert!(
+                dryrun_err
+                    .held_permissions
+                    .contains(&but_authz::Authority::ContentsWrite),
+                "DryRun branch.protected MUST carry held_permissions (contents:write)"
+            );
+            assert!(
+                !dryrun_err.authorized_actions.is_empty(),
+                "DryRun branch.protected MUST carry authorized_actions"
+            );
+            assert_eq!(
+                ref_id(&repo, MAIN_REF)?,
+                main_before,
+                "denied dry run must leave main unchanged"
+            );
 
-        // An allowed DryRun previews a commit object but persists nothing: it MUST
-        // still produce a preview commit, and that object MUST be absent from the
-        // live odb (strong assertion -- not vacuously skipped when new_commit None).
-        reset_worktree(&repo);
-        checkout(&repo, "feat");
-        write_file(&repo, "allowed-dryrun.txt", "allowed dry run\n")?;
-        let feat_before = ref_id(&repo, FEAT_REF)?;
-        let mut ctx = but_ctx::Context::from_repo(repo.clone())?.with_memory_app_cache();
-        let outcome = commit_to_ref(&mut ctx, FEAT_REF, "allowed dry run", DryRun::Yes)?;
-        assert_eq!(
-            ref_id(&repo, FEAT_REF)?,
-            feat_before,
-            "allowed dry run must preview without advancing feat"
-        );
-        let preview_commit = outcome
-            .new_commit
-            .expect("an allowed DryRun must still preview a commit object");
-        assert!(
-            repo.find_object(preview_commit).is_err(),
-            "allowed dry run commit object must not be persisted in the live repo"
-        );
-        println!("malformed and partial (incomplete) config return `config.invalid`");
-        println!("denied and allowed DryRun commits persist no ref/object");
-        Ok(())
-    })?;
+            // An allowed DryRun previews a commit object but persists nothing: it MUST
+            // still produce a preview commit, and that object MUST be absent from the
+            // live odb (strong assertion -- not vacuously skipped when new_commit None).
+            reset_worktree(&repo);
+            checkout(&repo, "feat");
+            write_file(&repo, "allowed-dryrun.txt", "allowed dry run\n")?;
+            let feat_before = ref_id(&repo, FEAT_REF)?;
+            let mut ctx = but_ctx::Context::from_repo(repo.clone())?.with_memory_app_cache();
+            let outcome = commit_to_ref(&mut ctx, FEAT_REF, "allowed dry run", DryRun::Yes)?;
+            assert_eq!(
+                ref_id(&repo, FEAT_REF)?,
+                feat_before,
+                "allowed dry run must preview without advancing feat"
+            );
+            let preview_commit = outcome
+                .new_commit
+                .expect("an allowed DryRun must still preview a commit object");
+            assert!(
+                repo.find_object(preview_commit).is_err(),
+                "allowed dry run commit object must not be persisted in the live repo"
+            );
+            println!("malformed and partial (incomplete) config return `config.invalid`");
+            println!("denied and allowed DryRun commits persist no ref/object");
+            Ok(())
+        },
+    )?;
 
     Ok(())
 }
@@ -325,27 +349,33 @@ fn commit_gate_absent_config_is_ungoverned() -> anyhow::Result<()> {
     for (handle, label) in [(None, "unset"), (Some("ro"), "read-only")] {
         let (repo, _tmp) = repo_with_no_governance_config();
         let feat_before = ref_id(&repo, FEAT_REF)?;
-        temp_env::with_var("BUT_AGENT_HANDLE", handle, || -> anyhow::Result<()> {
-            checkout(&repo, "feat");
-            write_file(&repo, &format!("ungoverned-{label}.txt"), label)?;
-            let mut ctx = but_ctx::Context::from_repo(repo.clone())?.with_memory_app_cache();
-            let outcome = commit_to_ref(
-                &mut ctx,
-                FEAT_REF,
-                &format!("ungoverned {label} commit"),
-                DryRun::No,
-            )?;
-            assert!(
-                outcome.new_commit.is_some(),
-                "ungoverned repo ({label} handle) must allow a commit -- no governance config is committed"
-            );
-            assert_ne!(
-                ref_id(&repo, FEAT_REF)?,
-                feat_before,
-                "feat ref should advance in an ungoverned repo ({label} handle)"
-            );
-            Ok(())
-        })?;
+        temp_env::with_vars(
+            [
+                ("BUT_AGENT_HANDLE", handle),
+                ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+            ],
+            || -> anyhow::Result<()> {
+                checkout(&repo, "feat");
+                write_file(&repo, &format!("ungoverned-{label}.txt"), label)?;
+                let mut ctx = but_ctx::Context::from_repo(repo.clone())?.with_memory_app_cache();
+                let outcome = commit_to_ref(
+                    &mut ctx,
+                    FEAT_REF,
+                    &format!("ungoverned {label} commit"),
+                    DryRun::No,
+                )?;
+                assert!(
+                    outcome.new_commit.is_some(),
+                    "ungoverned repo ({label} handle) must allow a commit -- no governance config is committed"
+                );
+                assert_ne!(
+                    ref_id(&repo, FEAT_REF)?,
+                    feat_before,
+                    "feat ref should advance in an ungoverned repo ({label} handle)"
+                );
+                Ok(())
+            },
+        )?;
     }
     println!(
         "a target ref with no committed governance config is ungoverned: commits are allowed (opt-in by presence)"
@@ -403,74 +433,86 @@ fn commit_gate_steering_fields_positive_assertions() -> anyhow::Result<()> {
     let (repo, _tmp) = governed_repo();
 
     // ---- branch.protected: dev (holds contents:write) commits to main ----
-    temp_env::with_var("BUT_AGENT_HANDLE", Some("dev"), || -> anyhow::Result<()> {
-        checkout(&repo, "main");
-        write_file(&repo, "steer-audit-protected.txt", "audit\n")?;
-        let mut ctx = but_ctx::Context::from_repo(repo.clone())?.with_memory_app_cache();
-        let err = match commit_to_ref(&mut ctx, MAIN_REF, "steer audit protected", DryRun::No) {
-            Ok(_) => anyhow::bail!("protected main commit should be denied"),
-            Err(err) => err,
-        };
-        let denial = err
-            .downcast_ref::<but_authz::Denial>()
-            .expect("branch.protected should be a Denial");
+    temp_env::with_vars(
+        [
+            ("BUT_AGENT_HANDLE", Some("dev")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        || -> anyhow::Result<()> {
+            checkout(&repo, "main");
+            write_file(&repo, "steer-audit-protected.txt", "audit\n")?;
+            let mut ctx = but_ctx::Context::from_repo(repo.clone())?.with_memory_app_cache();
+            let err = match commit_to_ref(&mut ctx, MAIN_REF, "steer audit protected", DryRun::No) {
+                Ok(_) => anyhow::bail!("protected main commit should be denied"),
+                Err(err) => err,
+            };
+            let denial = err
+                .downcast_ref::<but_authz::Denial>()
+                .expect("branch.protected should be a Denial");
 
-        assert_eq!(denial.code, "branch.protected");
-        assert_eq!(
-            denial.class,
-            but_authz::DenialClass::ActorCorrectable,
-            "branch.protected MUST be actor_correctable"
-        );
-        assert!(
-            denial
-                .held_permissions
-                .contains(&but_authz::Authority::ContentsWrite),
-            "branch.protected held_permissions MUST include contents:write"
-        );
-        assert!(
-            !denial.authorized_actions.is_empty(),
-            "branch.protected MUST carry a non-empty authorized_actions menu"
-        );
+            assert_eq!(denial.code, "branch.protected");
+            assert_eq!(
+                denial.class,
+                but_authz::DenialClass::ActorCorrectable,
+                "branch.protected MUST be actor_correctable"
+            );
+            assert!(
+                denial
+                    .held_permissions
+                    .contains(&but_authz::Authority::ContentsWrite),
+                "branch.protected held_permissions MUST include contents:write"
+            );
+            assert!(
+                !denial.authorized_actions.is_empty(),
+                "branch.protected MUST carry a non-empty authorized_actions menu"
+            );
 
-        reset_worktree(&repo);
-        Ok(())
-    })?;
+            reset_worktree(&repo);
+            Ok(())
+        },
+    )?;
 
     // ---- perm.denied: ro (lacks contents:write) commits to feat ----
-    temp_env::with_var("BUT_AGENT_HANDLE", Some("ro"), || -> anyhow::Result<()> {
-        checkout(&repo, "feat");
-        write_file(&repo, "steer-audit-perm.txt", "audit\n")?;
-        let mut ctx = but_ctx::Context::from_repo(repo.clone())?.with_memory_app_cache();
-        let err = match commit_to_ref(&mut ctx, FEAT_REF, "steer audit perm", DryRun::No) {
-            Ok(_) => anyhow::bail!("readonly commit should be denied"),
-            Err(err) => err,
-        };
-        let denial = err
-            .downcast_ref::<but_authz::Denial>()
-            .expect("perm.denied should be a Denial");
+    temp_env::with_vars(
+        [
+            ("BUT_AGENT_HANDLE", Some("ro")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        || -> anyhow::Result<()> {
+            checkout(&repo, "feat");
+            write_file(&repo, "steer-audit-perm.txt", "audit\n")?;
+            let mut ctx = but_ctx::Context::from_repo(repo.clone())?.with_memory_app_cache();
+            let err = match commit_to_ref(&mut ctx, FEAT_REF, "steer audit perm", DryRun::No) {
+                Ok(_) => anyhow::bail!("readonly commit should be denied"),
+                Err(err) => err,
+            };
+            let denial = err
+                .downcast_ref::<but_authz::Denial>()
+                .expect("perm.denied should be a Denial");
 
-        assert_eq!(denial.code, "perm.denied");
-        assert_eq!(
-            denial.class,
-            but_authz::DenialClass::ActorCorrectable,
-            "resolved-principal perm.denied (ro) MUST be actor_correctable"
-        );
-        // ro holds contents:read only — held_permissions is non-empty.
-        assert!(
-            !denial.held_permissions.is_empty(),
-            "perm.denied held_permissions MUST be non-empty for a resolved principal: {:?}",
-            denial.held_permissions
-        );
-        // The menu offers review verbs + discovery (ro may hold comments:write
-        // or reviews:write in other configs; here ro holds contents:read only,
-        // so the menu is discovery-only — but it MUST be non-empty).
-        assert!(
-            !denial.authorized_actions.is_empty(),
-            "perm.denied authorized_actions MUST be non-empty (at least discovery)"
-        );
+            assert_eq!(denial.code, "perm.denied");
+            assert_eq!(
+                denial.class,
+                but_authz::DenialClass::ActorCorrectable,
+                "resolved-principal perm.denied (ro) MUST be actor_correctable"
+            );
+            // ro holds contents:read only — held_permissions is non-empty.
+            assert!(
+                !denial.held_permissions.is_empty(),
+                "perm.denied held_permissions MUST be non-empty for a resolved principal: {:?}",
+                denial.held_permissions
+            );
+            // The menu offers review verbs + discovery (ro may hold comments:write
+            // or reviews:write in other configs; here ro holds contents:read only,
+            // so the menu is discovery-only — but it MUST be non-empty).
+            assert!(
+                !denial.authorized_actions.is_empty(),
+                "perm.denied authorized_actions MUST be non-empty (at least discovery)"
+            );
 
-        Ok(())
-    })?;
+            Ok(())
+        },
+    )?;
 
     println!("AC-7: commit_gate.rs steering fields positive assertions:");
     println!(
@@ -490,44 +532,57 @@ fn commit_gate_commit_relative_checks_contents_write_without_branch_protection()
     let (repo, _tmp) = governed_repo();
     let main_before = ref_id(&repo, MAIN_REF)?;
 
-    temp_env::with_var("BUT_AGENT_HANDLE", Some("ro"), || -> anyhow::Result<()> {
-        checkout(&repo, "main");
-        write_file(&repo, "commit-relative-ro.txt", "readonly\n")?;
-        let mut ctx = but_ctx::Context::from_repo(repo.clone())?.with_memory_app_cache();
-        let err = assert_commit_denied(
-            commit_to_commit(
-                &mut ctx,
+    temp_env::with_vars(
+        [
+            ("BUT_AGENT_HANDLE", Some("ro")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        || -> anyhow::Result<()> {
+            checkout(&repo, "main");
+            write_file(&repo, "commit-relative-ro.txt", "readonly\n")?;
+            let mut ctx = but_ctx::Context::from_repo(repo.clone())?.with_memory_app_cache();
+            let err = assert_commit_denied(
+                commit_to_commit(
+                    &mut ctx,
+                    main_before,
+                    "readonly commit-relative",
+                    DryRun::No,
+                ),
+                "perm.denied",
+            );
+            assert!(
+                err.message.contains("contents:write"),
+                "commit-relative denial should require contents:write"
+            );
+            assert_eq!(
+                ref_id(&repo, MAIN_REF)?,
                 main_before,
-                "readonly commit-relative",
-                DryRun::No,
-            ),
-            "perm.denied",
-        );
-        assert!(
-            err.message.contains("contents:write"),
-            "commit-relative denial should require contents:write"
-        );
-        assert_eq!(
-            ref_id(&repo, MAIN_REF)?,
-            main_before,
-            "readonly commit-relative denial must leave protected main unchanged"
-        );
-        Ok(())
-    })?;
+                "readonly commit-relative denial must leave protected main unchanged"
+            );
+            Ok(())
+        },
+    )?;
 
     reset_worktree(&repo);
 
-    temp_env::with_var("BUT_AGENT_HANDLE", Some("dev"), || -> anyhow::Result<()> {
-        checkout(&repo, "main");
-        write_file(&repo, "commit-relative-dev.txt", "dev\n")?;
-        let mut ctx = but_ctx::Context::from_repo(repo.clone())?.with_memory_app_cache();
-        let outcome = commit_to_commit(&mut ctx, main_before, "dev commit-relative", DryRun::No)?;
-        assert!(
-            outcome.new_commit.is_some(),
-            "contents:write principal should create a commit relative to a protected branch commit"
-        );
-        Ok(())
-    })?;
+    temp_env::with_vars(
+        [
+            ("BUT_AGENT_HANDLE", Some("dev")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        || -> anyhow::Result<()> {
+            checkout(&repo, "main");
+            write_file(&repo, "commit-relative-dev.txt", "dev\n")?;
+            let mut ctx = but_ctx::Context::from_repo(repo.clone())?.with_memory_app_cache();
+            let outcome =
+                commit_to_commit(&mut ctx, main_before, "dev commit-relative", DryRun::No)?;
+            assert!(
+                outcome.new_commit.is_some(),
+                "contents:write principal should create a commit relative to a protected branch commit"
+            );
+            Ok(())
+        },
+    )?;
 
     Ok(())
 }
@@ -540,30 +595,42 @@ fn commit_gate_worktree_integrate_protected_rejected() -> anyhow::Result<()> {
     let feature_target = gix::refs::FullName::try_from(FEAT_REF)?;
     let protected_target = gix::refs::FullName::try_from(MAIN_REF)?;
 
-    temp_env::with_var("BUT_AGENT_HANDLE", Some("dev"), || -> anyhow::Result<()> {
-        let mut ctx = but_ctx::Context::from_repo(repo.clone())?.with_memory_app_cache();
-        let worktree_id = but_worktrees::WorktreeId::generate();
-        let protected_result =
-            but_api::legacy::worktree::worktree_integrate(&mut ctx, worktree_id, protected_target);
-        let denial = assert_governance_denied(protected_result, "branch.protected");
-        assert!(
-            denial.message.contains("main"),
-            "branch.protected message should name the protected main branch"
-        );
-        assert_eq!(
-            ref_id(&repo, MAIN_REF)?,
-            main_before,
-            "main ref must remain unchanged after protected worktree integration denial"
-        );
+    temp_env::with_vars(
+        [
+            ("BUT_AGENT_HANDLE", Some("dev")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        || -> anyhow::Result<()> {
+            let mut ctx = but_ctx::Context::from_repo(repo.clone())?.with_memory_app_cache();
+            let worktree_id = but_worktrees::WorktreeId::generate();
+            let protected_result = but_api::legacy::worktree::worktree_integrate(
+                &mut ctx,
+                worktree_id,
+                protected_target,
+            );
+            let denial = assert_governance_denied(protected_result, "branch.protected");
+            assert!(
+                denial.message.contains("main"),
+                "branch.protected message should name the protected main branch"
+            );
+            assert_eq!(
+                ref_id(&repo, MAIN_REF)?,
+                main_before,
+                "main ref must remain unchanged after protected worktree integration denial"
+            );
 
-        let mut ctx = but_ctx::Context::from_repo(repo.clone())?.with_memory_app_cache();
-        let worktree_id = but_worktrees::WorktreeId::generate();
-        let feature_result =
-            but_api::legacy::worktree::worktree_integrate(&mut ctx, worktree_id, feature_target);
-        assert_no_governance_denial(feature_result, "feature-target worktree integration");
+            let mut ctx = but_ctx::Context::from_repo(repo.clone())?.with_memory_app_cache();
+            let worktree_id = but_worktrees::WorktreeId::generate();
+            let feature_result = but_api::legacy::worktree::worktree_integrate(
+                &mut ctx,
+                worktree_id,
+                feature_target,
+            );
+            assert_no_governance_denial(feature_result, "feature-target worktree integration");
 
-        Ok(())
-    })?;
+            Ok(())
+        },
+    )?;
 
     Ok(())
 }
@@ -580,69 +647,81 @@ fn commit_gate_apply_integrate_readonly_denied() -> anyhow::Result<()> {
         set_default_target_to_origin_main(&mut ctx, &repo)?;
     }
 
-    temp_env::with_var("BUT_AGENT_HANDLE", Some("ro"), || -> anyhow::Result<()> {
-        let mut ctx = but_ctx::Context::from_repo(repo.clone())?.with_memory_app_cache();
-        let apply_denial = assert_governance_denied(
-            but_api::branch::apply(&mut ctx, feat.as_ref()),
-            "perm.denied",
-        );
-        assert!(
-            apply_denial.message.contains("contents:write"),
-            "branch::apply denial should name the missing contents:write permission"
-        );
-        assert_eq!(
-            ref_id(&repo, FEAT_REF)?,
-            feat_before,
-            "readonly branch::apply denial must leave feat unchanged"
-        );
+    temp_env::with_vars(
+        [
+            ("BUT_AGENT_HANDLE", Some("ro")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        || -> anyhow::Result<()> {
+            let mut ctx = but_ctx::Context::from_repo(repo.clone())?.with_memory_app_cache();
+            let apply_denial = assert_governance_denied(
+                but_api::branch::apply(&mut ctx, feat.as_ref()),
+                "perm.denied",
+            );
+            assert!(
+                apply_denial.message.contains("contents:write"),
+                "branch::apply denial should name the missing contents:write permission"
+            );
+            assert_eq!(
+                ref_id(&repo, FEAT_REF)?,
+                feat_before,
+                "readonly branch::apply denial must leave feat unchanged"
+            );
 
-        let mut ctx = but_ctx::Context::from_repo(repo.clone())?.with_memory_app_cache();
-        let integration = integration_plan_for_branch(&ctx, feat.as_ref())?;
-        let integrate_denial = assert_governance_denied(
-            but_api::branch::apply_branch_integration(
-                &mut ctx,
-                feat.as_ref(),
-                integration,
-                DryRun::No,
-            ),
-            "perm.denied",
-        );
-        assert!(
-            integrate_denial.message.contains("contents:write"),
-            "apply_branch_integration denial should name the missing contents:write permission"
-        );
-        assert_eq!(
-            ref_id(&repo, FEAT_REF)?,
-            feat_before,
-            "readonly apply_branch_integration denial must leave feat unchanged"
-        );
+            let mut ctx = but_ctx::Context::from_repo(repo.clone())?.with_memory_app_cache();
+            let integration = integration_plan_for_branch(&ctx, feat.as_ref())?;
+            let integrate_denial = assert_governance_denied(
+                but_api::branch::apply_branch_integration(
+                    &mut ctx,
+                    feat.as_ref(),
+                    integration,
+                    DryRun::No,
+                ),
+                "perm.denied",
+            );
+            assert!(
+                integrate_denial.message.contains("contents:write"),
+                "apply_branch_integration denial should name the missing contents:write permission"
+            );
+            assert_eq!(
+                ref_id(&repo, FEAT_REF)?,
+                feat_before,
+                "readonly apply_branch_integration denial must leave feat unchanged"
+            );
 
-        Ok(())
-    })?;
+            Ok(())
+        },
+    )?;
 
     reset_worktree(&repo);
 
-    temp_env::with_var("BUT_AGENT_HANDLE", Some("dev"), || -> anyhow::Result<()> {
-        let mut ctx = but_ctx::Context::from_repo(repo.clone())?.with_memory_app_cache();
-        assert_no_governance_denial(
-            but_api::branch::apply(&mut ctx, feat.as_ref()),
-            "contents:write branch::apply",
-        );
+    temp_env::with_vars(
+        [
+            ("BUT_AGENT_HANDLE", Some("dev")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        || -> anyhow::Result<()> {
+            let mut ctx = but_ctx::Context::from_repo(repo.clone())?.with_memory_app_cache();
+            assert_no_governance_denial(
+                but_api::branch::apply(&mut ctx, feat.as_ref()),
+                "contents:write branch::apply",
+            );
 
-        let mut ctx = but_ctx::Context::from_repo(repo.clone())?.with_memory_app_cache();
-        let integration = integration_plan_for_branch(&ctx, feat.as_ref())?;
-        assert_no_governance_denial(
-            but_api::branch::apply_branch_integration(
-                &mut ctx,
-                feat.as_ref(),
-                integration,
-                DryRun::No,
-            ),
-            "contents:write apply_branch_integration",
-        );
+            let mut ctx = but_ctx::Context::from_repo(repo.clone())?.with_memory_app_cache();
+            let integration = integration_plan_for_branch(&ctx, feat.as_ref())?;
+            assert_no_governance_denial(
+                but_api::branch::apply_branch_integration(
+                    &mut ctx,
+                    feat.as_ref(),
+                    integration,
+                    DryRun::No,
+                ),
+                "contents:write apply_branch_integration",
+            );
 
-        Ok(())
-    })?;
+            Ok(())
+        },
+    )?;
 
     Ok(())
 }
@@ -653,29 +732,35 @@ fn commit_gate_apply_integrate_no_target_ungoverned() -> anyhow::Result<()> {
     let (repo, _tmp) = repo_with_no_governance_config();
     let feat = gix::refs::FullName::try_from(FEAT_REF)?;
 
-    temp_env::with_var("BUT_AGENT_HANDLE", Some("ro"), || -> anyhow::Result<()> {
-        let mut ctx = but_ctx::Context::from_repo(repo.clone())?.with_memory_app_cache();
-        clear_default_target(&mut ctx)?;
-        assert_no_governance_denial(
-            but_api::branch::apply(&mut ctx, feat.as_ref()),
-            "no-target branch::apply",
-        );
+    temp_env::with_vars(
+        [
+            ("BUT_AGENT_HANDLE", Some("ro")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        || -> anyhow::Result<()> {
+            let mut ctx = but_ctx::Context::from_repo(repo.clone())?.with_memory_app_cache();
+            clear_default_target(&mut ctx)?;
+            assert_no_governance_denial(
+                but_api::branch::apply(&mut ctx, feat.as_ref()),
+                "no-target branch::apply",
+            );
 
-        let mut ctx = but_ctx::Context::from_repo(repo.clone())?.with_memory_app_cache();
-        clear_default_target(&mut ctx)?;
-        let integration = empty_body_integration_plan(&repo)?;
-        assert_no_governance_denial(
-            but_api::branch::apply_branch_integration(
-                &mut ctx,
-                feat.as_ref(),
-                integration,
-                DryRun::No,
-            ),
-            "no-target apply_branch_integration",
-        );
+            let mut ctx = but_ctx::Context::from_repo(repo.clone())?.with_memory_app_cache();
+            clear_default_target(&mut ctx)?;
+            let integration = empty_body_integration_plan(&repo)?;
+            assert_no_governance_denial(
+                but_api::branch::apply_branch_integration(
+                    &mut ctx,
+                    feat.as_ref(),
+                    integration,
+                    DryRun::No,
+                ),
+                "no-target apply_branch_integration",
+            );
 
-        Ok(())
-    })?;
+            Ok(())
+        },
+    )?;
 
     Ok(())
 }
@@ -693,47 +778,53 @@ fn commit_gate_governed_missing_target_failclosed() -> anyhow::Result<()> {
         "the governed missing-target fixture must commit governance on main"
     );
 
-    temp_env::with_var("BUT_AGENT_HANDLE", Some("ro"), || -> anyhow::Result<()> {
-        let mut ctx = but_ctx::Context::from_repo(repo.clone())?.with_memory_app_cache();
-        clear_default_target(&mut ctx)?;
-        let apply_denial = assert_governance_denied(
-            but_api::branch::apply(&mut ctx, feat.as_ref()),
-            "perm.denied",
-        );
-        assert!(
-            apply_denial.message.contains("contents:write"),
-            "governed no-target branch::apply must fail closed through contents:write"
-        );
-        assert_eq!(
-            ref_id(&repo, FEAT_REF)?,
-            feat_before,
-            "governed no-target branch::apply denial must leave feat unchanged"
-        );
+    temp_env::with_vars(
+        [
+            ("BUT_AGENT_HANDLE", Some("ro")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        || -> anyhow::Result<()> {
+            let mut ctx = but_ctx::Context::from_repo(repo.clone())?.with_memory_app_cache();
+            clear_default_target(&mut ctx)?;
+            let apply_denial = assert_governance_denied(
+                but_api::branch::apply(&mut ctx, feat.as_ref()),
+                "perm.denied",
+            );
+            assert!(
+                apply_denial.message.contains("contents:write"),
+                "governed no-target branch::apply must fail closed through contents:write"
+            );
+            assert_eq!(
+                ref_id(&repo, FEAT_REF)?,
+                feat_before,
+                "governed no-target branch::apply denial must leave feat unchanged"
+            );
 
-        let mut ctx = but_ctx::Context::from_repo(repo.clone())?.with_memory_app_cache();
-        clear_default_target(&mut ctx)?;
-        let integration = empty_body_integration_plan(&repo)?;
-        let integrate_denial = assert_governance_denied(
-            but_api::branch::apply_branch_integration(
-                &mut ctx,
-                feat.as_ref(),
-                integration,
-                DryRun::No,
-            ),
-            "perm.denied",
-        );
-        assert!(
-            integrate_denial.message.contains("contents:write"),
-            "governed no-target apply_branch_integration must fail closed through contents:write"
-        );
-        assert_eq!(
-            ref_id(&repo, FEAT_REF)?,
-            feat_before,
-            "governed no-target apply_branch_integration denial must leave feat unchanged"
-        );
+            let mut ctx = but_ctx::Context::from_repo(repo.clone())?.with_memory_app_cache();
+            clear_default_target(&mut ctx)?;
+            let integration = empty_body_integration_plan(&repo)?;
+            let integrate_denial = assert_governance_denied(
+                but_api::branch::apply_branch_integration(
+                    &mut ctx,
+                    feat.as_ref(),
+                    integration,
+                    DryRun::No,
+                ),
+                "perm.denied",
+            );
+            assert!(
+                integrate_denial.message.contains("contents:write"),
+                "governed no-target apply_branch_integration must fail closed through contents:write"
+            );
+            assert_eq!(
+                ref_id(&repo, FEAT_REF)?,
+                feat_before,
+                "governed no-target apply_branch_integration denial must leave feat unchanged"
+            );
 
-        Ok(())
-    })?;
+            Ok(())
+        },
+    )?;
 
     Ok(())
 }
@@ -750,47 +841,53 @@ fn commit_gate_apply_integrate_dryrun_targetref_pinned() -> anyhow::Result<()> {
         set_default_target_to_origin_main(&mut ctx, &repo)?;
     }
 
-    temp_env::with_var("BUT_AGENT_HANDLE", Some("ro"), || -> anyhow::Result<()> {
-        let mut ctx = but_ctx::Context::from_repo(repo.clone())?.with_memory_app_cache();
-        let integration = integration_plan_for_branch(&ctx, feat.as_ref())?;
-        let dryrun_denial = assert_governance_denied(
-            but_api::branch::apply_branch_integration(
-                &mut ctx,
-                feat.as_ref(),
-                integration,
-                DryRun::Yes,
-            ),
-            "perm.denied",
-        );
-        assert!(
-            dryrun_denial.message.contains("contents:write"),
-            "DryRun integrate denial should name the missing contents:write permission"
-        );
-        assert_eq!(
-            ref_id(&repo, FEAT_REF)?,
-            feat_before,
-            "denied DryRun apply_branch_integration must leave feat unchanged"
-        );
+    temp_env::with_vars(
+        [
+            ("BUT_AGENT_HANDLE", Some("ro")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        || -> anyhow::Result<()> {
+            let mut ctx = but_ctx::Context::from_repo(repo.clone())?.with_memory_app_cache();
+            let integration = integration_plan_for_branch(&ctx, feat.as_ref())?;
+            let dryrun_denial = assert_governance_denied(
+                but_api::branch::apply_branch_integration(
+                    &mut ctx,
+                    feat.as_ref(),
+                    integration,
+                    DryRun::Yes,
+                ),
+                "perm.denied",
+            );
+            assert!(
+                dryrun_denial.message.contains("contents:write"),
+                "DryRun integrate denial should name the missing contents:write permission"
+            );
+            assert_eq!(
+                ref_id(&repo, FEAT_REF)?,
+                feat_before,
+                "denied DryRun apply_branch_integration must leave feat unchanged"
+            );
 
-        reset_worktree(&repo);
-        weaken_worktree_governance(&repo);
-        let mut ctx = but_ctx::Context::from_repo(repo.clone())?.with_memory_app_cache();
-        let apply_denial = assert_governance_denied(
-            but_api::branch::apply(&mut ctx, feat.as_ref()),
-            "perm.denied",
-        );
-        assert!(
-            apply_denial.message.contains("contents:write"),
-            "working-tree governance edits must not grant contents:write"
-        );
-        assert_eq!(
-            ref_id(&repo, FEAT_REF)?,
-            feat_before,
-            "working-tree governance edit must not let readonly apply advance feat"
-        );
+            reset_worktree(&repo);
+            weaken_worktree_governance(&repo);
+            let mut ctx = but_ctx::Context::from_repo(repo.clone())?.with_memory_app_cache();
+            let apply_denial = assert_governance_denied(
+                but_api::branch::apply(&mut ctx, feat.as_ref()),
+                "perm.denied",
+            );
+            assert!(
+                apply_denial.message.contains("contents:write"),
+                "working-tree governance edits must not grant contents:write"
+            );
+            assert_eq!(
+                ref_id(&repo, FEAT_REF)?,
+                feat_before,
+                "working-tree governance edit must not let readonly apply advance feat"
+            );
 
-        Ok(())
-    })?;
+            Ok(())
+        },
+    )?;
 
     assert_gate_helper_call_count("src/branch.rs", 2)?;
     assert_gate_helper_call_count("src/legacy/worktree.rs", 1)?;

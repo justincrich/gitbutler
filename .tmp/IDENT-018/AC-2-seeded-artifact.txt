@@ -1,0 +1,13 @@
+AC-2 seeded evidence
+
+Green evidence:
+- .tmp/IDENT-018/AC-2-green.txt
+- .tmp/IDENT-018/tc-3-output.txt
+
+Observed values:
+- all_scopes_paired=true
+- unpaired helper scope count == 0
+- high-frequency targets passing == 3/3
+- commit_gate target passed
+- perm_governance target passed
+- local_review_assignments target passed

@@ -31,13 +31,19 @@ fn request_review_persists_pending_assignment_without_touching_verdicts() -> any
     );
 
     // `dev` holds pull_requests:write — the open-PR authority.
-    temp_env::with_var("BUT_AGENT_HANDLE", Some("dev"), || {
-        runtime.block_on(but_api::legacy::forge::request_review(
-            ctx.to_sync(),
-            FEAT_REF.to_owned(),
-            Some("rev2".to_owned()),
-        ))
-    })
+    temp_env::with_vars(
+        [
+            ("BUT_AGENT_HANDLE", Some("dev")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        || {
+            runtime.block_on(but_api::legacy::forge::request_review(
+                ctx.to_sync(),
+                FEAT_REF.to_owned(),
+                Some("rev2".to_owned()),
+            ))
+        },
+    )
     .context("request_review as dev (pull_requests:write) must succeed")?;
 
     let db = ctx.db.get_cache()?;
@@ -92,24 +98,36 @@ fn assign_reviewer_distinct_from_author_upserts_idempotent() -> anyhow::Result<(
     // Establish `auth` as the target branch author principal by recording it as
     // the opener (the canonical source for "target author" at the but-api
     // boundary). `dev` opens the review on PullRequestsWrite.
-    temp_env::with_var("BUT_AGENT_HANDLE", Some("auth"), || {
-        runtime.block_on(but_api::legacy::forge::request_review(
-            ctx.to_sync(),
-            FEAT_REF.to_owned(),
-            None,
-        ))
-    })
+    temp_env::with_vars(
+        [
+            ("BUT_AGENT_HANDLE", Some("auth")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        || {
+            runtime.block_on(but_api::legacy::forge::request_review(
+                ctx.to_sync(),
+                FEAT_REF.to_owned(),
+                None,
+            ))
+        },
+    )
     .context("request_review as auth establishes the opener principal")?;
 
     // `rev` holds reviews:write — the assignment authority.
     let assign = |reviewer: &str| {
-        temp_env::with_var("BUT_AGENT_HANDLE", Some("rev"), || {
-            runtime.block_on(but_api::legacy::forge::assign_reviewer(
-                ctx.to_sync(),
-                FEAT_REF.to_owned(),
-                reviewer.to_owned(),
-            ))
-        })
+        temp_env::with_vars(
+            [
+                ("BUT_AGENT_HANDLE", Some("rev")),
+                ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+            ],
+            || {
+                runtime.block_on(but_api::legacy::forge::assign_reviewer(
+                    ctx.to_sync(),
+                    FEAT_REF.to_owned(),
+                    reviewer.to_owned(),
+                ))
+            },
+        )
     };
 
     assign("rev2").context("first assign_reviewer(rev2) must succeed")?;
@@ -173,22 +191,34 @@ fn request_changes_review_implements_changes_requested_write() -> anyhow::Result
     // Open the review and seed a pending assignment for `rev` so set_state has a
     // row to act on. `rev` itself holds reviews:write and is distinct from the
     // `auth` opener, so the assign succeeds.
-    temp_env::with_var("BUT_AGENT_HANDLE", Some("auth"), || {
-        runtime.block_on(but_api::legacy::forge::request_review(
-            ctx.to_sync(),
-            FEAT_REF.to_owned(),
-            None,
-        ))
-    })
+    temp_env::with_vars(
+        [
+            ("BUT_AGENT_HANDLE", Some("auth")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        || {
+            runtime.block_on(but_api::legacy::forge::request_review(
+                ctx.to_sync(),
+                FEAT_REF.to_owned(),
+                None,
+            ))
+        },
+    )
     .context("opener must be established")?;
 
-    temp_env::with_var("BUT_AGENT_HANDLE", Some("auth"), || {
-        runtime.block_on(but_api::legacy::forge::assign_reviewer(
-            ctx.to_sync(),
-            FEAT_REF.to_owned(),
-            "rev".to_owned(),
-        ))
-    })
+    temp_env::with_vars(
+        [
+            ("BUT_AGENT_HANDLE", Some("auth")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        || {
+            runtime.block_on(but_api::legacy::forge::assign_reviewer(
+                ctx.to_sync(),
+                FEAT_REF.to_owned(),
+                "rev".to_owned(),
+            ))
+        },
+    )
     .context("seed pending assignment for rev")?;
 
     let verdicts_before = ctx
@@ -200,13 +230,19 @@ fn request_changes_review_implements_changes_requested_write() -> anyhow::Result
         .map(|v| (v.principal_id, v.verdict))
         .collect::<Vec<_>>();
 
-    let result = temp_env::with_var("BUT_AGENT_HANDLE", Some("rev"), || {
-        runtime.block_on(but_api::legacy::forge::request_changes_review(
-            ctx.to_sync(),
-            FEAT_REF.to_owned(),
-            Some("needs work".to_owned()),
-        ))
-    });
+    let result = temp_env::with_vars(
+        [
+            ("BUT_AGENT_HANDLE", Some("rev")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        || {
+            runtime.block_on(but_api::legacy::forge::request_changes_review(
+                ctx.to_sync(),
+                FEAT_REF.to_owned(),
+                Some("needs work".to_owned()),
+            ))
+        },
+    );
 
     let err_text = match result {
         Ok(()) => String::new(),
@@ -271,13 +307,19 @@ fn request_review_denied_without_authority_writes_nothing() -> anyhow::Result<()
     assert!(assignments_before.is_empty(), "fixture must seed empty");
 
     // `impl` holds contents:write ONLY — no pull_requests:write, no reviews:write.
-    let request_err = match temp_env::with_var("BUT_AGENT_HANDLE", Some("impl"), || {
-        runtime.block_on(but_api::legacy::forge::request_review(
-            ctx.to_sync(),
-            FEAT_REF.to_owned(),
-            Some("rev2".to_owned()),
-        ))
-    }) {
+    let request_err = match temp_env::with_vars(
+        [
+            ("BUT_AGENT_HANDLE", Some("impl")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        || {
+            runtime.block_on(but_api::legacy::forge::request_review(
+                ctx.to_sync(),
+                FEAT_REF.to_owned(),
+                Some("rev2".to_owned()),
+            ))
+        },
+    ) {
         Ok(()) => anyhow::bail!("impl lacks pull_requests:write; request_review must deny"),
         Err(err) => err,
     };
@@ -293,13 +335,19 @@ fn request_review_denied_without_authority_writes_nothing() -> anyhow::Result<()
         gate_error.message
     );
 
-    let changes_err = match temp_env::with_var("BUT_AGENT_HANDLE", Some("impl"), || {
-        runtime.block_on(but_api::legacy::forge::request_changes_review(
-            ctx.to_sync(),
-            FEAT_REF.to_owned(),
-            Some("fix".to_owned()),
-        ))
-    }) {
+    let changes_err = match temp_env::with_vars(
+        [
+            ("BUT_AGENT_HANDLE", Some("impl")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        || {
+            runtime.block_on(but_api::legacy::forge::request_changes_review(
+                ctx.to_sync(),
+                FEAT_REF.to_owned(),
+                Some("fix".to_owned()),
+            ))
+        },
+    ) {
         Ok(()) => anyhow::bail!("impl lacks reviews:write; request_changes_review must deny"),
         Err(err) => err,
     };
@@ -348,13 +396,19 @@ fn request_review_is_local_cache_only_no_ref_mutation() -> anyhow::Result<()> {
     let ctx = but_ctx::Context::from_repo(repo)?.with_memory_app_cache();
     let runtime = tokio::runtime::Runtime::new()?;
 
-    temp_env::with_var("BUT_AGENT_HANDLE", Some("dev"), || {
-        runtime.block_on(but_api::legacy::forge::request_review(
-            ctx.to_sync(),
-            FEAT_REF.to_owned(),
-            Some("rev2".to_owned()),
-        ))
-    })
+    temp_env::with_vars(
+        [
+            ("BUT_AGENT_HANDLE", Some("dev")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        || {
+            runtime.block_on(but_api::legacy::forge::request_review(
+                ctx.to_sync(),
+                FEAT_REF.to_owned(),
+                Some("rev2".to_owned()),
+            ))
+        },
+    )
     .context("request_review must succeed for the local-cache-only proof")?;
 
     // The assignment row MUST be written (local cache, like approve_review)…

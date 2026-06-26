@@ -1,0 +1,72 @@
+[
+  {
+    "id": "AC-1",
+    "verify": "cargo test -p but-api --test gate_registry_swap -- all_but_agent_handle_env_helpers_are_flag_gated && cargo test -p but-api --tests",
+    "exit_code": 0,
+    "output_file": ".tmp/IDENT-018/ac-1-output.txt",
+    "red_against_start_file": ".tmp/IDENT-018/AC-1-red-against-start.txt",
+    "green_file": ".tmp/IDENT-018/AC-1-green.txt",
+    "seeded_value": "all_scopes_paired=true; unpaired helper scope count == 0; cargo test -p but-api --tests exit 0",
+    "seeded_value_file": ".tmp/IDENT-018/AC-1-seeded-artifact.txt"
+  },
+  {
+    "id": "AC-2",
+    "verify": "for file in commit_gate.rs perm_governance.rs local_review_assignments.rs; do cargo test -p but-api --test gate_registry_swap -- all_but_agent_handle_env_helpers_are_flag_gated || exit 1; cargo test -p but-api --test ${file%.rs} || exit 1; done",
+    "exit_code": 0,
+    "output_file": ".tmp/IDENT-018/ac-2-output.txt",
+    "red_against_start_file": ".tmp/IDENT-018/AC-1-red-against-start.txt",
+    "green_file": ".tmp/IDENT-018/AC-2-green.txt",
+    "seeded_value": "commit_gate.rs, perm_governance.rs, and local_review_assignments.rs structurally paired; high-frequency targets passing == 3/3",
+    "seeded_value_file": ".tmp/IDENT-018/AC-2-seeded-artifact.txt"
+  },
+  {
+    "id": "AC-3",
+    "verify": "for file in admin_write_guard.rs branch_gates_governance.rs confinement.rs commit_gate.rs forge_guard.rs governance_api.rs keep_reviews_local_gate.rs local_review_assignments.rs local_review_comments_verbs.rs local_review_status.rs merge_gate.rs merge_gate_self_escalation.rs group_governance.rs perm_governance.rs steer_class_wiring.rs rules_scoped.rs steer_telemetry.rs; do cargo test -p but-api --test ${file%.rs} || exit 1; done",
+    "exit_code": 0,
+    "output_file": ".tmp/IDENT-018/ac-3-output.txt",
+    "red_against_start_file": ".tmp/IDENT-018/AC-1-red-against-start.txt",
+    "green_file": ".tmp/IDENT-018/AC-3-green.txt",
+    "seeded_value": "modified target count passing == 17/17; all modified test targets exit 0 individually",
+    "seeded_value_file": ".tmp/IDENT-018/AC-3-seeded-artifact.txt"
+  },
+  {
+    "id": "AC-4",
+    "verify": "cargo test -p but-api --test gate_registry_swap -- all_but_agent_handle_env_helpers_are_flag_gated",
+    "exit_code": 0,
+    "output_file": ".tmp/IDENT-018/ac-4-output.txt",
+    "red_against_start_file": ".tmp/IDENT-018/AC-4-red-against-start.txt",
+    "green_file": ".tmp/IDENT-018/AC-4-green.txt",
+    "seeded_value": "all_scopes_paired=true; structural checker fails closed on unflagged helper scopes and passes when paired",
+    "seeded_value_file": ".tmp/IDENT-018/AC-4-seeded-artifact.txt"
+  },
+  {
+    "id": "TC-1",
+    "verify": "cargo test -p but-api --test gate_registry_swap -- all_but_agent_handle_env_helpers_are_flag_gated",
+    "exit_code": 0,
+    "output_file": ".tmp/IDENT-018/tc-1-output.txt"
+  },
+  {
+    "id": "TC-2",
+    "verify": "cargo test -p but-api --tests",
+    "exit_code": 0,
+    "output_file": ".tmp/IDENT-018/tc-2-output.txt"
+  },
+  {
+    "id": "TC-3",
+    "verify": "for file in commit_gate.rs perm_governance.rs local_review_assignments.rs; do cargo test -p but-api --test ${file%.rs} || exit 1; done",
+    "exit_code": 0,
+    "output_file": ".tmp/IDENT-018/tc-3-output.txt"
+  },
+  {
+    "id": "TC-4",
+    "verify": "for file in admin_write_guard.rs branch_gates_governance.rs confinement.rs commit_gate.rs forge_guard.rs governance_api.rs keep_reviews_local_gate.rs local_review_assignments.rs local_review_comments_verbs.rs local_review_status.rs merge_gate.rs merge_gate_self_escalation.rs group_governance.rs perm_governance.rs steer_class_wiring.rs rules_scoped.rs steer_telemetry.rs; do cargo test -p but-api --test ${file%.rs} || exit 1; done",
+    "exit_code": 0,
+    "output_file": ".tmp/IDENT-018/tc-4-output.txt"
+  },
+  {
+    "id": "TC-5",
+    "verify": "cargo test -p but-api --test gate_registry_swap -- all_but_agent_handle_env_helpers_are_flag_gated",
+    "exit_code": 0,
+    "output_file": ".tmp/IDENT-018/tc-5-output.txt"
+  }
+]
