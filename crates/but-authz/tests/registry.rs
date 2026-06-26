@@ -542,6 +542,37 @@ fn thread_panic_message(payload: Box<dyn std::any::Any + Send + 'static>) -> Str
     }
 }
 
+#[cfg(unix)]
+#[test]
+fn H1a_write_creates_runtime_registry_file_mode_0600() -> anyhow::Result<()> {
+    use std::os::unix::fs::PermissionsExt as _;
+
+    let tmp = TempDir::new()?;
+    let path = tmp.path().join("agents-runtime.toml");
+    let mut registry = Registry::empty();
+    registry.register(1234, 1_730_000_000, "rust-implementer", 14_400, "operator")?;
+
+    registry.write(&path)?;
+
+    let mode = fs::metadata(&path)?.permissions().mode() & 0o777;
+    assert_eq!(
+        mode, 0o600,
+        "the runtime registry is the spoofing trust root; it must be created owner-only (0600), got {mode:o}"
+    );
+
+    // Re-writing an existing registry must preserve the 0600 mode across the
+    // atomic rename, not inherit the default umask of the replacement temp file.
+    registry.register(2345, 1_730_000_100, "rust-reviewer", 14_400, "operator")?;
+    registry.write(&path)?;
+    let mode_after = fs::metadata(&path)?.permissions().mode() & 0o777;
+    assert_eq!(
+        mode_after, 0o600,
+        "re-writing the registry must keep it owner-only (0600), got {mode_after:o}"
+    );
+
+    Ok(())
+}
+
 #[test]
 fn IDENT_001_write_missing_parent_returns_error_naming_path() -> anyhow::Result<()> {
     let tmp = TempDir::new()?;

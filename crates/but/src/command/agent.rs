@@ -18,6 +18,10 @@ use crate::{CliError, args::agent::Subcommands, bad_input, utils::OutputChannel}
 
 const AGENTS_PATH: &str = ".gitbutler/agents.toml";
 const PERMISSIONS_PATH: &str = ".gitbutler/permissions.toml";
+/// Bare filename of the runtime registry, matching the constant owned by
+/// `but_authz::runtime_registry_location`. Used to write the `.gitignore` rule
+/// on the worktree-fallback path.
+const RUNTIME_REGISTRY_FILE_NAME: &str = "agents-runtime.toml";
 const MIGRATE_CAVEAT: &str = "agents.toml written to the working tree; inert until committed. Commit the add of .gitbutler/agents.toml and the delete of .gitbutler/permissions.toml together.";
 
 /// Execute `but agent`.
@@ -183,15 +187,37 @@ fn resolve_registry_path(ctx: &mut Context) -> anyhow::Result<RegistryPath> {
     let repo = ctx.repo.get()?;
     let location = but_authz::runtime_registry_location(&repo)?
         .context("worktree is required for default agent registry path without XDG_RUNTIME_DIR")?;
+    let worktree_fallback = registry_path_is_worktree_fallback(&repo, &location.path);
     tracing::debug!(
         path = %location.path.display(),
         create_parent = location.create_parent,
+        worktree_fallback,
         "resolved agent registry path"
     );
     Ok(RegistryPath {
         path: location.path,
         create_parent: location.create_parent,
+        worktree_fallback,
     })
+}
+
+/// Whether `resolved` is the in-worktree fallback registry path
+/// (`<workdir>/.gitbutler/agents-runtime.toml`), used on hosts without
+/// `XDG_RUNTIME_DIR` — the normal macOS case.
+///
+/// This mirrors the third branch of [`but_authz::runtime_registry_location`]: it
+/// is the fallback only when neither `BUT_AGENT_REGISTRY_PATH` nor
+/// `XDG_RUNTIME_DIR` selected the path and the resolved file sits in the working
+/// tree's `.gitbutler` directory. The explicit-override and XDG paths are
+/// deliberately excluded so their registries are never gitignored.
+fn registry_path_is_worktree_fallback(repo: &gix::Repository, resolved: &Path) -> bool {
+    if std::env::var_os("BUT_AGENT_REGISTRY_PATH").is_some()
+        || std::env::var_os("XDG_RUNTIME_DIR").is_some()
+    {
+        return false;
+    }
+    repo.workdir()
+        .is_some_and(|workdir| resolved.parent() == Some(workdir.join(".gitbutler").as_path()))
 }
 
 fn write_registry_or_exit(registry: &but_authz::Registry, registry_path: &RegistryPath) {
@@ -202,9 +228,57 @@ fn write_registry_or_exit(registry: &but_authz::Registry, registry_path: &Regist
         exit_registry_write_error(&registry_path.path, error.into());
     }
 
+    if registry_path.worktree_fallback
+        && let Err(error) = ensure_runtime_registry_gitignored(&registry_path.path)
+    {
+        exit_registry_write_error(&registry_path.path, error);
+    }
+
     if let Err(error) = registry.write(&registry_path.path) {
         exit_registry_write_error(&registry_path.path, error);
     }
+}
+
+/// Ensure the worktree-fallback runtime registry is gitignored.
+///
+/// On the macOS / no-`XDG_RUNTIME_DIR` path the runtime registry lives at
+/// `<workdir>/.gitbutler/agents-runtime.toml`, inside the working tree. That
+/// file is per-host process state and the spoofing trust root; it must never be
+/// committed. Because `but agent register` is the file's creator, it writes a
+/// `<workdir>/.gitbutler/.gitignore` rule next to it. Idempotent: it creates the
+/// ignore file when absent and appends the rule only when it is not already
+/// present, so repeated registers never duplicate the line.
+fn ensure_runtime_registry_gitignored(registry_path: &Path) -> anyhow::Result<()> {
+    let Some(dir) = registry_path.parent() else {
+        return Ok(());
+    };
+    let gitignore_path = dir.join(".gitignore");
+
+    let existing = match fs::read_to_string(&gitignore_path) {
+        Ok(contents) => Some(contents),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => None,
+        Err(error) => {
+            return Err(error).with_context(|| format!("reading {}", gitignore_path.display()));
+        }
+    };
+
+    if let Some(contents) = &existing
+        && contents
+            .lines()
+            .any(|line| line.trim() == RUNTIME_REGISTRY_FILE_NAME)
+    {
+        return Ok(());
+    }
+
+    let mut contents = existing.unwrap_or_default();
+    if !contents.is_empty() && !contents.ends_with('\n') {
+        contents.push('\n');
+    }
+    contents.push_str(RUNTIME_REGISTRY_FILE_NAME);
+    contents.push('\n');
+
+    fs::write(&gitignore_path, contents)
+        .with_context(|| format!("writing {}", gitignore_path.display()))
 }
 
 fn exit_registry_write_error(path: &Path, error: anyhow::Error) -> ! {
@@ -430,6 +504,11 @@ fn write_migrate_already_done(out: &mut OutputChannel) -> anyhow::Result<()> {
 struct RegistryPath {
     path: PathBuf,
     create_parent: bool,
+    /// Whether the path is the in-worktree fallback
+    /// (`<workdir>/.gitbutler/agents-runtime.toml`). Only this path is
+    /// gitignored on write — the XDG and explicit-override paths live outside
+    /// the working tree and need no ignore rule.
+    worktree_fallback: bool,
 }
 
 #[derive(Debug, Serialize)]

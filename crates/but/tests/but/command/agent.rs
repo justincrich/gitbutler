@@ -136,6 +136,57 @@ fn agent_register_unknown_id_rejects_without_registry_write() -> anyhow::Result<
 }
 
 #[test]
+fn agent_register_worktree_fallback_gitignores_runtime_registry() -> anyhow::Result<()> {
+    let env = ident_fixture("ident-agent-register-gitignore", RUST_IMPLEMENTER_AGENT)?;
+    let gitbutler_dir = env.projects_root().join(".gitbutler");
+    let gitignore_path = gitbutler_dir.join(".gitignore");
+    let registry_path = gitbutler_dir.join("agents-runtime.toml");
+
+    // No BUT_AGENT_REGISTRY_PATH override and no XDG_RUNTIME_DIR forces the
+    // worktree fallback: the registry resolves to
+    // <workdir>/.gitbutler/agents-runtime.toml inside the working tree, where it
+    // is one `git add` away from being committed unless it is gitignored.
+    env.but("agent register --pid 12345 --start-time 1730000000 --as rust-implementer --ttl 1h")
+        .env_remove("XDG_RUNTIME_DIR")
+        .assert()
+        .success();
+
+    assert!(
+        registry_path.exists(),
+        "worktree-fallback register must write the runtime registry into the working tree at {}",
+        registry_path.display()
+    );
+    let contents = fs::read_to_string(&gitignore_path)?;
+    assert!(
+        contents
+            .lines()
+            .any(|line| line.trim() == "agents-runtime.toml"),
+        ".gitbutler/.gitignore must ignore the runtime registry, got: {contents:?}"
+    );
+
+    // git agrees the runtime registry is ignored: check-ignore exits 0 on a
+    // match (invoke_git asserts success), so a non-match would panic here.
+    env.invoke_git("check-ignore .gitbutler/agents-runtime.toml");
+
+    // Re-running register must be idempotent and not duplicate the ignore line.
+    env.but("agent register --pid 23456 --start-time 1730000001 --as rust-implementer --ttl 1h")
+        .env_remove("XDG_RUNTIME_DIR")
+        .assert()
+        .success();
+    let contents_after = fs::read_to_string(&gitignore_path)?;
+    let occurrences = contents_after
+        .lines()
+        .filter(|line| line.trim() == "agents-runtime.toml")
+        .count();
+    assert_eq!(
+        occurrences, 1,
+        "re-running register must not duplicate the gitignore entry, got: {contents_after:?}"
+    );
+
+    Ok(())
+}
+
+#[test]
 fn agent_list_empty_and_populated_registries() -> anyhow::Result<()> {
     let env = ident_fixture("ident-agent-list", RUST_IMPLEMENTER_AND_REVIEWER_AGENTS)?;
     let registry_path = registry_path(&env, "list");

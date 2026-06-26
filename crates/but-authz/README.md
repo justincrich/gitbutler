@@ -78,22 +78,50 @@ The Rust domain types (`Principal`, `PrincipalId`) are unchanged by the rename;
 only the wire format and filename moved from `[[principal]]` /
 `permissions.toml` to `[[agent]]` / `agents.toml`.
 
-### Runtime: `agents-runtime.toml` (gitignored, mode 0600)
+### Runtime: `agents-runtime.toml` (per-host, mode 0600)
 
-`.gitbutler/agents-runtime.toml` is the **gitignored runtime registry**. It
-maps `(pid, start_time, expiry) → agent_id` and is written by
-`but agent register`. The default location is
-`$XDG_RUNTIME_DIR/gitbutler/<repo-hash>/agents-runtime.toml` (tmpfs on Linux,
-cleared on reboot); override the path with **`BUT_AGENT_REGISTRY_PATH`** for
-tests and sandboxed environments.
+The runtime registry maps `(pid, start_time, expiry) → agent_id` and is written
+by `but agent register`. It is **per-host process state**, never committed.
 
-The registry file is created with **mode `0600`**, owned by the user, and
-written atomically through a Git-style lock file (`gix::lock` with a
-`fsync` + `sync_all` + atomic rename). Expired entries (`expires_at < now`)
-are garbage-collected lazily on read.
+**Resolution order** (`runtime_registry_location`, the single source of truth
+shared by the CLI writer and the gate reader; first match wins):
+
+1. **`BUT_AGENT_REGISTRY_PATH`** — explicit override. Wins over every
+   host-derived default; its parent directory is assumed to already exist (the
+   operator owns the path). Used for tests and sandboxed environments.
+2. **`$XDG_RUNTIME_DIR/gitbutler/<repo-hash>/agents-runtime.toml`** — when
+   `XDG_RUNTIME_DIR` is set (the normal Linux case). This is typically tmpfs and
+   cleared on reboot. `<repo-hash>` is the lowercase hex of the first 16 bytes
+   of the SHA-256 of the canonicalized git directory, keeping per-host
+   registries isolated.
+3. **`<workdir>/.gitbutler/agents-runtime.toml`** — the **worktree fallback**,
+   used when `XDG_RUNTIME_DIR` is unset (the normal **macOS** case). This file
+   lives **inside the working tree** and **persists there** — it is not on tmpfs
+   and is not cleared on reboot.
+
+A bare repository with no override and no `XDG_RUNTIME_DIR` has no default
+registry location.
+
+**Guarantees the code enforces:**
+
+- **Mode `0600`, owned by the user.** The file is created owner-only: the write
+  path sets `0600` on the locked temp file before the atomic rename
+  (`Registry::write_inner`), so the mode survives commit instead of inheriting
+  the process umask. The registry is the spoofing trust root, so on the worktree
+  fallback path — where it sits in the working tree — owner-only matters.
+- **Gitignored on the worktree fallback path.** Because the fallback file lives
+  inside the working tree, `but agent register` (its creator) ensures
+  `<workdir>/.gitbutler/.gitignore` contains a line `agents-runtime.toml`
+  (`ensure_runtime_registry_gitignored`, idempotent — created if absent, the
+  rule appended only when missing). This keeps the file one `git add` short of
+  being committed. The override and XDG paths live outside the working tree and
+  are not gitignored.
+- **Atomic write.** Written through a Git-style lock file (`gix::lock` with
+  `flush` + `sync_all` + atomic rename). Expired entries (`expires_at < now`)
+  are garbage-collected lazily on read (`Registry::gc`).
 
 ```toml
-# agents-runtime.toml — gitignored, mode 0600, per-host
+# agents-runtime.toml — per-host runtime state, mode 0600
 [[registration]]
 pid = 4711
 start_time = 1719417600

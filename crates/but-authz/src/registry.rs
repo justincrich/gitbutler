@@ -150,6 +150,25 @@ impl Registry {
                 lock.lock_path().display()
             )
         })?;
+
+        // The runtime registry is the spoofing trust root: on the worktree
+        // fallback path it lives inside the working tree, so it must be
+        // owner-only. Set the mode on the locked temp file before the atomic
+        // rename so the guarantee survives commit, rather than inheriting the
+        // process umask (which yields a world-readable 0644). Best-effort and a
+        // no-op on non-unix targets, which have no POSIX permission bits.
+        #[cfg(unix)]
+        lock.with_mut(|file| {
+            use std::os::unix::fs::PermissionsExt as _;
+            file.set_permissions(std::fs::Permissions::from_mode(0o600))
+        })
+        .with_context(|| {
+            format!(
+                "restricting permissions on temporary locked registry {}",
+                lock.lock_path().display()
+            )
+        })?;
+
         lock.commit()
             .map_err(|error| error.error)
             .with_context(|| format!("committing registry {}", path.display()))?;
