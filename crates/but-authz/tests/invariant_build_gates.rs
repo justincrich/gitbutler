@@ -34,6 +34,7 @@ const ENFORCEMENT_PATHS: &[&str] = &[
     CONFIG_MUTATE,
     GOVERNANCE,
     FORGE_GUARD,
+    RULES,
 ];
 const SPRINT_02_ENFORCEMENT_PATHS: &[&str] = &[MERGE_GATE, CONFIG_MUTATE];
 
@@ -191,8 +192,8 @@ fn test_enforcement_paths_extended() -> anyhow::Result<()> {
     let workspace_root = workspace_root()?;
     assert_eq!(
         ENFORCEMENT_PATHS.len(),
-        9,
-        "IDENT-020 enforcement coverage must include authorize/config plus registry/process hardening paths"
+        10,
+        "IDENT-020 enforcement coverage must include authorize/config plus registry/process hardening paths and the rules.rs workspace-rules gate"
     );
 
     let source =
