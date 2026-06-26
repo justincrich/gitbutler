@@ -343,14 +343,11 @@ fn serialization_fault_forced() -> bool {
 /// Renders the full steering envelope (`code`/`message`/`remediation_hint`
 /// when `Some`/`class`/`held_permissions`/`authorized_actions`/`do_not` when
 /// `Some`) from the parts supplied by a CLI serializer's carrier
-/// classification. If the TEST-ONLY [`BUT_STEER_FORCE_SERIALIZATION_FAULT`]
+/// classification. If the TEST-ONLY `BUT_STEER_FORCE_SERIALIZATION_FAULT`
 /// seam forces a fault (debug-only), degrades to a minimal
 /// `{code, message, remediation_hint}` envelope so the denial still emits
 /// the legacy fields + exit 1 (best-effort fail-closed, invariant §9.5).
 /// The seam is compiled out of release builds.
-///
-/// [`BUT_STEER_FORCE_SERIALIZATION_FAULT`]:
-///   serialization_fault_forced
 ///
 /// ```
 /// use but_authz::{Authority, DenialClass, steer_envelope_from_parts};
