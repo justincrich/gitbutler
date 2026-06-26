@@ -1,0 +1,21 @@
+   Compiling but-authz v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/RED-FIRST-IDENT-009/crates/but-authz)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.37s
+     Running tests/config.rs (target/debug/deps/config-3dbe4fa9b450541c)
+
+running 1 test
+Error: invalid governance config: missing .gitbutler/permissions.toml at refs/heads/main
+
+Caused by:
+    missing .gitbutler/permissions.toml at refs/heads/main
+test agents_toml_parses_same_config ... FAILED
+
+failures:
+
+failures:
+    agents_toml_parses_same_config
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 7 filtered out; finished in 0.08s
+
+error: test failed, to rerun pass `-p but-authz --test config`
+
+exit status: 101
