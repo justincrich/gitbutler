@@ -17,14 +17,20 @@ fn governance_api_perm_grant_admin_lands_inert() -> anyhow::Result<()> {
     let ctx = context_for(&repo)?;
     let main_before = ref_id(&repo, MAIN_REF)?;
 
-    let outcome = temp_env::with_var("BUT_AGENT_HANDLE", Some("admin"), || {
-        perm_grant(
-            &ctx,
-            TARGET_REF.to_owned(),
-            "rust-implementer".to_owned(),
-            vec!["reviews:write".to_owned()],
-        )
-    })?;
+    let outcome = temp_env::with_vars(
+        [
+            ("BUT_AGENT_HANDLE", Some("admin")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        || {
+            perm_grant(
+                &ctx,
+                TARGET_REF.to_owned(),
+                "rust-implementer".to_owned(),
+                vec!["reviews:write".to_owned()],
+            )
+        },
+    )?;
 
     let worktree_permissions = worktree_permissions(&repo)?;
     let rust_implementer = principal_block(&worktree_permissions, "rust-implementer")?;
@@ -54,14 +60,20 @@ fn governance_api_perm_grant_non_admin_denied_with_hint() -> anyhow::Result<()> 
     let ctx = context_for(&repo)?;
     let before = worktree_permissions_bytes(&repo)?;
 
-    let result = temp_env::with_var("BUT_AGENT_HANDLE", Some("rust-implementer"), || {
-        perm_grant(
-            &ctx,
-            TARGET_REF.to_owned(),
-            "rust-implementer".to_owned(),
-            vec!["administration:write".to_owned()],
-        )
-    });
+    let result = temp_env::with_vars(
+        [
+            ("BUT_AGENT_HANDLE", Some("rust-implementer")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        || {
+            perm_grant(
+                &ctx,
+                TARGET_REF.to_owned(),
+                "rust-implementer".to_owned(),
+                vec!["administration:write".to_owned()],
+            )
+        },
+    );
 
     let error = match result {
         Ok(_) => anyhow::bail!("non-admin self-grant through perm_grant must be denied"),
@@ -83,9 +95,13 @@ fn governance_api_status_read_returns_own_effective_set() -> anyhow::Result<()> 
     let (repo, _tmp) = governance_api_repo();
     let ctx = context_for(&repo)?;
 
-    let effective = temp_env::with_var("BUT_AGENT_HANDLE", Some("rust-implementer"), || {
-        governance_status_read(&ctx)
-    })?;
+    let effective = temp_env::with_vars(
+        [
+            ("BUT_AGENT_HANDLE", Some("rust-implementer")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        || governance_status_read(&ctx),
+    )?;
 
     assert!(
         effective
@@ -115,14 +131,20 @@ fn governance_api_group_add_member_non_admin_denied_with_hint() -> anyhow::Resul
     let ctx = context_for(&repo)?;
     let before = worktree_permissions_bytes(&repo)?;
 
-    let result = temp_env::with_var("BUT_AGENT_HANDLE", Some("rust-reviewer"), || {
-        group_add_member(
-            &ctx,
-            TARGET_REF.to_owned(),
-            "eng".to_owned(),
-            "rust-reviewer".to_owned(),
-        )
-    });
+    let result = temp_env::with_vars(
+        [
+            ("BUT_AGENT_HANDLE", Some("rust-reviewer")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        || {
+            group_add_member(
+                &ctx,
+                TARGET_REF.to_owned(),
+                "eng".to_owned(),
+                "rust-reviewer".to_owned(),
+            )
+        },
+    );
 
     let error = match result {
         Ok(_) => anyhow::bail!("non-admin group_add_member must be denied"),
@@ -144,9 +166,13 @@ fn governance_api_status_read_is_self_scoped_no_foreign_principal() -> anyhow::R
     let (repo, _tmp) = governance_api_repo();
     let ctx = context_for(&repo)?;
 
-    let effective = temp_env::with_var("BUT_AGENT_HANDLE", Some("rust-implementer"), || {
-        governance_status_read(&ctx)
-    })?;
+    let effective = temp_env::with_vars(
+        [
+            ("BUT_AGENT_HANDLE", Some("rust-implementer")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        || governance_status_read(&ctx),
+    )?;
 
     assert!(
         effective
@@ -266,9 +292,13 @@ protected = true
     )?;
     write_worktree_file(&repo, "unrelated.txt", "must not be included")?;
 
-    let outcome = temp_env::with_var("BUT_AGENT_HANDLE", Some("admin"), || {
-        governance_commit(&ctx, TARGET_REF.to_owned())
-    })?;
+    let outcome = temp_env::with_vars(
+        [
+            ("BUT_AGENT_HANDLE", Some("admin")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        || governance_commit(&ctx, TARGET_REF.to_owned()),
+    )?;
 
     assert_eq!(
         outcome.message, "chore: update governance config",
@@ -312,9 +342,13 @@ fn governance_api_commit_requires_admin_write_and_leaves_target_inert() -> anyho
         write_worktree_file(&repo, PERMISSIONS_PATH, &permissions)?;
         let worktree_before = worktree_permissions_bytes(&repo)?;
 
-        let result = temp_env::with_var("BUT_AGENT_HANDLE", handle, || {
-            governance_commit(&ctx, TARGET_REF.to_owned())
-        });
+        let result = temp_env::with_vars(
+            [
+                ("BUT_AGENT_HANDLE", handle),
+                ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+            ],
+            || governance_commit(&ctx, TARGET_REF.to_owned()),
+        );
         let error = match result {
             Ok(outcome) => anyhow::bail!(
                 "{case} governance_commit must be denied, got commit {:?}",

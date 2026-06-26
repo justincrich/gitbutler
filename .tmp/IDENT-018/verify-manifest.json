@@ -1,20 +1,53 @@
 {
-  "task_id": "RED-FIRST-IDENT-018",
+  "task_id": "IDENT-018",
   "original_task_id": "IDENT-018",
   "verification_policy": {
-    "requires_tests": false,
-    "requires_red_evidence": false,
-    "requires_seeded_evidence": false
+    "requires_tests": true,
+    "requires_red_evidence": true,
+    "requires_seeded_evidence": true
   },
   "project_commands": {
     "typecheck": "cargo check -p but-api --all-targets",
-    "lint": "cargo clippy -p but-api --test gate_registry_swap -- -D warnings",
-    "test": "cargo test -p but-api --test gate_registry_swap -- all_but_agent_handle_env_helpers_are_flag_gated"
+    "lint": "cargo clippy -p but-api --all-targets -- -D warnings",
+    "test": "cargo test -p but-api --tests",
+    "format": "cargo fmt"
   },
   "requirements": [
     {
-      "id": "RED-1",
-      "verify": "test -s .tmp/IDENT-018/red-output.txt && rg \"unpaired|all_scopes_paired=false|FAILED\" .tmp/IDENT-018/red-output.txt"
+      "id": "AC-1",
+      "verify": "cargo test -p but-api --test gate_registry_swap -- all_but_agent_handle_env_helpers_are_flag_gated && cargo test -p but-api --tests"
+    },
+    {
+      "id": "AC-2",
+      "verify": "for file in commit_gate.rs perm_governance.rs local_review_assignments.rs; do cargo test -p but-api --test gate_registry_swap -- all_but_agent_handle_env_helpers_are_flag_gated || exit 1; cargo test -p but-api --test ${file%.rs} || exit 1; done"
+    },
+    {
+      "id": "AC-3",
+      "verify": "for file in admin_write_guard.rs branch_gates_governance.rs confinement.rs commit_gate.rs forge_guard.rs governance_api.rs keep_reviews_local_gate.rs local_review_assignments.rs local_review_comments_verbs.rs local_review_status.rs merge_gate.rs merge_gate_self_escalation.rs group_governance.rs perm_governance.rs steer_class_wiring.rs rules_scoped.rs steer_telemetry.rs; do cargo test -p but-api --test ${file%.rs} || exit 1; done"
+    },
+    {
+      "id": "AC-4",
+      "verify": "cargo test -p but-api --test gate_registry_swap -- all_but_agent_handle_env_helpers_are_flag_gated"
+    },
+    {
+      "id": "TC-1",
+      "verify": "cargo test -p but-api --test gate_registry_swap -- all_but_agent_handle_env_helpers_are_flag_gated"
+    },
+    {
+      "id": "TC-2",
+      "verify": "cargo test -p but-api --tests"
+    },
+    {
+      "id": "TC-3",
+      "verify": "for file in commit_gate.rs perm_governance.rs local_review_assignments.rs; do cargo test -p but-api --test ${file%.rs} || exit 1; done"
+    },
+    {
+      "id": "TC-4",
+      "verify": "for file in admin_write_guard.rs branch_gates_governance.rs confinement.rs commit_gate.rs forge_guard.rs governance_api.rs keep_reviews_local_gate.rs local_review_assignments.rs local_review_comments_verbs.rs local_review_status.rs merge_gate.rs merge_gate_self_escalation.rs group_governance.rs perm_governance.rs steer_class_wiring.rs rules_scoped.rs steer_telemetry.rs; do cargo test -p but-api --test ${file%.rs} || exit 1; done"
+    },
+    {
+      "id": "TC-5",
+      "verify": "cargo test -p but-api --test gate_registry_swap -- all_but_agent_handle_env_helpers_are_flag_gated"
     }
   ]
 }

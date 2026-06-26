@@ -1,0 +1,10 @@
+AC-3 seeded evidence
+
+Green evidence:
+- .tmp/IDENT-018/AC-3-green.txt
+- .tmp/IDENT-018/tc-4-output.txt
+
+Observed values:
+- modified target count passing == 17/17
+- every modified test target exited 0 individually
+- cargo target names used ${file%.rs}, not .rs filenames

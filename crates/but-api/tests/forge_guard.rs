@@ -101,32 +101,44 @@ fn forge_guard_authorizes_comments_and_records_approval() -> anyhow::Result<()> 
     let ctx = but_ctx::Context::from_repo(repo)?.with_memory_app_cache();
     let runtime = tokio::runtime::Runtime::new()?;
 
-    temp_env::with_var("BUT_AGENT_HANDLE", Some("ro"), || -> anyhow::Result<()> {
-        let err = match runtime.block_on(but_api::legacy::forge::comment_review(
-            ctx.to_sync(),
-            "feat".to_owned(),
-            "note".to_owned(),
-        )) {
-            Ok(()) => anyhow::bail!("read-only principal should be denied comments:write"),
-            Err(err) => err,
-        };
-        let gate_error = but_api::legacy::forge::classify_error(&err)
-            .context("comment denial should be structured")?;
-        assert_eq!(gate_error.code, "perm.denied");
-        assert!(
-            gate_error.message.contains("comments:write"),
-            "comment denial must name comments:write"
-        );
-        println!("api comment denied with `perm.denied` naming `comments:write`");
-        Ok(())
-    })?;
+    temp_env::with_vars(
+        [
+            ("BUT_AGENT_HANDLE", Some("ro")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        || -> anyhow::Result<()> {
+            let err = match runtime.block_on(but_api::legacy::forge::comment_review(
+                ctx.to_sync(),
+                "feat".to_owned(),
+                "note".to_owned(),
+            )) {
+                Ok(()) => anyhow::bail!("read-only principal should be denied comments:write"),
+                Err(err) => err,
+            };
+            let gate_error = but_api::legacy::forge::classify_error(&err)
+                .context("comment denial should be structured")?;
+            assert_eq!(gate_error.code, "perm.denied");
+            assert!(
+                gate_error.message.contains("comments:write"),
+                "comment denial must name comments:write"
+            );
+            println!("api comment denied with `perm.denied` naming `comments:write`");
+            Ok(())
+        },
+    )?;
 
-    temp_env::with_var("BUT_AGENT_HANDLE", Some("reviewer"), || {
-        runtime.block_on(but_api::legacy::forge::approve_review(
-            ctx.to_sync(),
-            "feat".to_owned(),
-        ))
-    })?;
+    temp_env::with_vars(
+        [
+            ("BUT_AGENT_HANDLE", Some("reviewer")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        || {
+            runtime.block_on(but_api::legacy::forge::approve_review(
+                ctx.to_sync(),
+                "feat".to_owned(),
+            ))
+        },
+    )?;
 
     let db = ctx.db.get_cache()?;
     let verdicts = db.local_review_verdicts().list_by_target("feat")?;
@@ -164,9 +176,11 @@ fn forge_guard_no_stub_success_for_unimplemented_review_actions() -> anyhow::Res
     // dedicated `local_review_assignments.rs` proofs. The two remaining verbs
     // (comment, close) are still stubs and must still fail closed.
 
-    temp_env::with_var(
-        "BUT_AGENT_HANDLE",
-        Some("reviewer"),
+    temp_env::with_vars(
+        [
+            ("BUT_AGENT_HANDLE", Some("reviewer")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
         || -> anyhow::Result<()> {
             let err = match runtime.block_on(but_api::legacy::forge::comment_review(
                 ctx.to_sync(),
@@ -190,26 +204,32 @@ fn forge_guard_no_stub_success_for_unimplemented_review_actions() -> anyhow::Res
         },
     )?;
 
-    temp_env::with_var("BUT_AGENT_HANDLE", Some("dev"), || -> anyhow::Result<()> {
-        let err = match runtime.block_on(but_api::legacy::forge::close_review(
-            ctx.to_sync(),
-            "feat".to_owned(),
-        )) {
-            Ok(()) => anyhow::bail!("close must not report success without behavior"),
-            Err(err) => err,
-        };
-        let message = err.to_string();
-        assert!(
-            message.contains("close_review"),
-            "close blocker must name the unsupported action, got: {message}"
-        );
-        assert!(
-            message.contains("no downstream"),
-            "close blocker must explain no downstream behavior exists, got: {message}"
-        );
-        println!("close_review blocker: {message}");
-        Ok(())
-    })?;
+    temp_env::with_vars(
+        [
+            ("BUT_AGENT_HANDLE", Some("dev")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        || -> anyhow::Result<()> {
+            let err = match runtime.block_on(but_api::legacy::forge::close_review(
+                ctx.to_sync(),
+                "feat".to_owned(),
+            )) {
+                Ok(()) => anyhow::bail!("close must not report success without behavior"),
+                Err(err) => err,
+            };
+            let message = err.to_string();
+            assert!(
+                message.contains("close_review"),
+                "close blocker must name the unsupported action, got: {message}"
+            );
+            assert!(
+                message.contains("no downstream"),
+                "close blocker must explain no downstream behavior exists, got: {message}"
+            );
+            println!("close_review blocker: {message}");
+            Ok(())
+        },
+    )?;
 
     Ok(())
 }
@@ -219,12 +239,18 @@ fn approve_feat_as(
     ctx: &but_ctx::Context,
     handle: &str,
 ) -> anyhow::Result<()> {
-    temp_env::with_var("BUT_AGENT_HANDLE", Some(handle), || {
-        runtime.block_on(but_api::legacy::forge::approve_review(
-            ctx.to_sync(),
-            "feat".to_owned(),
-        ))
-    })
+    temp_env::with_vars(
+        [
+            ("BUT_AGENT_HANDLE", Some(handle)),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        || {
+            runtime.block_on(but_api::legacy::forge::approve_review(
+                ctx.to_sync(),
+                "feat".to_owned(),
+            ))
+        },
+    )
 }
 
 fn assert_no_verdicts(ctx: &but_ctx::Context, target: &str) -> anyhow::Result<()> {

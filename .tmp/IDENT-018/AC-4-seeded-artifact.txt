@@ -1,0 +1,15 @@
+AC-4 seeded evidence
+
+Red evidence:
+- .tmp/IDENT-018/AC-4-red-against-start.txt
+- Command exited nonzero before the migration.
+- Failure output named each unpaired helper as file:line.
+
+Green evidence:
+- .tmp/IDENT-018/AC-4-green.txt
+- .tmp/IDENT-018/tc-5-output.txt
+
+Observed values:
+- all_scopes_paired=true
+- unpaired helper scope count == 0
+- structural pairing checker fails closed on unflagged helper scopes == true
