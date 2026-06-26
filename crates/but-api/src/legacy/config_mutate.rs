@@ -4,6 +4,8 @@ use but_authz::{
 };
 use serde::Serialize;
 
+use crate::commit::create::gate::resolve_principal_with_runtime_registry;
+
 /// Structured administration-write gate error payload for API callers.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct AdminWriteGateError {
@@ -34,15 +36,14 @@ pub struct AdminWriteGateError {
 
 /// Enforce authorization before mutating governed configuration.
 ///
-/// The guard reads governance files from the committed `target_ref`, resolves
-/// the acting principal from `BUT_AGENT_HANDLE`, and requires
-/// `administration:write`.
+/// The guard reads governance files from the committed `target_ref`, resolves the
+/// acting principal from the runtime registry, and requires `administration:write`.
 pub fn enforce_administration_write_gate(
     repo: &gix::Repository,
     target_ref: &str,
 ) -> anyhow::Result<()> {
     let cfg = load_governance_config(repo, target_ref)?;
-    let principal = but_authz::resolve_principal_from_env(&cfg)?;
+    let principal = resolve_principal_with_runtime_registry(repo, &cfg)?;
 
     // STEER-002: Route::Admin row in ROUTE_AUTHORITY_TABLE supplies the
     // required Authority for this gate; the literal `but_authz::authorize`

@@ -1,0 +1,2 @@
+resolver callsites: rg -n --pcre2 'resolve_principal_from_env\s*\(' crates/but-api/src
+direct handle reads: rg -n --pcre2 '(?:std::)?env::var(?:_os)?\s*\(\s*"BUT_AGENT_HANDLE"' crates/but-api/src
