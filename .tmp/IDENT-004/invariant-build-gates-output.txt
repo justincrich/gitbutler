@@ -1,9 +1,9 @@
-    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.21s
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.17s
      Running tests/invariant_build_gates.rs (target/debug/deps/invariant_build_gates-3ba996ea39f50736)
 
 running 8 tests
-test steer_primer_marked_non_enforced ... ok
 test steer_primer_contains_required_statements ... ok
+test steer_primer_marked_non_enforced ... ok
 test steer_primer_goal_integrity_and_contract ... ok
 test steer_table_affordance_coverage ... ok
 test steer_closed_catalog_r15_boundary_teeth_control ... ok

@@ -32,4 +32,4 @@ warning: function `IDENT_003_none_registry_allows_flagged_env_fallback` should h
     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `ident_003_none_registry_allows_flagged_env_fallback`
 
 warning: `but-authz` (test "authorize") generated 5 warnings
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.72s
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.66s

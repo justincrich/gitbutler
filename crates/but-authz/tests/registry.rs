@@ -386,6 +386,62 @@ fn IDENT_004_unregister_write_removes_exact_key_without_resurrecting_via_merge()
 }
 
 #[test]
+fn IDENT_004_stale_add_write_does_not_resurrect_concurrently_unregistered_base_key()
+-> anyhow::Result<()> {
+    let tmp = TempDir::new()?;
+    let path = tmp.path().join("agents.toml");
+    let removed = ExpectedRegistration::new(31_000, 1_900_001_000, "removed", 600, "operator-a");
+    let kept = ExpectedRegistration::new(31_001, 1_900_001_001, "kept", 600, "operator-a");
+    let added = ExpectedRegistration::new(31_002, 1_900_001_002, "added", 600, "operator-b");
+
+    let mut initial = Registry::empty();
+    for entry in [&removed, &kept] {
+        initial.register(
+            entry.key.0,
+            entry.key.1,
+            entry.agent_id.clone(),
+            entry.ttl_seconds,
+            entry.registered_by.clone(),
+        )?;
+    }
+    initial.write(&path)?;
+
+    let mut stale_add_writer = Registry::load(&path)?;
+    stale_add_writer.register(
+        added.key.0,
+        added.key.1,
+        added.agent_id.clone(),
+        added.ttl_seconds,
+        added.registered_by.clone(),
+    )?;
+
+    let mut unregister_writer = Registry::load(&path)?;
+    unregister_writer
+        .unregister(removed.key)
+        .expect("the concurrent writer must remove the base key");
+    unregister_writer.write(&path)?;
+
+    stale_add_writer.write(&path)?;
+    let loaded = Registry::load(&path)?;
+
+    assert_eq!(
+        loaded.resolve(removed.key),
+        None,
+        "a stale add-only write must not reapply an unchanged base entry removed by another writer"
+    );
+    assert!(
+        registration_matches(&loaded, &kept),
+        "a stale add-only write must leave unrelated base entries intact"
+    );
+    assert!(
+        registration_matches(&loaded, &added),
+        "a stale add-only write must still persist its local addition"
+    );
+
+    Ok(())
+}
+
+#[test]
 fn IDENT_001_load_missing_file_returns_empty_registry() -> anyhow::Result<()> {
     let tmp = TempDir::new()?;
     let path = tmp.path().join("agents.toml");

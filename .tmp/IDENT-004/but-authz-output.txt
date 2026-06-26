@@ -32,13 +32,13 @@ warning: function `IDENT_003_none_registry_allows_flagged_env_fallback` should h
     |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `ident_003_none_registry_allows_flagged_env_fallback`
 
 warning: `but-authz` (test "authorize") generated 5 warnings
-    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.91s
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.83s
      Running unittests src/lib.rs (target/debug/deps/but_authz-01a6100e6918fc7d)
 
 running 4 tests
-test menu::tests::catalog_every_command_starts_with_but_and_has_nonempty_effect ... ok
-test menu::tests::affordance_map_covers_every_route ... ok
 test route::tests::route_all_matches_table_rows ... ok
+test menu::tests::affordance_map_covers_every_route ... ok
+test menu::tests::catalog_every_command_starts_with_but_and_has_nonempty_effect ... ok
 test menu::tests::authorized_actions_for_admin_denial_is_discovery_only ... ok
 
 test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
@@ -47,8 +47,8 @@ test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
 
 running 4 tests
 test assignment_state_not_an_authority ... ok
-test assignment_state_parse_name_round_trips ... ok
 test assignment_state_literals_match_column_values ... ok
+test assignment_state_parse_name_round_trips ... ok
 test assignment_state_parse_rejects_unknown ... ok
 
 test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
@@ -57,11 +57,11 @@ test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
 
 running 7 tests
 test authority_parse_unknown_errors ... ok
-test optional_role_desugar_preserves_role_behavior ... ok
-test desugar_admin_superuser_and_maintain ... ok
 test authority_parse ... ok
-test list_loads_without_role ... ok
 test desugar_write_excludes_merge_admin ... ok
+test desugar_admin_superuser_and_maintain ... ok
+test optional_role_desugar_preserves_role_behavior ... ok
+test list_loads_without_role ... ok
 test list_equals_role_write ... ok
 
 test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
@@ -74,11 +74,11 @@ test IDENT_003_none_registry_allows_flagged_env_fallback ... ok
 test IDENT_003_registry_miss_allows_flagged_env_fallback ... ok
 test IDENT_003_stale_registry_entry_denies_pid_reuse ... ok
 test IDENT_003_registry_miss_without_env_flag_denies_unregistered ... ok
-test resolve_no_handle_rejected ... ok
-test authorize_held_vs_missing ... ok
-test effective_authority_union ... ok
-test authority_only_from_config ... ok
 test resolve_unknown_principal_denied ... ok
+test authority_only_from_config ... ok
+test effective_authority_union ... ok
+test authorize_held_vs_missing ... ok
+test resolve_no_handle_rejected ... ok
 
 test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.09s
 
@@ -91,7 +91,7 @@ test config_ignores_working_tree_edit ... ok
 test config_loads_from_target_not_head ... ok
 test config_malformed_fails_closed ... ok
 
-test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.20s
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.19s
 
      Running tests/grps_ref_pin.rs (target/debug/deps/grps_ref_pin-7f49573a49c2d050)
 
@@ -104,20 +104,20 @@ test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
      Running tests/grps_union.rs (target/debug/deps/grps_union-41865793dc414b6e)
 
 running 4 tests
-test claims_do_not_widen_union_even_with_group_backing ... ok
-test group_union_authorizes_review_denies_merge ... ok
-test union_paths_stay_equal ... ok
 test delegated_admin_ceiling ... ok
+test union_paths_stay_equal ... ok
+test group_union_authorizes_review_denies_merge ... ok
+test claims_do_not_widen_union_even_with_group_backing ... ok
 
-test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.08s
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.07s
 
      Running tests/invariant_build_gates.rs (target/debug/deps/invariant_build_gates-3ba996ea39f50736)
 
 running 8 tests
-test steer_table_affordance_coverage ... ok
+test steer_primer_contains_required_statements ... ok
 test steer_primer_marked_non_enforced ... ok
 test steer_primer_goal_integrity_and_contract ... ok
-test steer_primer_contains_required_statements ... ok
+test steer_table_affordance_coverage ... ok
 test steer_closed_catalog_r15_boundary_teeth_control ... ok
 test steer_closed_catalog_no_interpolation_in_steering_fields ... ok
 test steer_primer_engine_independent ... ok
@@ -129,8 +129,8 @@ test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
 
 running 5 tests
 test IDENT_002_current_pid_matches_std_process_id ... ok
-test IDENT_002_current_process_start_time_is_sane_unix_timestamp ... ok
 test IDENT_002_current_process_start_time_is_stable_across_reads ... ok
+test IDENT_002_current_process_start_time_is_sane_unix_timestamp ... ok
 test IDENT_004_current_process_start_time_is_monotonic_and_sane_unix_seconds ... ok
 test IDENT_002_nonexistent_pid_returns_error_that_names_pid ... ok
 
@@ -138,31 +138,32 @@ test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
 
      Running tests/registry.rs (target/debug/deps/registry-e5b9a630f0628241)
 
-running 12 tests
+running 13 tests
 test IDENT_001_empty_registry_resolves_no_principal ... ok
 test IDENT_001_gc_keeps_expiry_boundary_and_drops_afterwards ... ok
-test IDENT_001_same_pid_with_different_start_time_does_not_resolve ... ok
 test IDENT_001_register_resolve_round_trip_uses_pid_and_start_time ... ok
+test IDENT_001_same_pid_with_different_start_time_does_not_resolve ... ok
 test IDENT_001_unregister_removes_exact_pid_start_time_pair ... ok
 test IDENT_004_gc_keeps_expiry_boundary_and_drops_afterwards ... ok
 test IDENT_001_load_missing_file_returns_empty_registry ... ok
 test IDENT_001_write_missing_parent_returns_error_naming_path ... ok
 test IDENT_001_write_then_load_round_trips_parseable_toml ... ok
 test IDENT_004_registry_write_then_load_round_trips_three_distinct_entries_exact_fields ... ok
+test IDENT_004_stale_add_write_does_not_resurrect_concurrently_unregistered_base_key ... ok
 test IDENT_004_unregister_write_removes_exact_key_without_resurrecting_via_merge ... ok
 test IDENT_004_concurrent_registry_writes_preserve_all_distinct_entries_and_parse ... ok
 
-test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.12s
+test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.14s
 
      Running tests/steer_carriers.rs (target/debug/deps/steer_carriers-4a88143fe238b237)
 
 running 6 tests
-test steer_legacy_keys_unchanged ... ok
-test steer_types_derive_eq_clone ... ok
-test steer_carriers_serialize_additive_superset ... ok
-test steer_held_permissions_stable_lexical_token_order ... ok
 test steer_config_error_class_and_do_not_only ... ok
+test steer_legacy_keys_unchanged ... ok
+test steer_carriers_serialize_additive_superset ... ok
+test steer_types_derive_eq_clone ... ok
 test steer_do_not_skip_when_none ... ok
+test steer_held_permissions_stable_lexical_token_order ... ok
 
 test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 
@@ -176,14 +177,14 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
      Running tests/steer_menu.rs (target/debug/deps/steer_menu-78002d243d71448e)
 
 running 8 tests
+test steer_affordance_map_covers_every_route_and_no_self_reference ... ok
 test steer_menu_subset_of_effective_set_empty_authority ... ok
-test steer_menu_text_has_no_interpolated_substrings ... ok
-test steer_menu_subset_of_effective_set_protected_keeps_commit ... ok
+test steer_menu_intent_scoped_entries_well_formed ... ok
+test steer_menu_subset_of_effective_set ... ok
 test steer_menu_branch_protected_offers_feature_commit_not_protected ... ok
 test steer_menu_text_is_closed_catalog_constants ... ok
-test steer_affordance_map_covers_every_route_and_no_self_reference ... ok
-test steer_menu_subset_of_effective_set ... ok
-test steer_menu_intent_scoped_entries_well_formed ... ok
+test steer_menu_text_has_no_interpolated_substrings ... ok
+test steer_menu_subset_of_effective_set_protected_keeps_commit ... ok
 
 test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 
@@ -191,8 +192,8 @@ test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
 
 running 5 tests
 test steer_route_required_authority_is_total ... ok
-test steer_route_name_is_stable_and_unique ... ok
 test steer_route_table_includes_forge_routes ... ok
+test steer_route_name_is_stable_and_unique ... ok
 test steer_route_table_is_a_single_but_authz_symbol ... ok
 test steer_route_table_covers_every_gated_route ... ok
 

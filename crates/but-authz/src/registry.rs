@@ -161,14 +161,22 @@ impl Registry {
         &self,
         mut current: BTreeMap<ProcessKey, Registration>,
     ) -> BTreeMap<ProcessKey, Registration> {
-        if let Some(loaded_base) = &self.loaded_base {
-            for key in loaded_base.keys() {
-                if !self.registrations.contains_key(key) {
-                    current.remove(key);
-                }
+        let Some(loaded_base) = &self.loaded_base else {
+            current.extend(self.registrations.clone());
+            return current;
+        };
+
+        for key in loaded_base.keys() {
+            if !self.registrations.contains_key(key) {
+                current.remove(key);
             }
         }
-        current.extend(self.registrations.clone());
+        for (key, registration) in &self.registrations {
+            if loaded_base.get(key) != Some(registration) {
+                current.insert(*key, registration.clone());
+            }
+        }
+
         current
     }
 
