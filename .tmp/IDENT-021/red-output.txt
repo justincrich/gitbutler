@@ -1,0 +1,57 @@
+   Compiling but-authz v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/RED-FIRST-IDENT-021/crates/but-authz)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.41s
+     Running tests/invariant_build_gates.rs (target/debug/deps/invariant_build_gates-3ba996ea39f50736)
+
+running 1 test
+Error: IDENT-021 resolution-order docs must name the runtime-registry resolver chain and denial order:
+crates/but-api/src/commit/gate.rs::enforce_commit_gate_for_target doc block missing "resolve_principal_with_runtime_registry"
+crates/but-api/src/commit/gate.rs::enforce_commit_gate_for_target doc block missing "but_authz::resolve_principal_with_registry"
+crates/but-api/src/commit/gate.rs::enforce_commit_gate_for_target doc block missing "BUT_AUTHZ_ALLOW_ENV_HANDLE"
+crates/but-api/src/commit/gate.rs::enforce_commit_gate_for_target doc block missing "Denial::unregistered"
+crates/but-api/src/legacy/merge_gate.rs::enforce_merge_gate doc block missing "resolve_principal_with_runtime_registry"
+crates/but-api/src/legacy/merge_gate.rs::enforce_merge_gate doc block missing "but_authz::resolve_principal_with_registry"
+crates/but-api/src/legacy/merge_gate.rs::enforce_merge_gate doc block missing "BUT_AUTHZ_ALLOW_ENV_HANDLE"
+crates/but-api/src/legacy/merge_gate.rs::enforce_merge_gate doc block missing "Denial::unregistered"
+crates/but-api/src/legacy/forge.rs::authorize_branch_action doc block missing "resolve_principal_with_runtime_registry"
+crates/but-api/src/legacy/forge.rs::authorize_branch_action doc block missing "but_authz::resolve_principal_with_registry"
+crates/but-api/src/legacy/forge.rs::authorize_branch_action doc block missing "BUT_AUTHZ_ALLOW_ENV_HANDLE"
+crates/but-api/src/legacy/forge.rs::authorize_branch_action doc block missing "Denial::unregistered"
+crates/but-api/src/legacy/config_mutate.rs::enforce_administration_write_gate doc block missing "resolve_principal_with_runtime_registry"
+crates/but-api/src/legacy/config_mutate.rs::enforce_administration_write_gate doc block missing "but_authz::resolve_principal_with_registry"
+crates/but-api/src/legacy/config_mutate.rs::enforce_administration_write_gate doc block missing "BUT_AUTHZ_ALLOW_ENV_HANDLE"
+crates/but-api/src/legacy/config_mutate.rs::enforce_administration_write_gate doc block missing "Denial::unregistered"
+crates/but-api/src/legacy/rules.rs::list_workspace_rules_scoped_for_caller missing preceding /// doc block: function list_workspace_rules_scoped_for_caller has no immediately preceding /// doc block
+crates/but-api/src/legacy/governance.rs::governance_status_read doc block missing "resolve_principal_with_runtime_registry"
+crates/but-api/src/legacy/governance.rs::governance_status_read doc block missing "but_authz::resolve_principal_with_registry"
+crates/but-api/src/legacy/governance.rs::governance_status_read doc block missing "BUT_AUTHZ_ALLOW_ENV_HANDLE"
+crates/but-api/src/legacy/governance.rs::governance_status_read doc block missing "Denial::unregistered"
+crates/but-api/src/legacy/governance.rs::branch_gates_read_with_repo doc block missing "resolve_principal_with_runtime_registry"
+crates/but-api/src/legacy/governance.rs::branch_gates_read_with_repo doc block missing "but_authz::resolve_principal_with_registry"
+crates/but-api/src/legacy/governance.rs::branch_gates_read_with_repo doc block missing "BUT_AUTHZ_ALLOW_ENV_HANDLE"
+crates/but-api/src/legacy/governance.rs::branch_gates_read_with_repo doc block missing "Denial::unregistered"
+crates/but-api/src/legacy/governance.rs::group_list_with_repo doc block missing "resolve_principal_with_runtime_registry"
+crates/but-api/src/legacy/governance.rs::group_list_with_repo doc block missing "but_authz::resolve_principal_with_registry"
+crates/but-api/src/legacy/governance.rs::group_list_with_repo doc block missing "BUT_AUTHZ_ALLOW_ENV_HANDLE"
+crates/but-api/src/legacy/governance.rs::group_list_with_repo doc block missing "Denial::unregistered"
+crates/but-api/src/legacy/governance.rs::perm_list_with_repo doc block missing "resolve_principal_with_runtime_registry"
+crates/but-api/src/legacy/governance.rs::perm_list_with_repo doc block missing "but_authz::resolve_principal_with_registry"
+crates/but-api/src/legacy/governance.rs::perm_list_with_repo doc block missing "BUT_AUTHZ_ALLOW_ENV_HANDLE"
+crates/but-api/src/legacy/governance.rs::perm_list_with_repo doc block missing "Denial::unregistered"
+crates/but-api/src/legacy/governance.rs::whoami_with_repo doc block missing "resolve_principal_with_runtime_registry"
+crates/but-api/src/legacy/governance.rs::whoami_with_repo doc block missing "but_authz::resolve_principal_with_registry"
+crates/but-api/src/legacy/governance.rs::whoami_with_repo doc block missing "BUT_AUTHZ_ALLOW_ENV_HANDLE"
+crates/but-api/src/legacy/governance.rs::whoami_with_repo doc block missing "Denial::unregistered"
+crates/but-api/src/legacy/governance.rs::can_i_with_repo doc block missing "resolve_principal_with_runtime_registry"
+crates/but-api/src/legacy/governance.rs::can_i_with_repo doc block missing "but_authz::resolve_principal_with_registry"
+crates/but-api/src/legacy/governance.rs::can_i_with_repo doc block missing "BUT_AUTHZ_ALLOW_ENV_HANDLE"
+crates/but-api/src/legacy/governance.rs::can_i_with_repo doc block missing "Denial::unregistered"
+test test_resolution_order_documented ... FAILED
+
+failures:
+
+failures:
+    test_resolution_order_documented
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 20 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `-p but-authz --test invariant_build_gates`
