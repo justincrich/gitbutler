@@ -1,0 +1,16 @@
+   Compiling but v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-011/crates/but)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 7.01s
+     Running tests/but/main.rs (target/debug/deps/but-77794c23152c66fc)
+
+running 9 tests
+test command::agent::agent_help_lists_verbs ... ok
+test command::agent::agent_migrate_missing_source ... ok
+test command::agent::agent_migrate_idempotent ... ok
+test command::agent::agent_migrate_writes_agents_toml ... ok
+test command::agent::agent_whoami_without_registration_reports_current_process_key ... ok
+test command::agent::agent_register_unknown_id_rejects_without_registry_write ... ok
+test command::agent::agent_register_known_id_prints_tuple ... ok
+test command::agent::agent_list_empty_and_populated_registries ... ok
+test command::agent::agent_unregister_known_and_unknown_pid_is_idempotent ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 464 filtered out; finished in 2.10s

@@ -48,8 +48,7 @@ permissions = ["contents:read"]
 preserve_me = "do-not-overwrite"
 "#;
 
-const AGENT_MIGRATE_REF_PIN_CAVEAT: &str =
-    "Commit the add of .gitbutler/agents.toml and the delete of .gitbutler/permissions.toml together.";
+const AGENT_MIGRATE_REF_PIN_CAVEAT: &str = "Commit the add of .gitbutler/agents.toml and the delete of .gitbutler/permissions.toml together.";
 
 #[test]
 fn agent_help_lists_verbs() -> anyhow::Result<()> {
@@ -58,7 +57,40 @@ fn agent_help_lists_verbs() -> anyhow::Result<()> {
     env.but("agent --help")
         .assert()
         .success()
-        .stdout_eq(snapshot!("snapshots/agent/help.stdout"));
+        .stdout_eq(snapbox::str![[r#"Manage runtime agent registrations
+
+Usage: but agent [OPTIONS] [COMMAND]
+
+Commands:
+  register    Register a process as an agent
+  unregister  Unregister a process. Missing registrations are not an error
+  list        List live runtime registrations, or the committed roster with --committed
+  whoami      Print the committed agent id for this process
+  migrate     Rewrite working-tree .gitbutler/permissions.toml to .gitbutler/agents.toml
+
+Options:
+      --format <FORMAT>
+          Explicitly control how output should be formatted.
+[..]
+          If unset and from a terminal, it defaults to human output, when redirected it's for
+          shells.
+
+          Possible values:
+          - human: The output to write is supposed to be for human consumption, and can be more
+            verbose
+          - agent: The output is for an AI coding agent, rendered as human-readable text
+          - shell: The output should be suitable for shells, and assigning the major result to
+            variables so that it can be reused in subsequent CLI invocations
+          - json:  Output detailed information as JSON for tool consumption
+          - none:  Do not output anything, like redirecting to /dev/null
+[..]
+          [env: BUT_OUTPUT_FORMAT=]
+          [default: human]
+
+  -h, --help
+          Print help (see a summary with '-h')
+
+"#]]);
 
     Ok(())
 }
