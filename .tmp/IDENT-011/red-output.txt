@@ -1,0 +1,30 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.29s
+     Running tests/but/main.rs (target/debug/deps/but-77794c23152c66fc)
+
+running 1 test
+
+thread 'command::agent::agent_migrate_writes_agents_toml' (63581905) panicked at crates/but/tests/but/command/agent.rs:177:5:
+agent migrate must succeed for a permissions.toml-only working tree; stdout:
+
+stderr:
+error: unrecognized subcommand 'migrate'
+
+  tip: a similar subcommand exists: 'register'
+
+Usage: but agent [OPTIONS] [COMMAND]
+
+For more information, try '--help'.
+
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test command::agent::agent_migrate_writes_agents_toml ... FAILED
+
+failures:
+
+failures:
+    command::agent::agent_migrate_writes_agents_toml
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 472 filtered out; finished in 1.87s
+
+error: test failed, to rerun pass `-p but --test but`
+
+EXIT_STATUS=101

@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::{fs, path::PathBuf};
 
 use crate::utils::Sandbox;
 
@@ -18,6 +18,31 @@ id = "rust-implementer"
 [[agent]]
 id = "rust-reviewer"
 "#;
+
+const LEGACY_PERMISSIONS_TOML: &str = r#"# preserve leading comments
+[[principal]]
+id = "rust-implementer"
+permissions = ["contents:write"]
+
+# role-based entries keep their body bytes
+[[principal]]
+id = "release-bot"
+role = "maintain"
+"#;
+
+const MIGRATED_AGENTS_TOML: &str = r#"# preserve leading comments
+[[agent]]
+id = "rust-implementer"
+permissions = ["contents:write"]
+
+# role-based entries keep their body bytes
+[[agent]]
+id = "release-bot"
+role = "maintain"
+"#;
+
+const AGENT_MIGRATE_REF_PIN_CAVEAT: &str =
+    "Commit the add of .gitbutler/agents.toml and the delete of .gitbutler/permissions.toml together.";
 
 #[test]
 fn agent_help_lists_verbs() -> anyhow::Result<()> {
@@ -142,6 +167,90 @@ Error: no agent registration for pid [..] start_time [..]
     Ok(())
 }
 
+#[test]
+fn agent_migrate_writes_agents_toml() -> anyhow::Result<()> {
+    let env = permissions_only_fixture(LEGACY_PERMISSIONS_TOML)?;
+    let permissions_path = governance_path(&env, "permissions.toml");
+    let agents_path = governance_path(&env, "agents.toml");
+
+    let output = env.but("agent migrate").output()?;
+    assert!(
+        output.status.success(),
+        "agent migrate must succeed for a permissions.toml-only working tree; stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        stdout.contains(AGENT_MIGRATE_REF_PIN_CAVEAT),
+        "agent migrate stdout must include the ref-pin caveat naming the add+delete commit step, got: {stdout}"
+    );
+    assert!(
+        permissions_path.exists(),
+        "agent migrate must leave the legacy permissions.toml in place for the operator to delete"
+    );
+    assert_eq!(
+        fs::read_to_string(&agents_path)?,
+        MIGRATED_AGENTS_TOML,
+        "agent migrate must only rename [[principal]] table headers to [[agent]]"
+    );
+
+    Ok(())
+}
+
+#[test]
+fn agent_migrate_idempotent() -> anyhow::Result<()> {
+    let env = permissions_only_fixture(LEGACY_PERMISSIONS_TOML)?;
+    let agents_path = governance_path(&env, "agents.toml");
+    fs::write(&agents_path, MIGRATED_AGENTS_TOML)?;
+
+    let output = env.but("agent migrate").output()?;
+    assert!(
+        output.status.success(),
+        "agent migrate must succeed when agents.toml already exists; stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        stdout.contains("already migrated") && stdout.contains("no change"),
+        "idempotent agent migrate stdout must report the no-op distinctly, got: {stdout}"
+    );
+    assert_eq!(
+        fs::read_to_string(&agents_path)?,
+        MIGRATED_AGENTS_TOML,
+        "idempotent agent migrate must not rewrite an existing non-empty agents.toml"
+    );
+
+    Ok(())
+}
+
+#[test]
+fn agent_migrate_missing_source() -> anyhow::Result<()> {
+    let env = Sandbox::init_scenario_with_target_and_default_settings("one-stack")?;
+    let agents_path = governance_path(&env, "agents.toml");
+
+    let output = env.but("agent migrate").output()?;
+    assert!(
+        !output.status.success(),
+        "agent migrate must fail without permissions.toml or agents.toml"
+    );
+
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains(".gitbutler/permissions.toml"),
+        "missing-source stderr must name .gitbutler/permissions.toml, got: {stderr}"
+    );
+    assert!(
+        !agents_path.exists(),
+        "missing-source agent migrate must not create agents.toml"
+    );
+
+    Ok(())
+}
+
 fn ident_fixture(_name: &str, agents_toml: &str) -> anyhow::Result<Sandbox> {
     let env = Sandbox::init_scenario_with_target_and_default_settings("one-stack")?;
     env.invoke_bash(format!(
@@ -163,6 +272,18 @@ unset GIT_INDEX_FILE
 "#
     ));
     Ok(env)
+}
+
+fn permissions_only_fixture(permissions_toml: &str) -> anyhow::Result<Sandbox> {
+    let env = Sandbox::init_scenario_with_target_and_default_settings("one-stack")?;
+    let gitbutler_dir = env.projects_root().join(".gitbutler");
+    fs::create_dir_all(&gitbutler_dir)?;
+    fs::write(gitbutler_dir.join("permissions.toml"), permissions_toml)?;
+    Ok(env)
+}
+
+fn governance_path(env: &Sandbox, name: &str) -> PathBuf {
+    env.projects_root().join(".gitbutler").join(name)
 }
 
 fn registry_path(env: &Sandbox, name: &str) -> PathBuf {
