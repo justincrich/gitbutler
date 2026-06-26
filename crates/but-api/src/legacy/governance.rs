@@ -493,7 +493,8 @@ pub fn governance_status_read(ctx: &Context) -> anyhow::Result<GovernanceStatus>
             .map(|authority| authority.name().to_owned())
             .collect(),
         // No resolvable caller: read-only, not an error.
-        Err(_) => Vec::new(),
+        Err(error) if error.downcast_ref::<Denial>().is_some() => Vec::new(),
+        Err(error) => return Err(error),
     };
     Ok(GovernanceStatus {
         authorities,

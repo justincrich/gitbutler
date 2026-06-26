@@ -123,6 +123,30 @@ fn governance_status_read_registered_then_unregistered_empty() -> anyhow::Result
 
 #[test]
 #[serial_test::serial]
+fn governance_status_read_malformed_registry_propagates_instead_of_empty() -> anyhow::Result<()> {
+    let (repo, tmp) = governed_repo();
+    let registry_path = tmp.path().join("agent-registry.toml");
+    fs::write(&registry_path, "not valid toml = [")?;
+    let ctx = context_with_target_ref(&repo, FEAT_REMOTE_REF)?;
+
+    with_registry_only(&registry_path, || {
+        let error = governance_status_read(&ctx)
+            .expect_err("malformed registry must not return empty governance status");
+        assert!(
+            error.downcast_ref::<but_authz::Denial>().is_none(),
+            "malformed registry must propagate as registry corruption, not a permission denial"
+        );
+        let message = format!("{error:#}");
+        assert!(
+            message.contains("parsing registry") || message.contains("loading registry"),
+            "malformed registry error must retain registry parse/load context, got: {message}"
+        );
+        Ok(())
+    })
+}
+
+#[test]
+#[serial_test::serial]
 fn workspace_rules_scoped_for_caller_registered_then_unregistered_denied() -> anyhow::Result<()> {
     let (repo, tmp) = governed_repo();
     let registry_path = tmp.path().join("agent-registry.toml");
