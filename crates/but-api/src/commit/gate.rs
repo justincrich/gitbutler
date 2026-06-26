@@ -1,4 +1,4 @@
-use std::{env, path::PathBuf};
+use std::{env, io, path::PathBuf};
 
 use bstr::ByteSlice as _;
 use but_authz::{
@@ -186,7 +186,7 @@ fn load_runtime_registry(repo: &gix::Repository) -> anyhow::Result<but_authz::Re
     };
     match but_authz::Registry::load(&path) {
         Ok(registry) => Ok(registry),
-        Err(error) => {
+        Err(error) if registry_load_error_is_io(&error) => {
             tracing::debug!(
                 path = %path.display(),
                 error = %error,
@@ -194,7 +194,14 @@ fn load_runtime_registry(repo: &gix::Repository) -> anyhow::Result<but_authz::Re
             );
             Ok(but_authz::Registry::empty())
         }
+        Err(error) => Err(error),
     }
+}
+
+fn registry_load_error_is_io(error: &anyhow::Error) -> bool {
+    error
+        .chain()
+        .any(|cause| cause.downcast_ref::<io::Error>().is_some())
 }
 
 fn runtime_registry_path(repo: &gix::Repository) -> anyhow::Result<Option<PathBuf>> {

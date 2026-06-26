@@ -4,12 +4,18 @@ use but_api::commit::create::gate::{CommitGateTarget, enforce_commit_gate_for_ta
 use but_api::legacy::{
     config_mutate::enforce_administration_write_gate,
     forge::authorize_branch_action,
-    governance::{branch_gates_read_with_repo, group_list_with_repo, perm_list_with_repo},
+    governance::{
+        branch_gates_read_with_repo, can_i_with_repo, governance_status_read, group_list_with_repo,
+        perm_list_with_repo, whoami_with_repo,
+    },
     merge_gate::enforce_merge_gate,
+    rules::{create_workspace_rule, list_workspace_rules_scoped_for_caller},
 };
 use but_db::ForgeReview;
+use but_rules::{Action, CreateRuleRequest, Filter, ImplicitOperation, Trigger, WorkspaceRule};
 
 const FEAT_REF: &str = "refs/heads/feat";
+const FEAT_REMOTE_REF: &str = "refs/remotes/origin/feat";
 const REVIEW_ID: usize = 1;
 
 #[test]
@@ -79,6 +85,66 @@ fn perm_list_registered_process_allowed_then_unregistered_denied() -> anyhow::Re
 
 #[test]
 #[serial_test::serial]
+fn governance_status_read_registered_then_unregistered_empty() -> anyhow::Result<()> {
+    let (repo, tmp) = governed_repo();
+    let registry_path = tmp.path().join("agent-registry.toml");
+    write_process_registry(&registry_path, true)?;
+    let ctx = context_with_target_ref(&repo, FEAT_REMOTE_REF)?;
+
+    with_registry_only(&registry_path, || {
+        let registered = governance_status_read(&ctx)?;
+        assert!(
+            registered
+                .authorities
+                .iter()
+                .any(|authority| authority == "contents:write"),
+            "registered runtime process must resolve to the dev principal's real authorities"
+        );
+        assert!(
+            !registered.not_configured,
+            "governed target ref must report configured governance"
+        );
+        assert_eq!(registered.target_ref, FEAT_REMOTE_REF);
+
+        write_process_registry(&registry_path, false)?;
+        let unregistered = governance_status_read(&ctx)?;
+        assert!(
+            unregistered.authorities.is_empty(),
+            "unregistered runtime process must get the governance status read-only empty-authority shape"
+        );
+        assert!(
+            !unregistered.not_configured,
+            "unregistered caller resolution must not masquerade as unconfigured governance"
+        );
+        assert_eq!(unregistered.target_ref, FEAT_REMOTE_REF);
+        Ok(())
+    })
+}
+
+#[test]
+#[serial_test::serial]
+fn workspace_rules_scoped_for_caller_registered_then_unregistered_denied() -> anyhow::Result<()> {
+    let (repo, tmp) = governed_repo();
+    let registry_path = tmp.path().join("agent-registry.toml");
+    write_process_registry(&registry_path, true)?;
+    let mut ctx = context_with_target_ref(&repo, FEAT_REMOTE_REF)?;
+    let seeded = seed_workspace_rules(&mut ctx)?;
+
+    with_registry_only(&registry_path, || {
+        let registered = list_workspace_rules_scoped_for_caller(&ctx, Some("dev"))?;
+        assert_eq!(
+            rule_ids(&registered),
+            vec![seeded.dev.id()],
+            "registered runtime process must be allowed to read its own scoped rules"
+        );
+
+        write_process_registry(&registry_path, false)?;
+        assert_perm_denied(list_workspace_rules_scoped_for_caller(&ctx, Some("dev")).map(|_| ()))
+    })
+}
+
+#[test]
+#[serial_test::serial]
 fn admin_write_gate_registered_process_allowed_then_unregistered_denied() -> anyhow::Result<()> {
     let (repo, tmp) = governed_repo();
     let registry_path = tmp.path().join("agent-registry.toml");
@@ -101,6 +167,50 @@ fn merge_gate_registered_process_allowed_then_unregistered_denied() -> anyhow::R
 
     with_registry_only(&registry_path, || {
         registered_then_unregistered_denied(&registry_path, || enforce_merge_gate(&ctx, REVIEW_ID))
+    })
+}
+
+#[test]
+#[serial_test::serial]
+fn whoami_registered_process_allowed_then_unregistered_denied() -> anyhow::Result<()> {
+    let (repo, tmp) = governed_repo();
+    let registry_path = tmp.path().join("agent-registry.toml");
+    write_process_registry(&registry_path, true)?;
+
+    with_registry_only(&registry_path, || {
+        registered_then_unregistered_denied(&registry_path, || {
+            let outcome = whoami_with_repo(&repo, FEAT_REF, None)?;
+            assert_eq!(outcome.principal, "dev");
+            assert!(
+                outcome
+                    .authorities
+                    .iter()
+                    .any(|authority| authority == "contents:write"),
+                "registered runtime process must receive its own effective authority set"
+            );
+            Ok(())
+        })
+    })
+}
+
+#[test]
+#[serial_test::serial]
+fn can_i_registered_process_allowed_then_unregistered_denied() -> anyhow::Result<()> {
+    let (repo, tmp) = governed_repo();
+    let registry_path = tmp.path().join("agent-registry.toml");
+    write_process_registry(&registry_path, true)?;
+
+    with_registry_only(&registry_path, || {
+        registered_then_unregistered_denied(&registry_path, || {
+            let outcome = can_i_with_repo(&repo, FEAT_REF, "contents:write", None)?;
+            assert_eq!(outcome.principal, "dev");
+            assert_eq!(outcome.authority, "contents:write");
+            assert!(
+                outcome.held,
+                "registered runtime process must resolve before answering held=true"
+            );
+            Ok(())
+        })
     })
 }
 
@@ -152,6 +262,30 @@ fn env_fallback_still_allowed_on_registry_miss() -> anyhow::Result<()> {
             })
         },
     )
+}
+
+#[test]
+#[serial_test::serial]
+fn malformed_registry_propagates_instead_of_empty() -> anyhow::Result<()> {
+    let (repo, tmp) = governed_repo();
+    let registry_path = tmp.path().join("agent-registry.toml");
+    fs::write(&registry_path, "not valid toml = [")?;
+
+    with_registry_only(&registry_path, || {
+        let target = CommitGateTarget::config_only(gix::refs::FullName::try_from(FEAT_REF)?);
+        let error = enforce_commit_gate_for_target(&repo, &target)
+            .expect_err("malformed registry must not be treated as an empty registry");
+        assert!(
+            error.downcast_ref::<but_authz::Denial>().is_none(),
+            "malformed registry must propagate as registry corruption, not a permission denial"
+        );
+        let message = format!("{error:#}");
+        assert!(
+            message.contains("parsing registry"),
+            "malformed registry error must retain the parser context, got: {message}"
+        );
+        Ok(())
+    })
 }
 
 #[test]
@@ -215,6 +349,39 @@ fn production_sources_do_not_use_legacy_env_resolver() -> anyhow::Result<()> {
         }
     }
     Ok(())
+}
+
+struct SeededRules {
+    dev: WorkspaceRule,
+}
+
+fn seed_workspace_rules(ctx: &mut but_ctx::Context) -> anyhow::Result<SeededRules> {
+    Ok(SeededRules {
+        dev: create_rule(ctx, Some("dev"))?,
+    })
+}
+
+fn create_rule(
+    ctx: &mut but_ctx::Context,
+    session_id: Option<&str>,
+) -> anyhow::Result<WorkspaceRule> {
+    let mut filters = Vec::new();
+    if let Some(session_id) = session_id {
+        filters.push(Filter::ClaudeCodeSessionId(session_id.to_owned()));
+    }
+
+    create_workspace_rule(
+        ctx,
+        CreateRuleRequest {
+            trigger: Trigger::ClaudeCodeHook,
+            filters,
+            action: Action::Implicit(ImplicitOperation::AssignToAppropriateBranch),
+        },
+    )
+}
+
+fn rule_ids(rules: &[WorkspaceRule]) -> Vec<String> {
+    rules.iter().map(WorkspaceRule::id).collect()
 }
 
 fn with_registry_only(
@@ -320,11 +487,24 @@ git checkout -b feat
 echo feat-base >feat-base.txt
 git add feat-base.txt
 git commit -m "feat base"
+git update-ref refs/remotes/origin/feat refs/heads/feat
 git checkout main
 "#,
         &repo,
     );
     (repo, tmp)
+}
+
+fn context_with_target_ref(
+    repo: &gix::Repository,
+    target_ref: &str,
+) -> anyhow::Result<but_ctx::Context> {
+    let ctx = but_ctx::Context::from_repo(repo.clone())?.with_memory_app_cache();
+    let mut project_meta = ctx.project_meta()?;
+    project_meta.target_ref = Some(target_ref.try_into()?);
+    project_meta.target_commit_id = Some(ref_id(repo, target_ref)?);
+    ctx.set_project_meta(project_meta)?;
+    Ok(ctx)
 }
 
 fn context_with_review(repo: &gix::Repository) -> anyhow::Result<but_ctx::Context> {
