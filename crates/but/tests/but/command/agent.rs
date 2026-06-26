@@ -290,6 +290,64 @@ fn agent_migrate_missing_source() -> anyhow::Result<()> {
     Ok(())
 }
 
+#[test]
+#[serial_test::serial]
+fn agent_migrate_initial_writes_agents_toml_with_caveat() -> anyhow::Result<()> {
+    let env = permissions_only_committed_fixture(LEGACY_PERMISSIONS_TOML)?;
+    let agents_path = governance_path(&env, "agents.toml");
+
+    env.but("agent migrate")
+        .assert()
+        .success()
+        .stdout_eq(snapbox::str![])
+        .stderr_eq(snapbox::str![]);
+
+    assert!(
+        agents_path.exists(),
+        "agent migrate must write .gitbutler/agents.toml into the working tree"
+    );
+
+    Ok(())
+}
+
+#[test]
+#[serial_test::serial]
+fn agent_migrate_idempotent_rerun_is_noop() -> anyhow::Result<()> {
+    let env = permissions_only_committed_fixture(LEGACY_PERMISSIONS_TOML)?;
+    let agents_path = governance_path(&env, "agents.toml");
+
+    env.but("agent migrate").assert().success();
+    let agents_before = fs::read(&agents_path)?;
+
+    env.but("agent migrate")
+        .assert()
+        .success()
+        .stdout_eq(snapbox::str![])
+        .stderr_eq(snapbox::str![]);
+
+    assert_eq!(
+        fs::read(&agents_path)?,
+        agents_before,
+        "idempotent agent migrate must leave .gitbutler/agents.toml byte-unchanged"
+    );
+
+    Ok(())
+}
+
+#[test]
+#[serial_test::serial]
+fn agent_migrate_permissions_only_emits_deprecation_warning() -> anyhow::Result<()> {
+    let env = permissions_only_committed_fixture(LEGACY_PERMISSIONS_TOML)?;
+
+    env.but("perm list --principal rust-implementer")
+        .assert()
+        .success()
+        .stdout_eq(snapbox::str![])
+        .stderr_eq(snapbox::str![]);
+
+    Ok(())
+}
+
 fn ident_fixture(_name: &str, agents_toml: &str) -> anyhow::Result<Sandbox> {
     let env = Sandbox::init_scenario_with_target_and_default_settings("one-stack")?;
     env.invoke_bash(format!(
@@ -318,6 +376,33 @@ fn permissions_only_fixture(permissions_toml: &str) -> anyhow::Result<Sandbox> {
     let gitbutler_dir = env.projects_root().join(".gitbutler");
     fs::create_dir_all(&gitbutler_dir)?;
     fs::write(gitbutler_dir.join("permissions.toml"), permissions_toml)?;
+    Ok(env)
+}
+
+fn permissions_only_committed_fixture(permissions_toml: &str) -> anyhow::Result<Sandbox> {
+    let env = Sandbox::init_scenario_with_target_and_default_settings("one-stack")?;
+    env.invoke_bash(format!(
+        r#"
+base=$(git rev-parse refs/heads/main)
+index=$(mktemp)
+export GIT_INDEX_FILE="$index"
+git read-tree "$base"
+permissions_blob=$(git hash-object -w --stdin <<'EOF'
+{permissions_toml}
+EOF
+)
+git update-index --add --cacheinfo 100644 "$permissions_blob" .gitbutler/permissions.toml
+tree=$(git write-tree)
+commit=$(printf 'seed legacy permissions\n' | git commit-tree "$tree" -p "$base")
+git update-ref refs/heads/main "$commit"
+rm "$index"
+unset GIT_INDEX_FILE
+mkdir -p .gitbutler
+cat >.gitbutler/permissions.toml <<'EOF'
+{permissions_toml}
+EOF
+"#
+    ));
     Ok(env)
 }
 
