@@ -1,0 +1,132 @@
+{
+  "task_id": "IDENT-020",
+  "status": "satisfied",
+  "requirements": [
+    {
+      "id": "AC-1",
+      "type": "acceptance_criterion",
+      "satisfied": true,
+      "verify_command": "cargo test -p but-authz --test invariant_build_gates -- test_enforcement_paths_extended",
+      "evidence": "ENFORCEMENT_PATHS has 9 entries and includes AUTHZ_REGISTRY and AUTHZ_PROCESS with exact registry.rs/process.rs constants.",
+      "output_path": ".tmp/IDENT-020/green-test-enforcement-paths-extended.txt",
+      "seeded_value": "ENFORCEMENT_PATHS length was 7 before adding AUTHZ_REGISTRY and AUTHZ_PROCESS.",
+      "seeded_value_file": "crates/but-authz/tests/invariant_build_gates.rs",
+      "red_against_start_file": ".tmp/IDENT-020/red-output.txt",
+      "green_file": ".tmp/IDENT-020/green-test-enforcement-paths-extended.txt"
+    },
+    {
+      "id": "AC-2",
+      "type": "acceptance_criterion",
+      "satisfied": true,
+      "verify_command": "cargo test -p but-authz --test invariant_build_gates -- test_runtime_registry_wrapper_callsite_set_is_authoritative",
+      "evidence": "The invariant verifies the exact 11 runtime-registry wrapper callsites and the wrapper delegation to but_authz::resolve_principal_with_registry(Some(&registry), cfg).",
+      "output_path": ".tmp/IDENT-020/green-test-runtime-registry-wrapper-callsite-set.txt",
+      "seeded_value": "Exact runtime-registry wrapper callsite set of 11 governed but-api surfaces.",
+      "seeded_value_file": "crates/but-authz/tests/invariant_build_gates.rs",
+      "red_against_start_file": ".tmp/IDENT-020/red-output-focused-set.txt",
+      "green_file": ".tmp/IDENT-020/green-test-runtime-registry-wrapper-callsite-set.txt"
+    },
+    {
+      "id": "AC-3",
+      "type": "acceptance_criterion",
+      "satisfied": true,
+      "verify_command": "cargo test -p but-authz --test invariant_build_gates -- test_but_agent_handle_env_reads_only_in_authorize",
+      "evidence": "The invariant scans governed production Rust sources and finds direct_env_reads=0 outside authorize.rs.",
+      "output_path": ".tmp/IDENT-020/green-test-but-agent-handle-env-reads-only-in-authorize.txt",
+      "seeded_value": "Direct BUT_AGENT_HANDLE env::var/env::var_os reads are forbidden outside crates/but-authz/src/authorize.rs.",
+      "seeded_value_file": "crates/but-authz/tests/invariant_build_gates.rs",
+      "red_against_start_file": ".tmp/IDENT-020/red-output-focused-set.txt",
+      "green_file": ".tmp/IDENT-020/green-test-but-agent-handle-env-reads-only-in-authorize.txt"
+    },
+    {
+      "id": "AC-4",
+      "type": "acceptance_criterion",
+      "satisfied": true,
+      "verify_command": "cargo test -p but-authz --test invariant_build_gates -- test_agents_path_exists",
+      "evidence": "AGENTS_PATH exists in config.rs with the exact .gitbutler/agents.toml value.",
+      "output_path": ".tmp/IDENT-020/green-test-agents-path-exists.txt",
+      "seeded_value": "const AGENTS_PATH: &str = \".gitbutler/agents.toml\";",
+      "seeded_value_file": "crates/but-authz/src/config.rs",
+      "red_against_start_file": ".tmp/IDENT-020/red-output-focused-set.txt",
+      "green_file": ".tmp/IDENT-020/green-test-agents-path-exists.txt"
+    },
+    {
+      "id": "AC-5",
+      "type": "acceptance_criterion",
+      "satisfied": true,
+      "verify_command": "cargo test -p but-authz --test invariant_build_gates -- test_permissions_path_deprecated",
+      "evidence": "PERMISSIONS_PATH has an immediate #[deprecated] attribute in config.rs.",
+      "output_path": ".tmp/IDENT-020/green-test-permissions-path-deprecated.txt",
+      "seeded_value": "PERMISSIONS_PATH initially lacked an immediate #[deprecated] attribute.",
+      "seeded_value_file": "crates/but-authz/src/config.rs",
+      "red_against_start_file": ".tmp/IDENT-020/red-output-focused-set.txt",
+      "green_file": ".tmp/IDENT-020/green-test-permissions-path-deprecated.txt"
+    },
+    {
+      "id": "AC-6",
+      "type": "acceptance_criterion",
+      "satisfied": true,
+      "verify_command": "cargo test -p but-authz --test invariant_build_gates -- test_registry_ttl_process_identity_negative_controls_present",
+      "evidence": "The invariant requires expired-entry, wrong-start-time, and wrong-pid registry negative-control test names and rejects success-only coverage.",
+      "output_path": ".tmp/IDENT-020/green-test-registry-ttl-process-identity-negative-controls.txt",
+      "seeded_value": "Required TTL/process-identity negative controls: expired_current_process_registry_entry_denied, current_pid_wrong_start_time_denied_at_commit_gate, wrong_pid_current_start_time_denied_at_commit_gate.",
+      "seeded_value_file": "crates/but-authz/tests/invariant_build_gates.rs",
+      "red_against_start_file": ".tmp/IDENT-020/red-output-focused-set.txt",
+      "green_file": ".tmp/IDENT-020/green-test-registry-ttl-process-identity-negative-controls.txt"
+    },
+    {
+      "id": "TC-1",
+      "type": "test_criterion",
+      "maps_to_ac": "AC-1",
+      "satisfied": true,
+      "verify_command": "cargo test -p but-authz --test invariant_build_gates -- test_enforcement_paths_extended",
+      "evidence": "Focused invariant passed.",
+      "output_path": ".tmp/IDENT-020/green-test-enforcement-paths-extended.txt"
+    },
+    {
+      "id": "TC-2",
+      "type": "test_criterion",
+      "maps_to_ac": "AC-2",
+      "satisfied": true,
+      "verify_command": "cargo test -p but-authz --test invariant_build_gates -- test_runtime_registry_wrapper_callsite_set_is_authoritative",
+      "evidence": "Focused invariant passed.",
+      "output_path": ".tmp/IDENT-020/green-test-runtime-registry-wrapper-callsite-set.txt"
+    },
+    {
+      "id": "TC-3",
+      "type": "test_criterion",
+      "maps_to_ac": "AC-3",
+      "satisfied": true,
+      "verify_command": "cargo test -p but-authz --test invariant_build_gates -- test_but_agent_handle_env_reads_only_in_authorize",
+      "evidence": "Focused invariant passed.",
+      "output_path": ".tmp/IDENT-020/green-test-but-agent-handle-env-reads-only-in-authorize.txt"
+    },
+    {
+      "id": "TC-4",
+      "type": "test_criterion",
+      "maps_to_ac": "AC-4",
+      "satisfied": true,
+      "verify_command": "cargo test -p but-authz --test invariant_build_gates -- test_agents_path_exists",
+      "evidence": "Focused invariant passed.",
+      "output_path": ".tmp/IDENT-020/green-test-agents-path-exists.txt"
+    },
+    {
+      "id": "TC-5",
+      "type": "test_criterion",
+      "maps_to_ac": "AC-5",
+      "satisfied": true,
+      "verify_command": "cargo test -p but-authz --test invariant_build_gates -- test_permissions_path_deprecated",
+      "evidence": "Focused invariant passed.",
+      "output_path": ".tmp/IDENT-020/green-test-permissions-path-deprecated.txt"
+    },
+    {
+      "id": "TC-6",
+      "type": "test_criterion",
+      "maps_to_ac": "AC-6",
+      "satisfied": true,
+      "verify_command": "cargo test -p but-authz --test invariant_build_gates -- test_registry_ttl_process_identity_negative_controls_present",
+      "evidence": "Focused invariant passed.",
+      "output_path": ".tmp/IDENT-020/green-test-registry-ttl-process-identity-negative-controls.txt"
+    }
+  ]
+}

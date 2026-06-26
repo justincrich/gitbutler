@@ -16,6 +16,8 @@ const PERMISSION_CARRIER_PATTERN: &str =
 
 const AUTHZ_AUTHORIZE: &str = "crates/but-authz/src/authorize.rs";
 const AUTHZ_CONFIG: &str = "crates/but-authz/src/config.rs";
+const AUTHZ_REGISTRY: &str = "crates/but-authz/src/registry.rs";
+const AUTHZ_PROCESS: &str = "crates/but-authz/src/process.rs";
 const COMMIT_GATE: &str = "crates/but-api/src/commit/gate.rs";
 const MERGE_GATE: &str = "crates/but-api/src/legacy/merge_gate.rs";
 const CONFIG_MUTATE: &str = "crates/but-api/src/legacy/config_mutate.rs";
@@ -24,6 +26,8 @@ const FORGE_GUARD: &str = "crates/but-api/src/legacy/forge.rs";
 const ENFORCEMENT_PATHS: &[&str] = &[
     AUTHZ_AUTHORIZE,
     AUTHZ_CONFIG,
+    AUTHZ_REGISTRY,
+    AUTHZ_PROCESS,
     COMMIT_GATE,
     MERGE_GATE,
     CONFIG_MUTATE,
@@ -185,15 +189,19 @@ fn test_enforcement_paths_extended() -> anyhow::Result<()> {
         .and_then(|rest| rest.split("];").next())
         .context("ENFORCEMENT_PATHS source definition must be parseable")?;
 
-    for token in [
-        concat!("AUTHZ_", "REGISTRY"),
-        concat!("AUTHZ_", "PROCESS"),
-        concat!("registry", ".rs"),
-        concat!("process", ".rs"),
-    ] {
+    for token in [concat!("AUTHZ_", "REGISTRY"), concat!("AUTHZ_", "PROCESS")] {
         assert!(
             enforcement_paths.contains(token),
             "IDENT-020 ENFORCEMENT_PATHS source must include {token}"
+        );
+    }
+    for line in [
+        r#"const AUTHZ_REGISTRY: &str = "crates/but-authz/src/registry.rs";"#,
+        r#"const AUTHZ_PROCESS: &str = "crates/but-authz/src/process.rs";"#,
+    ] {
+        assert!(
+            source.contains(line),
+            "IDENT-020 enforcement path constants must include {line}"
         );
     }
 

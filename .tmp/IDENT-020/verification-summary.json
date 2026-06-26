@@ -1,0 +1,66 @@
+{
+  "task_id": "IDENT-020",
+  "status": "completed",
+  "branch": "kb-run-sprint/sprint-10-ident-deprecation-hardening/IDENT-020",
+  "worktree": "/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-020",
+  "red_first_evidence": [
+    ".tmp/IDENT-020/red-output.txt",
+    ".tmp/IDENT-020/red-output-focused-set.txt"
+  ],
+  "files_changed": [
+    "crates/but-authz/tests/invariant_build_gates.rs",
+    "crates/but-authz/src/config.rs"
+  ],
+  "verification_commands": [
+    {
+      "command": "cargo test -p but-authz --test invariant_build_gates -- test_enforcement_paths_extended",
+      "exit_code": 0,
+      "output_path": ".tmp/IDENT-020/green-test-enforcement-paths-extended.txt"
+    },
+    {
+      "command": "cargo test -p but-authz --test invariant_build_gates -- test_runtime_registry_wrapper_callsite_set_is_authoritative",
+      "exit_code": 0,
+      "output_path": ".tmp/IDENT-020/green-test-runtime-registry-wrapper-callsite-set.txt"
+    },
+    {
+      "command": "cargo test -p but-authz --test invariant_build_gates -- test_but_agent_handle_env_reads_only_in_authorize",
+      "exit_code": 0,
+      "output_path": ".tmp/IDENT-020/green-test-but-agent-handle-env-reads-only-in-authorize.txt"
+    },
+    {
+      "command": "cargo test -p but-authz --test invariant_build_gates -- test_agents_path_exists",
+      "exit_code": 0,
+      "output_path": ".tmp/IDENT-020/green-test-agents-path-exists.txt"
+    },
+    {
+      "command": "cargo test -p but-authz --test invariant_build_gates -- test_permissions_path_deprecated",
+      "exit_code": 0,
+      "output_path": ".tmp/IDENT-020/green-test-permissions-path-deprecated.txt"
+    },
+    {
+      "command": "cargo test -p but-authz --test invariant_build_gates -- test_registry_ttl_process_identity_negative_controls_present",
+      "exit_code": 0,
+      "output_path": ".tmp/IDENT-020/green-test-registry-ttl-process-identity-negative-controls.txt"
+    },
+    {
+      "command": "cargo test -p but-authz --test invariant_build_gates",
+      "exit_code": 0,
+      "output_path": ".tmp/IDENT-020/green-test-invariant-build-gates-full.txt"
+    },
+    {
+      "command": "cargo check -p but-authz --all-targets",
+      "exit_code": 0,
+      "output_path": ".tmp/IDENT-020/cargo-check-but-authz-all-targets.txt"
+    },
+    {
+      "command": "cargo clippy -p but-authz --all-targets -- -D warnings",
+      "exit_code": 0,
+      "output_path": ".tmp/IDENT-020/cargo-clippy-but-authz-all-targets.txt"
+    },
+    {
+      "command": "cargo fmt",
+      "exit_code": 0,
+      "output_path": ".tmp/IDENT-020/cargo-fmt.txt"
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.16s
+     Running tests/invariant_build_gates.rs (target/debug/deps/invariant_build_gates-3ba996ea39f50736)
+
+running 14 tests
+test steer_primer_contains_required_statements ... ok
+test steer_primer_marked_non_enforced ... ok
+test test_agents_path_exists ... ok
+test steer_primer_goal_integrity_and_contract ... ok
+test test_enforcement_paths_extended ... ok
+test steer_table_affordance_coverage ... ok
+test test_permissions_path_deprecated ... ok
+test test_registry_ttl_process_identity_negative_controls_present ... ok
+test test_runtime_registry_wrapper_callsite_set_is_authoritative ... ok
+test test_but_agent_handle_env_reads_only_in_authorize ... ok
+test steer_closed_catalog_r15_boundary_teeth_control ... ok
+test steer_closed_catalog_no_interpolation_in_steering_fields ... ok
+test steer_primer_engine_independent ... ok
+test invariant_build_gates ... ok
+
+test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+

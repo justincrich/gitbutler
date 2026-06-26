@@ -1,3 +1,5 @@
+#![allow(deprecated)]
+
 use std::{borrow::Borrow, collections::BTreeMap, path::Path, str};
 
 use anyhow::{Context, anyhow};
@@ -6,6 +8,7 @@ use serde::{Deserialize, Serialize};
 use crate::{AuthoritySet, DenialClass, Group, GroupName, PrincipalId};
 
 const AGENTS_PATH: &str = ".gitbutler/agents.toml";
+#[deprecated]
 const PERMISSIONS_PATH: &str = ".gitbutler/permissions.toml";
 const GATES_PATH: &str = ".gitbutler/gates.toml";
 const CONFIG_INVALID: &str = "config.invalid";
