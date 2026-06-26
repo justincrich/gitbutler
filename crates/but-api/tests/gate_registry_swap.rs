@@ -375,6 +375,249 @@ fn production_sources_do_not_use_legacy_env_resolver() -> anyhow::Result<()> {
     Ok(())
 }
 
+#[test]
+fn all_but_agent_handle_env_helpers_are_flag_gated() -> anyhow::Result<()> {
+    let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let test_root = manifest_dir.join("tests");
+    let mut violations = Vec::new();
+
+    for path in rust_sources(&test_root)? {
+        if is_dedicated_env_fallback_gate_test(&path) {
+            continue;
+        }
+        let source = fs::read_to_string(&path)?;
+        let relative = path.strip_prefix(manifest_dir)?.display().to_string();
+        let helper_scopes = temp_env_helper_scopes(&source);
+
+        for scope in helper_scopes
+            .iter()
+            .filter(|scope| scope.contains_agent_handle)
+        {
+            let paired = scope.contains_allow_env_handle
+                || helper_scopes.iter().any(|candidate| {
+                    candidate.contains_allow_env_handle
+                        && candidate.start <= scope.start
+                        && scope.end <= candidate.end
+                });
+            if !paired {
+                violations.push(format!(
+                    "{relative}:{} unpaired {helper} scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1",
+                    scope.line,
+                    helper = scope.helper
+                ));
+            }
+        }
+    }
+
+    assert!(
+        violations.is_empty(),
+        "every temp_env BUT_AGENT_HANDLE helper scope must also enable BUT_AUTHZ_ALLOW_ENV_HANDLE=1:\n{}",
+        violations.join("\n")
+    );
+    Ok(())
+}
+
+fn is_dedicated_env_fallback_gate_test(path: &Path) -> bool {
+    matches!(
+        path.file_name().and_then(OsStr::to_str),
+        Some("agents_toml_migration.rs" | "gate_registry_swap.rs")
+    )
+}
+
+#[derive(Debug)]
+struct TempEnvScope {
+    helper: &'static str,
+    start: usize,
+    end: usize,
+    line: usize,
+    contains_agent_handle: bool,
+    contains_allow_env_handle: bool,
+}
+
+fn temp_env_helper_scopes(source: &str) -> Vec<TempEnvScope> {
+    const HELPERS: [(&str, &str); 3] = [
+        ("temp_env::with_var(", "temp_env::with_var"),
+        ("temp_env::with_vars(", "temp_env::with_vars"),
+        ("temp_env::async_with_vars(", "temp_env::async_with_vars"),
+    ];
+
+    let mut scopes = Vec::new();
+    for (needle, helper) in HELPERS {
+        for start in helper_starts(source, needle) {
+            let open_paren = start + needle.len() - 1;
+            let Some(close_paren) = find_matching_paren(source, open_paren) else {
+                break;
+            };
+            let scope_source = &source[start..=close_paren];
+            scopes.push(TempEnvScope {
+                helper,
+                start,
+                end: close_paren,
+                line: source[..start].matches('\n').count() + 1,
+                contains_agent_handle: scope_source.contains("\"BUT_AGENT_HANDLE\""),
+                contains_allow_env_handle: scope_source.contains("\"BUT_AUTHZ_ALLOW_ENV_HANDLE\"")
+                    && (scope_source.contains("Some(\"1\")")
+                        || scope_source.contains("Some(OsStr::new(\"1\"))")),
+            });
+        }
+    }
+    scopes.sort_by_key(|scope| (scope.start, scope.end));
+    scopes
+}
+
+fn helper_starts(source: &str, needle: &str) -> Vec<usize> {
+    let bytes = source.as_bytes();
+    let mut starts = Vec::new();
+    let mut idx = 0;
+    let mut in_line_comment = false;
+    let mut in_block_comment = false;
+    let mut in_string = false;
+    let mut in_char = false;
+    let mut escaped = false;
+
+    while idx < bytes.len() {
+        let byte = bytes[idx];
+        let next = bytes.get(idx + 1).copied();
+
+        if in_line_comment {
+            in_line_comment = byte != b'\n';
+            idx += 1;
+            continue;
+        }
+        if in_block_comment {
+            if byte == b'*' && next == Some(b'/') {
+                in_block_comment = false;
+                idx += 2;
+            } else {
+                idx += 1;
+            }
+            continue;
+        }
+        if in_string {
+            if escaped {
+                escaped = false;
+            } else if byte == b'\\' {
+                escaped = true;
+            } else if byte == b'"' {
+                in_string = false;
+            }
+            idx += 1;
+            continue;
+        }
+        if in_char {
+            if escaped {
+                escaped = false;
+            } else if byte == b'\\' {
+                escaped = true;
+            } else if byte == b'\'' {
+                in_char = false;
+            }
+            idx += 1;
+            continue;
+        }
+
+        if bytes[idx..].starts_with(needle.as_bytes()) {
+            starts.push(idx);
+            idx += needle.len();
+        } else if byte == b'/' && next == Some(b'/') {
+            in_line_comment = true;
+            idx += 2;
+        } else if byte == b'/' && next == Some(b'*') {
+            in_block_comment = true;
+            idx += 2;
+        } else if byte == b'"' {
+            in_string = true;
+            idx += 1;
+        } else if byte == b'\'' {
+            in_char = true;
+            idx += 1;
+        } else {
+            idx += 1;
+        }
+    }
+
+    starts
+}
+
+fn find_matching_paren(source: &str, open_paren: usize) -> Option<usize> {
+    let bytes = source.as_bytes();
+    let mut idx = open_paren;
+    let mut depth = 0usize;
+    let mut in_line_comment = false;
+    let mut in_block_comment = false;
+    let mut in_string = false;
+    let mut in_char = false;
+    let mut escaped = false;
+
+    while idx < bytes.len() {
+        let byte = bytes[idx];
+        let next = bytes.get(idx + 1).copied();
+
+        if in_line_comment {
+            in_line_comment = byte != b'\n';
+            idx += 1;
+            continue;
+        }
+        if in_block_comment {
+            if byte == b'*' && next == Some(b'/') {
+                in_block_comment = false;
+                idx += 2;
+            } else {
+                idx += 1;
+            }
+            continue;
+        }
+        if in_string {
+            if escaped {
+                escaped = false;
+            } else if byte == b'\\' {
+                escaped = true;
+            } else if byte == b'"' {
+                in_string = false;
+            }
+            idx += 1;
+            continue;
+        }
+        if in_char {
+            if escaped {
+                escaped = false;
+            } else if byte == b'\\' {
+                escaped = true;
+            } else if byte == b'\'' {
+                in_char = false;
+            }
+            idx += 1;
+            continue;
+        }
+
+        if byte == b'/' && next == Some(b'/') {
+            in_line_comment = true;
+            idx += 2;
+        } else if byte == b'/' && next == Some(b'*') {
+            in_block_comment = true;
+            idx += 2;
+        } else if byte == b'"' {
+            in_string = true;
+            idx += 1;
+        } else if byte == b'\'' {
+            in_char = true;
+            idx += 1;
+        } else if byte == b'(' {
+            depth += 1;
+            idx += 1;
+        } else if byte == b')' {
+            depth = depth.checked_sub(1)?;
+            if depth == 0 {
+                return Some(idx);
+            }
+            idx += 1;
+        } else {
+            idx += 1;
+        }
+    }
+    None
+}
+
 struct SeededRules {
     dev: WorkspaceRule,
 }

@@ -1,0 +1,188 @@
+   Compiling but-api v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/RED-FIRST-IDENT-018/crates/but-api)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.74s
+     Running tests/gate_registry_swap.rs (target/debug/deps/gate_registry_swap-db23272148eb0f78)
+
+running 1 test
+test all_but_agent_handle_env_helpers_are_flag_gated ... FAILED
+
+failures:
+
+---- all_but_agent_handle_env_helpers_are_flag_gated stdout ----
+
+thread 'all_but_agent_handle_env_helpers_are_flag_gated' (66965257) panicked at crates/but-api/tests/gate_registry_swap.rs:412:5:
+every temp_env BUT_AGENT_HANDLE helper scope must also enable BUT_AUTHZ_ALLOW_ENV_HANDLE=1:
+tests/admin_write_guard.rs:14 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/admin_write_guard.rs:26 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/admin_write_guard.rs:47 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/admin_write_guard.rs:75 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/branch_gates_governance.rs:18 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/branch_gates_governance.rs:38 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/branch_gates_governance.rs:65 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/branch_gates_governance.rs:81 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/branch_gates_governance.rs:107 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/commit_gate.rs:14 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/commit_gate.rs:91 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/commit_gate.rs:152 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/commit_gate.rs:212 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/commit_gate.rs:328 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/commit_gate.rs:406 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/commit_gate.rs:440 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/commit_gate.rs:493 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/commit_gate.rs:520 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/commit_gate.rs:543 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/commit_gate.rs:583 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/commit_gate.rs:625 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/commit_gate.rs:656 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/commit_gate.rs:696 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/commit_gate.rs:753 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/confinement.rs:20 unpaired temp_env::async_with_vars scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/confinement.rs:40 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/confinement.rs:48 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/confinement.rs:68 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/confinement.rs:108 unpaired temp_env::async_with_vars scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/confinement.rs:252 unpaired temp_env::async_with_vars scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/forge_guard.rs:104 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/forge_guard.rs:124 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/forge_guard.rs:167 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/forge_guard.rs:193 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/forge_guard.rs:222 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/governance_api.rs:20 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/governance_api.rs:57 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/governance_api.rs:86 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/governance_api.rs:118 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/governance_api.rs:147 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/governance_api.rs:269 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/governance_api.rs:315 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/group_governance.rs:25 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/group_governance.rs:31 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/group_governance.rs:37 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/group_governance.rs:43 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/group_governance.rs:49 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/group_governance.rs:94 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/group_governance.rs:100 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/group_governance.rs:106 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/group_governance.rs:112 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/group_governance.rs:118 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/group_governance.rs:159 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/group_governance.rs:205 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/group_governance.rs:240 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/group_governance.rs:278 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/group_governance.rs:327 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/group_governance.rs:380 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/group_governance.rs:398 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/group_governance.rs:412 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/group_governance.rs:443 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/group_governance.rs:458 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/group_governance.rs:473 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/group_governance.rs:488 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/group_governance.rs:503 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/group_governance.rs:527 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/group_governance.rs:541 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/group_governance.rs:555 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/group_governance.rs:582 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/group_governance.rs:599 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/group_governance.rs:621 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/group_governance.rs:662 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/group_governance.rs:696 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/keep_reviews_local_gate.rs:28 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/local_review_assignments.rs:34 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/local_review_assignments.rs:95 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/local_review_assignments.rs:106 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/local_review_assignments.rs:176 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/local_review_assignments.rs:185 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/local_review_assignments.rs:203 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/local_review_assignments.rs:274 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/local_review_assignments.rs:296 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/local_review_assignments.rs:351 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/local_review_comments_verbs.rs:23 unpaired temp_env::async_with_vars scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/local_review_comments_verbs.rs:132 unpaired temp_env::async_with_vars scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/local_review_comments_verbs.rs:172 unpaired temp_env::async_with_vars scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/local_review_comments_verbs.rs:227 unpaired temp_env::async_with_vars scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/local_review_comments_verbs.rs:272 unpaired temp_env::async_with_vars scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/local_review_comments_verbs.rs:336 unpaired temp_env::async_with_vars scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/local_review_comments_verbs.rs:348 unpaired temp_env::async_with_vars scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/local_review_comments_verbs.rs:373 unpaired temp_env::async_with_vars scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/local_review_comments_verbs.rs:401 unpaired temp_env::async_with_vars scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/local_review_comments_verbs.rs:422 unpaired temp_env::async_with_vars scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/local_review_comments_verbs.rs:444 unpaired temp_env::async_with_vars scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/local_review_comments_verbs.rs:464 unpaired temp_env::async_with_vars scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/local_review_comments_verbs.rs:483 unpaired temp_env::async_with_vars scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/local_review_comments_verbs.rs:798 unpaired temp_env::async_with_vars scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/local_review_status.rs:25 unpaired temp_env::async_with_vars scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/local_review_status.rs:36 unpaired temp_env::async_with_vars scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/local_review_status.rs:85 unpaired temp_env::async_with_vars scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/local_review_status.rs:95 unpaired temp_env::async_with_vars scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/local_review_status.rs:124 unpaired temp_env::async_with_vars scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/local_review_status.rs:133 unpaired temp_env::async_with_vars scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/local_review_status.rs:160 unpaired temp_env::async_with_vars scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/merge_gate.rs:17 unpaired temp_env::async_with_vars scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/merge_gate.rs:47 unpaired temp_env::async_with_vars scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/merge_gate.rs:64 unpaired temp_env::async_with_vars scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/merge_gate.rs:88 unpaired temp_env::async_with_vars scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/merge_gate.rs:112 unpaired temp_env::async_with_vars scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/merge_gate.rs:135 unpaired temp_env::async_with_vars scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/merge_gate.rs:163 unpaired temp_env::async_with_vars scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/merge_gate.rs:192 unpaired temp_env::async_with_vars scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/merge_gate.rs:217 unpaired temp_env::async_with_vars scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/merge_gate.rs:245 unpaired temp_env::async_with_vars scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/merge_gate.rs:261 unpaired temp_env::async_with_vars scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/merge_gate.rs:285 unpaired temp_env::async_with_vars scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/merge_gate.rs:301 unpaired temp_env::async_with_vars scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/merge_gate.rs:325 unpaired temp_env::async_with_vars scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/merge_gate.rs:361 unpaired temp_env::async_with_vars scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/merge_gate.rs:395 unpaired temp_env::async_with_vars scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/merge_gate.rs:435 unpaired temp_env::async_with_vars scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/merge_gate.rs:462 unpaired temp_env::async_with_vars scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/merge_gate.rs:482 unpaired temp_env::async_with_vars scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/merge_gate.rs:506 unpaired temp_env::async_with_vars scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/merge_gate.rs:540 unpaired temp_env::async_with_vars scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/merge_gate.rs:558 unpaired temp_env::async_with_vars scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/merge_gate.rs:587 unpaired temp_env::async_with_vars scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/merge_gate.rs:625 unpaired temp_env::async_with_vars scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/merge_gate.rs:673 unpaired temp_env::async_with_vars scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/merge_gate.rs:719 unpaired temp_env::async_with_vars scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/merge_gate.rs:1032 unpaired temp_env::async_with_vars scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/merge_gate_self_escalation.rs:21 unpaired temp_env::async_with_vars scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/merge_gate_self_escalation.rs:53 unpaired temp_env::async_with_vars scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/merge_gate_self_escalation.rs:74 unpaired temp_env::async_with_vars scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/perm_governance.rs:18 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/perm_governance.rs:62 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/perm_governance.rs:101 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/perm_governance.rs:144 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/perm_governance.rs:171 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/perm_governance.rs:190 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/perm_governance.rs:205 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/perm_governance.rs:229 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/perm_governance.rs:243 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/perm_governance.rs:271 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/perm_governance.rs:308 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/perm_governance.rs:337 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/perm_governance.rs:366 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/perm_governance.rs:372 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/perm_governance.rs:378 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/perm_governance.rs:409 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/perm_governance.rs:418 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/perm_governance.rs:430 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/perm_governance.rs:447 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/perm_governance.rs:450 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/rules_scoped.rs:89 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/rules_scoped.rs:98 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/rules_scoped.rs:106 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/steer_class_wiring.rs:45 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/steer_class_wiring.rs:106 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/steer_class_wiring.rs:195 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/steer_class_wiring.rs:280 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/steer_class_wiring.rs:374 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/steer_telemetry.rs:180 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/steer_telemetry.rs:277 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/steer_telemetry.rs:376 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+tests/steer_telemetry.rs:463 unpaired temp_env::with_var scope sets BUT_AGENT_HANDLE without BUT_AUTHZ_ALLOW_ENV_HANDLE=1
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    all_but_agent_handle_env_helpers_are_flag_gated
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 17 filtered out; finished in 0.01s
+
+error: test failed, to rerun pass `-p but-api --test gate_registry_swap`

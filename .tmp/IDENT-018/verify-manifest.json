@@ -1,0 +1,20 @@
+{
+  "task_id": "RED-FIRST-IDENT-018",
+  "original_task_id": "IDENT-018",
+  "verification_policy": {
+    "requires_tests": false,
+    "requires_red_evidence": false,
+    "requires_seeded_evidence": false
+  },
+  "project_commands": {
+    "typecheck": "cargo check -p but-api --all-targets",
+    "lint": "cargo clippy -p but-api --test gate_registry_swap -- -D warnings",
+    "test": "cargo test -p but-api --test gate_registry_swap -- all_but_agent_handle_env_helpers_are_flag_gated"
+  },
+  "requirements": [
+    {
+      "id": "RED-1",
+      "verify": "test -s .tmp/IDENT-018/red-output.txt && rg \"unpaired|all_scopes_paired=false|FAILED\" .tmp/IDENT-018/red-output.txt"
+    }
+  ]
+}
