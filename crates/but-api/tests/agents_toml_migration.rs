@@ -89,9 +89,7 @@ fn legacy_permissions_only_repo_authorizes_via_env_fallback() -> anyhow::Result<
 }
 
 fn governed_repo() -> (gix::Repository, tempfile::TempDir) {
-    // checkout-head-info is the existing writable fixture; this helper seeds it
-    // into the agents-toml-migration scenario needed by these RED tests.
-    let (repo, tmp) = but_testsupport::writable_scenario("checkout-head-info");
+    let (repo, tmp) = but_testsupport::writable_scenario("agents-toml-migration");
     but_testsupport::invoke_bash(
         r#"
 mkdir -p .gitbutler
@@ -120,9 +118,7 @@ git commit -m "permissions governance config"
 }
 
 fn legacy_permissions_only_repo() -> (gix::Repository, tempfile::TempDir) {
-    // checkout-head-info is the existing writable fixture; this helper seeds it
-    // into the agents-toml-migration scenario needed by these RED tests.
-    let (repo, tmp) = but_testsupport::writable_scenario("checkout-head-info");
+    let (repo, tmp) = but_testsupport::writable_scenario("agents-toml-migration");
     but_testsupport::invoke_bash(
         r#"
 mkdir -p .gitbutler
