@@ -1,0 +1,18 @@
+   Compiling but-api v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/RED-FIRST-IDENT-013/crates/but-api)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.60s
+     Running tests/agents_toml_migration.rs (target/debug/deps/agents_toml_migration-1f38514f7f2ea1e7)
+
+running 1 test
+warning: .gitbutler/permissions.toml is deprecated; run: but agent migrate
+warning: .gitbutler/permissions.toml is deprecated; run: but agent migrate
+Error: legacy env fallback must deny when BUT_AUTHZ_ALLOW_ENV_HANDLE is unset
+test legacy_permissions_only_repo_authorizes_via_env_fallback ... FAILED
+
+failures:
+
+failures:
+    legacy_permissions_only_repo_authorizes_via_env_fallback
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1 filtered out; finished in 0.24s
+
+error: test failed, to rerun pass `-p but-api --test agents_toml_migration`
