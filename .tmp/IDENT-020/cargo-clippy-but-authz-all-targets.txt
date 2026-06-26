@@ -1,0 +1,4 @@
+    Checking but-authz v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-020/crates/but-authz)
+    Checking but-graph v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-020/crates/but-graph)
+    Checking but-testsupport v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-020/crates/but-testsupport)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1.33s
