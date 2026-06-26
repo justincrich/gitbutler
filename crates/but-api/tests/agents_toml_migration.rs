@@ -1,6 +1,5 @@
 use but_api::commit::create::gate::{CommitGateTarget, enforce_commit_gate_for_target};
 use but_authz::{Authority, PrincipalId, load_governance_config};
-use serde::Serialize;
 
 const MAIN_REF: &str = "refs/heads/main";
 const FEAT_REF: &str = "refs/heads/feat";
@@ -11,7 +10,30 @@ const AGENTS_FORMAT_REF: &str = "refs/heads/agents-format";
 fn migrate_round_trip_is_byte_equivalent_gov_config() -> anyhow::Result<()> {
     let (repo, _tmp) = governed_repo();
     let permissions_commit = ref_id(&repo, MAIN_REF)?;
-    write_agents_toml_from_permissions_wire(&repo)?;
+    write_agents_toml_via_migration(&repo)?;
+
+    let workdir = repo
+        .workdir()
+        .ok_or_else(|| anyhow::anyhow!("test repository must have a working tree"))?;
+    let permissions_text = std::fs::read_to_string(workdir.join(".gitbutler/permissions.toml"))?;
+    let agents_text = std::fs::read_to_string(workdir.join(".gitbutler/agents.toml"))?;
+    let expected_agents_text = permissions_text.replace("[[principal]]", "[[agent]]");
+    assert_eq!(
+        agents_text, expected_agents_text,
+        "migration must preserve comments, blank lines, and spacing verbatim; only [[principal]] headers may become [[agent]]"
+    );
+    assert!(
+        agents_text.contains("# governance principals - preserve this header comment"),
+        "leading governance comment must survive migration, got:\n{agents_text}"
+    );
+    assert!(
+        agents_text.contains("[[agent]]  # inline trailing comment"),
+        "inline trailing header comment must survive migration, got:\n{agents_text}"
+    );
+    assert!(
+        !agents_text.contains("[[principal]]"),
+        "migration must rewrite every [[principal]] header, got:\n{agents_text}"
+    );
 
     but_testsupport::invoke_bash(
         r#"
@@ -94,11 +116,13 @@ fn governed_repo() -> (gix::Repository, tempfile::TempDir) {
         r#"
 mkdir -p .gitbutler
 cat >.gitbutler/permissions.toml <<'EOF'
+# governance principals - preserve this header comment
 [[principal]]
 id = "dev"
 permissions = ["contents:write"]
 
-[[principal]]
+# read-only principal keeps its body bytes
+[[principal]]  # inline trailing comment
 id = "ro"
 permissions = ["contents:read"]
 EOF
@@ -155,57 +179,18 @@ git checkout main
     (repo, tmp)
 }
 
-fn write_agents_toml_from_permissions_wire(repo: &gix::Repository) -> anyhow::Result<()> {
+/// Migrate the working tree's `permissions.toml` to `agents.toml` using the same
+/// text-preserving transform the `but agent migrate` CLI verb runs, so this test
+/// exercises the real migration rather than a comment-stripping re-serialization.
+fn write_agents_toml_via_migration(repo: &gix::Repository) -> anyhow::Result<()> {
     let workdir = repo
         .workdir()
         .ok_or_else(|| anyhow::anyhow!("test repository must have a working tree"))?;
-    let permissions_path = workdir.join(".gitbutler/permissions.toml");
-    let permissions_text = std::fs::read_to_string(&permissions_path)?;
-    let permissions = toml::from_str::<but_authz::PermissionsWire>(&permissions_text)?;
-    let agents = AgentsWireForMigration::from(permissions);
-    let agents_text = toml::to_string(&agents)?;
+    let permissions_text = std::fs::read_to_string(workdir.join(".gitbutler/permissions.toml"))?;
+    let agents_text = but_authz::rewrite_principals_to_agents(&permissions_text);
 
     std::fs::write(workdir.join(".gitbutler/agents.toml"), agents_text)?;
     Ok(())
-}
-
-#[derive(Serialize)]
-struct AgentsWireForMigration {
-    agent: Vec<AgentWireForMigration>,
-    group: Vec<but_authz::GroupWire>,
-}
-
-impl From<but_authz::PermissionsWire> for AgentsWireForMigration {
-    fn from(permissions: but_authz::PermissionsWire) -> Self {
-        Self {
-            agent: permissions
-                .principal
-                .into_iter()
-                .map(AgentWireForMigration::from)
-                .collect(),
-            group: permissions.group,
-        }
-    }
-}
-
-#[derive(Serialize)]
-struct AgentWireForMigration {
-    id: String,
-    permissions: Vec<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    role: Option<String>,
-    groups: Vec<String>,
-}
-
-impl From<but_authz::PrincipalWire> for AgentWireForMigration {
-    fn from(principal: but_authz::PrincipalWire) -> Self {
-        Self {
-            id: principal.id,
-            permissions: principal.permissions,
-            role: principal.role,
-            groups: principal.groups,
-        }
-    }
 }
 
 fn assert_contents_write(config: &but_authz::GovConfig, principal_id: &str) -> anyhow::Result<()> {

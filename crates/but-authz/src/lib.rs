@@ -18,6 +18,7 @@ mod authorize;
 mod config;
 mod denial;
 mod menu;
+mod migrate;
 mod principal;
 mod process;
 mod registry;
@@ -40,6 +41,7 @@ pub use menu::{
     AFFORDANCE_MAP, Affordance, CATALOG, DISCOVERY_COMMAND, DenialPredicate, DeniedRoute,
     authorized_actions,
 };
+pub use migrate::rewrite_principals_to_agents;
 pub use principal::{Group, GroupName, Principal, PrincipalId};
 pub use process::{current_pid, process_start_time};
 pub use registry::{AgentId, ProcessKey, Registration, Registry};
