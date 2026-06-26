@@ -1,0 +1,18 @@
+   Compiling but-api v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/RED-FIRST-IDENT-012/crates/but-api)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.66s
+     Running tests/agent_registry.rs (target/debug/deps/agent_registry-6ad69d08b81c4ef3)
+
+running 1 test
+registered test process pid=85775 start_time=1782442245 as `dev` via BUT_AGENT_REGISTRY_PATH=/var/folders/rt/8_hh9gmj43x4763f7_l_nk3c0000gn/T/.tmpGSyVAn
+warning: .gitbutler/permissions.toml is deprecated; run: but agent migrate
+Error: BUT_AGENT_HANDLE is required to resolve a governed principal
+test commit_surface ... FAILED
+
+failures:
+
+failures:
+    commit_surface
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 3 filtered out; finished in 0.12s
+
+error: test failed, to rerun pass `-p but-api --test agent_registry`
