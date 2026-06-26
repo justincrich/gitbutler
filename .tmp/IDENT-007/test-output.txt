@@ -1,0 +1,13 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.26s
+     Running tests/but/main.rs (target/debug/deps/but-77794c23152c66fc)
+
+running 6 tests
+test command::agent::agent_help_lists_verbs ... ok
+test command::agent::agent_whoami_without_registration_reports_current_process_key ... ok
+test command::agent::agent_register_unknown_id_rejects_without_registry_write ... ok
+test command::agent::agent_register_known_id_prints_tuple ... ok
+test command::agent::agent_list_empty_and_populated_registries ... ok
+test command::agent::agent_unregister_known_and_unknown_pid_is_idempotent ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 464 filtered out; finished in 1.87s
+
