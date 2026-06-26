@@ -1,0 +1,90 @@
+   Compiling but-authz v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/BLOCKER-IDENT-016-DOCTEST/crates/but-authz)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.60s
+   Doc-tests but_authz
+
+running 81 tests
+test crates/but-authz/src/assignment_state.rs - assignment_state::AssignmentState::ALL (line 36) ... ok
+test crates/but-authz/src/authority.rs - authority::AuthoritySet::is_empty (line 351) ... ok
+test crates/but-authz/src/assignment_state.rs - assignment_state::AssignmentState (line 18) ... ok
+test crates/but-authz/src/assignment_state.rs - assignment_state::AssignmentStateParseError (line 90) ... ok
+test crates/but-authz/src/authority.rs - authority::Authority::name (line 91) ... ok
+test crates/but-authz/src/authority.rs - authority::Authority::ALL (line 43) ... ok
+test crates/but-authz/src/assignment_state.rs - assignment_state::AssignmentStateParseError::token (line 108) ... ok
+test crates/but-authz/src/authority.rs - authority::AuthoritySet::iter (line 362) ... ok
+test crates/but-authz/src/authority.rs - authority::Authority::parse (line 65) ... ok
+test crates/but-authz/src/authority.rs - authority::AuthoritySet::contains (line 322) ... ok
+test crates/but-authz/src/assignment_state.rs - assignment_state::AssignmentState::name (line 48) ... ok
+test crates/but-authz/src/authority.rs - authority::Authority (line 126) ... ok
+test crates/but-authz/src/authority.rs - authority::AuthoritySet::empty (line 224) ... ok
+test crates/but-authz/src/authority.rs - authority::AuthoritySet::from_role (line 258) ... ok
+test crates/but-authz/src/authority.rs - authority::AuthoritySet (line 207) ... ok
+test crates/but-authz/src/assignment_state.rs - assignment_state::AssignmentState::parse (line 66) ... ok
+test crates/but-authz/src/authority.rs - authority::AuthoritySet::from_optional_role (line 280) ... ok
+test crates/but-authz/src/authority.rs - authority::Authority (line 7) ... ok
+test crates/but-authz/src/authority.rs - authority::AuthoritySet::parse (line 235) ... ok
+test crates/but-authz/src/authority.rs - authority::AuthoritySet::len (line 337) ... ok
+test crates/but-authz/src/authorize.rs - authorize::Denial::no_handle (line 348) ... ok
+test crates/but-authz/src/authority.rs - authority::AuthoritySet::union (line 301) ... ok
+test crates/but-authz/src/authorize.rs - authorize::Denial::unknown_principal (line 374) ... ok
+test crates/but-authz/src/authority.rs - authority::ParseAuthorityError (line 171) ... ok
+test crates/but-authz/src/authorize.rs - authorize::Denial::missing_permission (line 303) ... ok
+test crates/but-authz/src/authorize.rs - authorize::effective_authority (line 135) ... ok
+test crates/but-authz/src/authorize.rs - authorize::authorize (line 109) ... ok
+test crates/but-authz/src/authorize.rs - authorize::resolve_principal_from_env (line 285) ... ok
+test crates/but-authz/src/authority.rs - authority::ParseAuthorityError::token (line 192) ... ok
+test crates/but-authz/src/config.rs - config::BranchName (line 215) ... ok
+test crates/but-authz/src/authorize.rs - authorize::resolve_principal (line 162) ... ok
+test crates/but-authz/src/config.rs - config::BranchName::new (line 225) ... ok
+test crates/but-authz/src/config.rs - config::BranchName::as_str (line 235) ... ok
+test crates/but-authz/src/config.rs - config::BranchProtection::new (line 263) ... ok
+test crates/but-authz/src/authorize.rs - authorize::DenialCause::class (line 85) ... ok
+test crates/but-authz/src/config.rs - config::BranchProtection (line 251) ... ok
+test crates/but-authz/src/config.rs - config::BranchProtection::protected (line 273) ... ok
+test crates/but-authz/src/config.rs - config::ConfigError (line 286) ... ok
+test crates/but-authz/src/config.rs - config::ConfigError::code (line 310) ... ok
+test crates/but-authz/src/config.rs - config::GovConfig::groups (line 184) ... ok
+test crates/but-authz/src/config.rs - config::GovConfig::branch (line 204) ... ok
+test crates/but-authz/src/config.rs - config::load_governance_config (line 36) ... ok
+test crates/but-authz/src/config.rs - config::GovConfig (line 131) ... ok
+test crates/but-authz/src/config.rs - config::GovConfig::new (line 145) ... ok
+test crates/but-authz/src/config.rs - config::GovConfig::principals (line 164) ... ok
+test crates/but-authz/src/denial.rs - denial::Denial::PERM_DENIED_CODE (line 148) ... ok
+test crates/but-authz/src/config.rs - config::GovConfig::branches (line 194) ... ok
+test crates/but-authz/src/config.rs - config::GovConfig::principal_authorities (line 174) ... ok
+test crates/but-authz/src/denial.rs - denial::DenialClass (line 16) ... ok
+test crates/but-authz/src/config.rs - config::load_permissions_wire (line 62) ... ok
+test crates/but-authz/src/denial.rs - denial::steer_envelope_from_parts (line 355) ... ok
+test crates/but-authz/src/denial.rs - denial::AuthorizedAction (line 66) ... ok
+test crates/but-authz/src/denial.rs - denial::Denial (line 115) ... ok
+test crates/but-authz/src/config.rs - config::permissions_path (line 23) ... ok
+test crates/but-authz/src/denial.rs - denial::to_envelope (line 187) ... ok
+test crates/but-authz/src/menu.rs - menu::AFFORDANCE_MAP (line 278) ... ok
+test crates/but-authz/src/menu.rs - menu::DenialPredicate::name (line 67) ... ok
+test crates/but-authz/src/menu.rs - menu::authorized_actions (line 408) ... ok
+test crates/but-authz/src/menu.rs - menu::CATALOG (line 159) ... ok
+test crates/but-authz/src/principal.rs - principal::Group::authorities (line 194) ... ok
+test crates/but-authz/src/menu.rs - menu::DeniedRoute (line 98) ... ok
+test crates/but-authz/src/principal.rs - principal::Group::members (line 206) ... ok
+test crates/but-authz/src/principal.rs - principal::Group (line 147) ... ok
+test crates/but-authz/src/principal.rs - principal::Group::name (line 182) ... ok
+test crates/but-authz/src/principal.rs - principal::Group::new (line 163) ... ok
+test crates/but-authz/src/principal.rs - principal::GroupName::new (line 51) ... ok
+test crates/but-authz/src/principal.rs - principal::Principal (line 75) ... ok
+test crates/but-authz/src/principal.rs - principal::GroupName::as_str (line 63) ... ok
+test crates/but-authz/src/principal.rs - principal::GroupName (line 40) ... ok
+test crates/but-authz/src/principal.rs - principal::Principal::authorities (line 122) ... ok
+test crates/but-authz/src/principal.rs - principal::Principal::groups (line 134) ... ok
+test crates/but-authz/src/principal.rs - principal::Principal::id (line 110) ... ok
+test crates/but-authz/src/principal.rs - principal::PrincipalId (line 5) ... ok
+test crates/but-authz/src/principal.rs - principal::PrincipalId::new (line 16) ... ok
+test crates/but-authz/src/route.rs - route::ROUTE_AUTHORITY_TABLE (line 179) ... ok
+test crates/but-authz/src/principal.rs - principal::PrincipalId::as_str (line 28) ... ok
+test crates/but-authz/src/principal.rs - principal::Principal::new (line 91) ... ok
+test crates/but-authz/src/route.rs - route::Route::required_authority (line 132) ... ok
+test crates/but-authz/src/route.rs - route::Route::name (line 102) ... ok
+test crates/but-authz/src/route.rs - route::Route::ALL (line 81) ... ok
+test crates/but-authz/src/route.rs - route::Route (line 40) ... ok
+
+test result: ok. 81 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+all doctests ran in 0.82s; merged doctests compilation took 0.28s
