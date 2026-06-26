@@ -456,22 +456,38 @@ fn malformed_registry_propagates_instead_of_empty() -> anyhow::Result<()> {
 
 #[test]
 #[serial_test::serial]
-fn unreadable_registry_falls_through_to_structured_denial() -> anyhow::Result<()> {
+fn unreadable_registry_propagates_io_error_not_denial() -> anyhow::Result<()> {
     let (repo, tmp) = governed_repo();
     let registry_path = tmp.path().join("agents-runtime.toml");
     fs::create_dir(&registry_path)?;
 
     with_registry_only(&registry_path, || {
         let target = CommitGateTarget::config_only(gix::refs::FullName::try_from(FEAT_REF)?);
-        assert_perm_denied(enforce_commit_gate_for_target(&repo, &target))
+        let error = enforce_commit_gate_for_target(&repo, &target).expect_err(
+            "an unreadable registry must fail closed, not resolve to a structured denial via an empty registry",
+        );
+        assert!(
+            error.downcast_ref::<but_authz::Denial>().is_none(),
+            "unreadable registry must propagate as an IO error, not a permission denial: {error:#}"
+        );
+        let message = format!("{error:#}");
+        assert!(
+            message.contains("reading registry"),
+            "unreadable registry error must retain the registry read context, got: {message}"
+        );
+        Ok(())
     })
 }
 
 #[test]
 #[serial_test::serial]
-fn env_fallback_still_allowed_when_registry_unreadable() -> anyhow::Result<()> {
+fn unreadable_registry_with_env_flag_fails_closed_with_io_error() -> anyhow::Result<()> {
     let (repo, tmp) = governed_repo();
     let registry_path = tmp.path().join("agents-runtime.toml");
+    // A directory at the registry path yields a non-NotFound IO error (EISDIR)
+    // on read — the exact fail-OPEN downgrade this gate must refuse. The env
+    // handle is supplied AND flag-enabled so that a regression to the old
+    // behavior would silently succeed via BUT_AGENT_HANDLE.
     fs::create_dir(&registry_path)?;
 
     temp_env::with_vars(
@@ -482,11 +498,19 @@ fn env_fallback_still_allowed_when_registry_unreadable() -> anyhow::Result<()> {
         ],
         || -> anyhow::Result<()> {
             let target = CommitGateTarget::config_only(gix::refs::FullName::try_from(FEAT_REF)?);
-            enforce_commit_gate_for_target(&repo, &target).map_err(|err| {
-                anyhow::anyhow!(
-                    "unreadable registry must fall through to explicit env fallback: {err:#}"
-                )
-            })
+            let error = enforce_commit_gate_for_target(&repo, &target).expect_err(
+                "an unreadable registry must fail closed, not silently degrade to the BUT_AGENT_HANDLE env path",
+            );
+            assert!(
+                error.downcast_ref::<but_authz::Denial>().is_none(),
+                "unreadable registry must propagate the IO error, not a structured permission denial: {error:#}"
+            );
+            let message = format!("{error:#}");
+            assert!(
+                message.contains("reading registry"),
+                "fail-closed IO error must retain the registry read context, got: {message}"
+            );
+            Ok(())
         },
     )
 }

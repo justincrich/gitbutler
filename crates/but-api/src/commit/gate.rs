@@ -1,5 +1,4 @@
 use std::{
-    io,
     path::PathBuf,
     time::{SystemTime, UNIX_EPOCH},
 };
@@ -184,31 +183,29 @@ pub(crate) fn resolve_principal_with_runtime_registry(
     repo: &gix::Repository,
     cfg: &but_authz::GovConfig,
 ) -> anyhow::Result<Principal> {
-    let registry = load_runtime_registry(repo)?;
+    // Resolve the wall clock once at the gate boundary so the registry GC/TTL
+    // path is deterministic and testable (no implicit `SystemTime::now()`
+    // buried inside the loader).
+    let now = unix_time_seconds()?;
+    let registry = load_runtime_registry(repo, now)?;
     but_authz::resolve_principal_with_registry(Some(&registry), cfg).map_err(Into::into)
 }
 
-fn load_runtime_registry(repo: &gix::Repository) -> anyhow::Result<but_authz::Registry> {
+fn load_runtime_registry(repo: &gix::Repository, now: u64) -> anyhow::Result<but_authz::Registry> {
     let Some(path) = runtime_registry_path(repo)? else {
         return Ok(but_authz::Registry::empty());
     };
-    match but_authz::Registry::load(&path) {
-        Ok(mut registry) => {
-            if registry.gc(unix_time_seconds()?) > 0 {
-                registry.write(&path)?;
-            }
-            Ok(registry)
-        }
-        Err(error) if registry_load_error_is_io(&error) => {
-            tracing::debug!(
-                path = %path.display(),
-                error = %error,
-                "runtime agent registry is unavailable; using an empty registry"
-            );
-            Ok(but_authz::Registry::empty())
-        }
-        Err(error) => Err(error),
+    // Fail closed: `Registry::load` already maps a genuinely absent file
+    // (`ErrorKind::NotFound`) to an empty registry. Every other IO error
+    // (EACCES, EISDIR, EIO — a permission-denied or corrupt-directory
+    // registry) must propagate rather than silently degrade to an empty
+    // registry, which would let the `BUT_AGENT_HANDLE` env path resolve a
+    // principal an unreadable registry never authorized.
+    let mut registry = but_authz::Registry::load(&path)?;
+    if registry.gc(now) > 0 {
+        registry.write(&path)?;
     }
+    Ok(registry)
 }
 
 fn unix_time_seconds() -> anyhow::Result<u64> {
@@ -216,12 +213,6 @@ fn unix_time_seconds() -> anyhow::Result<u64> {
         .duration_since(UNIX_EPOCH)
         .map_err(|error| anyhow::anyhow!("system clock is before Unix epoch: {error}"))?
         .as_secs())
-}
-
-fn registry_load_error_is_io(error: &anyhow::Error) -> bool {
-    error
-        .chain()
-        .any(|cause| cause.downcast_ref::<io::Error>().is_some())
 }
 
 fn runtime_registry_path(repo: &gix::Repository) -> anyhow::Result<Option<PathBuf>> {
