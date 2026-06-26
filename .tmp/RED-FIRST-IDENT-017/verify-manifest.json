@@ -1,0 +1,20 @@
+{
+  "task_id": "RED-FIRST-IDENT-017",
+  "original_task_id": "IDENT-017",
+  "verification_policy": {
+    "requires_tests": true,
+    "requires_red_evidence": false,
+    "requires_seeded_evidence": false
+  },
+  "project_commands": {
+    "typecheck": "cargo check -p but-authz --all-targets",
+    "lint": "cargo clippy -p but-authz --all-targets -- -D warnings",
+    "test": "cargo test -p but-authz --test authorize"
+  },
+  "requirements": [
+    {
+      "id": "RED-1",
+      "verify": "test -s .tmp/IDENT-017/red-output.txt"
+    }
+  ]
+}
