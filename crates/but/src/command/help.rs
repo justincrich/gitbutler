@@ -147,6 +147,8 @@ fn print_grouped_with_truncation(
                 SubcommandDiscriminant::Alias => Group::OtherCommands,
                 SubcommandDiscriminant::Config => Group::OtherCommands,
                 #[cfg(feature = "legacy")]
+                SubcommandDiscriminant::Agent => Group::OtherCommands,
+                #[cfg(feature = "legacy")]
                 SubcommandDiscriminant::Perm => Group::OtherCommands,
                 #[cfg(feature = "legacy")]
                 SubcommandDiscriminant::Whoami => Group::OtherCommands,

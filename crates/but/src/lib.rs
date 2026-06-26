@@ -486,6 +486,20 @@ async fn match_subcommand(
             }
         }
         #[cfg(feature = "legacy")]
+        Subcommands::Agent(args::agent::Platform { cmd }) => {
+            let mut ctx = setup::init_ctx(
+                &args,
+                InitCtxOptions {
+                    background_sync: BackgroundSync::Disabled,
+                    ..Default::default()
+                },
+                out,
+            )?;
+            command::agent::exec(&mut ctx, out, cmd)
+                .await
+                .emit_metrics(metrics_ctx)
+        }
+        #[cfg(feature = "legacy")]
         Subcommands::Perm(args::perm::Platform { cmd }) => {
             let mut ctx = setup::init_ctx(
                 &args,
