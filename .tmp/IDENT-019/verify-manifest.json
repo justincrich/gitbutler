@@ -1,0 +1,29 @@
+{
+  "task_id": "RED-FIRST-IDENT-019",
+  "original_task_id": "IDENT-019",
+  "coverage": [
+    {
+      "acceptance_criterion": "AC-9",
+      "test_case": "TC-9",
+      "test_name": "expired_current_process_registry_entry_denied",
+      "explanation": "Adds a registry-only but-api commit-gate proof that writes an expired runtime registration for the real current process and expects the governed commit gate to deny it with perm.denied. The current implementation resolves the expired registration as authorized, so the focused verify command fails red."
+    }
+  ],
+  "commands": [
+    {
+      "command": "cargo fmt --package but-api",
+      "exit_code": 0,
+      "output_path": null
+    },
+    {
+      "command": "cargo test -p but-api --test agent_registry -- expired_current_process_registry_entry_denied --nocapture",
+      "exit_code": 101,
+      "output_path": ".tmp/IDENT-019/red-output.txt"
+    }
+  ],
+  "files_changed": [
+    "crates/but-api/tests/agent_registry.rs",
+    ".tmp/IDENT-019/red-output.txt",
+    ".tmp/IDENT-019/verify-manifest.json"
+  ]
+}
