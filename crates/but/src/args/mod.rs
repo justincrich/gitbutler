@@ -1289,6 +1289,8 @@ pub enum Subcommands {
     External(Vec<OsString>),
 }
 
+#[cfg(feature = "legacy")]
+pub mod agent;
 pub mod alias;
 #[cfg(feature = "legacy")]
 pub mod can_i;
