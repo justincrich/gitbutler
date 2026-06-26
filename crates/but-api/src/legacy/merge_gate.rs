@@ -65,6 +65,13 @@ impl std::fmt::Display for MergeGateError {
 impl std::error::Error for MergeGateError {}
 
 /// Enforce merge authority and the target-ref review requirement for a forge review.
+///
+/// Merge-gate identity resolution calls `resolve_principal_with_runtime_registry`;
+/// the `but_authz::authorize` resolver chain checks (1) the runtime registry via
+/// `but_authz::resolve_principal_with_registry`, (2) the environment handle only
+/// when `BUT_AUTHZ_ALLOW_ENV_HANDLE` is `1`, then (3) returns
+/// `Denial::unregistered` (`perm.denied`) when no registered principal is
+/// available.
 pub fn enforce_merge_gate(ctx: &but_ctx::Context, review_id: usize) -> anyhow::Result<()> {
     let review = review_for_id(ctx, review_id)?;
     let target_ref = branch_ref(&review.target_branch);

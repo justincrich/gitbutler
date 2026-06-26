@@ -1,0 +1,101 @@
+{
+  "task_id": "IDENT-021",
+  "status": "completed",
+  "branch": "kb-run-sprint/sprint-10-ident-deprecation-hardening/IDENT-021",
+  "base_sha": "d7cd73fb6a896c3a29518edb8f937622554f9ba6",
+  "evidence_path": ".tmp/IDENT-021/",
+  "red_first": {
+    "path": ".tmp/IDENT-021/red-output.txt",
+    "command": "cargo test -p but-authz --test invariant_build_gates -- test_resolution_order_documented",
+    "exit_code": 101
+  },
+  "implementation": {
+    "summary": "Added preceding Rust /// doc-comments to all 11 runtime-registry identity surfaces in but-api. No function signatures, function bodies, resolver logic, or but-authz/src files were changed.",
+    "surfaces": [
+      "crates/but-api/src/commit/gate.rs::enforce_commit_gate_for_target",
+      "crates/but-api/src/legacy/merge_gate.rs::enforce_merge_gate",
+      "crates/but-api/src/legacy/governance.rs::governance_status_read",
+      "crates/but-api/src/legacy/governance.rs::branch_gates_read_with_repo",
+      "crates/but-api/src/legacy/governance.rs::group_list_with_repo",
+      "crates/but-api/src/legacy/governance.rs::perm_list_with_repo",
+      "crates/but-api/src/legacy/governance.rs::whoami_with_repo",
+      "crates/but-api/src/legacy/governance.rs::can_i_with_repo",
+      "crates/but-api/src/legacy/forge.rs::authorize_branch_action",
+      "crates/but-api/src/legacy/config_mutate.rs::enforce_administration_write_gate",
+      "crates/but-api/src/legacy/rules.rs::list_workspace_rules_scoped_for_caller"
+    ],
+    "required_literals_per_doc": [
+      "resolve_principal_with_runtime_registry",
+      "but_authz::resolve_principal_with_registry",
+      "BUT_AUTHZ_ALLOW_ENV_HANDLE",
+      "Denial::unregistered"
+    ],
+    "documented_resolution_order": [
+      "runtime registry via but_authz::resolve_principal_with_registry",
+      "environment fallback only when BUT_AUTHZ_ALLOW_ENV_HANDLE=1",
+      "Denial::unregistered when no registered principal is available"
+    ]
+  },
+  "changed_files": [
+    ".tmp/IDENT-021/red-output.txt",
+    ".tmp/IDENT-021/requirement-results.json",
+    ".tmp/IDENT-021/verification-summary.json",
+    "crates/but-api/src/commit/gate.rs",
+    "crates/but-api/src/legacy/config_mutate.rs",
+    "crates/but-api/src/legacy/forge.rs",
+    "crates/but-api/src/legacy/governance.rs",
+    "crates/but-api/src/legacy/merge_gate.rs",
+    "crates/but-api/src/legacy/rules.rs"
+  ],
+  "commands": [
+    {
+      "command": "cargo fmt -p but-api -p but-authz",
+      "exit_code": 0
+    },
+    {
+      "command": "cargo test -p but-authz --test invariant_build_gates -- test_commit_gate_resolution_order_doc_precedes_function",
+      "exit_code": 0
+    },
+    {
+      "command": "cargo test -p but-authz --test invariant_build_gates -- test_merge_gate_resolution_order_doc_precedes_function",
+      "exit_code": 0
+    },
+    {
+      "command": "cargo test -p but-authz --test invariant_build_gates -- test_governance_resolution_order_docs_precede_functions",
+      "exit_code": 0
+    },
+    {
+      "command": "cargo test -p but-authz --test invariant_build_gates -- test_forge_resolution_order_doc_precedes_function",
+      "exit_code": 0
+    },
+    {
+      "command": "cargo test -p but-authz --test invariant_build_gates -- test_config_mutate_resolution_order_doc_precedes_function",
+      "exit_code": 0
+    },
+    {
+      "command": "cargo test -p but-authz --test invariant_build_gates -- test_rules_resolution_order_doc_precedes_function",
+      "exit_code": 0
+    },
+    {
+      "command": "cargo test -p but-authz --test invariant_build_gates -- test_resolution_order_documented",
+      "exit_code": 0
+    },
+    {
+      "command": "cargo doc --no-deps -p but-api",
+      "exit_code": 0,
+      "note": "Observed one unrelated pre-existing rustdoc warning: crates/but-api/src/open/editor.rs:227 unresolved link to open_in_editor. The file is outside the allowed write scope."
+    },
+    {
+      "command": "cargo check -p but-api --all-targets",
+      "exit_code": 0
+    },
+    {
+      "command": "cargo clippy -p but-api --all-targets -- -D warnings",
+      "exit_code": 0
+    }
+  ],
+  "manual_audit": {
+    "status": "passed",
+    "summary": "Reviewed all 11 preceding doc-comments. Each accurately documents registry-first resolution, flag-gated env fallback, and Denial::unregistered when no registered principal is available; whoami_with_repo, can_i_with_repo, and legacy/rules.rs are included."
+  }
+}

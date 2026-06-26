@@ -1,0 +1,136 @@
+{
+  "task_id": "IDENT-021",
+  "sprint": "sprint-10-ident-deprecation-hardening",
+  "base_sha": "d7cd73fb6a896c3a29518edb8f937622554f9ba6",
+  "red_first_evidence": {
+    "path": ".tmp/IDENT-021/red-output.txt",
+    "command": "cargo test -p but-authz --test invariant_build_gates -- test_resolution_order_documented",
+    "exit_code": 101,
+    "result": "failed at base because the 11 preceding doc blocks were missing required resolution-order literals"
+  },
+  "changed_files": [
+    ".tmp/IDENT-021/red-output.txt",
+    ".tmp/IDENT-021/requirement-results.json",
+    ".tmp/IDENT-021/verification-summary.json",
+    "crates/but-api/src/commit/gate.rs",
+    "crates/but-api/src/legacy/config_mutate.rs",
+    "crates/but-api/src/legacy/forge.rs",
+    "crates/but-api/src/legacy/governance.rs",
+    "crates/but-api/src/legacy/merge_gate.rs",
+    "crates/but-api/src/legacy/rules.rs"
+  ],
+  "requirements": {
+    "AC-1": {
+      "status": "passed",
+      "maps_to": "TC-1",
+      "evidence": "crates/but-api/src/commit/gate.rs::enforce_commit_gate_for_target has a preceding /// doc block naming resolve_principal_with_runtime_registry, but_authz::resolve_principal_with_registry, BUT_AUTHZ_ALLOW_ENV_HANDLE, and Denial::unregistered.",
+      "command": "cargo test -p but-authz --test invariant_build_gates -- test_commit_gate_resolution_order_doc_precedes_function",
+      "exit_code": 0
+    },
+    "AC-2": {
+      "status": "passed",
+      "maps_to": "TC-2",
+      "evidence": "crates/but-api/src/legacy/merge_gate.rs::enforce_merge_gate has the required preceding resolution-order doc block.",
+      "command": "cargo test -p but-authz --test invariant_build_gates -- test_merge_gate_resolution_order_doc_precedes_function",
+      "exit_code": 0
+    },
+    "AC-3": {
+      "status": "passed",
+      "maps_to": "TC-3",
+      "evidence": "All six governance surfaces, including whoami_with_repo and can_i_with_repo, have preceding resolution-order doc blocks.",
+      "command": "cargo test -p but-authz --test invariant_build_gates -- test_governance_resolution_order_docs_precede_functions",
+      "exit_code": 0
+    },
+    "AC-4": {
+      "status": "passed",
+      "maps_to": "TC-4",
+      "evidence": "crates/but-api/src/legacy/forge.rs::authorize_branch_action has the required preceding resolution-order doc block.",
+      "command": "cargo test -p but-authz --test invariant_build_gates -- test_forge_resolution_order_doc_precedes_function",
+      "exit_code": 0
+    },
+    "AC-5": {
+      "status": "passed",
+      "maps_to": "TC-5",
+      "evidence": "crates/but-api/src/legacy/config_mutate.rs::enforce_administration_write_gate has the required preceding resolution-order doc block.",
+      "command": "cargo test -p but-authz --test invariant_build_gates -- test_config_mutate_resolution_order_doc_precedes_function",
+      "exit_code": 0
+    },
+    "AC-6": {
+      "status": "passed",
+      "maps_to": "TC-6",
+      "evidence": "crates/but-api/src/legacy/rules.rs::list_workspace_rules_scoped_for_caller has the required preceding resolution-order doc block.",
+      "command": "cargo test -p but-authz --test invariant_build_gates -- test_rules_resolution_order_doc_precedes_function",
+      "exit_code": 0
+    },
+    "AC-7": {
+      "status": "passed",
+      "maps_to": "TC-7",
+      "evidence": "The existing invariant checks all 11 target doc blocks and all four required literals.",
+      "command": "cargo test -p but-authz --test invariant_build_gates -- test_resolution_order_documented",
+      "exit_code": 0
+    },
+    "AC-8": {
+      "status": "passed",
+      "maps_to": "TC-8",
+      "evidence": "but-api rustdoc built successfully with exit code 0 after adding the 11 doc comments.",
+      "command": "cargo doc --no-deps -p but-api",
+      "exit_code": 0,
+      "note": "rustdoc emitted one pre-existing unrelated unresolved link warning for crates/but-api/src/open/editor.rs:227 (`open_in_editor`), which is outside IDENT-021 allowed write scope; no IDENT-021 doc comment emitted a warning."
+    },
+    "AC-9": {
+      "status": "passed",
+      "maps_to": "TC-9",
+      "evidence": "Manual audit confirmed all 11 preceding doc comments accurately state the Sprint-10 order: runtime registry through but_authz::resolve_principal_with_registry, env fallback only when BUT_AUTHZ_ALLOW_ENV_HANDLE=1, then Denial::unregistered when no registered principal is available.",
+      "command": "Manual review of all 11 doc-comments",
+      "exit_code": 0
+    }
+  },
+  "test_criteria": {
+    "TC-1": {
+      "status": "passed",
+      "command": "cargo test -p but-authz --test invariant_build_gates -- test_commit_gate_resolution_order_doc_precedes_function",
+      "exit_code": 0
+    },
+    "TC-2": {
+      "status": "passed",
+      "command": "cargo test -p but-authz --test invariant_build_gates -- test_merge_gate_resolution_order_doc_precedes_function",
+      "exit_code": 0
+    },
+    "TC-3": {
+      "status": "passed",
+      "command": "cargo test -p but-authz --test invariant_build_gates -- test_governance_resolution_order_docs_precede_functions",
+      "exit_code": 0
+    },
+    "TC-4": {
+      "status": "passed",
+      "command": "cargo test -p but-authz --test invariant_build_gates -- test_forge_resolution_order_doc_precedes_function",
+      "exit_code": 0
+    },
+    "TC-5": {
+      "status": "passed",
+      "command": "cargo test -p but-authz --test invariant_build_gates -- test_config_mutate_resolution_order_doc_precedes_function",
+      "exit_code": 0
+    },
+    "TC-6": {
+      "status": "passed",
+      "command": "cargo test -p but-authz --test invariant_build_gates -- test_rules_resolution_order_doc_precedes_function",
+      "exit_code": 0
+    },
+    "TC-7": {
+      "status": "passed",
+      "command": "cargo test -p but-authz --test invariant_build_gates -- test_resolution_order_documented",
+      "exit_code": 0
+    },
+    "TC-8": {
+      "status": "passed",
+      "command": "cargo doc --no-deps -p but-api",
+      "exit_code": 0,
+      "note": "exit code passed; one unrelated pre-existing rustdoc warning outside allowed write scope was observed."
+    },
+    "TC-9": {
+      "status": "passed",
+      "command": "Manual review of all 11 doc-comments",
+      "exit_code": 0
+    }
+  }
+}
