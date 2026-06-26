@@ -1,0 +1,21 @@
+   Compiling but-api v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/RED-FIRST-IDENT-019/crates/but-api)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.61s
+     Running tests/agent_registry.rs (target/debug/deps/agent_registry-6ad69d08b81c4ef3)
+
+running 1 test
+wrote expired registry entry pid=44417 start_time=1782487640 expires_at=1782487639 as `dev` via BUT_AGENT_REGISTRY_PATH=/var/folders/rt/8_hh9gmj43x4763f7_l_nk3c0000gn/T/.tmpERIlnL
+warning: .gitbutler/permissions.toml is deprecated; run: but agent migrate
+
+thread 'expired_current_process_registry_entry_denied' (67208867) panicked at crates/but-api/tests/agent_registry.rs:117:10:
+expired current-process registry entry must deny the commit gate: ()
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test expired_current_process_registry_entry_denied ... FAILED
+
+failures:
+
+failures:
+    expired_current_process_registry_entry_denied
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 4 filtered out; finished in 0.24s
+
+error: test failed, to rerun pass `-p but-api --test agent_registry`

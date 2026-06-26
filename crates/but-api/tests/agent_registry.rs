@@ -106,6 +106,29 @@ fn forge_review_surface() -> anyhow::Result<()> {
     Ok(())
 }
 
+#[test]
+#[serial_test::serial]
+fn expired_current_process_registry_entry_denied() -> anyhow::Result<()> {
+    let (repo, _tmp) = governed_repo("dev", "contents:write");
+    let registry = RegistryEnv::expired("dev")?;
+    let target = CommitGateTarget::config_only(gix::refs::FullName::try_from(MAIN_REF)?);
+
+    let err = enforce_commit_gate_for_target(&repo, &target)
+        .expect_err("expired current-process registry entry must deny the commit gate");
+    assert_perm_denied(&err, "expired_current_process_registry_entry_denied");
+    let message = format!("{err:#}");
+    assert!(
+        message.contains("pid ") && message.contains("start_time"),
+        "expired registration denial must identify the current process, got: {message}"
+    );
+    println!(
+        "expired_current_process_registry_entry_denied rejected pid={} start_time={} with `perm.denied`",
+        registry.pid, registry.start_time
+    );
+
+    Ok(())
+}
+
 struct RegistryEnv {
     path: PathBuf,
     _file: tempfile::NamedTempFile,
@@ -142,6 +165,49 @@ impl RegistryEnv {
             "registered test process pid={} start_time={} as `{}` via BUT_AGENT_REGISTRY_PATH={}",
             env.pid,
             env.start_time,
+            agent_id,
+            env.path.display()
+        );
+        Ok(env)
+    }
+
+    fn expired(agent_id: &str) -> anyhow::Result<Self> {
+        let file = tempfile::NamedTempFile::new()?;
+        let path = file.path().to_owned();
+        let pid = but_authz::current_pid();
+        let start_time = but_authz::process_start_time(pid)?;
+        let expires_at = start_time.saturating_sub(1);
+        std::fs::write(
+            &path,
+            format!(
+                r#"[[registration]]
+pid = {pid}
+start_time = {start_time}
+agent_id = "{agent_id}"
+registered_at = {start_time}
+expires_at = {expires_at}
+registered_by = "operator"
+"#
+            ),
+        )?;
+
+        let env = Self {
+            path,
+            _file: file,
+            previous_registry_path: std::env::var_os("BUT_AGENT_REGISTRY_PATH"),
+            previous_agent_handle: std::env::var_os("BUT_AGENT_HANDLE"),
+            previous_allow_env_handle: std::env::var_os("BUT_AUTHZ_ALLOW_ENV_HANDLE"),
+            pid,
+            start_time,
+        };
+        set_env_var("BUT_AGENT_REGISTRY_PATH", Some(env.path.as_os_str()));
+        set_env_var("BUT_AGENT_HANDLE", None);
+        set_env_var("BUT_AUTHZ_ALLOW_ENV_HANDLE", None);
+        println!(
+            "wrote expired registry entry pid={} start_time={} expires_at={} as `{}` via BUT_AGENT_REGISTRY_PATH={}",
+            env.pid,
+            env.start_time,
+            expires_at,
             agent_id,
             env.path.display()
         );
