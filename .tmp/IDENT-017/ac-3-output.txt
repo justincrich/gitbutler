@@ -1,0 +1,7 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.17s
+     Running tests/authorize.rs (target/debug/deps/authorize-bfc7f8dd5e07578f)
+
+running 1 test
+test test_resolver_registry_hit ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 13 filtered out; finished in 0.05s

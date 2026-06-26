@@ -1,0 +1,1 @@
+289:/// TEST/CI-ONLY - governed but-api gates use `resolve_principal_with_runtime_registry`; resolver-level tests may call `resolve_principal_with_registry` directly.
