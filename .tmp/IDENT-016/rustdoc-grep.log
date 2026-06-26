@@ -1,0 +1,3 @@
+target/doc/but_authz/fn.resolve_principal_with_registry.html:8:<li>registry hit for the current <code>(pid, start_time)</code> -&gt; registered principal;</li>
+target/doc/but_authz/fn.resolve_principal_with_registry.html:9:<li>registry miss + <code>BUT_AUTHZ_ALLOW_ENV_HANDLE=1</code> -&gt; environment fallback
+target/doc/but_authz/fn.resolve_principal_with_registry.html:11:<li>else -&gt; <a href="struct.Denial.html#method.unregistered" title="associated function but_authz::Denial::unregistered"><code>Denial::unregistered</code></a> for an unregistered process. A
