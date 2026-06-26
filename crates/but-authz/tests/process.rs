@@ -51,6 +51,33 @@ fn IDENT_002_current_process_start_time_is_stable_across_reads() -> anyhow::Resu
 
 #[allow(non_snake_case)]
 #[test]
+fn IDENT_004_current_process_start_time_is_monotonic_and_sane_unix_seconds() -> anyhow::Result<()> {
+    let pid = current_pid();
+    let first = process_start_time(pid)?;
+    let second = process_start_time(pid)?;
+    let now = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .expect("system clock must be after the unix epoch")
+        .as_secs();
+
+    assert_eq!(
+        first, second,
+        "process_start_time({pid}) must return the same process start timestamp on back-to-back reads"
+    );
+    assert!(
+        first > 1_000_000_000,
+        "process_start_time({pid}) must be represented as sane unix seconds"
+    );
+    assert!(
+        first <= now,
+        "process_start_time({pid}) must not be later than the current unix time"
+    );
+
+    Ok(())
+}
+
+#[allow(non_snake_case)]
+#[test]
 fn IDENT_002_nonexistent_pid_returns_error_that_names_pid() {
     let pid = u32::MAX;
     let error = process_start_time(pid).expect_err("nonexistent pid must return Err");
