@@ -286,6 +286,7 @@ fn principal_from_handle(handle: &str, cfg: &GovConfig) -> Result<Principal, Den
 /// # let config = but_authz::GovConfig::new([], [], []);
 /// let _ = but_authz::resolve_principal_from_env(&config);
 /// ```
+/// TEST/CI-ONLY - governed but-api gates use `resolve_principal_with_runtime_registry`; resolver-level tests may call `resolve_principal_with_registry` directly.
 pub fn resolve_principal_from_env(cfg: &GovConfig) -> Result<Principal, Denial> {
     resolve_principal(|key| env::var_os(key), cfg)
 }

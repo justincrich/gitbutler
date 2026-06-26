@@ -1,0 +1,19 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.17s
+     Running tests/authorize.rs (target/debug/deps/authorize-bfc7f8dd5e07578f)
+
+running 1 test
+warning: .gitbutler/permissions.toml is deprecated; run: but agent migrate
+
+thread 'test_resolver_env_fallback' (66614876) panicked at crates/but-authz/tests/authorize.rs:545:24:
+flag-set env fallback must resolve a principal: perm.denied unregistered process pid 17122 start_time 1782481429; no governed principal resolved
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test test_resolver_env_fallback ... FAILED
+
+failures:
+
+failures:
+    test_resolver_env_fallback
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 13 filtered out; finished in 0.04s
+
+error: test failed, to rerun pass `-p but-authz --test authorize`

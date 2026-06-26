@@ -1,0 +1,51 @@
+{
+  "task_id": "IDENT-017",
+  "original_task_id": "IDENT-017",
+  "verification_policy": {
+    "requires_tests": true,
+    "requires_red_evidence": true,
+    "requires_seeded_evidence": true
+  },
+  "project_commands": {
+    "typecheck": "cargo check -p but-authz --all-targets",
+    "lint": "cargo clippy -p but-authz --all-targets -- -D warnings",
+    "test": "cargo test -p but-authz --test authorize",
+    "format": "cargo fmt",
+    "doc": "cargo doc --no-deps -p but-authz"
+  },
+  "red_evidence_command": "cargo test -p but-authz --test authorize -- ident_017_resolve_principal_from_env_doc_marks_test_ci_only",
+  "requirements": [
+    {
+      "id": "AC-1",
+      "verify": "cargo test -p but-authz --test authorize -- test_resolver_env_handle_denied_without_flag"
+    },
+    {
+      "id": "AC-2",
+      "verify": "cargo test -p but-authz --test authorize -- test_resolver_env_fallback"
+    },
+    {
+      "id": "AC-3",
+      "verify": "cargo test -p but-authz --test authorize -- test_resolver_registry_hit"
+    },
+    {
+      "id": "AC-4",
+      "verify": "Manual review of authorize.rs doc-comment + cargo doc --no-deps -p but-authz"
+    },
+    {
+      "id": "TC-1",
+      "verify": "cargo test -p but-authz --test authorize -- test_resolver_env_handle_denied_without_flag"
+    },
+    {
+      "id": "TC-2",
+      "verify": "cargo test -p but-authz --test authorize -- test_resolver_env_fallback"
+    },
+    {
+      "id": "TC-3",
+      "verify": "cargo test -p but-authz --test authorize -- test_resolver_registry_hit"
+    },
+    {
+      "id": "TC-4",
+      "verify": "Manual review of authorize.rs doc-comment"
+    }
+  ]
+}

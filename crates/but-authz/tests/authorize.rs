@@ -291,6 +291,108 @@ fn IDENT_003_none_registry_allows_flagged_env_fallback() -> anyhow::Result<()> {
 }
 
 #[test]
+fn test_resolver_env_handle_denied_without_flag() -> anyhow::Result<()> {
+    let _guard = ENV_LOCK.lock().expect("env lock must not be poisoned");
+    let allow_env_handle = ident_017_negative_control("AC-1").then_some("1");
+    with_authz_env(allow_env_handle, Some("dev"), || {
+        let (repo, _tmp) = governed_repo();
+        let config = load_governance_config(&repo, TARGET_REF)?;
+        let registry = Registry::empty();
+        let pid = current_pid();
+        let observed_start_time = process_start_time(pid)?;
+
+        let denial =
+            assert_no_principal_denied(resolve_principal_with_registry(Some(&registry), &config));
+
+        assert_eq!(
+            denial.code,
+            Denial::PERM_DENIED_CODE,
+            "env-only handle on a registry miss without BUT_AUTHZ_ALLOW_ENV_HANDLE must fail closed with perm.denied"
+        );
+        assert!(
+            denial.message.contains("unregistered process"),
+            "registry miss with env fallback disabled must be an unregistered-process denial: {}",
+            denial.message
+        );
+        assert!(
+            denial.message.contains(&pid.to_string()),
+            "unregistered-process denial must name the current pid: {}",
+            denial.message
+        );
+        assert!(
+            denial.message.contains(&observed_start_time.to_string()),
+            "unregistered-process denial must name the observed start time: {}",
+            denial.message
+        );
+        println!("Err(Denial::unregistered(pid, observed_start_time))");
+        println!("Denial.code == {:?}", denial.code);
+
+        Ok(())
+    })
+}
+
+#[test]
+fn test_resolver_env_fallback() -> anyhow::Result<()> {
+    let _guard = ENV_LOCK.lock().expect("env lock must not be poisoned");
+    let allow_env_handle = (!ident_017_negative_control("AC-2")).then_some("1");
+    with_authz_env(allow_env_handle, Some("dev"), || {
+        let (repo, _tmp) = governed_repo();
+        let config = load_governance_config(&repo, TARGET_REF)?;
+        let registry = Registry::empty();
+
+        let principal = assert_principal_resolved(
+            resolve_principal_with_registry(Some(&registry), &config),
+            "flag-set env fallback must resolve a principal",
+        );
+
+        assert_eq!(
+            principal.id().as_str(),
+            "dev",
+            "registry miss with BUT_AUTHZ_ALLOW_ENV_HANDLE=1 must resolve BUT_AGENT_HANDLE"
+        );
+        println!("Ok(Principal {{ agent_id: 'dev', ... }})");
+        println!("Principal returned via env-fallback path, not registry");
+
+        Ok(())
+    })
+}
+
+#[test]
+fn test_resolver_registry_hit() -> anyhow::Result<()> {
+    let _guard = ENV_LOCK.lock().expect("env lock must not be poisoned");
+    with_authz_env(None, Some("dev"), || {
+        let (repo, _tmp) = governed_repo();
+        let config = load_governance_config(&repo, TARGET_REF)?;
+        let pid = current_pid();
+        let start_time = process_start_time(pid)?;
+        let mut registry = Registry::empty();
+        if !ident_017_negative_control("AC-3") {
+            registry.register(pid, start_time, "rust-implementer", 60, "rust-implementer")?;
+        }
+
+        let principal = assert_principal_resolved(
+            resolve_principal_with_registry(Some(&registry), &config),
+            "registry hit must resolve a principal",
+        );
+
+        assert_eq!(
+            principal.id().as_str(),
+            "rust-implementer",
+            "registry hit must resolve the registered principal before considering env fallback"
+        );
+        assert_ne!(
+            principal.id().as_str(),
+            "dev",
+            "registry hit must not resolve the conflicting BUT_AGENT_HANDLE"
+        );
+        println!("Ok(Principal {{ agent_id: 'rust-implementer', ... }})");
+        println!("Registry hit bypasses flag check entirely");
+
+        Ok(())
+    })
+}
+
+#[test]
 fn ident_017_resolve_principal_from_env_doc_marks_test_ci_only() {
     let source = include_str!("../src/authorize.rs");
     let function_start = source
@@ -323,6 +425,10 @@ mkdir -p .gitbutler
 cat >.gitbutler/permissions.toml <<'EOF'
 [[principal]]
 id = "dev"
+permissions = ["contents:write"]
+
+[[principal]]
+id = "rust-implementer"
 permissions = ["contents:write"]
 
 [[principal]]
@@ -431,4 +537,15 @@ fn assert_no_principal_denied(result: Result<Principal, Denial>) -> Denial {
         ),
         Err(denial) => denial,
     }
+}
+
+fn assert_principal_resolved(result: Result<Principal, Denial>, context: &str) -> Principal {
+    match result {
+        Ok(principal) => principal,
+        Err(denial) => panic!("{context}: {} {}", denial.code, denial.message),
+    }
+}
+
+fn ident_017_negative_control(ac_id: &str) -> bool {
+    std::env::var("IDENT_017_NEGATIVE_CONTROL").as_deref() == Ok(ac_id)
 }
