@@ -188,6 +188,8 @@ impl Subcommands {
                 _ => Unknown,
             },
             #[cfg(feature = "legacy")]
+            Subcommands::Agent(_) => Unknown,
+            #[cfg(feature = "legacy")]
             Subcommands::Perm(_) => Unknown,
             #[cfg(feature = "legacy")]
             Subcommands::Whoami(_) => Unknown,
