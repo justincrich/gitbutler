@@ -38,6 +38,14 @@ pub struct AdminWriteGateError {
 ///
 /// The guard reads governance files from the committed `target_ref`, resolves the
 /// acting principal from the runtime registry, and requires `administration:write`.
+///
+/// Administration-write identity resolution uses
+/// `resolve_principal_with_runtime_registry`; the `but_authz::authorize`
+/// resolver order is (1) runtime registry via
+/// `but_authz::resolve_principal_with_registry`, (2) environment fallback only
+/// when `BUT_AUTHZ_ALLOW_ENV_HANDLE` is `1`, and (3)
+/// `Denial::unregistered` (`perm.denied`) when no registered principal is
+/// available.
 pub fn enforce_administration_write_gate(
     repo: &gix::Repository,
     target_ref: &str,

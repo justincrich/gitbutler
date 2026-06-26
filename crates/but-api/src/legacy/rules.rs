@@ -87,6 +87,15 @@ pub fn list_workspace_rules_scoped(
         .collect())
 }
 
+/// List workspace rules scoped to `principal_id` after resolving the caller.
+///
+/// `list_workspace_rules_scoped_for_caller` uses
+/// `resolve_principal_with_runtime_registry`; the `but_authz::authorize`
+/// resolver order is (1) runtime registry via
+/// `but_authz::resolve_principal_with_registry`, (2) environment fallback only
+/// when `BUT_AUTHZ_ALLOW_ENV_HANDLE` is `1`, and (3)
+/// `Denial::unregistered` (`perm.denied`) when no registered principal is
+/// available.
 #[instrument(err(Debug))]
 pub fn list_workspace_rules_scoped_for_caller(
     ctx: &Context,

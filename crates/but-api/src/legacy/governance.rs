@@ -475,6 +475,14 @@ pub fn perm_revoke(
 /// has no committed governance config, and returns the resolved `target_ref` so the UI
 /// reuses it for follow-up reads. A caller that can't be resolved yields empty
 /// authorities (read-only), not an error.
+///
+/// `governance_status_read` resolves the caller through
+/// `resolve_principal_with_runtime_registry`; the `but_authz::authorize` resolver
+/// order is (1) runtime registry via `but_authz::resolve_principal_with_registry`,
+/// (2) environment fallback only when `BUT_AUTHZ_ALLOW_ENV_HANDLE` is `1`, and
+/// (3) `Denial::unregistered` (`perm.denied`) when no registered principal is
+/// available. This read surface catches that denial and reports empty
+/// authorities.
 #[but_api(napi, GovernanceStatus)]
 pub fn governance_status_read(ctx: &Context) -> anyhow::Result<GovernanceStatus> {
     let repo = ctx.repo.get()?;
@@ -555,6 +563,14 @@ pub fn governance_commit(
 }
 
 /// Read branch gates under administration-read authority.
+///
+/// `branch_gates_read_with_repo` gets its caller from
+/// `resolve_principal_with_runtime_registry`; the `but_authz::authorize`
+/// resolver order is (1) runtime registry via
+/// `but_authz::resolve_principal_with_registry`, (2) environment fallback only
+/// when `BUT_AUTHZ_ALLOW_ENV_HANDLE` is `1`, and (3)
+/// `Denial::unregistered` (`perm.denied`) when no registered principal is
+/// available.
 pub fn branch_gates_read_with_repo(
     repo: &gix::Repository,
     target_ref: &str,
@@ -1155,6 +1171,14 @@ fn authority_set_for_pending(
 }
 
 /// List governed groups under administration-read authority.
+///
+/// `group_list_with_repo` identifies the caller with
+/// `resolve_principal_with_runtime_registry`; the `but_authz::authorize`
+/// resolver order is (1) runtime registry via
+/// `but_authz::resolve_principal_with_registry`, (2) environment fallback only
+/// when `BUT_AUTHZ_ALLOW_ENV_HANDLE` is `1`, and (3)
+/// `Denial::unregistered` (`perm.denied`) when no registered principal is
+/// available.
 pub fn group_list_with_repo(
     repo: &gix::Repository,
     target_ref: &str,
@@ -1456,6 +1480,14 @@ fn group_delete_authorized(
 }
 
 /// List committed permissions plus working-tree pending grants for a principal.
+///
+/// `perm_list_with_repo` scopes self-versus-admin reads by resolving the caller
+/// with `resolve_principal_with_runtime_registry`; the `but_authz::authorize`
+/// resolver order is (1) runtime registry via
+/// `but_authz::resolve_principal_with_registry`, (2) environment fallback only
+/// when `BUT_AUTHZ_ALLOW_ENV_HANDLE` is `1`, and (3)
+/// `Denial::unregistered` (`perm.denied`) when no registered principal is
+/// available.
 pub fn perm_list_with_repo(
     repo: &gix::Repository,
     target_ref: &str,
@@ -1626,6 +1658,14 @@ fn resolve_target_principal(
 /// The disclosure is self-scoped: it surfaces the target's effective authority
 /// set, its OWN group memberships (group names only — never the other members
 /// of those groups), and its authorized-action set from the closed CATALOG.
+///
+/// `whoami_with_repo` resolves the requesting principal with
+/// `resolve_principal_with_runtime_registry`; the `but_authz::authorize`
+/// resolver order is (1) runtime registry via
+/// `but_authz::resolve_principal_with_registry`, (2) environment fallback only
+/// when `BUT_AUTHZ_ALLOW_ENV_HANDLE` is `1`, and (3)
+/// `Denial::unregistered` (`perm.denied`) when no registered principal is
+/// available.
 pub fn whoami_with_repo(
     repo: &gix::Repository,
     target_ref: &str,
@@ -1677,6 +1717,14 @@ pub fn whoami_with_repo(
 /// unheld authority (that is a factual answer, not an error). Cross-principal
 /// recon by a non-admin caller is denied `perm.denied` before the target is
 /// resolved, so the endpoint cannot be used as a principal-existence oracle.
+///
+/// `can_i_with_repo` resolves the requesting principal with
+/// `resolve_principal_with_runtime_registry`; the `but_authz::authorize`
+/// resolver order is (1) runtime registry via
+/// `but_authz::resolve_principal_with_registry`, (2) environment fallback only
+/// when `BUT_AUTHZ_ALLOW_ENV_HANDLE` is `1`, and (3)
+/// `Denial::unregistered` (`perm.denied`) when no registered principal is
+/// available.
 pub fn can_i_with_repo(
     repo: &gix::Repository,
     target_ref: &str,

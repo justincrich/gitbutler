@@ -121,6 +121,13 @@ pub fn enforce_commit_gate(ctx: &but_ctx::Context, relative_to: &RelativeTo) -> 
 }
 
 /// Enforce commit authorization for a resolved commit target.
+///
+/// Gate identity resolution uses `resolve_principal_with_runtime_registry`, whose
+/// underlying `but_authz::authorize` resolver order is: (1) runtime registry via
+/// `but_authz::resolve_principal_with_registry`, (2) environment fallback only
+/// when `BUT_AUTHZ_ALLOW_ENV_HANDLE` is `1`, and (3) deny with
+/// `Denial::unregistered` (`perm.denied`) when no registered principal is
+/// available.
 pub fn enforce_commit_gate_for_target(
     repo: &gix::Repository,
     target: &CommitGateTarget,

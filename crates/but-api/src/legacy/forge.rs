@@ -166,6 +166,13 @@ fn branch_ref(branch: &str) -> String {
 /// Returns `Ok(None)` when the branch is not governed. Governed branches resolve
 /// through the runtime registry, with the explicit env-handle fallback policy
 /// owned by `but-authz`.
+///
+/// `authorize_branch_action` uses `resolve_principal_with_runtime_registry`;
+/// the `but_authz::authorize` resolver order is (1) runtime registry via
+/// `but_authz::resolve_principal_with_registry`, (2) environment fallback only
+/// when `BUT_AUTHZ_ALLOW_ENV_HANDLE` is `1`, and (3)
+/// `Denial::unregistered` (`perm.denied`) when no registered principal is
+/// available.
 pub fn authorize_branch_action(
     repo: &gix::Repository,
     branch: &str,
