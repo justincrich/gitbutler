@@ -1,0 +1,66 @@
+[
+  {
+    "id": "AC-1",
+    "verify": "cargo test -p but-authz --test authorize -- test_resolver_env_handle_denied_without_flag",
+    "exit_code": 0,
+    "output_file": ".tmp/IDENT-017/ac-1-output.txt",
+    "red_against_start_file": ".tmp/IDENT-017/AC-1-red-against-start.txt",
+    "green_file": ".tmp/IDENT-017/AC-1-green.txt",
+    "seeded_value": "Err(Denial::unregistered(pid, observed_start_time)); Denial.code == \"perm.denied\"",
+    "seeded_value_file": ".tmp/IDENT-017/AC-1-seeded-artifact.txt"
+  },
+  {
+    "id": "AC-2",
+    "verify": "cargo test -p but-authz --test authorize -- test_resolver_env_fallback",
+    "exit_code": 0,
+    "output_file": ".tmp/IDENT-017/ac-2-output.txt",
+    "red_against_start_file": ".tmp/IDENT-017/AC-2-red-against-start.txt",
+    "green_file": ".tmp/IDENT-017/AC-2-green.txt",
+    "seeded_value": "Ok(Principal { agent_id: 'dev', ... })",
+    "seeded_value_file": ".tmp/IDENT-017/AC-2-seeded-artifact.txt"
+  },
+  {
+    "id": "AC-3",
+    "verify": "cargo test -p but-authz --test authorize -- test_resolver_registry_hit",
+    "exit_code": 0,
+    "output_file": ".tmp/IDENT-017/ac-3-output.txt",
+    "red_against_start_file": ".tmp/IDENT-017/AC-3-red-against-start.txt",
+    "green_file": ".tmp/IDENT-017/AC-3-green.txt",
+    "seeded_value": "Ok(Principal { agent_id: 'rust-implementer', ... })",
+    "seeded_value_file": ".tmp/IDENT-017/AC-3-seeded-artifact.txt"
+  },
+  {
+    "id": "AC-4",
+    "verify": "Manual review of authorize.rs doc-comment + cargo doc --no-deps -p but-authz",
+    "exit_code": 0,
+    "output_file": ".tmp/IDENT-017/ac-4-output.txt",
+    "seeded_value": "Doc-comment contains TEST/CI-ONLY, resolve_principal_with_runtime_registry, and resolve_principal_with_registry",
+    "seeded_value_file": ".tmp/IDENT-017/AC-4-seeded-artifact.txt",
+    "red_against_start_file": ".tmp/IDENT-017/AC-4-red-against-start.txt",
+    "green_file": ".tmp/IDENT-017/AC-4-green.txt"
+  },
+  {
+    "id": "TC-1",
+    "verify": "cargo test -p but-authz --test authorize -- test_resolver_env_handle_denied_without_flag",
+    "exit_code": 0,
+    "output_file": ".tmp/IDENT-017/tc-1-output.txt"
+  },
+  {
+    "id": "TC-2",
+    "verify": "cargo test -p but-authz --test authorize -- test_resolver_env_fallback",
+    "exit_code": 0,
+    "output_file": ".tmp/IDENT-017/tc-2-output.txt"
+  },
+  {
+    "id": "TC-3",
+    "verify": "cargo test -p but-authz --test authorize -- test_resolver_registry_hit",
+    "exit_code": 0,
+    "output_file": ".tmp/IDENT-017/tc-3-output.txt"
+  },
+  {
+    "id": "TC-4",
+    "verify": "Manual review of authorize.rs doc-comment",
+    "exit_code": 0,
+    "output_file": ".tmp/IDENT-017/tc-4-output.txt"
+  }
+]

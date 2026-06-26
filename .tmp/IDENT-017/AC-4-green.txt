@@ -1,0 +1,13 @@
+warning: public documentation for `steer_envelope_from_parts` links to private item `serialization_fault_forced`
+   --> crates/but-authz/src/denial.rs:353:7
+    |
+353 | ///   serialization_fault_forced
+    |       ^^^^^^^^^^^^^^^^^^^^^^^^^^ this item is private
+    |
+    = note: this link will resolve properly if you pass `--document-private-items`
+    = note: `#[warn(rustdoc::private_intra_doc_links)]` on by default
+
+warning: `but-authz` (lib doc) generated 1 warning
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.13s
+   Generated /Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-017/target/doc/but_authz/index.html
+/// TEST/CI-ONLY - governed but-api gates use `resolve_principal_with_runtime_registry`; resolver-level tests may call `resolve_principal_with_registry` directly.
