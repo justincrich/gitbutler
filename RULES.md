@@ -215,6 +215,17 @@ See `frontend.md` for full frontend-test detail.
 - Commit messages and PR descriptions: succinct — why, impact, core decisions. No
   local validation commands, no AI co-author trailers, no tool branding.
 
+### Agent identity
+
+- In governed repos, each process must run `but agent register` before any
+  gate; an unregistered process resolves no principal and is denied with
+  `perm.denied`.
+- `BUT_AGENT_HANDLE` is a test-only escape hatch: it is consulted only when
+  `BUT_AUTHZ_ALLOW_ENV_HANDLE=1` is set, and it is not the production identity
+  path.
+- Resolution order is strict: process registry → flag-gated `BUT_AGENT_HANDLE`
+  → `Denial::unregistered`.
+
 ## Scoped Instructions & Key Docs
 
 - Rust work under `crates/` → `crates/AGENTS.md`

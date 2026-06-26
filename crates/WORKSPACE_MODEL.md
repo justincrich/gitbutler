@@ -4,6 +4,10 @@ Use this when changing, reviewing, or investigating Rust code under `crates/` th
 
 This document captures intended direction. Prefer nearby code patterns for small legacy fixes, but avoid expanding legacy abstractions when adding new behavior.
 
+## Related Documentation
+
+- Agent identity model: see [`but-authz/README.md`](but-authz/README.md) for the threat model, `agents.toml` format, and principal resolution order.
+
 ## Core direction
 
 GitButler is moving away from **stacks** as a primary internal abstraction.

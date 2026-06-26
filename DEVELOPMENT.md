@@ -540,3 +540,4 @@ This is a list of crates/modules that we want to eliminate or split into smaller
 - [gitbutler-branch](crates/gitbutler-branch/) (contains `diff` and `branch` contexts due to a cyclic dependency)
 - [gitbutler-url](crates/gitbutler-url/) (this is a huge mess and ideally we need none of it)
 - [gitbutler_repo::config](crates/gitbutler-repo/src/config.rs) (seems like the wrong abstraction)
+- `permissions.toml` → `agents.toml` rename (governance config migration — `but agent migrate` converts; legacy fallback window active through v1.4.0)

@@ -133,3 +133,8 @@ vendored, or fixture data unless the task is specifically about that code.
 - Explain why an `insta` assertion holds concisely using the second argument as message, like `insta::assert_debug_snapshot(debug, "needs to be this because...", @r"")`.
 - Use `insta` redactions to remove unstable output from the snapshot. Avoid *creating* additional macros, as it's possible to change its settings
   directly. It's fine to use its own utility macros to configure redactions, where applicable.
+
+## Related Documentation
+
+- **Agent identity model**: see [`but-authz/README.md`](but-authz/README.md) for the threat model, `agents.toml` format, and resolution order.
+- For graph/workspace/branch/stack/commit/rebase relationships, see [`WORKSPACE_MODEL.md`](WORKSPACE_MODEL.md).
