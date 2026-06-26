@@ -3,7 +3,7 @@ use anyhow::{Context as _, Result};
 use but_api_macros::but_api;
 use but_authz::{
     AssignmentState, Authority, AuthorizedAction, Denial, DenialClass, authorize,
-    load_governance_config, resolve_principal_from_env, serialize_authority_tokens,
+    load_governance_config, serialize_authority_tokens,
 };
 use but_core::{RepositoryExt, ref_metadata::ProjectMeta};
 use but_ctx::{Context, ThreadSafeContext};
@@ -13,6 +13,8 @@ use but_forge::{
 use gitbutler_repo::{FileInfo, RepoCommands};
 use serde::Serialize;
 use tracing::instrument;
+
+use crate::commit::create::gate::resolve_principal_with_runtime_registry;
 
 /// Structured forge-gate error payload for CLI and API callers.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -170,7 +172,7 @@ fn authorize_branch_action(
     }
 
     let cfg = load_forge_governance_config(repo, &ref_name)?;
-    let principal = resolve_principal_from_env(&cfg)?;
+    let principal = resolve_principal_with_runtime_registry(repo, &cfg)?;
     // STEER-002: the forge `authorize_branch_action` match is reconciled
     // with the ROUTE_AUTHORITY_TABLE rows in `but-authz`. The three
     // explicit arms below (ReviewsWrite / CommentsWrite / PullRequestsWrite)

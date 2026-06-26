@@ -1,3 +1,5 @@
+use std::{env, path::PathBuf};
+
 use bstr::ByteSlice as _;
 use but_authz::{
     Authority, AuthorizedAction, Denial, DenialCause, DenialClass, DenialPredicate, DeniedRoute,
@@ -7,6 +9,9 @@ use but_authz::{
 use but_rebase::graph_rebase::mutate::RelativeTo;
 use gix::refs::FullName;
 use serde::Serialize;
+
+const AGENT_REGISTRY_PATH_ENV: &str = "BUT_AGENT_REGISTRY_PATH";
+const AGENT_REGISTRY_FILE_NAME: &str = "agent-registry.toml";
 
 // ---------------------------------------------------------------------------
 // STEER-007 — denial-steering telemetry (observation-only)
@@ -101,10 +106,10 @@ impl CommitGateTarget {
 /// Enforce commit authorization for a ref-aware commit target.
 ///
 /// If the target ref carries committed governance files, the gate reads that
-/// governance configuration, resolves the acting principal from
-/// `BUT_AGENT_HANDLE`, requires `contents:write`, and rejects direct commits to
-/// protected branches before callers take write guards or mutate repository
-/// state. Target refs with no committed governance files remain non-governed.
+/// governance configuration, resolves the acting principal from the runtime
+/// registry, requires `contents:write`, and rejects direct commits to protected
+/// branches before callers take write guards or mutate repository state. Target
+/// refs with no committed governance files remain non-governed.
 pub fn enforce_commit_gate(ctx: &but_ctx::Context, relative_to: &RelativeTo) -> anyhow::Result<()> {
     let target = gate_target(ctx, relative_to)?;
     let repo = ctx.repo.get()?;
@@ -132,7 +137,7 @@ pub fn enforce_commit_gate_for_target(
         );
         anyhow::Error::from(config_error)
     })?;
-    let principal = but_authz::resolve_principal_from_env(&cfg)?;
+    let principal = resolve_principal_with_runtime_registry(repo, &cfg)?;
 
     // STEER-002: Route::Commit row in ROUTE_AUTHORITY_TABLE supplies the
     // required Authority for this gate; the literal `but_authz::authorize`
@@ -165,6 +170,51 @@ pub fn enforce_commit_gate_for_target(
     }
 
     Ok(())
+}
+
+pub(crate) fn resolve_principal_with_runtime_registry(
+    repo: &gix::Repository,
+    cfg: &but_authz::GovConfig,
+) -> anyhow::Result<Principal> {
+    let registry = load_runtime_registry(repo)?;
+    but_authz::resolve_principal_with_registry(Some(&registry), cfg).map_err(Into::into)
+}
+
+fn load_runtime_registry(repo: &gix::Repository) -> anyhow::Result<but_authz::Registry> {
+    let Some(path) = runtime_registry_path(repo)? else {
+        return Ok(but_authz::Registry::empty());
+    };
+    but_authz::Registry::load(path)
+}
+
+fn runtime_registry_path(repo: &gix::Repository) -> anyhow::Result<Option<PathBuf>> {
+    if let Some(path) = env::var_os(AGENT_REGISTRY_PATH_ENV) {
+        return Ok(Some(PathBuf::from(path)));
+    }
+
+    if let Some(runtime_dir) = env::var_os("XDG_RUNTIME_DIR") {
+        return Ok(Some(
+            PathBuf::from(runtime_dir)
+                .join("gitbutler")
+                .join(repo_hash(repo)?)
+                .join(AGENT_REGISTRY_FILE_NAME),
+        ));
+    }
+
+    Ok(repo
+        .workdir()
+        .map(|workdir| workdir.join(".gitbutler").join(AGENT_REGISTRY_FILE_NAME)))
+}
+
+fn repo_hash(repo: &gix::Repository) -> anyhow::Result<String> {
+    let path = gix::path::realpath(repo.git_dir()).unwrap_or_else(|_| repo.git_dir().to_owned());
+    let mut hasher = gix::hash::hasher(gix::hash::Kind::Sha256);
+    hasher.update(path.as_os_str().as_encoded_bytes());
+    let digest = hasher.try_finalize()?;
+    Ok(digest.as_slice()[..16]
+        .iter()
+        .map(|byte| format!("{byte:02x}"))
+        .collect())
 }
 
 /// Extract a structured gate payload from an error chain.

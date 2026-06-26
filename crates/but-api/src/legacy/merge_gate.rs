@@ -11,7 +11,9 @@ use serde::{Deserialize, Serialize};
 // STEER-007: shared denial-steering telemetry helper (observation-only).
 // `gate` is mounted as `commit::create::gate` via the `#[path = "gate.rs"]`
 // attribute in `commit/create.rs`.
-use crate::commit::create::gate::emit_denial_steering_event;
+use crate::commit::create::gate::{
+    emit_denial_steering_event, resolve_principal_with_runtime_registry,
+};
 
 #[path = "review_requirement.rs"]
 mod review_requirement;
@@ -70,7 +72,7 @@ pub fn enforce_merge_gate(ctx: &but_ctx::Context, review_id: usize) -> anyhow::R
     let repo = ctx.repo.get()?;
     let config = load_merge_governance_config(&repo, &target_ref)?;
 
-    let principal = but_authz::resolve_principal_from_env(&config.gov)?;
+    let principal = resolve_principal_with_runtime_registry(&repo, &config.gov)?;
     // STEER-002: Route::Merge row in ROUTE_AUTHORITY_TABLE supplies the
     // required Authority for this gate; the literal `but_authz::authorize`
     // call is preserved so the AUTHORITY_POSITIVE_PATTERN honesty grep

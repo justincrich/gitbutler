@@ -17,6 +17,7 @@ use but_ctx::Context;
 use gix::{bstr::ByteSlice as _, object::tree::EntryKind};
 use serde::{Deserialize, Serialize};
 
+use crate::commit::create::gate::resolve_principal_with_runtime_registry;
 use crate::json::{self, ConfigInvalid};
 
 use super::config_mutate::enforce_administration_write_gate;
@@ -472,8 +473,8 @@ pub fn perm_revoke(
 ///
 /// Reports a graceful `not_configured` status (instead of an error) when the target ref
 /// has no committed governance config, and returns the resolved `target_ref` so the UI
-/// reuses it for follow-up reads. A caller that can't be resolved (e.g. `BUT_AGENT_HANDLE`
-/// unset) yields empty authorities (read-only), not an error.
+/// reuses it for follow-up reads. A caller that can't be resolved yields empty
+/// authorities (read-only), not an error.
 #[but_api(napi, GovernanceStatus)]
 pub fn governance_status_read(ctx: &Context) -> anyhow::Result<GovernanceStatus> {
     let repo = ctx.repo.get()?;
@@ -486,12 +487,12 @@ pub fn governance_status_read(ctx: &Context) -> anyhow::Result<GovernanceStatus>
         });
     }
     let config = load_governance_config(&repo, &target_ref)?;
-    let authorities = match but_authz::resolve_principal_from_env(&config) {
+    let authorities = match resolve_principal_with_runtime_registry(&repo, &config) {
         Ok(caller) => but_authz::effective_authority(&caller, &config)
             .iter()
             .map(|authority| authority.name().to_owned())
             .collect(),
-        // No resolvable caller (e.g. BUT_AGENT_HANDLE unset) → read-only, not an error.
+        // No resolvable caller: read-only, not an error.
         Err(_) => Vec::new(),
     };
     Ok(GovernanceStatus {
@@ -558,7 +559,7 @@ pub fn branch_gates_read_with_repo(
     target_ref: &str,
 ) -> anyhow::Result<BranchGatesOutcome> {
     let config = load_governance_config(repo, target_ref)?;
-    let caller = but_authz::resolve_principal_from_env(&config)?;
+    let caller = resolve_principal_with_runtime_registry(repo, &config)?;
     let held = but_authz::effective_authority(&caller, &config);
     if !held.contains(Authority::AdministrationRead)
         && !held.contains(Authority::AdministrationWrite)
@@ -1158,7 +1159,7 @@ pub fn group_list_with_repo(
     target_ref: &str,
 ) -> anyhow::Result<GroupListOutcome> {
     let config = load_governance_config(repo, target_ref)?;
-    let caller = but_authz::resolve_principal_from_env(&config)?;
+    let caller = resolve_principal_with_runtime_registry(repo, &config)?;
     let held = but_authz::effective_authority(&caller, &config);
     if !held.contains(Authority::AdministrationRead)
         && !held.contains(Authority::AdministrationWrite)
@@ -1460,7 +1461,7 @@ pub fn perm_list_with_repo(
     principal: Option<&str>,
 ) -> anyhow::Result<PermListOutcome> {
     let config = load_governance_config(repo, target_ref)?;
-    let caller = but_authz::resolve_principal_from_env(&config)?;
+    let caller = resolve_principal_with_runtime_registry(repo, &config)?;
     let target = principal.unwrap_or_else(|| caller.id().as_str());
     let target_id = PrincipalId::new(target);
 
@@ -1630,7 +1631,7 @@ pub fn whoami_with_repo(
     principal: Option<&str>,
 ) -> anyhow::Result<WhoamiOutcome> {
     let config = load_governance_config(repo, target_ref)?;
-    let caller = but_authz::resolve_principal_from_env(&config)?;
+    let caller = resolve_principal_with_runtime_registry(repo, &config)?;
     let target = principal.unwrap_or_else(|| caller.id().as_str());
     let target_id = PrincipalId::new(target);
 
@@ -1682,7 +1683,7 @@ pub fn can_i_with_repo(
     principal: Option<&str>,
 ) -> anyhow::Result<CanIOutcome> {
     let config = load_governance_config(repo, target_ref)?;
-    let caller = but_authz::resolve_principal_from_env(&config)?;
+    let caller = resolve_principal_with_runtime_registry(repo, &config)?;
     let target = principal.unwrap_or_else(|| caller.id().as_str());
     let target_id = PrincipalId::new(target);
 
@@ -1733,9 +1734,8 @@ pub fn perm_grant_with_repo(
 /// Grant direct permissions after the desktop command boundary has resolved the
 /// signed-in fleet-owner and asserted the v1 administration-write exception.
 ///
-/// This is intentionally not used by the agent/env path, which must continue to
-/// call [`perm_grant_with_repo`] and resolve `BUT_AGENT_HANDLE` through
-/// `but-authz`.
+/// This is intentionally not used by the agent runtime-registry path, which must
+/// continue to call [`perm_grant_with_repo`] and resolve through `but-authz`.
 pub fn perm_grant_with_repo_as_fleet_owner(
     repo: &gix::Repository,
     target_ref: &str,
