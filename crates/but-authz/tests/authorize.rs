@@ -7,6 +7,10 @@ use std::ffi::OsString;
 use std::sync::Mutex;
 
 const TARGET_REF: &str = "refs/heads/main";
+
+// These are the only process-environment mutations in this integration test
+// binary, so a local lock keeps the IDENT-003 fallback cases serialized without
+// adding crate-local env-mutation dependencies.
 static ENV_LOCK: Mutex<()> = Mutex::new(());
 
 #[test]

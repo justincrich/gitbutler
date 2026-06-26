@@ -1,8 +1,13 @@
 #![allow(non_snake_case)]
 
-use std::fs;
+use std::{
+    fs,
+    sync::{Arc, Barrier},
+    thread,
+};
 
-use but_authz::{PrincipalId, Registry};
+use anyhow::Context;
+use but_authz::{PrincipalId, ProcessKey, Registry};
 use but_testsupport::gix_testtools::tempfile::TempDir;
 
 #[test]
@@ -42,6 +47,11 @@ fn IDENT_001_same_pid_with_different_start_time_does_not_resolve() {
         registry.resolve((1234, 1_730_000_099)),
         None,
         "pid reuse must not resolve when the process start_time differs"
+    );
+    assert_eq!(
+        registry.resolve((1234, 1_730_000_000)),
+        Some(PrincipalId::new("rust-implementer")),
+        "rejecting a reused pid with a different start_time must not remove the original entry"
     );
 }
 
@@ -139,6 +149,181 @@ fn IDENT_001_write_then_load_round_trips_parseable_toml() -> anyhow::Result<()> 
 }
 
 #[test]
+fn IDENT_004_registry_write_then_load_round_trips_three_distinct_entries_exact_fields()
+-> anyhow::Result<()> {
+    let tmp = TempDir::new()?;
+    let path = tmp.path().join("agents.toml");
+    let mut registry = Registry::empty();
+    let expected = [
+        ExpectedRegistration::new(1234, 900, "rust-implementer", 100, "operator-a"),
+        ExpectedRegistration::new(2345, 1_730_000_000, "rust-reviewer", 14_400, "operator-b"),
+        ExpectedRegistration::new(3456, 1_730_001_000, "release-agent", 86_400, "operator-c"),
+    ];
+
+    for entry in &expected {
+        registry.register(
+            entry.key.0,
+            entry.key.1,
+            entry.agent_id.clone(),
+            entry.ttl_seconds,
+            entry.registered_by.clone(),
+        )?;
+    }
+
+    registry.write(&path)?;
+    let loaded = Registry::load(&path)?;
+
+    assert_eq!(
+        loaded, registry,
+        "loading the registry TOML must preserve the exact three-entry registry"
+    );
+    assert_eq!(
+        loaded.len(),
+        expected.len(),
+        "the loaded registry must contain all three distinct registrations"
+    );
+    for entry in &expected {
+        assert_registration_fields(&loaded, entry);
+    }
+
+    Ok(())
+}
+
+#[test]
+fn IDENT_004_gc_keeps_expiry_boundary_and_drops_afterwards() -> anyhow::Result<()> {
+    let mut registry = Registry::empty();
+    let entry = ExpectedRegistration::new(55, 900, "ttl-agent", 100, "operator");
+    registry.register(
+        entry.key.0,
+        entry.key.1,
+        entry.agent_id.clone(),
+        entry.ttl_seconds,
+        entry.registered_by.clone(),
+    )?;
+
+    assert_registration_fields(&registry, &entry);
+    assert_eq!(
+        registry.gc(999),
+        0,
+        "gc before expires_at=1000 must keep the registration"
+    );
+    assert_eq!(
+        registry.resolve(entry.key),
+        Some(PrincipalId::new("ttl-agent")),
+        "the registration must remain resolvable before the expiry boundary"
+    );
+    assert_eq!(
+        registry.gc(1000),
+        0,
+        "gc at expires_at=1000 must keep the registration"
+    );
+    assert_eq!(
+        registry.resolve(entry.key),
+        Some(PrincipalId::new("ttl-agent")),
+        "the registration must remain resolvable at the expiry boundary"
+    );
+    assert_eq!(
+        registry.gc(1001),
+        1,
+        "gc after expires_at=1000 must drop the expired registration"
+    );
+    assert_eq!(
+        registry.resolve(entry.key),
+        None,
+        "the registration must no longer resolve after gc drops it"
+    );
+
+    Ok(())
+}
+
+#[test]
+fn IDENT_004_concurrent_registry_writes_preserve_all_distinct_entries_and_parse()
+-> anyhow::Result<()> {
+    const WRITER_COUNT: u32 = 8;
+
+    let tmp = TempDir::new()?;
+    let path = tmp.path().join("agents.toml");
+    Registry::empty().write(&path)?;
+
+    let expected = (0..WRITER_COUNT)
+        .map(|index| {
+            ExpectedRegistration::new(
+                20_000 + index,
+                1_800_000_000 + u64::from(index),
+                format!("agent-{index}"),
+                3_600 + u64::from(index),
+                format!("operator-{index}"),
+            )
+        })
+        .collect::<Vec<_>>();
+    let start_barrier = Arc::new(Barrier::new(WRITER_COUNT as usize));
+    let loaded_barrier = Arc::new(Barrier::new(WRITER_COUNT as usize));
+    let handles = expected
+        .iter()
+        .cloned()
+        .map(|entry| {
+            let path = path.clone();
+            let start_barrier = Arc::clone(&start_barrier);
+            let loaded_barrier = Arc::clone(&loaded_barrier);
+            thread::spawn(move || -> anyhow::Result<()> {
+                start_barrier.wait();
+                let loaded = Registry::load(&path);
+                loaded_barrier.wait();
+
+                let mut registry = loaded?;
+                registry.register(
+                    entry.key.0,
+                    entry.key.1,
+                    entry.agent_id.clone(),
+                    entry.ttl_seconds,
+                    entry.registered_by.clone(),
+                )?;
+                registry.write(&path)?;
+                Ok(())
+            })
+        })
+        .collect::<Vec<_>>();
+
+    let mut writer_errors = Vec::new();
+    for handle in handles {
+        match handle.join() {
+            Ok(Ok(())) => {}
+            Ok(Err(error)) => writer_errors.push(format!("{error:#}")),
+            Err(payload) => writer_errors.push(thread_panic_message(payload)),
+        }
+    }
+
+    let content = fs::read_to_string(&path).with_context(|| {
+        format!(
+            "reading registry after concurrent writes: {}",
+            path.display()
+        )
+    })?;
+    toml::from_str::<toml::Value>(&content).with_context(|| {
+        format!(
+            "parsing registry after concurrent writes: {}",
+            path.display()
+        )
+    })?;
+
+    let loaded = Registry::load(&path)?;
+    let missing = expected
+        .iter()
+        .filter(|entry| !registration_matches(&loaded, entry))
+        .map(ExpectedRegistration::description)
+        .collect::<Vec<_>>();
+    let loaded_keys = loaded.registrations().keys().copied().collect::<Vec<_>>();
+
+    assert!(
+        writer_errors.is_empty() && missing.is_empty(),
+        "concurrent registry writers must all succeed and preserve every distinct registration; \
+         writer_errors={writer_errors:?}; missing={missing:?}; loaded_keys={loaded_keys:?}"
+    );
+
+    Ok(())
+}
+
+#[test]
 fn IDENT_001_load_missing_file_returns_empty_registry() -> anyhow::Result<()> {
     let tmp = TempDir::new()?;
     let path = tmp.path().join("agents.toml");
@@ -151,6 +336,92 @@ fn IDENT_001_load_missing_file_returns_empty_registry() -> anyhow::Result<()> {
     );
 
     Ok(())
+}
+
+#[derive(Debug, Clone)]
+struct ExpectedRegistration {
+    key: ProcessKey,
+    agent_id: String,
+    ttl_seconds: u64,
+    expires_at: u64,
+    registered_by: String,
+}
+
+impl ExpectedRegistration {
+    fn new(
+        pid: u32,
+        start_time: u64,
+        agent_id: impl Into<String>,
+        ttl_seconds: u64,
+        registered_by: impl Into<String>,
+    ) -> Self {
+        Self {
+            key: (pid, start_time),
+            agent_id: agent_id.into(),
+            ttl_seconds,
+            expires_at: start_time + ttl_seconds,
+            registered_by: registered_by.into(),
+        }
+    }
+
+    fn description(&self) -> String {
+        format!(
+            "pid={} start_time={} agent_id={} expires_at={} registered_by={}",
+            self.key.0, self.key.1, self.agent_id, self.expires_at, self.registered_by
+        )
+    }
+}
+
+fn assert_registration_fields(registry: &Registry, expected: &ExpectedRegistration) {
+    let registration = registry
+        .registrations()
+        .get(&expected.key)
+        .unwrap_or_else(|| panic!("registration must exist for {:?}", expected.key));
+
+    assert_eq!(
+        registration.agent_id.as_str(),
+        expected.agent_id.as_str(),
+        "agent_id must round-trip exactly for {:?}",
+        expected.key
+    );
+    assert_eq!(
+        registration.registered_at, expected.key.1,
+        "registered_at must round-trip exactly for {:?}",
+        expected.key
+    );
+    assert_eq!(
+        registration.expires_at, expected.expires_at,
+        "expires_at must round-trip exactly for {:?}",
+        expected.key
+    );
+    assert_eq!(
+        registration.registered_by.as_str(),
+        expected.registered_by.as_str(),
+        "registered_by must round-trip exactly for {:?}",
+        expected.key
+    );
+}
+
+fn registration_matches(registry: &Registry, expected: &ExpectedRegistration) -> bool {
+    registry
+        .registrations()
+        .get(&expected.key)
+        .is_some_and(|registration| {
+            registration.agent_id.as_str() == expected.agent_id.as_str()
+                && registration.registered_at == expected.key.1
+                && registration.expires_at == expected.expires_at
+                && registration.registered_by.as_str() == expected.registered_by.as_str()
+        })
+}
+
+fn thread_panic_message(payload: Box<dyn std::any::Any + Send + 'static>) -> String {
+    if let Some(message) = payload.downcast_ref::<&str>() {
+        format!("writer thread panicked: {message}")
+    } else if let Some(message) = payload.downcast_ref::<String>() {
+        format!("writer thread panicked: {message}")
+    } else {
+        "writer thread panicked with non-string payload".to_owned()
+    }
 }
 
 #[test]

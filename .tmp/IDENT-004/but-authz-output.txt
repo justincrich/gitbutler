@@ -1,0 +1,168 @@
+warning: function `IDENT_003_registry_hit_resolves_registered_principal` should have a snake case name
+   --> crates/but-authz/tests/authorize.rs:157:4
+    |
+157 | fn IDENT_003_registry_hit_resolves_registered_principal() -> anyhow::Result<()> {
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `ident_003_registry_hit_resolves_registered_principal`
+    |
+    = note: `#[warn(non_snake_case)]` (part of `#[warn(nonstandard_style)]`) on by default
+
+warning: function `IDENT_003_registry_miss_allows_flagged_env_fallback` should have a snake case name
+   --> crates/but-authz/tests/authorize.rs:176:4
+    |
+176 | fn IDENT_003_registry_miss_allows_flagged_env_fallback() -> anyhow::Result<()> {
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `ident_003_registry_miss_allows_flagged_env_fallback`
+
+warning: function `IDENT_003_registry_miss_without_env_flag_denies_unregistered` should have a snake case name
+   --> crates/but-authz/tests/authorize.rs:194:4
+    |
+194 | fn IDENT_003_registry_miss_without_env_flag_denies_unregistered() -> anyhow::Result<()> {
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `ident_003_registry_miss_without_env_flag_denies_unregistered`
+
+warning: function `IDENT_003_stale_registry_entry_denies_pid_reuse` should have a snake case name
+   --> crates/but-authz/tests/authorize.rs:226:4
+    |
+226 | fn IDENT_003_stale_registry_entry_denies_pid_reuse() -> anyhow::Result<()> {
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `ident_003_stale_registry_entry_denies_pid_reuse`
+
+warning: function `IDENT_003_none_registry_allows_flagged_env_fallback` should have a snake case name
+   --> crates/but-authz/tests/authorize.rs:275:4
+    |
+275 | fn IDENT_003_none_registry_allows_flagged_env_fallback() -> anyhow::Result<()> {
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `ident_003_none_registry_allows_flagged_env_fallback`
+
+   Compiling but-authz v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-004/crates/but-authz)
+warning: `but-authz` (test "authorize") generated 5 warnings
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.39s
+     Running unittests src/lib.rs (target/debug/deps/but_authz-01a6100e6918fc7d)
+
+running 4 tests
+test menu::tests::affordance_map_covers_every_route ... ok
+test menu::tests::catalog_every_command_starts_with_but_and_has_nonempty_effect ... ok
+test menu::tests::authorized_actions_for_admin_denial_is_discovery_only ... ok
+test route::tests::route_all_matches_table_rows ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/assignment_state.rs (target/debug/deps/assignment_state-3fa1bcb2eaa78fda)
+
+running 4 tests
+test assignment_state_literals_match_column_values ... ok
+test assignment_state_not_an_authority ... ok
+test assignment_state_parse_name_round_trips ... ok
+test assignment_state_parse_rejects_unknown ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/authority.rs (target/debug/deps/authority-2b7ee172cbf0bfe5)
+
+running 7 tests
+test authority_parse_unknown_errors ... ok
+test authority_parse ... ok
+test desugar_admin_superuser_and_maintain ... ok
+test list_equals_role_write ... ok
+test desugar_write_excludes_merge_admin ... ok
+test list_loads_without_role ... ok
+test optional_role_desugar_preserves_role_behavior ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/authorize.rs (target/debug/deps/authorize-bfc7f8dd5e07578f)
+
+running 10 tests
+test IDENT_003_registry_hit_resolves_registered_principal ... ok
+test IDENT_003_none_registry_allows_flagged_env_fallback ... ok
+test IDENT_003_registry_miss_allows_flagged_env_fallback ... ok
+test IDENT_003_stale_registry_entry_denies_pid_reuse ... ok
+test IDENT_003_registry_miss_without_env_flag_denies_unregistered ... ok
+test authority_only_from_config ... ok
+test resolve_no_handle_rejected ... ok
+test resolve_unknown_principal_denied ... ok
+test effective_authority_union ... ok
+test authorize_held_vs_missing ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.06s
+
+     Running tests/config.rs (target/debug/deps/config-3dbe4fa9b450541c)
+
+running 5 tests
+test config_loads_from_target_ref ... ok
+test config_ignores_working_tree_edit ... ok
+test config_role_entry_desugars ... ok
+test config_loads_from_target_not_head ... ok
+test config_malformed_fails_closed ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.15s
+
+     Running tests/grps_ref_pin.rs (target/debug/deps/grps_ref_pin-7f49573a49c2d050)
+
+running 2 tests
+test membership_read_only_from_target_ref ... ok
+test self_grant_admin_inert_until_landed ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.14s
+
+     Running tests/grps_union.rs (target/debug/deps/grps_union-41865793dc414b6e)
+
+running 4 tests
+test group_union_authorizes_review_denies_merge ... ok
+test delegated_admin_ceiling ... ok
+test union_paths_stay_equal ... ok
+test claims_do_not_widen_union_even_with_group_backing ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.07s
+
+     Running tests/invariant_build_gates.rs (target/debug/deps/invariant_build_gates-3ba996ea39f50736)
+
+running 8 tests
+test steer_primer_marked_non_enforced ... ok
+test steer_primer_goal_integrity_and_contract ... ok
+test steer_primer_contains_required_statements ... ok
+test steer_table_affordance_coverage ... ok
+test steer_closed_catalog_r15_boundary_teeth_control ... ok
+test steer_closed_catalog_no_interpolation_in_steering_fields ... ok
+test steer_primer_engine_independent ... ok
+test invariant_build_gates ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+
+     Running tests/process.rs (target/debug/deps/process-0397c82901147ebf)
+
+running 5 tests
+test IDENT_002_current_pid_matches_std_process_id ... ok
+test IDENT_002_current_process_start_time_is_stable_across_reads ... ok
+test IDENT_002_current_process_start_time_is_sane_unix_timestamp ... ok
+test IDENT_004_current_process_start_time_is_monotonic_and_sane_unix_seconds ... ok
+test IDENT_002_nonexistent_pid_returns_error_that_names_pid ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/registry.rs (target/debug/deps/registry-e5b9a630f0628241)
+
+running 11 tests
+test IDENT_001_empty_registry_resolves_no_principal ... ok
+test IDENT_001_gc_keeps_expiry_boundary_and_drops_afterwards ... ok
+test IDENT_004_gc_keeps_expiry_boundary_and_drops_afterwards ... ok
+test IDENT_001_same_pid_with_different_start_time_does_not_resolve ... ok
+test IDENT_001_unregister_removes_exact_pid_start_time_pair ... ok
+test IDENT_001_register_resolve_round_trip_uses_pid_and_start_time ... ok
+test IDENT_001_load_missing_file_returns_empty_registry ... ok
+test IDENT_001_write_missing_parent_returns_error_naming_path ... ok
+test IDENT_004_registry_write_then_load_round_trips_three_distinct_entries_exact_fields ... ok
+test IDENT_001_write_then_load_round_trips_parseable_toml ... ok
+test IDENT_004_concurrent_registry_writes_preserve_all_distinct_entries_and_parse ... FAILED
+
+failures:
+
+---- IDENT_004_concurrent_registry_writes_preserve_all_distinct_entries_and_parse stdout ----
+
+thread 'IDENT_004_concurrent_registry_writes_preserve_all_distinct_entries_and_parse' (62028679) panicked at crates/but-authz/tests/registry.rs:317:5:
+concurrent registry writers must all succeed and preserve every distinct registration; writer_errors=["writing registry /var/folders/rt/8_hh9gmj43x4763f7_l_nk3c0000gn/T/.tmpX83EGl/agents.toml: renaming temporary registry /var/folders/rt/8_hh9gmj43x4763f7_l_nk3c0000gn/T/.tmpX83EGl/agents.toml.tmp.5607 to /var/folders/rt/8_hh9gmj43x4763f7_l_nk3c0000gn/T/.tmpX83EGl/agents.toml: No such file or directory (os error 2)", "writing registry /var/folders/rt/8_hh9gmj43x4763f7_l_nk3c0000gn/T/.tmpX83EGl/agents.toml: renaming temporary registry /var/folders/rt/8_hh9gmj43x4763f7_l_nk3c0000gn/T/.tmpX83EGl/agents.toml.tmp.5607 to /var/folders/rt/8_hh9gmj43x4763f7_l_nk3c0000gn/T/.tmpX83EGl/agents.toml: No such file or directory (os error 2)", "writing registry /var/folders/rt/8_hh9gmj43x4763f7_l_nk3c0000gn/T/.tmpX83EGl/agents.toml: renaming temporary registry /var/folders/rt/8_hh9gmj43x4763f7_l_nk3c0000gn/T/.tmpX83EGl/agents.toml.tmp.5607 to /var/folders/rt/8_hh9gmj43x4763f7_l_nk3c0000gn/T/.tmpX83EGl/agents.toml: No such file or directory (os error 2)", "writing registry /var/folders/rt/8_hh9gmj43x4763f7_l_nk3c0000gn/T/.tmpX83EGl/agents.toml: renaming temporary registry /var/folders/rt/8_hh9gmj43x4763f7_l_nk3c0000gn/T/.tmpX83EGl/agents.toml.tmp.5607 to /var/folders/rt/8_hh9gmj43x4763f7_l_nk3c0000gn/T/.tmpX83EGl/agents.toml: No such file or directory (os error 2)", "writing registry /var/folders/rt/8_hh9gmj43x4763f7_l_nk3c0000gn/T/.tmpX83EGl/agents.toml: renaming temporary registry /var/folders/rt/8_hh9gmj43x4763f7_l_nk3c0000gn/T/.tmpX83EGl/agents.toml.tmp.5607 to /var/folders/rt/8_hh9gmj43x4763f7_l_nk3c0000gn/T/.tmpX83EGl/agents.toml: No such file or directory (os error 2)", "writing registry /var/folders/rt/8_hh9gmj43x4763f7_l_nk3c0000gn/T/.tmpX83EGl/agents.toml: renaming temporary registry /var/folders/rt/8_hh9gmj43x4763f7_l_nk3c0000gn/T/.tmpX83EGl/agents.toml.tmp.5607 to /var/folders/rt/8_hh9gmj43x4763f7_l_nk3c0000gn/T/.tmpX83EGl/agents.toml: No such file or directory (os error 2)", "writing registry /var/folders/rt/8_hh9gmj43x4763f7_l_nk3c0000gn/T/.tmpX83EGl/agents.toml: renaming temporary registry /var/folders/rt/8_hh9gmj43x4763f7_l_nk3c0000gn/T/.tmpX83EGl/agents.toml.tmp.5607 to /var/folders/rt/8_hh9gmj43x4763f7_l_nk3c0000gn/T/.tmpX83EGl/agents.toml: No such file or directory (os error 2)"]; missing=["pid=20000 start_time=1800000000 agent_id=agent-0 expires_at=1800003600 registered_by=operator-0", "pid=20001 start_time=1800000001 agent_id=agent-1 expires_at=1800003602 registered_by=operator-1", "pid=20003 start_time=1800000003 agent_id=agent-3 expires_at=1800003606 registered_by=operator-3", "pid=20004 start_time=1800000004 agent_id=agent-4 expires_at=1800003608 registered_by=operator-4", "pid=20005 start_time=1800000005 agent_id=agent-5 expires_at=1800003610 registered_by=operator-5", "pid=20006 start_time=1800000006 agent_id=agent-6 expires_at=1800003612 registered_by=operator-6", "pid=20007 start_time=1800000007 agent_id=agent-7 expires_at=1800003614 registered_by=operator-7"]; loaded_keys=[(20002, 1800000002)]
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    IDENT_004_concurrent_registry_writes_preserve_all_distinct_entries_and_parse
+
+test result: FAILED. 10 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+
+error: test failed, to rerun pass `-p but-authz --test registry`
