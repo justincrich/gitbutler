@@ -184,7 +184,17 @@ fn load_runtime_registry(repo: &gix::Repository) -> anyhow::Result<but_authz::Re
     let Some(path) = runtime_registry_path(repo)? else {
         return Ok(but_authz::Registry::empty());
     };
-    but_authz::Registry::load(path)
+    match but_authz::Registry::load(&path) {
+        Ok(registry) => Ok(registry),
+        Err(error) => {
+            tracing::debug!(
+                path = %path.display(),
+                error = %error,
+                "runtime agent registry is unavailable; using an empty registry"
+            );
+            Ok(but_authz::Registry::empty())
+        }
+    }
 }
 
 fn runtime_registry_path(repo: &gix::Repository) -> anyhow::Result<Option<PathBuf>> {

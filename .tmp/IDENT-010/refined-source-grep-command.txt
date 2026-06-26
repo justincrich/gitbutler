@@ -1,0 +1,2 @@
+command: rg -n "resolve_principal_from_env\s*\(|(std::env|env)::var(_os)?\s*\([^)]*BUT_AGENT_HANDLE" crates/but-api/src
+output: <no matches>

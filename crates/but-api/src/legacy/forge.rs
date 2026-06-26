@@ -161,7 +161,12 @@ fn branch_ref(branch: &str) -> String {
     }
 }
 
-fn authorize_branch_action(
+/// Resolve and authorize the runtime principal for a governed branch action.
+///
+/// Returns `Ok(None)` when the branch is not governed. Governed branches resolve
+/// through the runtime registry, with the explicit env-handle fallback policy
+/// owned by `but-authz`.
+pub fn authorize_branch_action(
     repo: &gix::Repository,
     branch: &str,
     authority: Authority,

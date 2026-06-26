@@ -12,6 +12,8 @@ use but_rules::{
 };
 use tracing::instrument;
 
+use crate::commit::create::gate::resolve_principal_with_runtime_registry;
+
 #[but_api]
 #[instrument(err(Debug))]
 pub fn create_workspace_rule(
@@ -97,7 +99,7 @@ pub fn list_workspace_rules_scoped_for_caller(
     let repo = ctx.repo.get()?;
     let target_ref = ctx.project_meta()?.target_ref_or_err()?.to_string();
     let config = load_governance_config(&repo, &target_ref)?;
-    let caller = but_authz::resolve_principal_from_env(&config)?;
+    let caller = resolve_principal_with_runtime_registry(&repo, &config)?;
     let target = PrincipalId::new(principal_id);
 
     if caller.id() != &target {
