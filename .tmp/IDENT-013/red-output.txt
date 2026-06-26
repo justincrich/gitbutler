@@ -1,0 +1,26 @@
+IDENT-013 RED capture note:
+AC-1 is a positive migration invariant on this base because IDENT-009 has already landed, so it may pass here. The captured RED below is AC-2: the IDENT-010-dependent flag-unset negative control must deny legacy `permissions.toml` env fallback, but the current implementation still authorizes it.
+
+$ cargo test -p but-api --test agents_toml_migration legacy_permissions_only_repo_authorizes_via_env_fallback
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.25s
+     Running tests/agents_toml_migration.rs (target/debug/deps/agents_toml_migration-1f38514f7f2ea1e7)
+
+running 1 test
+test legacy_permissions_only_repo_authorizes_via_env_fallback ... FAILED
+
+failures:
+
+---- legacy_permissions_only_repo_authorizes_via_env_fallback stdout ----
+warning: .gitbutler/permissions.toml is deprecated; run: but agent migrate
+warning: .gitbutler/permissions.toml is deprecated; run: but agent migrate
+Error: legacy env fallback must deny when BUT_AUTHZ_ALLOW_ENV_HANDLE is unset
+
+
+failures:
+    legacy_permissions_only_repo_authorizes_via_env_fallback
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1 filtered out; finished in 0.11s
+
+error: test failed, to rerun pass `-p but-api --test agents_toml_migration`
+
+exit code: 101
