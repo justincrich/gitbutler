@@ -1,0 +1,13 @@
+   Compiling but-authz v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-009/crates/but-authz)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.40s
+     Running tests/config.rs (target/debug/deps/config-3dbe4fa9b450541c)
+
+running 1 test
+governance_present agents.toml-only == true
+governance_present permissions.toml-only == true
+governance_present gates.toml-only == true
+governance_present neither == false
+test governance_present_agents_or_permissions ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 9 filtered out; finished in 0.13s
+

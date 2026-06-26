@@ -1,0 +1,21 @@
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on artifact directory
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.38s
+     Running tests/config.rs (target/debug/deps/config-3dbe4fa9b450541c)
+
+running 10 tests
+test agents_toml_parses_same_config ... ok
+test config_role_entry_desugars ... ok
+test permissions_only_deprecation_warning ... ok
+test config_loads_from_target_ref ... ok
+test both_files_prefers_agents_toml ... ok
+test config_ignores_working_tree_edit ... ok
+test config_loads_from_target_not_head ... ok
+test byte_equivalent_across_formats ... ok
+test governance_present_agents_or_permissions ... ok
+test config_malformed_fails_closed ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.23s
+

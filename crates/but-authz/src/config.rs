@@ -5,9 +5,18 @@ use serde::{Deserialize, Serialize};
 
 use crate::{AuthoritySet, DenialClass, Group, GroupName, PrincipalId};
 
+const AGENTS_PATH: &str = ".gitbutler/agents.toml";
 const PERMISSIONS_PATH: &str = ".gitbutler/permissions.toml";
 const GATES_PATH: &str = ".gitbutler/gates.toml";
 const CONFIG_INVALID: &str = "config.invalid";
+
+/// Return the repository-relative governance agents path.
+///
+/// This helper intentionally stays local to `config.rs` until the public export
+/// is added by the migration task that owns crate-root re-exports.
+pub fn agents_path() -> &'static str {
+    AGENTS_PATH
+}
 
 /// Return the repository-relative governance permissions path.
 ///
@@ -20,8 +29,9 @@ pub fn permissions_path() -> &'static str {
 
 /// Load committed governance config from the supplied target ref.
 ///
-/// The loader reads `.gitbutler/permissions.toml` and `.gitbutler/gates.toml`
-/// from the target ref's tree through `gix`; it never consults the working tree.
+/// The loader reads `.gitbutler/agents.toml` (preferred) or legacy
+/// `.gitbutler/permissions.toml`, plus `.gitbutler/gates.toml`, from the target
+/// ref's tree through `gix`; it never consults the working tree.
 ///
 /// ```
 /// # fn example(repo: &gix::Repository) -> Result<(), but_authz::ConfigError> {
@@ -79,9 +89,10 @@ pub fn load_permissions_wire(
 /// Whether governance is opted-in at `target_ref`.
 ///
 /// Governance is **opt-in by presence**: a ref is governed once it commits at
-/// least one of `.gitbutler/permissions.toml` / `.gitbutler/gates.toml` into its
-/// tree. This is the gate's discriminator — `false` means the ref is ungoverned
-/// and the gate does not run; `true` means the gate must
+/// least one of `.gitbutler/agents.toml` / `.gitbutler/permissions.toml` /
+/// `.gitbutler/gates.toml` into its tree. This is the gate's discriminator —
+/// `false` means the ref is ungoverned and the gate does not run; `true` means
+/// the gate must
 /// [`load_governance_config`], which fails closed `config.invalid` if a
 /// companion file is missing (incomplete governance) or malformed. The working
 /// tree is never consulted; an unresolvable ref/commit/tree is treated as
@@ -103,7 +114,9 @@ pub fn governance_present(repo: &gix::Repository, target_ref: &str) -> anyhow::R
         Err(_) => return Ok(true),
     };
 
-    Ok(tree_has_path(&tree, PERMISSIONS_PATH)? || tree_has_path(&tree, GATES_PATH)?)
+    Ok(tree_has_path(&tree, agents_path())?
+        || tree_has_path(&tree, PERMISSIONS_PATH)?
+        || tree_has_path(&tree, GATES_PATH)?)
 }
 
 fn tree_has_path(tree: &gix::Tree<'_>, path: &str) -> anyhow::Result<bool> {
@@ -344,11 +357,22 @@ fn load_governance_config_inner(
     repo: &gix::Repository,
     target_ref: &str,
 ) -> anyhow::Result<GovConfig> {
-    let permissions_blob = read_config_blob(repo, target_ref, PERMISSIONS_PATH)?;
+    let agents_path = agents_path();
+    let permissions = match read_config_blob_optional(repo, target_ref, agents_path)? {
+        Some(agents_blob) => {
+            let agents = toml::from_str::<AgentsWire>(&agents_blob)
+                .with_context(|| format!("parsing {agents_path} at {target_ref}"))?;
+            PermissionsWire::from(agents)
+        }
+        None => {
+            let permissions_blob = read_config_blob(repo, target_ref, PERMISSIONS_PATH)?;
+            warn_legacy_permissions_toml();
+            toml::from_str::<PermissionsWire>(&permissions_blob)
+                .with_context(|| format!("parsing {PERMISSIONS_PATH} at {target_ref}"))?
+        }
+    };
     let gates_blob = read_config_blob(repo, target_ref, GATES_PATH)?;
 
-    let permissions = toml::from_str::<PermissionsWire>(&permissions_blob)
-        .with_context(|| format!("parsing {PERMISSIONS_PATH} at {target_ref}"))?;
     let gates = toml::from_str::<GatesWire>(&gates_blob)
         .with_context(|| format!("parsing {GATES_PATH} at {target_ref}"))?;
 
@@ -358,11 +382,24 @@ fn load_governance_config_inner(
     Ok(GovConfig::new(principals, groups, branches))
 }
 
+fn warn_legacy_permissions_toml() {
+    eprintln!("warning: {PERMISSIONS_PATH} is deprecated; run: but agent migrate");
+}
+
 fn read_config_blob(
     repo: &gix::Repository,
     target_ref: &str,
     path: &'static str,
 ) -> anyhow::Result<String> {
+    read_config_blob_optional(repo, target_ref, path)?
+        .ok_or_else(|| anyhow!("missing {path} at {target_ref}"))
+}
+
+fn read_config_blob_optional(
+    repo: &gix::Repository,
+    target_ref: &str,
+    path: &'static str,
+) -> anyhow::Result<Option<String>> {
     let mut reference = repo
         .find_reference(target_ref)
         .with_context(|| format!("resolving target ref {target_ref}"))?;
@@ -375,14 +412,17 @@ fn read_config_blob(
     let entry = tree
         .lookup_entry_by_path(Path::new(path))
         .with_context(|| format!("looking up {path} in {target_ref}"))?
-        .ok_or_else(|| anyhow!("missing {path} at {target_ref}"))?;
+        .map(|entry| entry.id());
+    let Some(entry_id) = entry else {
+        return Ok(None);
+    };
     let blob = repo
-        .find_blob(entry.id())
+        .find_blob(entry_id)
         .with_context(|| format!("reading {path} blob at {target_ref}"))?;
     let content = str::from_utf8(&blob.data)
         .with_context(|| format!("decoding {path} at {target_ref} as UTF-8"))?;
 
-    Ok(content.to_owned())
+    Ok(Some(content.to_owned()))
 }
 
 fn normalize_permissions(
@@ -494,6 +534,28 @@ pub struct PermissionsWire {
     pub group: Vec<GroupWire>,
 }
 
+/// Raw agents TOML wire format.
+///
+/// This is structurally converted to [`PermissionsWire`] so all enforcement
+/// normalization stays in one path.
+#[derive(Debug, Clone, Default, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct AgentsWire {
+    #[serde(default)]
+    pub agent: Vec<AgentWire>,
+    #[serde(default)]
+    pub group: Vec<GroupWire>,
+}
+
+impl From<AgentsWire> for PermissionsWire {
+    fn from(agents: AgentsWire) -> Self {
+        Self {
+            principal: agents.agent.into_iter().map(PrincipalWire::from).collect(),
+            group: agents.group,
+        }
+    }
+}
+
 /// Raw `[[principal]]` permissions TOML entry.
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
@@ -513,6 +575,31 @@ pub struct PrincipalWire {
     pub kind: Option<String>,
     #[serde(default)]
     pub groups: Vec<String>,
+}
+
+/// Raw `[[agent]]` agents TOML entry.
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct AgentWire {
+    pub id: String,
+    #[serde(default)]
+    pub permissions: Vec<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub role: Option<String>,
+    #[serde(default)]
+    pub groups: Vec<String>,
+}
+
+impl From<AgentWire> for PrincipalWire {
+    fn from(agent: AgentWire) -> Self {
+        Self {
+            id: agent.id,
+            permissions: agent.permissions,
+            role: agent.role,
+            kind: None,
+            groups: agent.groups,
+        }
+    }
 }
 
 /// Raw `[[group]]` permissions TOML entry.
