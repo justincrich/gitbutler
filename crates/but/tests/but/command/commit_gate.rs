@@ -1,3 +1,12 @@
+use std::{
+    path::Path,
+    process::{Child, Command, Stdio},
+    thread,
+    time::Duration,
+};
+
+use anyhow::Context as _;
+
 use crate::utils::{CommandExt as _, Sandbox};
 
 // Governance is OPT-IN BY PRESENCE (RF-010 amended): a repo with NO committed
@@ -182,6 +191,96 @@ Error: {"error":{"code":"config.invalid","message":"invalid governance config: p
     Ok(())
 }
 
+#[test]
+#[serial_test::serial]
+fn commit_gate_operator_runtime_registry_sequence() -> anyhow::Result<()> {
+    let env = governed_operator_env()?;
+    let registry_path = env.projects_root().join("operator-runtime-registry.toml");
+
+    env.file("env-only-denied.txt", "env-only");
+    env.but("--format json commit feat -m env-only-denied")
+        .allow_json()
+        .env("BUT_AGENT_REGISTRY_PATH", &registry_path)
+        .env("BUT_AGENT_HANDLE", "dev")
+        .env_remove("BUT_AUTHZ_ALLOW_ENV_HANDLE")
+        .assert()
+        .failure()
+        .stderr_eq(snapbox::str![[r#"
+[..]perm.denied[..]
+"#]]);
+    println!("first env-only commit stderr contains literal `perm.denied`");
+
+    env.but("--format json commit feat -m flag-fallback")
+        .allow_json()
+        .env("BUT_AGENT_REGISTRY_PATH", &registry_path)
+        .env("BUT_AGENT_HANDLE", "dev")
+        .env("BUT_AUTHZ_ALLOW_ENV_HANDLE", "1")
+        .assert()
+        .success();
+    println!("flag-set env fallback commit exits 0");
+
+    env.but("agent register --as dev --ttl 4h")
+        .env("BUT_AGENT_REGISTRY_PATH", &registry_path)
+        .assert()
+        .success()
+        .stdout_eq(snapbox::str![[r#"
+registered: pid=[..] start_time=[..] agent_id=dev expires_at=[..]
+
+"#]]);
+    println!("agent register stdout contains registered dev pid/start_time tuple");
+
+    env.file("registered-no-env.txt", "registered");
+    let stopped_commit = spawn_stopped_but_commit(&env, &registry_path, "registered-no-env")?;
+    env.but(format!(
+        "agent register --pid {} --start-time {} --as dev --ttl 4h",
+        stopped_commit.pid, stopped_commit.start_time
+    ))
+    .env("BUT_AGENT_REGISTRY_PATH", &registry_path)
+    .assert()
+    .success()
+    .stdout_eq(snapbox::str![[r#"
+registered: pid=[..] start_time=[..] agent_id=dev expires_at=[..]
+
+"#]]);
+    continue_process(stopped_commit.pid)?;
+    let registered_output = stopped_commit.child.wait_with_output()?;
+    assert!(
+        registered_output.status.success(),
+        "registered no-env commit must exit 0; stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&registered_output.stdout),
+        String::from_utf8_lossy(&registered_output.stderr)
+    );
+    println!("registered no-env commit exits 0");
+
+    env.but(format!(
+        "agent unregister --pid {} --start-time {}",
+        stopped_commit.pid, stopped_commit.start_time
+    ))
+    .env("BUT_AGENT_REGISTRY_PATH", &registry_path)
+    .assert()
+    .success()
+    .stdout_eq(snapbox::str![[r#"
+removed: pid=[..] start_time=[..]
+
+"#]]);
+    println!("but agent unregister succeeds");
+
+    env.file("post-unregister-denied.txt", "post-unregister");
+    env.but("--format json commit feat -m post-unregister-denied")
+        .allow_json()
+        .env("BUT_AGENT_REGISTRY_PATH", &registry_path)
+        .env("BUT_AGENT_HANDLE", "dev")
+        .env_remove("BUT_AUTHZ_ALLOW_ENV_HANDLE")
+        .assert()
+        .failure()
+        .stderr_eq(snapbox::str![[r#"
+[..]perm.denied[..]
+"#]]);
+    println!("post-unregister env-only commit stderr contains literal `perm.denied`");
+
+    Ok(())
+}
+
 fn governed_env(name: &str, stack: Option<&str>) -> anyhow::Result<Sandbox> {
     let env = Sandbox::open_scenario_with_target_and_default_settings(name)?;
     env.invoke_bash(
@@ -242,4 +341,128 @@ fi
         }
     }
     Ok(env)
+}
+
+fn governed_operator_env() -> anyhow::Result<Sandbox> {
+    let env = Sandbox::init_scenario_with_target_and_default_settings("one-stack")?;
+    env.invoke_bash(
+        r#"
+git branch -f main origin/main
+git branch -m A feat
+write_governance_commit() {
+    target_ref="$1"
+    base=$(git rev-parse "$target_ref")
+    index=$(mktemp)
+    export GIT_INDEX_FILE="$index"
+    git read-tree "$base"
+    permissions_blob=$(git hash-object -w --stdin <<'EOF'
+[[principal]]
+id = "dev"
+permissions = ["contents:write"]
+EOF
+)
+    agents_blob=$(git hash-object -w --stdin <<'EOF'
+[[agent]]
+id = "dev"
+permissions = ["contents:write"]
+EOF
+)
+    gates_blob=$(git hash-object -w --stdin <<'EOF'
+[[branch]]
+name = "feat"
+protected = false
+EOF
+)
+    git update-index --add --cacheinfo 100644 "$permissions_blob" .gitbutler/permissions.toml
+    git update-index --add --cacheinfo 100644 "$agents_blob" .gitbutler/agents.toml
+    git update-index --add --cacheinfo 100644 "$gates_blob" .gitbutler/gates.toml
+    tree=$(git write-tree)
+    commit=$(printf 'operator governance config\n' | git commit-tree "$tree" -p "$base")
+    git update-ref "$target_ref" "$commit"
+    rm "$index"
+    unset GIT_INDEX_FILE
+}
+
+write_governance_commit refs/heads/main
+write_governance_commit refs/heads/feat
+git checkout feat
+"#,
+    );
+    env.but("setup").assert().success();
+    env.set_target_sha("refs/heads/main")?;
+    env.setup_metadata(&["feat"])?;
+    env.but("apply feat").assert().success();
+    Ok(env)
+}
+
+struct StoppedButCommit {
+    child: Child,
+    pid: u32,
+    start_time: u64,
+}
+
+fn spawn_stopped_but_commit(
+    env: &Sandbox,
+    registry_path: &Path,
+    message: &str,
+) -> anyhow::Result<StoppedButCommit> {
+    let but_bin = snapbox::cmd::cargo_bin!("but");
+    let child = Command::new("sh")
+        .arg("-c")
+        .arg(
+            r#"
+kill -STOP $$
+exec "$BUT_BIN" --format json commit feat -m "$COMMIT_MESSAGE"
+"#,
+        )
+        .env("BUT_BIN", but_bin)
+        .env("COMMIT_MESSAGE", message)
+        .env("BUT_AGENT_REGISTRY_PATH", registry_path)
+        .env_remove("BUT_AGENT_HANDLE")
+        .env_remove("BUT_AUTHZ_ALLOW_ENV_HANDLE")
+        .env_remove("BUT_OUTPUT_FORMAT")
+        .env("E2E_TEST_APP_DATA_DIR", env.app_data_dir())
+        .env("GITBUTLER_CHANGE_ID", "42")
+        .env("NOPAGER", "1")
+        .current_dir(env.projects_root())
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .context("spawning stopped but commit process")?;
+    let pid = child.id();
+    let start_time = process_start_time_retry(pid)?;
+    Ok(StoppedButCommit {
+        child,
+        pid,
+        start_time,
+    })
+}
+
+fn process_start_time_retry(pid: u32) -> anyhow::Result<u64> {
+    let mut last_error = None;
+    for _ in 0..50 {
+        match but_authz::process_start_time(pid) {
+            Ok(start_time) => return Ok(start_time),
+            Err(error) => {
+                last_error = Some(error);
+                thread::sleep(Duration::from_millis(10));
+            }
+        }
+    }
+    Err(last_error
+        .unwrap_or_else(|| anyhow::anyhow!("process_start_time({pid}) was not attempted")))
+}
+
+fn continue_process(pid: u32) -> anyhow::Result<()> {
+    let status = Command::new("kill")
+        .arg("-CONT")
+        .arg(pid.to_string())
+        .status()
+        .with_context(|| format!("continuing stopped but process pid {pid}"))?;
+    anyhow::ensure!(
+        status.success(),
+        "kill -CONT {pid} must succeed before waiting for registered commit"
+    );
+    Ok(())
 }

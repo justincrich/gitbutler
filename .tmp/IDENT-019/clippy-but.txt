@@ -1,0 +1,100 @@
+    Checking but-schemars v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/but-schemars)
+    Checking but-utils v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/but-utils)
+    Checking but-project-handle v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/but-project-handle)
+    Checking but-oxidize v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/but-oxidize)
+    Checking but-serde v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/but-serde)
+    Checking but-secret v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/but-secret)
+    Checking but-authz v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/but-authz)
+    Checking gitbutler-notify-debouncer v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/gitbutler-filemonitor/vendor/debouncer)
+   Compiling but-api-macros v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/but-api-macros)
+   Compiling but v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/but)
+    Checking but-installer v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/but-installer)
+    Checking but-db v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/but-db)
+    Checking but-forge-storage v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/but-forge-storage)
+    Checking but-settings v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/but-settings)
+    Checking but-core v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/but-core)
+    Checking gitbutler-user v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/gitbutler-user)
+    Checking gitbutler-filemonitor v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/gitbutler-filemonitor)
+    Checking but-gitlab v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/but-gitlab)
+    Checking but-github v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/but-github)
+    Checking but-update v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/but-update)
+    Checking gitbutler-reference v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/gitbutler-reference)
+    Checking but-graph v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/but-graph)
+    Checking gitbutler-commit v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/gitbutler-commit)
+    Checking but-askpass v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/but-askpass)
+    Checking gitbutler-cherry-pick v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/gitbutler-cherry-pick)
+    Checking gitbutler-branch v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/gitbutler-branch)
+    Checking but-forge v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/but-forge)
+    Checking gitbutler-project v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/gitbutler-project)
+    Checking but-meta v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/but-meta)
+    Checking but-ctx v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/but-ctx)
+    Checking but-gerrit v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/but-gerrit)
+    Checking gitbutler-git v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/gitbutler-git)
+    Checking but-hunk-dependency v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/but-hunk-dependency)
+    Checking gitbutler-workspace v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/gitbutler-workspace)
+    Checking but-testsupport v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/but-testsupport)
+    Checking gitbutler-repo v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/gitbutler-repo)
+    Checking but-rebase v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/but-rebase)
+    Checking but-hunk-assignment v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/but-hunk-assignment)
+    Checking gitbutler-oplog v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/gitbutler-oplog)
+    Checking gitbutler-stack v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/gitbutler-stack)
+    Checking but-worktrees v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/but-worktrees)
+    Checking but-oplog v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/but-oplog)
+    Checking but-workspace v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/but-workspace)
+    Checking gitbutler-repo-actions v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/gitbutler-repo-actions)
+    Checking gitbutler-operating-modes v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/gitbutler-operating-modes)
+    Checking but-tools v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/but-tools)
+    Checking but-rules v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/but-rules)
+    Checking but-agentlog v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/but-agentlog)
+    Checking but-llm v0.1.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/but-llm)
+    Checking gitbutler-branch-actions v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/gitbutler-branch-actions)
+    Checking gitbutler-edit-mode v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/gitbutler-edit-mode)
+    Checking gitbutler-watcher v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/gitbutler-watcher)
+    Checking but-action v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/but-action)
+    Checking but-cherry-apply v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/but-cherry-apply)
+    Checking but-api v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/but-api)
+    Checking but-transaction v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/but-transaction)
+error: variables can be used directly in the `format!` string
+  --> crates/but/src/command/agent.rs:42:38
+   |
+42 |                 return Err(bad_input(format!("unknown agent_id: {as}", as = r#as))
+   |                                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.95.0/index.html#uninlined_format_args
+   = note: `-D clippy::uninlined-format-args` implied by `-D warnings`
+   = help: to override `-D warnings` add `#[allow(clippy::uninlined_format_args)]`
+help: change this to
+   |
+42 -                 return Err(bad_input(format!("unknown agent_id: {as}", as = r#as))
+42 +                 return Err(bad_input(format!("unknown agent_id: {as}"))
+   |
+
+error: usage of `bool::then` in `filter_map`
+  --> crates/but/src/command/agent.rs:79:22
+   |
+79 |                       .filter_map(|(&(entry_pid, entry_start_time), registration)| {
+   |  ______________________^
+80 | |                         (entry_pid == pid).then(|| RemovedRegistration {
+81 | |                             pid: entry_pid,
+82 | |                             start_time: entry_start_time,
+...  |
+85 | |                         })
+86 | |                     })
+   | |______________________^
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.95.0/index.html#filter_map_bool_then
+   = note: `-D clippy::filter-map-bool-then` implied by `-D clippy::all`
+   = help: to override `-D clippy::all` add `#[allow(clippy::filter_map_bool_then)]`
+help: use `filter` then `map` instead
+   |
+79 ~                     .filter(|&(&(entry_pid, entry_start_time), registration)| (entry_pid == pid)).map(|(&(entry_pid, entry_start_time), registration)| RemovedRegistration {
+80 +                             pid: entry_pid,
+81 +                             start_time: entry_start_time,
+82 +                             agent_id: registration.agent_id.as_str().to_owned(),
+83 +                             expires_at: registration.expires_at,
+84 +                         })
+   |
+
+error: could not compile `but` (lib) due to 2 previous errors
+warning: build failed, waiting for other jobs to finish...
+error: could not compile `but` (lib test) due to 2 previous errors

@@ -1,0 +1,37 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.22s
+     Running tests/agent_registry.rs (target/debug/deps/agent_registry-6ad69d08b81c4ef3)
+
+running 5 tests
+registered test process pid=85367 start_time=1782488520 as `admin` via BUT_AGENT_REGISTRY_PATH=/var/folders/rt/8_hh9gmj43x4763f7_l_nk3c0000gn/T/.tmpeoVFl0
+warning: .gitbutler/permissions.toml is deprecated; run: but agent migrate
+admin_write_surface registered principal `admin` authorized with Ok(())
+unregistered test process pid=85367 start_time=1782488520 from /var/folders/rt/8_hh9gmj43x4763f7_l_nk3c0000gn/T/.tmpeoVFl0
+warning: .gitbutler/permissions.toml is deprecated; run: but agent migrate
+admin_write_surface unregistered process denied with `perm.denied`
+test admin_write_surface ... ok
+wrote expired registry entry pid=85367 start_time=1782488520 expires_at=1782488520 as `dev` via BUT_AGENT_REGISTRY_PATH=/var/folders/rt/8_hh9gmj43x4763f7_l_nk3c0000gn/T/.tmp05VwxB
+warning: .gitbutler/permissions.toml is deprecated; run: but agent migrate
+expired_current_process_registry_entry_denied rejected pid=85367 start_time=1782488520 with `perm.denied`
+test expired_current_process_registry_entry_denied ... ok
+registered test process pid=85367 start_time=1782488520 as `merger` via BUT_AGENT_REGISTRY_PATH=/var/folders/rt/8_hh9gmj43x4763f7_l_nk3c0000gn/T/.tmp99DTKA
+merge_surface registered principal `merger` authorized with Ok(())
+unregistered test process pid=85367 start_time=1782488520 from /var/folders/rt/8_hh9gmj43x4763f7_l_nk3c0000gn/T/.tmp99DTKA
+merge_surface unregistered process denied with `perm.denied`
+test merge_surface ... ok
+registered test process pid=85367 start_time=1782488520 as `dev` via BUT_AGENT_REGISTRY_PATH=/var/folders/rt/8_hh9gmj43x4763f7_l_nk3c0000gn/T/.tmpvqogES
+warning: .gitbutler/permissions.toml is deprecated; run: but agent migrate
+commit_surface registered principal `dev` authorized with Ok(())
+unregistered test process pid=85367 start_time=1782488520 from /var/folders/rt/8_hh9gmj43x4763f7_l_nk3c0000gn/T/.tmpvqogES
+warning: .gitbutler/permissions.toml is deprecated; run: but agent migrate
+commit_surface unregistered process denied with `perm.denied`
+test commit_surface ... ok
+registered test process pid=85367 start_time=1782488520 as `reviewer` via BUT_AGENT_REGISTRY_PATH=/var/folders/rt/8_hh9gmj43x4763f7_l_nk3c0000gn/T/.tmpAdNVlR
+warning: .gitbutler/permissions.toml is deprecated; run: but agent migrate
+forge_review_surface registered principal `reviewer` authorized with Ok(Some)
+unregistered test process pid=85367 start_time=1782488520 from /var/folders/rt/8_hh9gmj43x4763f7_l_nk3c0000gn/T/.tmpAdNVlR
+warning: .gitbutler/permissions.toml is deprecated; run: but agent migrate
+forge_review_surface unregistered process denied with `perm.denied`
+test forge_review_surface ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.99s
+

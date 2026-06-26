@@ -1,0 +1,325 @@
+    Checking regex-automata v0.4.14
+   Compiling quote v1.0.45
+    Checking mio v1.1.1
+    Checking rustix v1.1.4
+    Checking simd-adler32 v0.3.8
+    Checking adler2 v2.0.1
+    Checking compression-core v0.4.31
+    Checking uuid v1.23.1
+    Checking hashbrown v0.16.1
+    Checking objc2 v0.6.4
+    Checking num_threads v0.1.7
+    Checking unicode-width v0.2.2
+   Compiling siphasher v1.0.2
+    Checking utf8parse v0.2.2
+   Compiling memchr v2.8.0
+    Checking anstyle v1.0.14
+    Checking anstyle-query v1.1.5
+    Checking is_terminal_polyfill v1.70.2
+    Checking miniz_oxide v0.8.9
+    Checking colorchoice v1.0.4
+    Checking time v0.3.47
+   Compiling syn v2.0.117
+    Checking approx v0.5.1
+    Checking castaway v0.2.4
+    Checking fast-srgb8 v1.0.0
+    Checking phf_shared v0.11.3
+   Compiling proc-macro-error-attr2 v2.0.0
+    Checking unicode-truncate v2.0.1
+    Checking signal-hook v0.3.18
+    Checking anstyle-parse v1.0.0
+    Checking line-clipping v0.3.5
+    Checking clap_lex v1.0.0
+    Checking cfb v0.7.3
+    Checking strsim v0.11.1
+   Compiling phf_generator v0.11.3
+    Checking anstream v1.0.0
+    Checking anstyle-parse v0.2.7
+    Checking is-terminal v0.4.17
+    Checking file-id v0.2.3
+    Checking signal-hook-mio v0.2.5
+    Checking onig_sys v69.9.1
+    Checking flate2 v1.1.9
+   Compiling serde_json v1.0.149
+   Compiling pulldown-cmark v0.13.3
+    Checking supports-color v2.1.0
+    Checking curl-sys v0.4.85+curl-8.18.0
+    Checking supports-color v3.0.2
+    Checking quick-xml v0.38.4
+    Checking utf8-width v0.1.8
+    Checking unicode-linebreak v0.1.5
+    Checking smawk v0.3.2
+    Checking hashlink v0.11.0
+    Checking lru v0.16.3
+    Checking onig v6.5.1
+    Checking curl v0.4.49
+    Checking owo-colors v4.3.0
+    Checking html-escape v0.2.13
+    Checking anstream v0.6.21
+    Checking anstyle-lossy v1.1.4
+    Checking compression-codecs v0.4.37
+    Checking textwrap v0.16.2
+    Checking nix v0.27.1
+    Checking semver v1.0.27
+    Checking unicode-ident v1.0.24
+    Checking machine-uid v0.5.4
+    Checking infer v0.19.0
+    Checking simdutf8 v0.1.5
+    Checking minisign-verify v0.2.5
+    Checking symlink v0.1.0
+    Checking proc-macro2 v1.0.106
+    Checking snapbox-macros v0.4.0
+    Checking self_cell v1.2.2
+    Checking normalize-line-endings v0.3.0
+    Checking objc2-core-foundation v0.3.2
+    Checking colored v3.1.1
+    Checking tempfile v3.27.0
+    Checking xattr v1.6.1
+    Checking terminal_size v0.4.4
+    Checking anstyle-svg v0.1.11
+    Checking clap_builder v4.6.0
+    Checking tar v0.4.46
+    Checking objc2-io-kit v0.3.2
+    Checking objc2-foundation v0.3.2
+    Checking objc2-core-graphics v0.3.2
+    Checking regex v1.12.3
+    Checking matchers v0.2.0
+    Checking sysinfo v0.37.2
+    Checking snapbox v0.6.24
+   Compiling synstructure v0.13.2
+   Compiling serde_derive_internals v0.29.1
+   Compiling proc-macro-error2 v2.0.1
+   Compiling darling_core v0.23.0
+   Compiling darling_core v0.20.11
+   Compiling serde_derive v1.0.228
+   Compiling thiserror-impl v2.0.18
+   Compiling tracing-attributes v0.1.31
+   Compiling zerofrom-derive v0.1.6
+   Compiling yoke-derive v0.8.1
+   Compiling zerovec-derive v0.11.2
+   Compiling displaydoc v0.2.5
+   Compiling tokio-macros v2.6.0
+   Compiling futures-macro v0.3.32
+   Compiling maybe-async v0.2.11
+   Compiling ref-cast-impl v1.0.25
+   Compiling strum_macros v0.27.2
+   Compiling phf_macros v0.11.3
+   Compiling palette_derive v0.7.6
+    Checking ref-cast v1.0.25
+   Compiling schemars_derive v1.2.1
+   Compiling getset v0.1.6
+   Compiling async-openai-macros v0.3.0
+   Compiling derive_more-impl v2.1.1
+    Checking phf v0.11.3
+   Compiling async-trait v0.1.89
+    Checking futures-util v0.3.32
+    Checking objc2-app-kit v0.3.2
+   Compiling clap_derive v4.6.1
+   Compiling but-api-macros v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/but-api-macros)
+   Compiling serial_test_derive v3.4.0
+    Checking zerofrom v0.1.6
+    Checking tracing v0.1.44
+    Checking thiserror v2.0.18
+    Checking derive_more v2.1.1
+    Checking arboard v3.6.1
+   Compiling darling_macro v0.23.0
+   Compiling darling_macro v0.20.11
+    Checking strum v0.27.2
+    Checking palette v0.7.6
+   Compiling darling v0.23.0
+   Compiling darling v0.20.11
+    Checking serde v1.0.228
+    Checking clap v4.6.1
+    Checking futures-executor v0.3.32
+    Checking futures v0.3.32
+    Checking yoke v0.8.1
+    Checking gix-trace v0.1.20 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+    Checking kasuari v0.4.11
+   Compiling instability v0.3.11
+   Compiling rmcp-macros v0.16.0
+   Compiling derive_builder_core v0.20.2
+   Compiling derive_builder_macro v0.20.2
+    Checking derive_builder v0.20.2
+    Checking smallvec v1.15.1
+    Checking bstr v1.12.1
+    Checking faster-hex v0.10.0
+    Checking nonempty v0.12.0
+    Checking kstring v2.0.2
+    Checking gix-sec v0.14.1 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+    Checking serde_urlencoded v0.7.1
+    Checking chrono v0.4.44
+    Checking boolean-enums v0.4.1
+    Checking serde_json_lenient v0.2.4
+    Checking compact_str v0.9.0
+    Checking serde-error v0.1.3
+    Checking secrecy v0.10.3
+    Checking serde_regex v1.1.0
+    Checking plist v1.8.0
+    Checking bincode v1.3.3
+    Checking insta v1.47.2
+    Checking parking_lot_core v0.9.12
+    Checking tracing-subscriber v0.3.23
+    Checking parking_lot v0.12.5
+    Checking dashmap v6.2.1
+    Checking gix-validate v0.11.2 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+    Checking gix-utils v0.3.3 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+    Checking gix-error v0.2.4 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+    Checking gix-packetline v0.21.5 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+    Checking gix-imara-diff v0.2.2 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+    Checking gix-validate v0.10.1
+    Checking globset v0.4.18
+    Checking prodash v31.0.0
+    Checking tokio v1.50.0
+    Checking gix-path v0.12.1 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+    Checking gix-path v0.10.22
+    Checking gix-date v0.15.4 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+    Checking gix-chunk v0.7.2 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+    Checking gix-quote v0.7.2 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+    Checking gix-bitmap v0.3.2 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+    Checking crossterm v0.29.0
+    Checking ignore v0.4.25
+    Checking gitbutler-notify-debouncer v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/gitbutler-filemonitor/vendor/debouncer)
+    Checking syntect v5.3.0
+    Checking temp-env v0.3.6
+    Checking serial_test v3.4.0
+    Checking gix-config-value v0.18.1 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+    Checking gix-command v0.9.1 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+    Checking gix-actor v0.41.1 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+    Checking gix-url v0.36.1 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+    Checking gix-features v0.48.1 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+    Checking clap_complete v4.6.2
+    Checking schemars v1.2.1
+    Checking rusqlite v0.39.0
+    Checking gix-prompt v0.15.1 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+    Checking gix-hash v0.25.1 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+    Checking gix-fs v0.21.2 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+    Checking gix-glob v0.26.1 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+    Checking tracing-forest v0.3.1
+    Checking tracing-appender v0.2.5
+    Checking gix-credentials v0.38.1 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+    Checking gix-tempfile v23.0.1 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+    Checking gix-hashtable v0.15.1 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+    Checking gix-commitgraph v0.37.1 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+    Checking gix-attributes v0.33.1 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+    Checking gix-ignore v0.21.1 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+    Checking minus v5.6.1 (https://github.com/arijit79/minus?rev=57f1848f831d153a10d65060562ce1fdde938a01#57f1848f)
+    Checking gix-lock v23.0.1 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+    Checking gix-object v0.61.0 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+    Checking gix-shallow v0.12.1 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+    Checking gix-pathspec v0.18.1 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+    Checking zerovec v0.11.5
+    Checking zerotrie v0.2.3
+    Checking ratatui-core v0.1.0
+    Checking gix-revwalk v0.32.0 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+    Checking gix-ref v0.64.0 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+    Checking gix-filter v0.31.0 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+    Checking gix-pack v0.71.0 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+    Checking gix-traverse v0.58.0 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+    Checking gix-revision v0.46.0 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+    Checking gix-negotiate v0.32.0 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+    Checking gix-index v0.52.0 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+    Checking gix-refspec v0.42.0 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+    Checking ratatui-widgets v0.3.0
+    Checking ratatui-crossterm v0.1.0
+    Checking ansi-to-tui v8.0.1
+    Checking gix-discover v0.52.0 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+    Checking gix-config v0.57.0 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+    Checking gix-worktree v0.53.0 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+    Checking gix-odb v0.81.0 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+    Checking gix-diff v0.64.0 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+    Checking gix-dir v0.26.0 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+    Checking gix-worktree-state v0.31.0 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+    Checking gix-testtools v0.19.0 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+    Checking gix-submodule v0.31.0 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+    Checking gix-merge v0.17.0 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+    Checking gix-status v0.31.0 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+    Checking but-schemars v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/but-schemars)
+    Checking tokio-util v0.7.18
+    Checking tokio-rustls v0.26.4
+    Checking async-compression v0.4.40
+    Checking tokio-stream v0.1.18
+    Checking command-group v5.0.1
+    Checking tinystr v0.8.2
+    Checking potential_utf v0.1.4
+    Checking icu_collections v2.1.1
+    Checking icu_locale_core v2.1.1
+    Checking h2 v0.4.13
+    Checking tower v0.5.3
+    Checking rmcp v0.16.0
+    Checking tower-http v0.6.8
+    Checking icu_provider v2.1.1
+    Checking icu_normalizer v2.1.1
+    Checking icu_properties v2.1.2
+    Checking ratatui-macros v0.7.0
+    Checking ratatui-textarea v0.8.0
+    Checking ratatui v0.30.0
+    Checking idna_adapter v1.2.1
+    Checking idna v1.1.0
+    Checking url v2.5.8
+    Checking hyper v1.8.1
+    Checking git2 v0.20.4
+    Checking git-url-parse v0.6.0
+    Checking but-installer v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/but-installer)
+    Checking hyper-util v0.1.20
+    Checking hyper-rustls v0.27.7
+    Checking reqwest v0.13.4
+    Checking git2-hooks v0.5.0
+    Checking gix-transport v0.57.1 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+    Checking async-openai v0.38.2
+    Checking posthog-rs v0.4.1 (https://github.com/gitbutlerapp/posthog-rs?rev=664c9245f79aaedcdd025b9f3c141b62bb866b8e#664c9245)
+    Checking gix-protocol v0.62.0 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+    Checking gix v0.84.0 (https://github.com/GitoxideLabs/gitoxide?rev=4f089fce944ce8b3a8f3417441ed3c02cabcac26#4f089fce)
+    Checking but-project-handle v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/but-project-handle)
+    Checking but-utils v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/but-utils)
+    Checking but-oxidize v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/but-oxidize)
+    Checking but-serde v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/but-serde)
+    Checking but-secret v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/but-secret)
+    Checking git-meta-lib v0.1.10 (https://github.com/git-meta/git-meta?rev=b40c108514a992abea2f739889376334481af1a3#b40c1085)
+    Checking but-authz v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/but-authz)
+    Checking but-forge-storage v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/but-forge-storage)
+    Checking but-db v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/but-db)
+    Checking but-settings v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/but-settings)
+    Checking but-core v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/but-core)
+    Checking gitbutler-filemonitor v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/gitbutler-filemonitor)
+    Checking gitbutler-user v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/gitbutler-user)
+    Checking but-gitlab v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/but-gitlab)
+    Checking but-github v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/but-github)
+    Checking but-update v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/but-update)
+    Checking gitbutler-reference v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/gitbutler-reference)
+    Checking but-graph v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/but-graph)
+    Checking gitbutler-commit v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/gitbutler-commit)
+    Checking but-askpass v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/but-askpass)
+    Checking gitbutler-cherry-pick v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/gitbutler-cherry-pick)
+    Checking gitbutler-branch v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/gitbutler-branch)
+    Checking but-forge v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/but-forge)
+    Checking gitbutler-project v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/gitbutler-project)
+    Checking but-meta v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/but-meta)
+    Checking but-ctx v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/but-ctx)
+    Checking but-gerrit v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/but-gerrit)
+    Checking gitbutler-git v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/gitbutler-git)
+    Checking gitbutler-workspace v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/gitbutler-workspace)
+    Checking but-hunk-dependency v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/but-hunk-dependency)
+    Checking but-testsupport v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/but-testsupport)
+    Checking gitbutler-repo v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/gitbutler-repo)
+    Checking but-rebase v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/but-rebase)
+    Checking but-hunk-assignment v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/but-hunk-assignment)
+    Checking gitbutler-oplog v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/gitbutler-oplog)
+    Checking gitbutler-stack v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/gitbutler-stack)
+    Checking but-worktrees v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/but-worktrees)
+    Checking but-oplog v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/but-oplog)
+    Checking but-workspace v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/but-workspace)
+    Checking gitbutler-repo-actions v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/gitbutler-repo-actions)
+    Checking gitbutler-operating-modes v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/gitbutler-operating-modes)
+    Checking but-tools v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/but-tools)
+    Checking but-rules v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/but-rules)
+    Checking but-agentlog v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/but-agentlog)
+    Checking but-llm v0.1.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/but-llm)
+    Checking gitbutler-branch-actions v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/gitbutler-branch-actions)
+    Checking gitbutler-edit-mode v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/gitbutler-edit-mode)
+    Checking gitbutler-watcher v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/gitbutler-watcher)
+    Checking but-action v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/but-action)
+    Checking but-cherry-apply v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/but-cherry-apply)
+    Checking but-api v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/but-api)
+    Checking but-transaction v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/but-transaction)
+    Checking but v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/but)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 24.78s

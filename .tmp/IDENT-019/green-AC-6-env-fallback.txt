@@ -1,0 +1,11 @@
+   Compiling but-api v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/IDENT-019/crates/but-api)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.70s
+     Running tests/gate_registry_swap.rs (target/debug/deps/gate_registry_swap-db23272148eb0f78)
+
+running 1 test
+warning: .gitbutler/permissions.toml is deprecated; run: but agent migrate
+governed commit accepted BUT_AGENT_HANDLE=dev only with BUT_AUTHZ_ALLOW_ENV_HANDLE=1 and runtime registry has 0 entries
+test env_fallback_still_allowed_on_registry_miss ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 21 filtered out; finished in 0.12s
+

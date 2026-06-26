@@ -1,0 +1,236 @@
+{
+  "task_id": "IDENT-019",
+  "results": [
+    {
+      "id": "AC-1",
+      "type": "acceptance_criterion",
+      "satisfied": true,
+      "verify_command": "cargo test -p but-api --test agent_registry",
+      "output_path": ".tmp/IDENT-019/verify-AC-1-agent-registry.txt",
+      "evidence": "agent_registry target passed and includes commit_surface, merge_surface, admin_write_surface, and forge_review_surface as passed registry-only tests.",
+      "seeded_value": "current process runtime registry entries for dev, merger, admin, and reviewer",
+      "seeded_value_file": "crates/but-api/tests/agent_registry.rs",
+      "red_against_start_file": ".tmp/IDENT-019/red-output.txt",
+      "green_file": ".tmp/IDENT-019/green-AC-1-agent-registry.txt"
+    },
+    {
+      "id": "AC-2",
+      "type": "acceptance_criterion",
+      "satisfied": true,
+      "verify_command": "cargo test -p but-api --test agent_registry -- commit_surface",
+      "output_path": ".tmp/IDENT-019/verify-AC-2-commit-surface.txt",
+      "evidence": "commit_surface registers current process as dev, succeeds, unregisters, and observes perm.denied.",
+      "seeded_value": "agent_id=dev with contents:write",
+      "seeded_value_file": "crates/but-api/tests/agent_registry.rs",
+      "red_against_start_file": ".tmp/IDENT-019/red-output.txt",
+      "green_file": ".tmp/IDENT-019/green-AC-2-commit-surface.txt"
+    },
+    {
+      "id": "AC-3",
+      "type": "acceptance_criterion",
+      "satisfied": true,
+      "verify_command": "cargo test -p but-api --test agent_registry -- merge_surface",
+      "output_path": ".tmp/IDENT-019/verify-AC-3-merge-surface.txt",
+      "evidence": "merge_surface registers current process as merger, succeeds, unregisters, and observes perm.denied.",
+      "seeded_value": "agent_id=merger with merge",
+      "seeded_value_file": "crates/but-api/tests/agent_registry.rs",
+      "red_against_start_file": ".tmp/IDENT-019/red-output.txt",
+      "green_file": ".tmp/IDENT-019/green-AC-3-merge-surface.txt"
+    },
+    {
+      "id": "AC-4",
+      "type": "acceptance_criterion",
+      "satisfied": true,
+      "verify_command": "cargo test -p but-api --test agent_registry -- admin_write_surface",
+      "output_path": ".tmp/IDENT-019/verify-AC-4-admin-write-surface.txt",
+      "evidence": "admin_write_surface registers current process as admin, succeeds, unregisters, and observes perm.denied.",
+      "seeded_value": "agent_id=admin with administration:write",
+      "seeded_value_file": "crates/but-api/tests/agent_registry.rs",
+      "red_against_start_file": ".tmp/IDENT-019/red-output.txt",
+      "green_file": ".tmp/IDENT-019/green-AC-4-admin-write-surface.txt"
+    },
+    {
+      "id": "AC-5",
+      "type": "acceptance_criterion",
+      "satisfied": true,
+      "verify_command": "cargo test -p but-api --test agent_registry -- forge_review_surface",
+      "output_path": ".tmp/IDENT-019/verify-AC-5-forge-review-surface.txt",
+      "evidence": "forge_review_surface registers current process as reviewer, writes one approval verdict for reviewer, unregisters, and observes perm.denied.",
+      "seeded_value": "agent_id=reviewer with reviews:write",
+      "seeded_value_file": "crates/but-api/tests/agent_registry.rs",
+      "red_against_start_file": ".tmp/IDENT-019/red-output.txt",
+      "green_file": ".tmp/IDENT-019/green-AC-5-forge-review-surface.txt"
+    },
+    {
+      "id": "AC-6",
+      "type": "acceptance_criterion",
+      "satisfied": true,
+      "verify_command": "cargo test -p but-api --test gate_registry_swap -- env_fallback_still_allowed_on_registry_miss",
+      "output_path": ".tmp/IDENT-019/verify-AC-6-env-fallback.txt",
+      "evidence": "empty runtime registry plus BUT_AGENT_HANDLE=dev and BUT_AUTHZ_ALLOW_ENV_HANDLE=1 satisfies the governed commit gate.",
+      "seeded_value": "empty registry; BUT_AGENT_HANDLE=dev; BUT_AUTHZ_ALLOW_ENV_HANDLE=1",
+      "seeded_value_file": "crates/but-api/tests/gate_registry_swap.rs",
+      "red_against_start_file": ".tmp/IDENT-019/red-output.txt",
+      "green_file": ".tmp/IDENT-019/green-AC-6-env-fallback.txt"
+    },
+    {
+      "id": "AC-7",
+      "type": "acceptance_criterion",
+      "satisfied": true,
+      "verify_command": "cargo test -p but-api --test gate_registry_swap -- merge_gate_env_only_without_flag_denied",
+      "output_path": ".tmp/IDENT-019/verify-AC-7-merge-env-only-denied.txt",
+      "evidence": "merge gate denies env-only BUT_AGENT_HANDLE=maint when BUT_AUTHZ_ALLOW_ENV_HANDLE is unset, with perm.denied and pid/start_time text.",
+      "seeded_value": "empty registry; BUT_AGENT_HANDLE=maint; BUT_AUTHZ_ALLOW_ENV_HANDLE unset",
+      "seeded_value_file": "crates/but-api/tests/gate_registry_swap.rs",
+      "red_against_start_file": ".tmp/IDENT-019/red-output.txt",
+      "green_file": ".tmp/IDENT-019/green-AC-7-merge-env-only-denied.txt"
+    },
+    {
+      "id": "AC-8",
+      "type": "acceptance_criterion",
+      "satisfied": true,
+      "verify_command": "cargo test -p but --test but --features legacy,but-2 -- command::commit_gate::commit_gate_operator_runtime_registry_sequence",
+      "output_path": ".tmp/IDENT-019/verify-AC-8-cli-operator-sequence.txt",
+      "evidence": "CLI operator sequence denies env-only, allows flag-set env fallback, registers dev, allows a no-env registered commit, unregisters, and denies env-only again.",
+      "seeded_value": "agent_id=dev; runtime registry path; explicit stopped commit process pid/start_time registration",
+      "seeded_value_file": "crates/but/tests/but/command/commit_gate.rs",
+      "red_against_start_file": ".tmp/IDENT-019/red-output.txt",
+      "green_file": ".tmp/IDENT-019/green-AC-8-cli-operator-sequence.txt"
+    },
+    {
+      "id": "AC-9",
+      "type": "acceptance_criterion",
+      "satisfied": true,
+      "verify_command": "cargo test -p but-api --test gate_registry_swap -- expired_current_process_registry_entry_denied",
+      "output_path": ".tmp/IDENT-019/verify-AC-9-expired-gate-swap.txt",
+      "evidence": "expired current-process registry entry is pruned on runtime load before resolution and the governed commit gate returns perm.denied.",
+      "seeded_value": "current pid/current start_time registered as dev with ttl=0, then waited until expired",
+      "seeded_value_file": "crates/but-api/tests/gate_registry_swap.rs",
+      "red_against_start_file": ".tmp/IDENT-019/red-output.txt",
+      "green_file": ".tmp/IDENT-019/green-AC-9-expired-gate-swap.txt"
+    },
+    {
+      "id": "AC-10",
+      "type": "acceptance_criterion",
+      "satisfied": true,
+      "verify_command": "cargo test -p but-api --test gate_registry_swap -- current_pid_wrong_start_time_denied_at_commit_gate",
+      "output_path": ".tmp/IDENT-019/verify-AC-10-wrong-start-time.txt",
+      "evidence": "registry entry for current pid with wrong start_time denies at the governed commit gate with perm.denied and observed/registered start_time text.",
+      "seeded_value": "registry key=(current_pid, current_start_time+1)",
+      "seeded_value_file": "crates/but-api/tests/gate_registry_swap.rs",
+      "red_against_start_file": ".tmp/IDENT-019/red-output.txt",
+      "green_file": ".tmp/IDENT-019/green-AC-10-wrong-start-time.txt"
+    },
+    {
+      "id": "AC-11",
+      "type": "acceptance_criterion",
+      "satisfied": true,
+      "verify_command": "cargo test -p but-api --test gate_registry_swap -- wrong_pid_current_start_time_denied_at_commit_gate",
+      "output_path": ".tmp/IDENT-019/verify-AC-11-wrong-pid.txt",
+      "evidence": "registry entry for wrong pid/current start_time denies at the governed commit gate with perm.denied and current pid/start_time text.",
+      "seeded_value": "registry key=(current_pid+1, current_start_time)",
+      "seeded_value_file": "crates/but-api/tests/gate_registry_swap.rs",
+      "red_against_start_file": ".tmp/IDENT-019/red-output.txt",
+      "green_file": ".tmp/IDENT-019/green-AC-11-wrong-pid.txt"
+    },
+    {
+      "id": "TC-1",
+      "type": "test_criterion",
+      "satisfied": true,
+      "maps_to_ac": "AC-1",
+      "verify_command": "cargo test -p but-api --test agent_registry",
+      "output_path": ".tmp/IDENT-019/verify-AC-1-agent-registry.txt",
+      "evidence": "Exact verify command passed."
+    },
+    {
+      "id": "TC-2",
+      "type": "test_criterion",
+      "satisfied": true,
+      "maps_to_ac": "AC-2",
+      "verify_command": "cargo test -p but-api --test agent_registry -- commit_surface",
+      "output_path": ".tmp/IDENT-019/verify-AC-2-commit-surface.txt",
+      "evidence": "Exact verify command passed."
+    },
+    {
+      "id": "TC-3",
+      "type": "test_criterion",
+      "satisfied": true,
+      "maps_to_ac": "AC-3",
+      "verify_command": "cargo test -p but-api --test agent_registry -- merge_surface",
+      "output_path": ".tmp/IDENT-019/verify-AC-3-merge-surface.txt",
+      "evidence": "Exact verify command passed."
+    },
+    {
+      "id": "TC-4",
+      "type": "test_criterion",
+      "satisfied": true,
+      "maps_to_ac": "AC-4",
+      "verify_command": "cargo test -p but-api --test agent_registry -- admin_write_surface",
+      "output_path": ".tmp/IDENT-019/verify-AC-4-admin-write-surface.txt",
+      "evidence": "Exact verify command passed."
+    },
+    {
+      "id": "TC-5",
+      "type": "test_criterion",
+      "satisfied": true,
+      "maps_to_ac": "AC-5",
+      "verify_command": "cargo test -p but-api --test agent_registry -- forge_review_surface",
+      "output_path": ".tmp/IDENT-019/verify-AC-5-forge-review-surface.txt",
+      "evidence": "Exact verify command passed."
+    },
+    {
+      "id": "TC-6",
+      "type": "test_criterion",
+      "satisfied": true,
+      "maps_to_ac": "AC-6",
+      "verify_command": "cargo test -p but-api --test gate_registry_swap -- env_fallback_still_allowed_on_registry_miss",
+      "output_path": ".tmp/IDENT-019/verify-AC-6-env-fallback.txt",
+      "evidence": "Exact verify command passed."
+    },
+    {
+      "id": "TC-7",
+      "type": "test_criterion",
+      "satisfied": true,
+      "maps_to_ac": "AC-7",
+      "verify_command": "cargo test -p but-api --test gate_registry_swap -- merge_gate_env_only_without_flag_denied",
+      "output_path": ".tmp/IDENT-019/verify-AC-7-merge-env-only-denied.txt",
+      "evidence": "Exact verify command passed."
+    },
+    {
+      "id": "TC-8",
+      "type": "test_criterion",
+      "satisfied": true,
+      "maps_to_ac": "AC-8",
+      "verify_command": "cargo test -p but --test but --features legacy,but-2 -- command::commit_gate::commit_gate_operator_runtime_registry_sequence",
+      "output_path": ".tmp/IDENT-019/verify-AC-8-cli-operator-sequence.txt",
+      "evidence": "Exact verify command passed."
+    },
+    {
+      "id": "TC-9",
+      "type": "test_criterion",
+      "satisfied": true,
+      "maps_to_ac": "AC-9",
+      "verify_command": "cargo test -p but-api --test gate_registry_swap -- expired_current_process_registry_entry_denied",
+      "output_path": ".tmp/IDENT-019/verify-AC-9-expired-gate-swap.txt",
+      "evidence": "Exact verify command passed."
+    },
+    {
+      "id": "TC-10",
+      "type": "test_criterion",
+      "satisfied": true,
+      "maps_to_ac": "AC-10",
+      "verify_command": "cargo test -p but-api --test gate_registry_swap -- current_pid_wrong_start_time_denied_at_commit_gate",
+      "output_path": ".tmp/IDENT-019/verify-AC-10-wrong-start-time.txt",
+      "evidence": "Exact verify command passed."
+    },
+    {
+      "id": "TC-11",
+      "type": "test_criterion",
+      "satisfied": true,
+      "maps_to_ac": "AC-11",
+      "verify_command": "cargo test -p but-api --test gate_registry_swap -- wrong_pid_current_start_time_denied_at_commit_gate",
+      "output_path": ".tmp/IDENT-019/verify-AC-11-wrong-pid.txt",
+      "evidence": "Exact verify command passed."
+    }
+  ]
+}
