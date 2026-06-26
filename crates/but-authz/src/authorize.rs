@@ -181,12 +181,12 @@ pub fn resolve_principal(
 ///
 /// Resolution order is strict:
 ///
-/// 1. exact registry hit for the current `(pid, start_time)` resolves the
-///    registered principal;
-/// 2. registry miss falls back to [`resolve_principal`] only when
-///    `BUT_AUTHZ_ALLOW_ENV_HANDLE=1`;
-/// 3. otherwise the process is denied as unregistered, or as stale when a
-///    different start time is registered for the same pid.
+/// 1. registry hit for the current `(pid, start_time)` -> registered principal;
+/// 2. registry miss + `BUT_AUTHZ_ALLOW_ENV_HANDLE=1` -> environment fallback
+///    through [`resolve_principal`];
+/// 3. else -> [`Denial::unregistered`] for an unregistered process. A
+///    same-pid registration with a different start time is still denied as
+///    stale and never resolves a principal.
 ///
 /// `reg=None` is treated as a registry miss.
 pub fn resolve_principal_with_registry(

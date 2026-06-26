@@ -1,4 +1,16 @@
 //! Functional authorization primitives for governed GitButler actions.
+//!
+//! ```
+//! assert_eq!(but_authz::agents_path(), ".gitbutler/agents.toml");
+//!
+//! let registry = but_authz::Registry::empty();
+//! let resolver: fn(
+//!     Option<&but_authz::Registry>,
+//!     &but_authz::GovConfig,
+//! ) -> Result<but_authz::Principal, but_authz::Denial> =
+//!     but_authz::resolve_principal_with_registry;
+//! # let _ = (registry, resolver);
+//! ```
 
 mod assignment_state;
 mod authority;
@@ -17,6 +29,7 @@ pub use authorize::{
     DenialCause, authorize, effective_authority, resolve_principal, resolve_principal_from_env,
     resolve_principal_with_registry,
 };
+pub use config::agents_path;
 pub use config::{
     BranchName, BranchProtection, ConfigError, GovConfig, GroupWire, PermissionsWire,
     PrincipalWire, governance_present, load_governance_config, load_permissions_wire,
