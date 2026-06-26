@@ -1,0 +1,65 @@
+{
+  "task": "RED-FIRST-IDENT-020",
+  "branch": "kb-run-sprint/sprint-10-ident-deprecation-hardening/RED-FIRST-IDENT-020",
+  "base_ref": "kb/steer-integration",
+  "base_sha": "ace086e8fe6b62032b46fe6080b546c5960cdf9d",
+  "commands": [
+    {
+      "command": "cargo fmt",
+      "exit_code": 0,
+      "purpose": "format Rust test changes"
+    },
+    {
+      "command": "cargo test -p but-authz --test invariant_build_gates -- test_enforcement_paths_extended --nocapture",
+      "exit_code": 101,
+      "output": ".tmp/IDENT-020/red-output.txt",
+      "purpose": "focused RED evidence for missing IDENT-020 enforcement path invariant"
+    },
+    {
+      "command": "cargo test -p but-authz --test invariant_build_gates -- test_ --nocapture",
+      "exit_code": 101,
+      "output": ".tmp/IDENT-020/red-output-focused-set.txt",
+      "purpose": "focused new invariant set; expected RED failures plus passing source-scan controls"
+    }
+  ],
+  "files_changed": [
+    "crates/but-authz/tests/invariant_build_gates.rs",
+    ".tmp/IDENT-020/red-output.txt",
+    ".tmp/IDENT-020/red-exit-code.txt",
+    ".tmp/IDENT-020/red-output-focused-set.txt",
+    ".tmp/IDENT-020/red-focused-set-exit-code.txt",
+    ".tmp/IDENT-020/verify-manifest.json"
+  ],
+  "ac_tc_coverage": [
+    {
+      "target": "test_enforcement_paths_extended",
+      "coverage": "expects ENFORCEMENT_PATHS length 9 and source membership for AUTHZ_REGISTRY, AUTHZ_PROCESS, registry.rs, and process.rs",
+      "red_status": "fails because ENFORCEMENT_PATHS currently has length 7"
+    },
+    {
+      "target": "test_runtime_registry_wrapper_callsite_set_is_authoritative",
+      "coverage": "locks the current authoritative runtime wrapper callsite set and wrapper delegation to but_authz::resolve_principal_with_registry(Some(&registry), cfg)",
+      "red_status": "passes against current IDENT-019 wrapper implementation"
+    },
+    {
+      "target": "test_but_agent_handle_env_reads_only_in_authorize",
+      "coverage": "scans governed production sources and requires direct_env_reads=0 outside authorize.rs for BUT_AGENT_HANDLE",
+      "red_status": "passes against current source"
+    },
+    {
+      "target": "test_agents_path_exists",
+      "coverage": "asserts AGENTS_PATH remains present as the preferred governance identity config path",
+      "red_status": "passes against current source"
+    },
+    {
+      "target": "test_permissions_path_deprecated",
+      "coverage": "expects #[deprecated] immediately above PERMISSIONS_PATH",
+      "red_status": "fails because PERMISSIONS_PATH currently has no immediate #[deprecated] attribute"
+    },
+    {
+      "target": "test_registry_ttl_process_identity_negative_controls_present",
+      "coverage": "asserts registry TTL/process identity negative-control tests are present and coverage is not success-only",
+      "red_status": "passes against current test sources"
+    }
+  ]
+}

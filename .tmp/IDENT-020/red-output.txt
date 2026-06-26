@@ -1,0 +1,21 @@
+   Compiling but-authz v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/RED-FIRST-IDENT-020/crates/but-authz)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.37s
+     Running tests/invariant_build_gates.rs (target/debug/deps/invariant_build_gates-3ba996ea39f50736)
+
+running 1 test
+
+thread 'test_enforcement_paths_extended' (67441872) panicked at crates/but-authz/tests/invariant_build_gates.rs:173:5:
+assertion `left == right` failed: IDENT-020 enforcement coverage must include authorize/config plus registry/process hardening paths
+  left: 7
+ right: 9
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test test_enforcement_paths_extended ... FAILED
+
+failures:
+
+failures:
+    test_enforcement_paths_extended
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 13 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `-p but-authz --test invariant_build_gates`

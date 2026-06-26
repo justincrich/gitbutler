@@ -167,6 +167,253 @@ fn invariant_build_gates() -> anyhow::Result<()> {
     Ok(())
 }
 
+#[test]
+fn test_enforcement_paths_extended() -> anyhow::Result<()> {
+    let workspace_root = workspace_root()?;
+    assert_eq!(
+        ENFORCEMENT_PATHS.len(),
+        9,
+        "IDENT-020 enforcement coverage must include authorize/config plus registry/process hardening paths"
+    );
+
+    let source =
+        fs::read_to_string(workspace_root.join("crates/but-authz/tests/invariant_build_gates.rs"))
+            .context("read invariant build gate source")?;
+    let enforcement_paths = source
+        .split("const ENFORCEMENT_PATHS: &[&str] = &[")
+        .nth(1)
+        .and_then(|rest| rest.split("];").next())
+        .context("ENFORCEMENT_PATHS source definition must be parseable")?;
+
+    for token in [
+        concat!("AUTHZ_", "REGISTRY"),
+        concat!("AUTHZ_", "PROCESS"),
+        concat!("registry", ".rs"),
+        concat!("process", ".rs"),
+    ] {
+        assert!(
+            enforcement_paths.contains(token),
+            "IDENT-020 ENFORCEMENT_PATHS source must include {token}"
+        );
+    }
+
+    assert_paths_exist_and_non_empty(&workspace_root, ENFORCEMENT_PATHS)?;
+    Ok(())
+}
+
+#[test]
+fn test_runtime_registry_wrapper_callsite_set_is_authoritative() -> anyhow::Result<()> {
+    let workspace_root = workspace_root()?;
+    let gate_src = fs::read_to_string(workspace_root.join(COMMIT_GATE))
+        .with_context(|| format!("read {COMMIT_GATE}"))?;
+    assert!(
+        gate_src.contains(
+            "but_authz::resolve_principal_with_registry(Some(&registry), cfg).map_err(Into::into)"
+        ),
+        "runtime wrapper must delegate to but_authz::resolve_principal_with_registry(Some(&registry), cfg)"
+    );
+
+    let expected = [
+        (
+            "crates/but-api/src/commit/gate.rs",
+            "let principal = resolve_principal_with_runtime_registry(repo, &cfg)?;",
+        ),
+        (
+            "crates/but-api/src/legacy/config_mutate.rs",
+            "let principal = resolve_principal_with_runtime_registry(repo, &cfg)?;",
+        ),
+        (
+            "crates/but-api/src/legacy/forge.rs",
+            "let principal = resolve_principal_with_runtime_registry(repo, &cfg)?;",
+        ),
+        (
+            "crates/but-api/src/legacy/governance.rs",
+            "let authorities = match resolve_principal_with_runtime_registry(&repo, &config) {",
+        ),
+        (
+            "crates/but-api/src/legacy/governance.rs",
+            "let caller = resolve_principal_with_runtime_registry(repo, &config)?;",
+        ),
+        (
+            "crates/but-api/src/legacy/governance.rs",
+            "let caller = resolve_principal_with_runtime_registry(repo, &config)?;",
+        ),
+        (
+            "crates/but-api/src/legacy/governance.rs",
+            "let caller = resolve_principal_with_runtime_registry(repo, &config)?;",
+        ),
+        (
+            "crates/but-api/src/legacy/governance.rs",
+            "let caller = resolve_principal_with_runtime_registry(repo, &config)?;",
+        ),
+        (
+            "crates/but-api/src/legacy/governance.rs",
+            "let caller = resolve_principal_with_runtime_registry(repo, &config)?;",
+        ),
+        (
+            "crates/but-api/src/legacy/merge_gate.rs",
+            "let principal = resolve_principal_with_runtime_registry(&repo, &config.gov)?;",
+        ),
+        (
+            "crates/but-api/src/legacy/rules.rs",
+            "let caller = resolve_principal_with_runtime_registry(&repo, &config)?;",
+        ),
+    ];
+
+    let mut actual = Vec::new();
+    for relative_path in [
+        COMMIT_GATE,
+        CONFIG_MUTATE,
+        FORGE_GUARD,
+        GOVERNANCE,
+        MERGE_GATE,
+        "crates/but-api/src/legacy/rules.rs",
+    ] {
+        let source = fs::read_to_string(workspace_root.join(relative_path))
+            .with_context(|| format!("read {relative_path}"))?;
+        for line in source.lines() {
+            let trimmed = line.trim();
+            if trimmed.contains("resolve_principal_with_runtime_registry(")
+                && !trimmed.starts_with("pub(crate) fn ")
+            {
+                actual.push((relative_path, trimmed.to_owned()));
+            }
+        }
+    }
+    let expected = expected
+        .into_iter()
+        .map(|(path, line)| (path, line.to_owned()))
+        .collect::<Vec<_>>();
+    assert_eq!(
+        actual, expected,
+        "authoritative runtime wrapper callsite set changed"
+    );
+    Ok(())
+}
+
+#[test]
+fn test_but_agent_handle_env_reads_only_in_authorize() -> anyhow::Result<()> {
+    let workspace_root = workspace_root()?;
+    let governed_sources = [
+        AUTHZ_CONFIG,
+        "crates/but-authz/src/denial.rs",
+        "crates/but-authz/src/lib.rs",
+        "crates/but-authz/src/menu.rs",
+        "crates/but-authz/src/process.rs",
+        "crates/but-authz/src/registry.rs",
+        AUTHZ_ROUTE,
+        COMMIT_GATE,
+        CONFIG_MUTATE,
+        FORGE_GUARD,
+        GOVERNANCE,
+        MERGE_GATE,
+        "crates/but-api/src/legacy/rules.rs",
+    ];
+    let mut direct_env_reads = Vec::new();
+    for relative_path in governed_sources {
+        let source = fs::read_to_string(workspace_root.join(relative_path))
+            .with_context(|| format!("read {relative_path}"))?;
+        for (line_index, line) in source.lines().enumerate() {
+            let reads_env = line.contains("env::var") || line.contains("std::env::var");
+            if line.contains("BUT_AGENT_HANDLE") && reads_env {
+                direct_env_reads.push(format!("{relative_path}:{}:{line}", line_index + 1));
+            }
+        }
+    }
+    assert!(
+        direct_env_reads.is_empty(),
+        "direct_env_reads=0 outside authorize.rs; found:\n{}",
+        direct_env_reads.join("\n")
+    );
+    Ok(())
+}
+
+#[test]
+fn test_agents_path_exists() -> anyhow::Result<()> {
+    let workspace_root = workspace_root()?;
+    let config_src = fs::read_to_string(workspace_root.join(AUTHZ_CONFIG))
+        .with_context(|| format!("read {AUTHZ_CONFIG}"))?;
+    assert!(
+        config_src.contains(r#"const AGENTS_PATH: &str = ".gitbutler/agents.toml";"#),
+        "AGENTS_PATH must remain the preferred governance identity config path"
+    );
+    Ok(())
+}
+
+#[test]
+fn test_permissions_path_deprecated() -> anyhow::Result<()> {
+    let workspace_root = workspace_root()?;
+    let config_src = fs::read_to_string(workspace_root.join(AUTHZ_CONFIG))
+        .with_context(|| format!("read {AUTHZ_CONFIG}"))?;
+    let permissions_line = config_src
+        .lines()
+        .position(|line| line.contains("const PERMISSIONS_PATH: &str"))
+        .context("PERMISSIONS_PATH const must exist")?;
+    let lines = config_src.lines().collect::<Vec<_>>();
+    let previous_line = lines[..permissions_line]
+        .iter()
+        .rev()
+        .find(|line| !line.trim().is_empty())
+        .context("PERMISSIONS_PATH must have a preceding attribute line")?;
+    assert!(
+        previous_line.trim_start().starts_with("#[deprecated"),
+        "#[deprecated] must be immediately above PERMISSIONS_PATH; found previous line {previous_line:?}"
+    );
+    Ok(())
+}
+
+#[test]
+fn test_registry_ttl_process_identity_negative_controls_present() -> anyhow::Result<()> {
+    let workspace_root = workspace_root()?;
+    let registry_src =
+        fs::read_to_string(workspace_root.join("crates/but-authz/tests/registry.rs"))
+            .context("read registry tests")?;
+    let process_src = fs::read_to_string(workspace_root.join("crates/but-authz/tests/process.rs"))
+        .context("read process tests")?;
+    let gate_swap_src =
+        fs::read_to_string(workspace_root.join("crates/but-api/tests/gate_registry_swap.rs"))
+            .context("read gate registry swap tests")?;
+    let combined = format!("{registry_src}\n{process_src}\n{gate_swap_src}");
+
+    for required in [
+        "IDENT_001_same_pid_with_different_start_time_does_not_resolve",
+        "IDENT_001_gc_keeps_expiry_boundary_and_drops_afterwards",
+        "IDENT_002_nonexistent_pid_returns_error_that_names_pid",
+        "expired_current_process_registry_entry_denied",
+        "current_pid_wrong_start_time_denied_at_commit_gate",
+        "wrong_pid_current_start_time_denied_at_commit_gate",
+        "malformed_registry_propagates_instead_of_empty",
+    ] {
+        assert!(
+            combined.contains(required),
+            "registry/process identity coverage must include negative-control test {required}"
+        );
+    }
+
+    let success_only_needles = [
+        "registered_process_allowed",
+        "register_resolve_round_trip",
+        "write_then_load_round_trips",
+    ];
+    let has_success_coverage = success_only_needles
+        .iter()
+        .all(|needle| combined.contains(needle));
+    let has_negative_coverage = [
+        "_denied",
+        "_does_not_resolve",
+        "_returns_error",
+        "_drops_afterwards",
+        "_propagates_instead_of_empty",
+    ]
+    .iter()
+    .all(|needle| combined.contains(needle));
+    assert!(
+        has_success_coverage && has_negative_coverage,
+        "registry coverage must not be success-only; required negative controls are part of the invariant"
+    );
+    Ok(())
+}
+
 /// STEER-010 AC-1: closed-catalog grep scoped to the exact menu/authorize/
 /// denial construction sites. Asserts NO `format!`/interpolation leaks into
 /// the `authorized_actions`/`do_not` steering fields (the NEW fields), while
