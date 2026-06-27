@@ -1,7 +1,7 @@
 ---
 stability: CONSTITUTION
-last_validated: 2026-06-20
-prd_version: 1.0.0
+last_validated: 2026-06-26
+prd_version: 1.2.0
 ---
 
 # 04 — API Design
@@ -18,11 +18,11 @@ prd_version: 1.0.0
 
 **The shipped gate entry is forge-review-keyed and cannot gate a local merge.**
 `enforce_merge_gate(ctx, review_id: usize)`
-(`crates/but-api/src/legacy/merge_gate.rs:40`) looks up a `ForgeReview` from the
-local forge cache (`review_for_id`, merge_gate.rs:148), derives
+(`crates/but-api/src/legacy/merge_gate.rs:75`) looks up a `ForgeReview` from the
+local forge cache (`review_for_id`, merge_gate.rs:230), derives
 `source_branch`/`target_branch` from it, and resolves `current_head_oid` from
 `review.source_branch` (merge_gate.rs:78). Its only non-test callers are the
-forge PR-merge path (`crates/but-api/src/legacy/forge.rs:607/637/650`). **A
+forge PR-merge path (`crates/but-api/src/legacy/forge.rs:1251/1281/1294`). Governance's GOV-LOCAL work shipped the **local** merge gate and local review-verdict persistence (`local_review_verdicts`, read at merge_gate.rs:241-252) around this entry, **but the entry is still keyed on `review_id`**. **A
 purely-local virtual-branch / worktree / plain-git `but merge` with no PR has no
 `review_id` and cannot reach the required-checks clause** — which would void the
 "gate a local `but` merge, mechanism-agnostic across virtual branches AND
@@ -31,7 +31,7 @@ worktrees" thesis.
 **v1 requirement:** generalize the gate entry so the required-checks evaluation
 runs on a resolved `(source_ref, target_ref)` pair, with the head OID resolved by
 a **mechanism-agnostic `gix` ref-peel** (the `find_reference → peel_to_id →
-to_string()` body at merge_gate.rs:172-179), **not** from a `ForgeReview`. The
+to_string()` body at merge_gate.rs:254-261), **not** from a `ForgeReview`. The
 shape:
 
 ```rust
@@ -42,7 +42,7 @@ pub fn enforce_merge_gate_for_refs(
     ctx: &but_ctx::Context,
     source_ref: &str,                 // caller-supplied; NOT a ForgeReview field
     target_ref: &str,                 // caller-supplied; NOT a ForgeReview field
-) -> anyhow::Result<()>;              // head OID peeled via gix (merge_gate.rs:172-179)
+) -> anyhow::Result<()>;              // head OID peeled via gix (merge_gate.rs:254-261)
 ```
 
 - The **local `but merge` path** calls `enforce_merge_gate_for_refs` directly with
@@ -80,7 +80,7 @@ A human/agent initiates a merge of source → target
    required-checks clause (independent of `protected`, 01 §9):
         defs    = but_checks::load_check_defs(repo, target_ref)     // ref-pinned blob
         req     = [[required_check]] for target                     // ref-pinned gates.toml
-        head    = gix ref-peel of source_ref                        // merge_gate.rs:172-179 (NOT forge-keyed :78)
+        head    = gix ref-peel of source_ref                        // merge_gate.rs:254-261 (NOT forge-keyed :78)
         results = check_results.list_for(name, head) for each req
         evaluate_required_checks(req, defs, results, head)          // PURE
           ├─ Ok(())             → proceed
@@ -146,20 +146,11 @@ pub fn evaluate_required_checks(
   fabricate one — and that is fine, because it is reproducible: re-running
   catches it, 01 §3.)
 
-## §5 — Denial contract (STEER) — **depends on governance STEER-001**
+## §5 — Denial contract (STEER) — **landed (governance closed)**
 
-**Dependency:** the four steering fields and `to_envelope()` do **not** exist on
-`MergeGateError` yet. `MergeGateError` today carries **only**
-`code`/`message`/`remediation_hint`/`unmet` (verified at merge_gate.rs:19-29).
-The full STEER denial below **requires governance STEER-001** (sprint-07,
-`STATUS: Backlog`, NOT yet merged) to first land
-`class`/`held_permissions`/`authorized_actions`/`do_not` + `to_envelope()` on
-`MergeGateError`. **Until STEER-001 lands**, the check clause can return only the
-four base fields (`code: "gate.check_required"`, `message`, `remediation_hint`,
-`unmet`); the STEER fields below are added once the carrier gains them. The GATE
-group sequences **after** STEER-001 (README "Dependencies").
+**Landed:** the four steering fields exist on `MergeGateError` today — `class`/`held_permissions`/`authorized_actions`/`do_not` (verified at merge_gate.rs:45-56) — alongside the legacy `code`/`message`/`remediation_hint`/`unmet`. The carrier serializes (via `#[derive(Serialize)]`) to the **uniform STEER envelope**: the same key set `but_authz::to_envelope` emits for `Denial` (`crates/but-authz/src/denial.rs`) plus the merge-only `unmet`, proven in `crates/but-api/tests/steer_envelope.rs`. This shipped with governance (now closed) in commit `353bbcdc1a`, an ancestor of `master`. The check clause therefore **sets the STEER fields directly** — there is no remaining dependency to wait on. The `gate.check_required` denial below is still **Check Runner's own new code**, but it now populates a carrier whose STEER fields already exist; a legacy reader of the four base fields sees no regression.
 
-Once STEER-001 has landed, the check clause sets:
+The check clause sets:
 
 ```rust
 MergeGateError {
@@ -196,9 +187,9 @@ acting agent can fix by running a check — matching governance's treatment of
 
 ```jsonc
 // but check ... --json  AND  the gate denial envelope.
-// The class/held_permissions/authorized_actions keys below require to_envelope()
-// from governance STEER-001 (not yet merged); pre-STEER-001 only the base keys
-// (code/message/remediation_hint/unmet) are present.
+// The class/held_permissions/authorized_actions keys are present NOW: MergeGateError
+// carries the STEER fields (merge_gate.rs:45-56) and serializes to the uniform envelope
+// (STEER landed, governance closed) — not a base-keys-only fallback.
 {
   "code": "gate.check_required",
   "message": "required checks for main are not satisfied: cargo-test: check_missing",
@@ -228,7 +219,7 @@ but check required        [--ref <target>] [--json]                           # 
 
 - `--head` defaults to the resolved current head OID via a **mechanism-agnostic
   `gix` ref-peel** (the `find_reference → peel_to_id → to_string()` body at
-  merge_gate.rs:172-179), resolving the caller's source ref directly — **not** via
+  merge_gate.rs:254-261), resolving the caller's source ref directly — **not** via
   the forge-coupled call site at merge_gate.rs:78, which feeds the peel
   `review.source_branch` (a `ForgeReview` field). The standalone runner has no
   `ForgeReview`, so it must peel a non-forge ref it resolves itself (ties to §1a /
@@ -241,9 +232,9 @@ but check required        [--ref <target>] [--json]                           # 
 ## §7 — Composition with the governance gate (ordering)
 
 The required-checks clause is added to `enforce_merge_gate` **after** the
-existing `Merge` authorization (merge_gate.rs:48) and review clause
+existing `Merge` authorization (merge_gate.rs:91) and review clause
 (merge_gate.rs:86), and is reached **independent of** the `protected`
-early-return (merge_gate.rs:50-56; 01 §9, 08 R-FAILOPEN). Authorization still
+early-return (merge_gate.rs:103-109; 01 §9, 08 R-FAILOPEN). Authorization still
 gates first (a principal lacking `Merge` is denied `perm.denied` before any check
 is consulted); the check clause is an additional merge requirement, not a
 replacement.

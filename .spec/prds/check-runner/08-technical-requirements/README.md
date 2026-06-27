@@ -1,7 +1,7 @@
 ---
 stability: CONSTITUTION
-last_validated: 2026-06-20
-prd_version: 1.1.0
+last_validated: 2026-06-26
+prd_version: 1.2.0
 ---
 
 # Check Runner — Technical Requirements
@@ -74,32 +74,42 @@ explicitly **not** a v1 security claim.
 - **GATE** — required-checks merge-gate clause + STEER denial +
   bootstrap-invariant.
 
-## Dependencies (governance prerequisites — verified against live `crates/`)
+## Dependencies (governance prerequisites — verified against frozen `master`)
 
-The GATE group depends on governance work that is **not yet merged**. These are
-hard prerequisites, not assumptions — the cited carriers/entry points do not have
-the required shape in `crates/` today.
+**Governance has closed and is frozen in `master`, so its prerequisites have
+LANDED — they are no longer pending work the GATE group sequences after.**
 
-1. **Governance STEER-001** — *the four steering fields + `to_envelope()` on
-   `MergeGateError`.* `MergeGateError`
-   (`crates/but-api/src/legacy/merge_gate.rs:19-29`) today carries **only**
-   `code`/`message`/`remediation_hint`/`unmet`. The steering fields
-   (`class`/`held_permissions`/`authorized_actions`/`do_not`) and `to_envelope()`
-   do **not** exist in `crates/`; they are deliverables of
-   `governance/.../sprint-07-steer-capability-aware-denials/STEER-001`
-   (`STATUS: Backlog`, unmerged). **Blocking for the GATE group's STEER denial**
-   (01 §7, 04 §5). The GATE group therefore sequences **after** STEER-001; before
-   it lands the check denial can carry only the four base fields.
+1. **Governance STEER — LANDED.** The four steering fields
+   (`class`/`held_permissions`/`authorized_actions`/`do_not`) now exist on
+   `MergeGateError` (`crates/but-api/src/legacy/merge_gate.rs:45-56`) and the
+   carrier serializes to the uniform STEER envelope — the same shape
+   `but_authz::to_envelope` emits for `Denial` (`crates/but-authz/src/denial.rs`),
+   proven in `crates/but-api/tests/steer_envelope.rs` (commit `353bbcdc1a`, an
+   ancestor of `master`). **No longer blocking, and the GATE group no longer
+   sequences after STEER** — the check denial populates the steering fields
+   directly (01 §7, 04 §5).
 
-2. **The governance merge gate itself** — `enforce_merge_gate`
-   (`crates/but-api/src/legacy/merge_gate.rs:40`) plus the `gates.toml` /
-   `[[gate]]` machinery (`GatesWire`/`normalize_gates`, the `read_config_blob`
-   ref-pin read, `classify_error`). Check Runner **extends** this gate with a
-   required-checks clause; it does not stand alone.
+2. **The governance merge gate itself — LANDED.** `enforce_merge_gate`
+   (`crates/but-api/src/legacy/merge_gate.rs:75`) plus the `gates.toml` / `[[gate]]`
+   machinery (`GatesWire`/`normalize_gates`, the `read_config_blob` ref-pin read,
+   `classify_error`) exist today. Check Runner **extends** this gate with a
+   required-checks clause; it does not stand alone. Note: `GatesWire` carries only
+   `branch` + `gate` today, so the `[[required_check]]` arm is **Check Runner's to
+   add**.
 
-**Sequencing:** the GATE group runs **after** STEER-001 (1). The mechanism-agnostic
-local-merge gate entry point (R-ENTRY, 04 §1a / 08) is built **within** the GATE
-group, since the shipped `enforce_merge_gate` is forge-`review_id`-only.
+3. **Governance IDENT — a NEW inherited precondition.** `enforce_merge_gate` now
+   resolves the acting principal through the runtime registry
+   (`resolve_principal_with_runtime_registry`, merge_gate.rs:82 →
+   `but_authz::resolve_principal_with_registry`); the static roster moved from
+   `permissions.toml` to `agents.toml` (legacy `permissions.toml` kept only as a
+   one-release fallback). The pre-merge runner and the merge caller must run as
+   **registered principals** (`but agent register`) or be denied `perm.denied`
+   before the checks clause (R-IDENT, 08).
+
+**Sequencing:** the GATE group **no longer waits on STEER** (landed). The
+mechanism-agnostic local-merge gate entry point (R-ENTRY, 04 §1a / 08) is built
+**within** the GATE group, since the shipped `enforce_merge_gate` is still
+forge-`review_id`-only.
 
 ## Routing
 
@@ -122,3 +132,4 @@ cases, e2e criteria (authored separately).
 |---------|------|--------|
 | 1.0.0 | 2026-06-20 | Initial technical requirements. Reframed from the over-scoped `.spec/prds/actions/` PRD: dropped cryptographic agent-non-forgeable framing; adopted second-deterministic-review + reproducibility + cheapest-honest-path; promoted mechanism-agnostic head-OID checkout to the #1 risk. |
 | 1.1.0 | 2026-06-20 | Added `10-frontend-ui.md` — the v1.1 desktop UI contract (component inventory, route-vs-state verdict, scope tiering) from a frontend-designer review of `apps/desktop/`. No new route (state of `/branches`); per-head results panel un-deferred, merge-summary / settings-tab / cross-branch-matrix / lite UI deferred. |
+| 1.2.0 | 2026-06-26 | Re-grounded against frozen master after governance closed: STEER flipped unmerged→LANDED (GATE no longer sequences after STEER); added the IDENT identity precondition (registry-resolved principals; agents.toml replaces permissions.toml); re-grounded R-ENTRY as still-open and corrected drifted merge_gate.rs line cites. |

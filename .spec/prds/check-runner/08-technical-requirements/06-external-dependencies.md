@@ -1,7 +1,7 @@
 ---
 stability: CONSTITUTION
-last_validated: 2026-06-20
-prd_version: 1.0.0
+last_validated: 2026-06-26
+prd_version: 1.2.0
 ---
 
 # 06 — External Dependencies
@@ -23,7 +23,7 @@ primitive unnecessary in v1.
 | Materialize the head OID into an isolated working tree | `gix` worktree APIs; `git worktree` executable at the shell boundary | 07 §3 Option A/C. Shelling at the executable boundary is sanctioned (RULES.md); prefer `gix` for in-process logic. |
 | Spawn the check command, capture exit + output | `std::process` (and/or the existing `tokio` async-process facility) | Prior art: `gitbutler-repo/src/hooks.rs` spawns hook processes; `but-forge/src/ci.rs:61-67` runs a `tokio` runtime on a thread. |
 | Enforce `timeout_seconds` | `tokio::time` (already in-tree) or a wait-with-timeout on the child | Hard kill → `timed_out` conclusion (fail-closed). |
-| Parse `.gitbutler/checks/*.toml` + `[[required_check]]` | `toml` + `serde` (`deny_unknown_fields`) | Same crates `merge_gate.rs` already uses for `gates.toml`/`permissions.toml`. |
+| Parse `.gitbutler/checks/*.toml` + `[[required_check]]` | `toml` + `serde` (`deny_unknown_fields`) | Same crates `merge_gate.rs` already uses for `gates.toml` and the governance identity config (now `agents.toml`, canonically). Nuance: `but-authz::load_governance_config` prefers `.gitbutler/agents.toml` and reads legacy `.gitbutler/permissions.toml` only as a one-release fallback, while `merge_gate.rs` itself still reads `permissions.toml` directly — governance's migration to finish, not Check Runner's. |
 | Persist `check_results` | `but-db` (`rusqlite`) | Plain table; mirrors `local_review_verdicts` / `ci_checks`. |
 | Managed temp dir for the throwaway worktree | `tempfile` (commonly already in-tree) **or** a checks-owned cache root | Tests must never use `std::env::temp_dir().join(format!(…))` (crates/AGENTS.md). Confirm `tempfile` presence; if absent, the checks-owned cache-root approach needs no new dep. |
 

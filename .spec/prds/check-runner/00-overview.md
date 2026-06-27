@@ -1,7 +1,7 @@
 ---
 stability: PRODUCT_CONTEXT
-last_validated: 2026-06-20
-prd_version: 1.0.0
+last_validated: 2026-06-26
+prd_version: 1.2.0
 ---
 # Check Runner — Local Deterministic Checks that Gate a Change — Overview
 
@@ -53,7 +53,7 @@ Check Runner is **not standalone** — it is the quality leg of the governance g
 | **Consume / block** | Governance merge gate (extended) | a new **required-checks clause** alongside `merge`-authority + review — block unless every required check is `success` @ current head |
 | **Redirect** | STEER | the denial's `class` / `authorized_actions` / `remediation_hint` name the failed/missing check and the next action (`but check run …`) so the agent self-corrects |
 
-> **Two sequencing dependencies (named, not assumed).** (1) The STEER steering fields (`class` / `held_permissions` / `authorized_actions` / `do_not`) and `to_envelope()` are added to the `MergeGateError` carrier by governance **STEER-001** (sprint-07), which is **not yet merged** — until it lands the carrier exposes only `code` / `message` / `remediation_hint` / `unmet`, so the GATE group's STEER denial **sequences after STEER-001**. (2) The shipped `enforce_merge_gate` is reachable only via a forge `review_id`; gating a **local** `but merge` (virtual-branch / worktree / plain-git, no PR) requires a **mechanism-agnostic local-merge entry point** that resolves source/target/head without a forge review — a v1 requirement, not an assumption (see `08-technical-requirements/`).
+> **Dependencies on governance — now resolved or re-grounded (named, not assumed).** Governance has since **closed and frozen in `master`**. (1) **STEER has LANDED.** The steering fields (`class` / `held_permissions` / `authorized_actions` / `do_not`) and `to_envelope()` now exist on the `MergeGateError` carrier in `crates/but-api` (steering carriers in `crates/but-authz`) — they are no longer "not yet merged," so the GATE group's STEER denial (UC-GATE-03) reuses fields that are real, not pending; **no upstream sequencing remains** for this dependency. (2) **The mechanism-agnostic local-merge entry point is still an open requirement of *this* PRD.** The shipped `enforce_merge_gate(ctx, review_id)` is still reachable only via a forge `review_id`; gating a **local** `but merge` (virtual-branch / worktree / plain-git, no PR) still requires generalizing the gate entry to resolve `(source_ref, target_ref, head_oid)` without a `ForgeReview` — a v1 requirement of this PRD, not a governance deliverable (see `08-technical-requirements/`, risk **R-ENTRY**). **Added precondition (governance IDENT):** every governed `but` invocation — including the merge gate Check Runner's clause composes into — now resolves the **acting principal through a runtime PID registry** before any gate runs (a process must `but agent register` or be denied `perm.denied`); the principal roster was renamed `permissions.toml` → `agents.toml` (`[[principal]]` becomes `[[agent]]`, legacy fallback retained). This is a **gate precondition, not a security upgrade to Check Runner** — identity is process-level, host-OS-rooted, **not** cryptographic, and does not change the own-fleet threat model or the forgeability of the plain `check_results` store; the runner ≠ agent separation is unchanged.
 
 Governance enforces **process** (a principal *may* act, and an approval exists); Check Runner adds **quality** (the committed checks provably ran and passed). Both read their config at the target ref; both fail closed; both speak the same denial contract.
 

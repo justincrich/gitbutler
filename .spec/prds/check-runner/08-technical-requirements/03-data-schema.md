@@ -1,7 +1,7 @@
 ---
 stability: CONSTITUTION
-last_validated: 2026-06-20
-prd_version: 1.0.0
+last_validated: 2026-06-26
+prd_version: 1.2.0
 ---
 
 # 03 — Data Schema

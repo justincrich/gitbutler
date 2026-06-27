@@ -1,7 +1,7 @@
 ---
 stability: CONSTITUTION
-last_validated: 2026-06-20
-prd_version: 1.0.0
+last_validated: 2026-06-26
+prd_version: 1.2.0
 ---
 
 # 07 — Mechanism-Agnostic Clean Checkout at the Head OID
@@ -136,10 +136,8 @@ guard; debug deadlocks with `BUT_WS_LOCK_DEBUG=1`.*
   take. A check run is not a workspace mutation; it must not contend for that
   lock. (Contrast the commit gate, which is designed to run *before* the guard at
   `crates/but-api/src/commit/gate.rs` and the apply/integrate seams — the commit
-  gate is designed to run pre-guard (**GATES-007, in progress**:
-  `STATUS: Backlog` with open `GATES-REM-001..007` remediation tasks); the gate
-  is read-only and pre-guard, and the runner is likewise off to the side of the
-  shared tree.)
+  gate's pre-guard design (**GATES — landed; governance closed**) is read-only and
+  pre-guard, and the runner is likewise off to the side of the shared tree.)
 - `git worktree add`/`remove` touch the repo's **worktree administrative state**
   (`.git/worktrees/`), a different lock domain than the shared working index.
   The runner serializes its own worktree lifecycle (one checks worktree per repo)
@@ -170,11 +168,10 @@ Because the runner materializes **the head OID** (a commit object) rather than
 - **Plain git** — with no virtual branches at all, the head OID is just the
   ref tip; Option A/B/C are unchanged.
 
-This is the mechanism-agnostic property the governance commit gate is **designed**
-to achieve for *authorization* (**GATES-007, in progress** — `STATUS: Backlog`
-with open `GATES-REM-001..007`: one decision helper fired at every ref-mutating
-seam). Check Runner achieves the analogous property for *execution*: one checkout
-strategy that binds to the OID, not the mechanism.
+This is the mechanism-agnostic property the governance commit gate **achieves**
+for *authorization* (**GATES — landed; governance closed**: one decision helper
+fired at every ref-mutating seam). Check Runner achieves the analogous property
+for *execution*: one checkout strategy that binds to the OID, not the mechanism.
 
 ## Cross-references
 

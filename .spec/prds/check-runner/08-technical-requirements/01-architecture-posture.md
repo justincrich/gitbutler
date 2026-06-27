@@ -1,7 +1,7 @@
 ---
 stability: CONSTITUTION
-last_validated: 2026-06-20
-prd_version: 1.0.0
+last_validated: 2026-06-26
+prd_version: 1.2.0
 ---
 
 # 01 — Architecture Posture
@@ -168,15 +168,14 @@ existing review-requirement clause, reusing its machinery:
   (merge_gate.rs:211-242) for `.gitbutler/checks/*.toml`, and the
   extended `GatesWire`/`normalize_gates` (merge_gate.rs:308-343) for
   `[[required_check]]`.
-- Same denial carrier: **`MergeGateError`** (merge_gate.rs:19), which **today
-  carries only** `code`/`message`/`remediation_hint`/`unmet: Vec<String>`
-  (verified at merge_gate.rs:19-29). **EXTENDS — requires governance STEER-001
-  (sprint-07, `STATUS: Backlog`, NOT yet merged) to first land the four steering
-  fields `class`/`held_permissions`/`authorized_actions`/`do_not` + `to_envelope()`
-  on `MergeGateError`.** Until STEER-001 lands, the carrier exposes only
-  `code`/`message`/`remediation_hint`/`unmet`. Once it lands, the check clause sets
-  `code: "gate.check_required"` and reuses the STEER fields (04 §5). The GATE
-  group therefore sequences **after** STEER-001 (README "Dependencies").
+- Same denial carrier: **`MergeGateError`** (merge_gate.rs:33), which **now
+  carries** the legacy `code`/`message`/`remediation_hint`/`unmet: Vec<String>`
+  **and** the STEER fields `class`/`held_permissions`/`authorized_actions`/`do_not`
+  (verified at merge_gate.rs:45-56). **REUSE — LANDED:** governance STEER (closed,
+  frozen in `master`; commit `353bbcdc1a`) already added those four steering fields
+  + the uniform `to_envelope()` shape on `MergeGateError`, so the check clause sets
+  `code: "gate.check_required"` and reuses the STEER fields directly (04 §5) — the
+  GATE group **no longer sequences after STEER** (README "Dependencies").
 - Same classification path: `classify_error` (merge_gate.rs:113) downcasts the
   carrier out of the `anyhow` chain unchanged.
 
@@ -199,7 +198,7 @@ UC-GATE-05.)
 
 `enforce_merge_gate` has an early-return: if the target branch is not flagged
 `protected`, it returns `Ok(())` at
-`crates/but-api/src/legacy/merge_gate.rs:50-56` **before** the review-requirement
+`crates/but-api/src/legacy/merge_gate.rs:103-109` **before** the review-requirement
 clause. A required-check clause placed after that early-return would be a
 **fail-open hole**: a branch that carries `[[required_check]]` but is not flagged
 `protected` would skip the check entirely.
@@ -213,7 +212,7 @@ precede) the required-checks evaluation. This is a Blocking control-flow risk
 ## §9a — The shipped gate entry is forge-review-keyed (mechanism-agnostic entry is a v1 requirement)
 
 The SHIPPED gate entry point is `enforce_merge_gate(ctx, review_id: usize)`
-(`crates/but-api/src/legacy/merge_gate.rs:40`). It looks up a `ForgeReview` from
+(`crates/but-api/src/legacy/merge_gate.rs:75`). It looks up a `ForgeReview` from
 the local forge cache (`review_for_id`, merge_gate.rs:148), derives
 `source_branch`/`target_branch` from it, and resolves `current_head_oid` from
 `review.source_branch` (merge_gate.rs:78). Its only non-test callers are the
@@ -234,9 +233,9 @@ shipped `enforce_merge_gate` is forge-`review_id`-only today.
 authorization precondition the forge path enforces.** The shipped
 `enforce_merge_gate` authorizes **before** any review/checks clause and **before**
 the `protected` early-return: it resolves the principal
-(`resolve_principal_from_env`, merge_gate.rs:47) and calls
+(`resolve_principal_with_runtime_registry`, merge_gate.rs:82) and calls
 `but_authz::authorize(&principal, Authority::Merge, &config.gov)?`
-(**merge_gate.rs:48** — the single `Merge`-authority call site, verified against
+(**merge_gate.rs:91** — the single `Merge`-authority call site, verified against
 live source). The new `enforce_merge_gate_for_refs(ctx, source_ref, target_ref)`
 local-merge entry MUST run that identical authority clause (plus the same review +
 required-checks clauses) on the config it loads from the **target ref**.

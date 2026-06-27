@@ -1,7 +1,7 @@
 ---
 stability: CONSTITUTION
-last_validated: 2026-06-20
-prd_version: 1.1.0
+last_validated: 2026-06-26
+prd_version: 1.2.0
 ---
 # 10 — Frontend UI (desktop)
 
@@ -54,11 +54,11 @@ Design tokens used: `--fill-safe-bg` / `--fill-safe-fg` (success), `--fill-dange
 | Surface | Tier | Rationale |
 |---|---|---|
 | **Per-head results panel** (Surface 2) + **branches "Checks" state** (Surface 1) | **v1.1 — un-deferred** | Modest: forge API fetch already happens, but delivering the panel requires a query-path change (§1) and type-system surgery for the new "Checks" segment (§2). Net-new: `CheckConclusionBadge` + `CheckResultRow` + `CheckResultsPanel` + a "Checks" segment. `CheckResultRow` / `CheckConclusionBadge` are produced here and consumed by Surface 3 — **Surface 3 has a hard sequential dependency on Surface 1 shipping first**. |
-| **Required-checks gate summary** (Surface 3) | **v1.1 IFF the governance merge dialog exists** | `MergeButton` is a plain dropdown today; there is **no** merge dialog to compose into. The summary can render `code/message/remediation_hint/unmet` now; the `class/authorized_actions/do_not` enrichment is additive once STEER-001 lands (governance sprint-07 STEER-001). **Two sequential dependencies: (a) Surface 1 must ship first** (Surface 3 reuses `CheckResultRow` / `CheckConclusionBadge`); **(b) the governance merge dialog must exist** (otherwise there is no host to compose into). Blocked on governance's own (deferred) merge-gate UI, not on this design. |
+| **Required-checks gate summary** (Surface 3) | **v1.1 IFF the governance merge dialog exists** | `MergeButton` is a plain dropdown today; there is **no** merge dialog to compose into. The summary can render `code/message/remediation_hint/unmet` now; STEER has landed (governance closed), so the `class/authorized_actions/do_not` enrichment is available now. **Two sequential dependencies: (a) Surface 1 must ship first** (Surface 3 reuses `CheckResultRow` / `CheckConclusionBadge`); **(b) the governance merge dialog must exist** (otherwise there is no host to compose into). Blocked on governance's own (deferred) merge-gate UI, not on this design. |
 | **Checks settings tab** (Surface 4) | **Deferred (v1.2)** | Needs the DEFN CLI shipped first (config to manage). Also requires governance settings tab wiring to be confirmed (§3): `ProjectSettingsModalContent.svelte` currently has no `governance` branch; Surface 4 follows the same scaffold pattern and cannot be wired until the modal itself is functional. |
 | **Cross-branch checks matrix** (Surface 1 "all-repo table" variant) | **Deferred (v1.2)** | Needs a `but check results --all-branches` CLI capability not specified in v1. |
 | **Lite (React/Electron) checks UI** | **Out of scope (all v1.x)** | `apps/lite/` has **no** PR/forge/checks UI at all, and `packages/ui` is Svelte-only → any lite checks UI is a full **port**, not a share. Flag, do not attempt under a checks-UI sprint. |
 
 ## §7 — Cross-references
 - The surfaces' wireframes live inline in the use cases: per-head panel + branches state → [`../05-uc-run.md` UC-RUN-05]; gate summary → [`../06-uc-gate.md` UC-GATE-03]; settings tab → [`../04-uc-defn.md` UC-DEFN-01].
-- Conclusion vocabulary → [`03-data-schema.md`](./03-data-schema.md). Denial/STEER fields the gate summary renders → [`04-api-design.md`](./04-api-design.md) §5 (STEER-001 dependency).
+- Conclusion vocabulary → [`03-data-schema.md`](./03-data-schema.md). Denial/STEER fields the gate summary renders → [`04-api-design.md`](./04-api-design.md) §5 (STEER-001 — landed, governance closed).

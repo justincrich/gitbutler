@@ -1,7 +1,7 @@
 ---
 stability: CONSTITUTION
-last_validated: 2026-06-20
-prd_version: 1.0.0
+last_validated: 2026-06-26
+prd_version: 1.2.0
 ---
 
 # 08 — Technical Risks (re-ranked register)
@@ -15,7 +15,8 @@ the threat model, *not* owed debt).
 | ID | Risk | Severity | Status |
 |----|------|----------|--------|
 | **R-CHECKOUT** | Mechanism-agnostic clean checkout at the head OID | **Blocking** | #1 — the headline engineering problem (07) |
-| **R-ENTRY** | Shipped gate entry is forge-review-keyed; no local-merge entry point exists | **Blocking** | A mechanism-agnostic entry must be built (04 §1a) |
+| **R-ENTRY** | Shipped `enforce_merge_gate(ctx, review_id)` is forge-review-keyed; no mechanism-agnostic local-merge entry exists | **Blocking** | Still open after governance closed (GOV-LOCAL added local verdict persistence, not a refs-keyed entry); Check Runner must build it (04 §1a) |
+| **R-IDENT** | Gate now resolves the acting principal via the runtime registry; an unregistered process is denied `perm.denied` before the checks clause | Low (assumption) | New since this PRD (governance IDENT landed); the pre-merge runner + merge caller must run as a registered principal (`but agent register`) |
 | **R-FAILOPEN** | Required-checks fail-open via the `protected` early-return | **Blocking** | Control-flow correctness |
 | **R-SHARESET** | SHA-reset: stale result satisfies the gate after the head moves | **Blocking** | Match `(name, head_oid==current)` only |
 | **R-FAILCLOSED** | A failure mode silently allows instead of blocking | **Blocking** | Fail-closed posture |
@@ -53,19 +54,23 @@ the threat model, *not* owed debt).
 
 - **Why it matters:** the shipped gate entry is
   `enforce_merge_gate(ctx, review_id: usize)`
-  (`crates/but-api/src/legacy/merge_gate.rs:40`). It looks up a `ForgeReview` from
-  the local forge cache (`review_for_id`, merge_gate.rs:148), derives
+  (`crates/but-api/src/legacy/merge_gate.rs:75`). It looks up a `ForgeReview` from
+  the local forge cache (`review_for_id`, merge_gate.rs:230), derives
   `source_branch`/`target_branch` from it, and resolves `current_head_oid` from
   `review.source_branch` (merge_gate.rs:78). Its only non-test callers are the
-  forge PR-merge path (`crates/but-api/src/legacy/forge.rs:607/637/650). **A
+  forge PR-merge path (`crates/but-api/src/legacy/forge.rs:1251/1281/1294`). **A
   purely-local virtual-branch / worktree / plain-git `but merge` with no PR has no
   `review_id` and cannot reach the required-checks clause at all** — directly
   contradicting the "gate a local `but` merge, mechanism-agnostic across virtual
-  branches AND worktrees" thesis.
+  branches AND worktrees" thesis. Governance's GOV-LOCAL work added local
+  review-verdict persistence (`local_review_verdicts`, read at merge_gate.rs:241-252)
+  around this entry but **did not** add a refs-keyed entry — the gate is still
+  keyed on `review_id` — so this remains an **open v1 requirement Check Runner must
+  build**, not a governance gap to wait on.
 - **Mitigation (this slice):** build a **mechanism-agnostic gate entry point**
   (04 §1a) — `enforce_merge_gate_for_refs(ctx, source_ref, target_ref)` — that
   runs the required-checks evaluation on a resolved `(source_ref, target_ref)`
-  pair with the head OID peeled via the `gix` ref-peel (merge_gate.rs:172-179),
+  pair with the head OID peeled via the `gix` ref-peel (merge_gate.rs:254-261),
   **not** from a `ForgeReview`. The local `but merge` path calls it directly; the
   existing forge path becomes one caller that resolves the refs from its
   `ForgeReview` and delegates. The shipped forge entry remains, but is no longer
@@ -73,9 +78,9 @@ the threat model, *not* owed debt).
 - **Auth invariant (MUST NOT regress, 01 §9a):** the new refs-keyed entry MUST sit
   behind the **same `Merge` authorization precondition** the forge path enforces.
   The shipped `enforce_merge_gate` resolves the principal
-  (`resolve_principal_from_env`, merge_gate.rs:47) and calls
+  (`resolve_principal_with_runtime_registry`, merge_gate.rs:82) and calls
   `but_authz::authorize(&principal, Authority::Merge, &config.gov)?`
-  (**merge_gate.rs:48** — the single `Merge`-authority call site) **before** any
+  (**merge_gate.rs:91** — the single `Merge`-authority call site) **before** any
   review/checks clause and **before** the `protected` early-return. A
   refs-resolving caller that resolves `(source_ref, target_ref)` but skips this
   `authorize(_, Authority::Merge, _)` clause would be an **authz bypass**, not
@@ -88,14 +93,40 @@ the threat model, *not* owed debt).
   branches, a multi-worktree repo, and plain git — identical behavior, none
   requiring a forge review. **Auth-invariant proof:** a principal **without
   `Merge` authority** invoking the refs-keyed entry is denied at the
-  authorization clause (parity with the forge path's merge_gate.rs:48 denial)
+  authorization clause (parity with the forge path's merge_gate.rs:91 denial)
   **before** the checks clause is consulted — confirming the refs entry does not
   bypass authz.
+
+## R-IDENT — registered-principal precondition at the gate (Low, assumption — NEW)
+
+- **Why it matters:** governance's IDENT model (landed, closed) changed how a
+  principal is established at the gate. `enforce_merge_gate` now resolves the acting
+  principal through the runtime registry: `resolve_principal_with_runtime_registry`
+  (merge_gate.rs:82) → `but_authz::resolve_principal_with_registry`, whose chain is
+  (1) a runtime PID registry hit, else (2) the `BUT_AUTHZ_ALLOW_ENV_HANDLE=1` env
+  handle (a test-only escape hatch), else (3) `Denial::unregistered` (`perm.denied`).
+  The static roster mapping principals to authority moved from `permissions.toml` to
+  `agents.toml` (legacy `permissions.toml` retained only as a one-release fallback).
+  This is **new since this PRD was written** — the required-checks clause inherits it
+  as a precondition by composing into `enforce_merge_gate`.
+- **Implication:** the pre-merge runner and the merge caller must run as a
+  **registered principal** (`but agent register`) or be denied `perm.denied`
+  **before** the required-checks clause is consulted. The new refs-keyed entry that
+  R-ENTRY must build (04 §1a) **MUST preserve this principal-resolution step** —
+  generalizing the entry to caller-supplied refs must not skip the registry resolve
+  any more than it skips the `Merge`-authority clause (01 §9a). It is an assumption
+  on the deployment (the harness registers its `but` processes), not a Check Runner
+  mechanism.
+- **Proof:** integration test — an **unregistered** process attempting the governed
+  merge is denied `perm.denied` (unregistered) **before** the checks clause runs;
+  after `but agent register` with `Merge` authority, the same process reaches the
+  required-checks clause (and is then blocked/allowed on the check result, not on
+  identity).
 
 ## R-FAILOPEN — required-checks fail-open via the `protected` early-return (Blocking)
 
 - **Why it matters:** `enforce_merge_gate` returns `Ok(())` at
-  `crates/but-api/src/legacy/merge_gate.rs:50-56` when the target is not flagged
+  `crates/but-api/src/legacy/merge_gate.rs:103-109` when the target is not flagged
   `protected`, **before** the review clause. A required-checks clause placed after
   that early-return would let a branch carrying `[[required_check]]` but not
   flagged `protected` skip the check entirely — a silent open.
@@ -140,7 +171,7 @@ the threat model, *not* owed debt).
   (including `Neutral`/`Skipped` on a *required* check) → `check_failed`;
   unresolvable target ref → treated as governed so the loader classifies the fault
   (parity with `governance_present` returning governed on an unresolvable ref,
-  `config.rs:53-67`).
+  `config.rs:199`).
 - **Direction note:** the "parity with `governance_present` (governed/`true` on an
   unresolvable ref)" reasoning is **fail-SAFE regardless of the soundness of the
   source decision** — treating an unresolvable ref as governed makes the gate
@@ -226,7 +257,9 @@ read-only gate. It inherits governance's accepted boundaries — forge/raw-push
 merge bypass (**R11**), ungoverned N-API bypass (**R14**), and the raw-git /
 `--no-verify` fence (**R1**) — and adds only the execution-axis risks above
 (plus R-ENTRY, the local-merge entry point that must be built because the shipped
-`enforce_merge_gate` is forge-`review_id`-only). The forgery risk is resolved by
+`enforce_merge_gate` is forge-`review_id`-only, and R-IDENT, the new
+registered-principal precondition governance's IDENT model introduced at the
+gate). The forgery risk is resolved by
 the **same** consistency argument governance uses for its review store — not by
 new cryptography.
 

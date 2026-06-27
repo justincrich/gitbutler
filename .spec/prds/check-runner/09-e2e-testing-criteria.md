@@ -1,7 +1,7 @@
 ---
 stability: TEST_SPEC
-last_validated: 2026-06-20
-prd_version: 1.0.0
+last_validated: 2026-06-26
+prd_version: 1.2.0
 ---
 # E2E / Integration Testing Criteria — Check Runner
 
@@ -88,7 +88,7 @@ Coverage rule: every AC in every UC maps to ≥1 criterion. The two load-bearing
 | T-GATE-004 | The denial `to_envelope()` JSON carries `code:gate.check_required`/`message`/`remediation_hint` + `class` + `authorized_actions` (and `do_not` for `config.invalid`); a legacy `code`/`message`/`remediation_hint` reader sees no regression | AC-5 | [api-contract] | Real `MergeGateError` + `to_envelope()` | PASS: full envelope + back-compat; FAIL: missing field / legacy break |
 | T-GATE-005 | `config.invalid` sets `class:OperatorRequired` + `do_not`; a runnable miss sets `class:ActorCorrectable` + a `but check run …` action | AC-5 | [api-contract] | Real classifier | PASS: class/do_not correct per reason; FAIL: wrong class |
 
-> **T-GATE-004 / T-GATE-005 depend on governance STEER-001** (which adds the steering fields + `to_envelope()` to `MergeGateError`). Until STEER-001 lands, the carrier exposes only `code`/`message`/`remediation_hint`/`unmet`, so these two assert the base denial today and the full-envelope `class`/`authorized_actions`/`do_not` assertions activate once STEER-001 is merged. They must **not** be made green by stubbing the carrier (the no-stub gate).
+> **T-GATE-004 / T-GATE-005 are LIVE now — STEER landed (governance closed).** The steering fields (`class`/`held_permissions`/`authorized_actions`/`do_not`) exist on `MergeGateError` today (`crates/but-api/src/legacy/merge_gate.rs:45-56`) and the carrier serializes to the uniform STEER envelope (the same shape `but_authz::to_envelope` emits for `Denial`, `crates/but-authz/src/denial.rs`; cf. `crates/but-api/tests/steer_envelope.rs`). So the full-envelope `class`/`authorized_actions`/`do_not` + back-compat assertions must run **for real against the real carrier** — they are no longer deferred. They must **not** be made green by stubbing the carrier (the no-stub gate), and — now that the fields exist — must **not** be downgraded to base-field-only assertions.
 
 ### UC-GATE-04: read-only consumer  *(load-bearing)*
 | # | Criterion | AC Ref | Type | Setup | Pass/Fail |
@@ -116,4 +116,4 @@ Coverage rule: every AC in every UC maps to ≥1 criterion. The two load-bearing
 | [build-gate] | (shared on 4 integration rows) |
 | [human-gate] | 2 |
 
-**AC coverage.** Every AC across the 15 UCs (**88** total — DEFN 29 · RUN 30 · GATE 29) maps to ≥1 criterion. Multi-AC rows (e.g. `GATE-01 all`) intentionally fold several ACs of one UC; the load-bearing ACs are each named in a row's pass condition (RUN-05 run-event → T-RUN-011; GATE-04 deterministic-function → T-GATE-006). Two criteria are **dependency-gated**: T-GATE-004/005 activate their full-envelope assertions once governance STEER-001 lands; T-GATE-002b exercises the mechanism-agnostic local-merge entry the GATE group requires.
+**AC coverage.** Every AC across the 15 UCs (**88** total — DEFN 29 · RUN 30 · GATE 29) maps to ≥1 criterion. Multi-AC rows (e.g. `GATE-01 all`) intentionally fold several ACs of one UC; the load-bearing ACs are each named in a row's pass condition (RUN-05 run-event → T-RUN-011; GATE-04 deterministic-function → T-GATE-006). **One** criterion is dependency-gated on **Check Runner's own** work: T-GATE-002b exercises the mechanism-agnostic local-merge entry the GATE group must still build (R-ENTRY). T-GATE-004/005 are **no longer dependency-gated** — STEER landed (governance closed), so their full-envelope `class`/`authorized_actions`/`do_not` assertions run live against the real `MergeGateError` (merge_gate.rs:45-56).

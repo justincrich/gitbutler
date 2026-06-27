@@ -1,7 +1,7 @@
 ---
 stability: CONSTITUTION
-last_validated: 2026-06-20
-prd_version: 1.0.0
+last_validated: 2026-06-26
+prd_version: 1.2.0
 ---
 
 # 09 — Capability Chains
@@ -21,7 +21,7 @@ read-only gate consumes it; a failure steers the agent to fix it.
 | 2. Run (produce) | `but check run` → `runner.rs` via `checkout.rs` | Materialize the **exact head OID** in an isolated tree (07); spawn the real command; conclusion from real `ExitStatus` | Checkout against the dirty shared tree (R-CHECKOUT); timeout → `timed_out` | Run with a dirty shared worktree at a different OID; assert the check ran against the requested OID's tree and the shared tree is unchanged |
 | 3. Record | `runner.rs` → `check_results` (but-db) | Append-only `CheckResult` keyed `(name, head_oid)`; `signature` NULL | — (no UPDATE path) | Inspect the row; assert `head_oid` == the run OID, conclusion == exit-derived |
 | 4. Consume (gate) | `enforce_merge_gate` → `evaluate_required_checks` (PURE) | Read-only; match `(name, head_oid == current)`; reached **independent of `protected`** (R-FAILOPEN) | Missing → `check_missing`; non-`Success` → `check_failed`; stale → `check_stale_at_head` | Merge attempt with a missing required result is blocked `gate.check_required`; the gate is **read-only at code level** — `evaluate_required_checks` calls **no runner entry point** and accepts **no caller-supplied `Conclusion`** (see Critical proofs (4) for the code-level vs. OS-instrumentation distinction) |
-| 5. Deny + STEER | gate → `MergeGateError` → CLI / `to_envelope` | `code:"gate.check_required"` + `unmet` (base fields, present today) **+** STEER fields (`class: ActorCorrectable`, `authorized_actions: [but check run …]`) — **the STEER fields + `to_envelope()` require governance STEER-001, `STATUS: Backlog`, not yet merged; until it lands only the base fields are carried** | Denial missing steering fields | Once STEER-001 lands: assert the JSON envelope carries `class`/`authorized_actions`; exit 1 (pre-STEER-001: assert base `code`/`message`/`unmet`, exit 1) |
+| 5. Deny + STEER | gate → `MergeGateError` → CLI / `to_envelope` | `code:"gate.check_required"` + `unmet` (base fields, present today) **+** STEER fields (`class: ActorCorrectable`, `authorized_actions: [but check run …]`) — **the STEER fields + `to_envelope()` are LANDED (governance closed; on `MergeGateError` at merge_gate.rs:45-56), so the clause carries them directly** | Denial missing steering fields | Assert the JSON envelope carries `class`/`authorized_actions` (live now — STEER landed); exit 1 |
 | 6. Re-run | agent reads `authorized_actions` → `but check run <name> --head <oid>` → hop 2 | The remediation command is the exact producer entry point | Agent cannot fabricate a pass via an API (R-LYING) | Behavioral negative test: no API stamps `Success` without a run; after a real re-run the merge proceeds |
 
 - **Owner:** `rust-implementer` (build) → `rust-reviewer` + `security-auditor`

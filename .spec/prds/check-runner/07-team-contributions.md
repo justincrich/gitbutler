@@ -1,7 +1,7 @@
 ---
 stability: PRODUCT_CONTEXT
-last_validated: 2026-06-20
-prd_version: 1.0.0
+last_validated: 2026-06-26
+prd_version: 1.2.0
 ---
 # Team Contributions
 
@@ -16,8 +16,8 @@ The overview, scope, roles, functional groups, and use cases were authored from 
 ## Phase 2 — Technical grounding (rust-planner)
 The `08-technical-requirements/` folder was authored by a `rust-planner`, grounded in real crates: the `enforce_merge_gate` extension point and its protected-branch early-return fail-open; the `check_results` table modeled on `local_review_verdicts`/`ci_checks`; the `but_rebase::graph_rebase::Editor::commit_mappings` SHA-reset basis; the `gix`/worktree options for the isolated head-OID checkout; and the reuse of `ci_checks` as producer-zero and `gitbutler-repo/hooks.rs` as the why-hooks-can't-be-the-producer prior art.
 
-## Phase 3 — STEER reuse (from governance sprint-07)
-The denial contract reuses governance's STEER design (`sprint-07-steer-capability-aware-denials` — **STEER-001, not yet merged**, named as a sequencing dependency): the four steering fields (`class: DenialClass{ActorCorrectable|OperatorRequired}`, `held_permissions`, `authorized_actions: Vec<{command, effect}>`, `do_not`) on the `MergeGateError` carrier, unified via `to_envelope()`, with a new `gate.check_required` code and check-specific miss-reasons (`check_missing` / `check_failed` / `check_stale_at_head` / `config.invalid`).
+## Phase 3 — STEER reuse (from governance sprint-07, since LANDED)
+The denial contract reuses governance's STEER design (`sprint-07-steer-capability-aware-denials`): the four steering fields (`class: DenialClass{ActorCorrectable|OperatorRequired}`, `held_permissions`, `authorized_actions: Vec<{command, effect}>`, `do_not`) on the `MergeGateError` carrier, unified via `to_envelope()`, with a new `gate.check_required` code and check-specific miss-reasons (`check_missing` / `check_failed` / `check_stale_at_head` / `config.invalid`). **Update (governance closed):** STEER — named here as a sequencing dependency when this PRD was written (then "STEER-001, not yet merged") — has since **LANDED and frozen in `master`**. The `DenialClass` enum, the `held_permissions` / `authorized_actions` / `do_not` fields, and `to_envelope()` now exist on the `MergeGateError` carrier in `crates/but-api` (with the steering carriers in `crates/but-authz`), so the GATE group's STEER denial reuses live fields, not a pending design.
 
 ## Phase 4 — Adversarial review
 A fresh red-hat pass checked the reframe for consistency (no residual crypto/non-forgery framing), the fail-closed and protected-flag-independence invariants, the mechanism-agnostic checkout treatment, AC testability against real services, and that the PRD is materially tighter than `actions` (3 groups / 15 UCs vs 4 groups / ~19 UCs, with the LEDG hardening group dissolved into a plain store).

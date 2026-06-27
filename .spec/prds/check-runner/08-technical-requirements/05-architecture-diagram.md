@@ -1,7 +1,7 @@
 ---
 stability: CONSTITUTION
-last_validated: 2026-06-20
-prd_version: 1.0.0
+last_validated: 2026-06-26
+prd_version: 1.2.0
 ---
 
 # 05 — Architecture Diagram
@@ -51,21 +51,21 @@ prd_version: 1.0.0
    │     └─ REQUIRED-CHECKS clause  (reached independent of `protected`, 01 §9)      │
    │           defs    = but_checks::load_check_defs(repo, target_ref)               │
    │           req     = [[required_check]] for target  (ref-pinned gates.toml)      │
-   │           head    = gix ref-peel of source_ref  (merge_gate.rs:172-179,        │
+   │           head    = gix ref-peel of source_ref  (merge_gate.rs:254-261,        │
    │                       NOT forge-keyed :78)                                      │
    │           results = check_results.list_for(name, head)                          │
    │           evaluate_required_checks(req, defs, results, head)   ── PURE          │
    │              Ok(())  → proceed                                                  │
    │              Err(unmet) → MergeGateError{ code:"gate.check_required", unmet }   │
-   │                 // base fields TODAY; +class/held_permissions/authorized_actions│
-   │                 // /do_not ONLY after governance STEER-001 lands (Backlog)      │
+   │                 // +class/held_permissions/authorized_actions/do_not present NOW│
+   │                 // (STEER landed, governance closed)                            │
    └────────────────────────────────────┬─────────────────────────────────────────┘
                                          │
                                          ▼
                          merge proceeds  iff  gate == Ok
                          else exit 1 + denial → agent runs `but check run` → retry
-                         (denial carries STEER steering fields once governance
-                          STEER-001 lands; base code/message/unmet before that)
+                         (denial carries the STEER steering fields now —
+                          STEER landed, governance closed)
 ```
 
 ## SHA-binding / staleness (R-SHARESET)
@@ -105,8 +105,8 @@ prd_version: 1.0.0
                                             │
                                             ▼
                         identical run + result regardless of branching mechanism
-                        (execution analog of GATES-007's one-decision-helper
-                         authorization — GATES-007 in progress, Backlog)
+                        (execution analog of the governance commit gate's
+                         one-decision-helper authorization — GATES landed, governance closed)
 ```
 
 ## Cross-references

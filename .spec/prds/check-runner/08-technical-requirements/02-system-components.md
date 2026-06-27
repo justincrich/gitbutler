@@ -1,7 +1,7 @@
 ---
 stability: CONSTITUTION
-last_validated: 2026-06-20
-prd_version: 1.0.0
+last_validated: 2026-06-26
+prd_version: 1.2.0
 ---
 
 # 02 — System Components
@@ -14,14 +14,16 @@ prd_version: 1.0.0
 | `check_results` table | **NEW** | `crates/but-db/src/table/check_results.rs` |
 | Required-checks merge-gate **clause** | **EXTEND** | `crates/but-api/src/legacy/merge_gate.rs` |
 | `but check {define,list,run,results,required}` CLI verbs | **NEW** | `crates/but/src/args/check.rs` + `crates/but/src/command/check.rs` |
-| `MergeGateError` (today: `code`/`message`/`remediation_hint`/`unmet` only, merge_gate.rs:19-29) | **REUSE** | `crates/but-api/src/legacy/merge_gate.rs:19` |
-| `MergeGateError` STEER fields (`class`/`held_permissions`/`authorized_actions`/`do_not`) + `to_envelope()` | **EXTENDS — depends on governance STEER-001** (sprint-07, `STATUS: Backlog`, NOT yet merged; the fields + `to_envelope()` do not exist in `crates/` yet) | governance `sprint-07-steer-capability-aware-denials/STEER-001` |
+| `MergeGateError` (now carries the legacy four **and** the STEER fields `class`/`held_permissions`/`authorized_actions`/`do_not`, merge_gate.rs:33-57) | **REUSE** | `crates/but-api/src/legacy/merge_gate.rs:33` |
+| `MergeGateError` STEER fields (`class`/`held_permissions`/`authorized_actions`/`do_not`) + uniform STEER envelope | **REUSE — LANDED** (governance closed; the fields exist on `MergeGateError` today and the carrier serializes to the same uniform envelope `but_authz::to_envelope` emits for `Denial`) | `crates/but-api/src/legacy/merge_gate.rs:45-56`; `but_authz::to_envelope` at `crates/but-authz/src/denial.rs`; proof `crates/but-api/tests/steer_envelope.rs` (commit `353bbcdc1a`) |
 | `read_config_blob` ref-pin read | **REUSE** | `crates/but-api/src/legacy/merge_gate.rs:211` |
 | `governance_present` opt-in discriminator | **REUSE** | `crates/but-authz/src/config.rs:53` |
 | `Editor::commit_mappings` (SHA-reset basis) | **REUSE** | `crates/but-rebase/src/graph_rebase/mod.rs:479` |
 | `gix` (OID resolve, tree read, worktree) | **REUSE** | workspace dep |
 | `std::process` / `tokio` process facility | **REUSE** | std / existing `tokio` |
 | `toml` + `serde` (config parse) | **REUSE** | workspace deps |
+
+> **Line-number advisory.** Governance's STEER + IDENT work inserted ~35 lines at the top of `merge_gate.rs`. Absolute `merge_gate.rs` line numbers in this PRD that predate that work have shifted; current anchors include `enforce_merge_gate` at `:75`, the principal resolve (`resolve_principal_with_runtime_registry`) at `:82`, the `Merge`-authority call at `:91`, the `protected` early-return at `:103-109`, and the gix head-OID ref-peel at `:254-261`. Re-grep by symbol rather than trust an absolute line.
 
 ## §2 — `but-checks` crate (module map)
 
@@ -81,7 +83,7 @@ crypto column logic — `signature` is a nullable passthrough.
 ## §4 — Extended `merge_gate.rs` clause component
 
 A new clause inside `enforce_merge_gate`
-(`crates/but-api/src/legacy/merge_gate.rs:40`), added **after** the review
+(`crates/but-api/src/legacy/merge_gate.rs:75`), added **after** the review
 clause and consulted **independent of the `protected` early-return**
 (01 §9; 08 R-FAILOPEN). It:
 
@@ -92,8 +94,9 @@ clause and consulted **independent of the `protected` early-return**
 3. Resolves `current_head_oid` (merge_gate.rs:78) and reads the recorded results.
 4. Calls the **pure** `but_checks::evaluate_required_checks(...)`.
 5. On `Err`, returns a `MergeGateError { code: "gate.check_required", … }` with
-   the STEER fields populated **once STEER-001 lands** (04 §5; until then the
-   carrier has only `code`/`message`/`remediation_hint`/`unmet`).
+   the STEER fields populated **now** (04 §5) — `class`/`held_permissions`/`authorized_actions`/`do_not`
+   already exist on the carrier (merge_gate.rs:45-56, STEER landed), so the clause
+   sets them directly rather than waiting on a dependency.
 
 For the unsatisfiable-`[[required_check]]` fail-closed case, copy the
 **enforcing** pattern — the caller's `is_empty()` → `MergeGateError` block at
@@ -108,8 +111,7 @@ out of the `anyhow` chain identically.
 
 A new `but check` noun, modeled on the governance `but perm` / `but group` noun
 pattern (`crates/but/src/args/perm.rs:10`, `crates/but/src/args/group.rs:10` —
-each a `pub enum Subcommands`; both verified present, though the governance CLI is
-still in progress in sprint-05/06), with a handler in
+each a `pub enum Subcommands`; both verified present (the governance CLI has since landed; governance closed), with a handler in
 `crates/but/src/command/check.rs`.
 
 | Verb | Purpose | UC |
