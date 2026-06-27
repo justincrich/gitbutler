@@ -8,10 +8,6 @@ macro_rules! snapshot {
     };
 }
 
-const RUST_IMPLEMENTER_AGENT: &str = r#"[[agent]]
-id = "rust-implementer"
-"#;
-
 const RUST_IMPLEMENTER_AND_REVIEWER_AGENTS: &str = r#"[[agent]]
 id = "rust-implementer"
 
@@ -67,11 +63,8 @@ fn agent_help_lists_verbs() -> anyhow::Result<()> {
 Usage: but agent [OPTIONS] [COMMAND]
 
 Commands:
-  register    Register a process as an agent
-  unregister  Unregister a process. Missing registrations are not an error
-  list        List live runtime registrations, or the committed roster with --committed
-  whoami      Print the committed agent id for this process
-  migrate     Rewrite working-tree .gitbutler/permissions.toml to .gitbutler/agents.toml
+  list     List the committed agent roster from .gitbutler/agents.toml
+  migrate  Rewrite working-tree .gitbutler/permissions.toml to .gitbutler/agents.toml
 
 Options:
       --format <FORMAT>
@@ -101,161 +94,17 @@ Options:
 }
 
 #[test]
-fn agent_register_known_id_prints_tuple() -> anyhow::Result<()> {
-    let env = ident_fixture("ident-agent-register-known", RUST_IMPLEMENTER_AGENT)?;
-    let registry_path = registry_path(&env, "register-known");
+fn agent_list_committed_prints_roster() -> anyhow::Result<()> {
+    // The runtime registry was removed (identity is env-primary). `but agent
+    // list` reports the committed roster from `.gitbutler/agents.toml`.
+    let env = ident_fixture("ident-agent-list-committed", RUST_IMPLEMENTER_AND_REVIEWER_AGENTS)?;
 
-    env.but("agent register --pid 12345 --start-time 1730000000 --as rust-implementer --ttl 1h")
-        .env("BUT_AGENT_REGISTRY_PATH", &registry_path)
+    env.but("agent list --committed")
         .assert()
         .success()
-        .stdout_eq(snapshot!("snapshots/agent/register-known.stdout"));
-
-    Ok(())
-}
-
-#[test]
-fn agent_register_unknown_id_rejects_without_registry_write() -> anyhow::Result<()> {
-    let env = ident_fixture("ident-agent-register-unknown", RUST_IMPLEMENTER_AGENT)?;
-    let registry_path = registry_path(&env, "register-unknown");
-
-    env.but("agent register --pid 12345 --start-time 1730000000 --as ghost --ttl 1h")
-        .env("BUT_AGENT_REGISTRY_PATH", &registry_path)
-        .assert()
-        .failure()
-        .stdout_eq(snapbox::str![])
-        .stderr_eq(snapshot!("snapshots/agent/register-unknown.stderr"));
-
-    assert!(
-        !registry_path.exists(),
-        "unknown agent_id must fail before writing a runtime registry at {}",
-        registry_path.display()
-    );
-
-    Ok(())
-}
-
-#[test]
-fn agent_register_worktree_fallback_gitignores_runtime_registry() -> anyhow::Result<()> {
-    let env = ident_fixture("ident-agent-register-gitignore", RUST_IMPLEMENTER_AGENT)?;
-    let gitbutler_dir = env.projects_root().join(".gitbutler");
-    let gitignore_path = gitbutler_dir.join(".gitignore");
-    let registry_path = gitbutler_dir.join("agents-runtime.toml");
-
-    // No BUT_AGENT_REGISTRY_PATH override and no XDG_RUNTIME_DIR forces the
-    // worktree fallback: the registry resolves to
-    // <workdir>/.gitbutler/agents-runtime.toml inside the working tree, where it
-    // is one `git add` away from being committed unless it is gitignored.
-    env.but("agent register --pid 12345 --start-time 1730000000 --as rust-implementer --ttl 1h")
-        .env_remove("XDG_RUNTIME_DIR")
-        .assert()
-        .success();
-
-    assert!(
-        registry_path.exists(),
-        "worktree-fallback register must write the runtime registry into the working tree at {}",
-        registry_path.display()
-    );
-    let contents = fs::read_to_string(&gitignore_path)?;
-    assert!(
-        contents
-            .lines()
-            .any(|line| line.trim() == "agents-runtime.toml"),
-        ".gitbutler/.gitignore must ignore the runtime registry, got: {contents:?}"
-    );
-
-    // git agrees the runtime registry is ignored: check-ignore exits 0 on a
-    // match (invoke_git asserts success), so a non-match would panic here.
-    env.invoke_git("check-ignore .gitbutler/agents-runtime.toml");
-
-    // Re-running register must be idempotent and not duplicate the ignore line.
-    env.but("agent register --pid 23456 --start-time 1730000001 --as rust-implementer --ttl 1h")
-        .env_remove("XDG_RUNTIME_DIR")
-        .assert()
-        .success();
-    let contents_after = fs::read_to_string(&gitignore_path)?;
-    let occurrences = contents_after
-        .lines()
-        .filter(|line| line.trim() == "agents-runtime.toml")
-        .count();
-    assert_eq!(
-        occurrences, 1,
-        "re-running register must not duplicate the gitignore entry, got: {contents_after:?}"
-    );
-
-    Ok(())
-}
-
-#[test]
-fn agent_list_empty_and_populated_registries() -> anyhow::Result<()> {
-    let env = ident_fixture("ident-agent-list", RUST_IMPLEMENTER_AND_REVIEWER_AGENTS)?;
-    let registry_path = registry_path(&env, "list");
-
-    env.but("agent list")
-        .env("BUT_AGENT_REGISTRY_PATH", &registry_path)
-        .assert()
-        .success()
-        .stdout_eq(snapshot!("snapshots/agent/list-empty.stdout"));
-
-    env.but("agent register --pid 12345 --start-time 1730000000 --as rust-implementer --ttl 1h")
-        .env("BUT_AGENT_REGISTRY_PATH", &registry_path)
-        .assert()
-        .success()
-        .stdout_eq(snapshot!("snapshots/agent/register-known.stdout"));
-
-    env.but("agent list")
-        .env("BUT_AGENT_REGISTRY_PATH", &registry_path)
-        .assert()
-        .success()
-        .stdout_eq(snapshot!("snapshots/agent/list-populated.stdout"));
-
-    Ok(())
-}
-
-#[test]
-fn agent_unregister_known_and_unknown_pid_is_idempotent() -> anyhow::Result<()> {
-    let env = ident_fixture("ident-agent-unregister", RUST_IMPLEMENTER_AGENT)?;
-    let registry_path = registry_path(&env, "unregister");
-
-    env.but("agent register --pid 12345 --start-time 1730000000 --as rust-implementer --ttl 1h")
-        .env("BUT_AGENT_REGISTRY_PATH", &registry_path)
-        .assert()
-        .success()
-        .stdout_eq(snapshot!("snapshots/agent/register-known.stdout"));
-
-    env.but("agent unregister --pid 12345 --start-time 1730000000")
-        .env("BUT_AGENT_REGISTRY_PATH", &registry_path)
-        .assert()
-        .success()
-        .stdout_eq(snapshot!("snapshots/agent/unregister-known.stdout"));
-
-    env.but("agent list")
-        .env("BUT_AGENT_REGISTRY_PATH", &registry_path)
-        .assert()
-        .success()
-        .stdout_eq(snapshot!("snapshots/agent/list-empty.stdout"));
-
-    env.but("agent unregister --pid 99999")
-        .env("BUT_AGENT_REGISTRY_PATH", &registry_path)
-        .assert()
-        .success()
-        .stdout_eq(snapshot!("snapshots/agent/unregister-unknown.stdout"));
-
-    Ok(())
-}
-
-#[test]
-fn agent_whoami_without_registration_reports_current_process_key() -> anyhow::Result<()> {
-    let env = ident_fixture("ident-agent-whoami-missing", RUST_IMPLEMENTER_AGENT)?;
-    let registry_path = registry_path(&env, "whoami-missing");
-
-    env.but("agent whoami")
-        .env("BUT_AGENT_REGISTRY_PATH", &registry_path)
-        .assert()
-        .failure()
-        .stdout_eq(snapbox::str![])
-        .stderr_eq(snapbox::str![[r#"
-Error: no agent registration for pid [..] start_time [..]
+        .stdout_eq(snapbox::str![[r#"
+rust-implementer
+rust-reviewer
 
 "#]]);
 
@@ -480,8 +329,4 @@ EOF
 
 fn governance_path(env: &Sandbox, name: &str) -> PathBuf {
     env.projects_root().join(".gitbutler").join(name)
-}
-
-fn registry_path(env: &Sandbox, name: &str) -> PathBuf {
-    env.projects_root().join(format!("{name}-runtime.toml"))
 }

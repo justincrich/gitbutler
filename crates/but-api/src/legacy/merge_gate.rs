@@ -11,9 +11,7 @@ use serde::{Deserialize, Serialize};
 // STEER-007: shared denial-steering telemetry helper (observation-only).
 // `gate` is mounted as `commit::create::gate` via the `#[path = "gate.rs"]`
 // attribute in `commit/create.rs`.
-use crate::commit::create::gate::{
-    emit_denial_steering_event, resolve_principal_with_runtime_registry,
-};
+use crate::commit::create::gate::emit_denial_steering_event;
 
 #[path = "review_requirement.rs"]
 mod review_requirement;
@@ -66,12 +64,10 @@ impl std::error::Error for MergeGateError {}
 
 /// Enforce merge authority and the target-ref review requirement for a forge review.
 ///
-/// Merge-gate identity resolution calls `resolve_principal_with_runtime_registry`;
-/// the `but_authz::authorize` resolver chain checks (1) the runtime registry via
-/// `but_authz::resolve_principal_with_registry`, (2) the environment handle only
-/// when `BUT_AUTHZ_ALLOW_ENV_HANDLE` is `1`, then (3) returns
-/// `Denial::unregistered` (`perm.denied`) when no registered principal is
-/// available.
+/// Merge-gate identity resolution calls `but_authz::resolve_principal_from_env`,
+/// resolving the acting principal from the `BUT_AGENT_HANDLE` environment
+/// variable against the committed `.gitbutler/agents.toml` (handle set by the
+/// trusted harness wrapper, not self-asserted).
 pub fn enforce_merge_gate(ctx: &but_ctx::Context, review_id: usize) -> anyhow::Result<()> {
     let review = review_for_id(ctx, review_id)?;
     let target_ref = branch_ref(&review.target_branch);
@@ -79,7 +75,7 @@ pub fn enforce_merge_gate(ctx: &but_ctx::Context, review_id: usize) -> anyhow::R
     let repo = ctx.repo.get()?;
     let config = load_merge_governance_config(&repo, &target_ref)?;
 
-    let principal = resolve_principal_with_runtime_registry(&repo, &config.gov)?;
+    let principal = but_authz::resolve_principal_from_env(&config.gov)?;
     // STEER-002: Route::Merge row in ROUTE_AUTHORITY_TABLE supplies the
     // required Authority for this gate; the literal `but_authz::authorize`
     // call is preserved so the AUTHORITY_POSITIVE_PATTERN honesty grep

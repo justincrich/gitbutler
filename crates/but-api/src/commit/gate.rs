@@ -1,8 +1,3 @@
-use std::{
-    path::PathBuf,
-    time::{SystemTime, UNIX_EPOCH},
-};
-
 use bstr::ByteSlice as _;
 use but_authz::{
     Authority, AuthorizedAction, Denial, DenialCause, DenialClass, DenialPredicate, DeniedRoute,
@@ -118,12 +113,12 @@ pub fn enforce_commit_gate(ctx: &but_ctx::Context, relative_to: &RelativeTo) -> 
 
 /// Enforce commit authorization for a resolved commit target.
 ///
-/// Gate identity resolution uses `resolve_principal_with_runtime_registry`, whose
-/// underlying `but_authz::authorize` resolver order is: (1) runtime registry via
-/// `but_authz::resolve_principal_with_registry`, (2) environment fallback only
-/// when `BUT_AUTHZ_ALLOW_ENV_HANDLE` is `1`, and (3) deny with
-/// `Denial::unregistered` (`perm.denied`) when no registered principal is
-/// available.
+/// Gate identity resolution uses `but_authz::resolve_principal_from_env`, which
+/// resolves the acting principal from the `BUT_AGENT_HANDLE` environment variable
+/// against the committed `.gitbutler/agents.toml`. The handle is set by the
+/// trusted harness wrapper (the git→but steerer), not self-asserted by the agent;
+/// an unset/unknown handle denies with `perm.denied`
+/// (`Denial::no_handle`/`unknown_principal`).
 pub fn enforce_commit_gate_for_target(
     repo: &gix::Repository,
     target: &CommitGateTarget,
@@ -144,7 +139,7 @@ pub fn enforce_commit_gate_for_target(
         );
         anyhow::Error::from(config_error)
     })?;
-    let principal = resolve_principal_with_runtime_registry(repo, &cfg)?;
+    let principal = but_authz::resolve_principal_from_env(&cfg)?;
 
     // STEER-002: Route::Commit row in ROUTE_AUTHORITY_TABLE supplies the
     // required Authority for this gate; the literal `but_authz::authorize`
@@ -177,46 +172,6 @@ pub fn enforce_commit_gate_for_target(
     }
 
     Ok(())
-}
-
-pub(crate) fn resolve_principal_with_runtime_registry(
-    repo: &gix::Repository,
-    cfg: &but_authz::GovConfig,
-) -> anyhow::Result<Principal> {
-    // Resolve the wall clock once at the gate boundary so the registry GC/TTL
-    // path is deterministic and testable (no implicit `SystemTime::now()`
-    // buried inside the loader).
-    let now = unix_time_seconds()?;
-    let registry = load_runtime_registry(repo, now)?;
-    but_authz::resolve_principal_with_registry(Some(&registry), cfg).map_err(Into::into)
-}
-
-fn load_runtime_registry(repo: &gix::Repository, now: u64) -> anyhow::Result<but_authz::Registry> {
-    let Some(path) = runtime_registry_path(repo)? else {
-        return Ok(but_authz::Registry::empty());
-    };
-    // Fail closed: `Registry::load` already maps a genuinely absent file
-    // (`ErrorKind::NotFound`) to an empty registry. Every other IO error
-    // (EACCES, EISDIR, EIO — a permission-denied or corrupt-directory
-    // registry) must propagate rather than silently degrade to an empty
-    // registry, which would let the `BUT_AGENT_HANDLE` env path resolve a
-    // principal an unreadable registry never authorized.
-    let mut registry = but_authz::Registry::load(&path)?;
-    if registry.gc(now) > 0 {
-        registry.write(&path)?;
-    }
-    Ok(registry)
-}
-
-fn unix_time_seconds() -> anyhow::Result<u64> {
-    Ok(SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map_err(|error| anyhow::anyhow!("system clock is before Unix epoch: {error}"))?
-        .as_secs())
-}
-
-fn runtime_registry_path(repo: &gix::Repository) -> anyhow::Result<Option<PathBuf>> {
-    Ok(but_authz::runtime_registry_location(repo)?.map(|location| location.path))
 }
 
 /// Extract a structured gate payload from an error chain.

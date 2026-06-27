@@ -69,39 +69,34 @@ git update-ref refs/heads/agents-format HEAD
 
 #[test]
 #[serial_test::serial]
-fn legacy_permissions_only_repo_authorizes_via_env_fallback() -> anyhow::Result<()> {
+fn legacy_permissions_only_repo_authorizes_via_env_handle() -> anyhow::Result<()> {
+    // Env-primary identity: a legacy `permissions.toml`-only repo authorizes a
+    // committed principal named by `BUT_AGENT_HANDLE` (set by the trusted harness
+    // wrapper), and denies when the handle is unset.
     let (repo, _tmp) = legacy_permissions_only_repo();
     let target = CommitGateTarget::config_only(gix::refs::FullName::try_from(FEAT_REF)?);
 
-    temp_env::with_vars(
-        [
-            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
-            ("BUT_AGENT_HANDLE", Some("dev")),
-        ],
-        || -> anyhow::Result<()> {
-            enforce_commit_gate_for_target(&repo, &target)?;
-            Ok(())
-        },
-    )?;
+    temp_env::with_var("BUT_AGENT_HANDLE", Some("dev"), || -> anyhow::Result<()> {
+        enforce_commit_gate_for_target(&repo, &target)?;
+        Ok(())
+    })?;
 
-    temp_env::with_vars(
-        [
-            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", None),
-            ("BUT_AGENT_HANDLE", Some("dev")),
-        ],
+    temp_env::with_var(
+        "BUT_AGENT_HANDLE",
+        None::<&str>,
         || -> anyhow::Result<()> {
             let err = match enforce_commit_gate_for_target(&repo, &target) {
-                Ok(()) => anyhow::bail!(
-                    "legacy env fallback must deny when BUT_AUTHZ_ALLOW_ENV_HANDLE is unset"
-                ),
+                Ok(()) => {
+                    anyhow::bail!("an unset BUT_AGENT_HANDLE must deny at the commit gate")
+                }
                 Err(err) => err,
             };
             let denial = err
                 .downcast_ref::<but_authz::Denial>()
-                .expect("env fallback rejection must be a structured authz denial");
+                .expect("an unresolved-handle rejection must be a structured authz denial");
             assert_eq!(
                 denial.code, "perm.denied",
-                "env fallback rejection must use the stable perm.denied code"
+                "an unset-handle rejection must use the stable perm.denied code"
             );
             Ok(())
         },

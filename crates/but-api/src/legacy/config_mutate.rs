@@ -4,8 +4,6 @@ use but_authz::{
 };
 use serde::Serialize;
 
-use crate::commit::create::gate::resolve_principal_with_runtime_registry;
-
 /// Structured administration-write gate error payload for API callers.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct AdminWriteGateError {
@@ -37,21 +35,20 @@ pub struct AdminWriteGateError {
 /// Enforce authorization before mutating governed configuration.
 ///
 /// The guard reads governance files from the committed `target_ref`, resolves the
-/// acting principal from the runtime registry, and requires `administration:write`.
+/// acting principal from the `BUT_AGENT_HANDLE` environment variable, and requires
+/// `administration:write`.
 ///
-/// Administration-write identity resolution uses
-/// `resolve_principal_with_runtime_registry`; the `but_authz::authorize`
-/// resolver order is (1) runtime registry via
-/// `but_authz::resolve_principal_with_registry`, (2) environment fallback only
-/// when `BUT_AUTHZ_ALLOW_ENV_HANDLE` is `1`, and (3)
-/// `Denial::unregistered` (`perm.denied`) when no registered principal is
-/// available.
+/// Administration-write identity resolution calls
+/// `but_authz::resolve_principal_from_env`, resolving the acting principal from the
+/// `BUT_AGENT_HANDLE` environment variable against the committed
+/// `.gitbutler/agents.toml` (handle set by the trusted harness wrapper, not
+/// self-asserted).
 pub fn enforce_administration_write_gate(
     repo: &gix::Repository,
     target_ref: &str,
 ) -> anyhow::Result<()> {
     let cfg = load_governance_config(repo, target_ref)?;
-    let principal = resolve_principal_with_runtime_registry(repo, &cfg)?;
+    let principal = but_authz::resolve_principal_from_env(&cfg)?;
 
     // STEER-002: Route::Admin row in ROUTE_AUTHORITY_TABLE supplies the
     // required Authority for this gate; the literal `but_authz::authorize`

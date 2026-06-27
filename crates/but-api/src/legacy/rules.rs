@@ -12,8 +12,6 @@ use but_rules::{
 };
 use tracing::instrument;
 
-use crate::commit::create::gate::resolve_principal_with_runtime_registry;
-
 #[but_api]
 #[instrument(err(Debug))]
 pub fn create_workspace_rule(
@@ -89,13 +87,11 @@ pub fn list_workspace_rules_scoped(
 
 /// List workspace rules scoped to `principal_id` after resolving the caller.
 ///
-/// `list_workspace_rules_scoped_for_caller` uses
-/// `resolve_principal_with_runtime_registry`; the `but_authz::authorize`
-/// resolver order is (1) runtime registry via
-/// `but_authz::resolve_principal_with_registry`, (2) environment fallback only
-/// when `BUT_AUTHZ_ALLOW_ENV_HANDLE` is `1`, and (3)
-/// `Denial::unregistered` (`perm.denied`) when no registered principal is
-/// available.
+/// `list_workspace_rules_scoped_for_caller` calls
+/// `but_authz::resolve_principal_from_env`, resolving the acting principal from the
+/// `BUT_AGENT_HANDLE` environment variable against the committed
+/// `.gitbutler/agents.toml` (handle set by the trusted harness wrapper, not
+/// self-asserted).
 #[instrument(err(Debug))]
 pub fn list_workspace_rules_scoped_for_caller(
     ctx: &Context,
@@ -108,7 +104,7 @@ pub fn list_workspace_rules_scoped_for_caller(
     let repo = ctx.repo.get()?;
     let target_ref = ctx.project_meta()?.target_ref_or_err()?.to_string();
     let config = load_governance_config(&repo, &target_ref)?;
-    let caller = resolve_principal_with_runtime_registry(&repo, &config)?;
+    let caller = but_authz::resolve_principal_from_env(&config)?;
     let target = PrincipalId::new(principal_id);
 
     if caller.id() != &target {

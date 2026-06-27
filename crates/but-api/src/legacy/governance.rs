@@ -17,7 +17,6 @@ use but_ctx::Context;
 use gix::{bstr::ByteSlice as _, object::tree::EntryKind};
 use serde::{Deserialize, Serialize};
 
-use crate::commit::create::gate::resolve_principal_with_runtime_registry;
 use crate::json::{self, ConfigInvalid};
 
 use super::config_mutate::enforce_administration_write_gate;
@@ -500,12 +499,11 @@ pub fn perm_revoke(
 /// authorities (read-only), not an error.
 ///
 /// `governance_status_read` resolves the caller through
-/// `resolve_principal_with_runtime_registry`; the `but_authz::authorize` resolver
-/// order is (1) runtime registry via `but_authz::resolve_principal_with_registry`,
-/// (2) environment fallback only when `BUT_AUTHZ_ALLOW_ENV_HANDLE` is `1`, and
-/// (3) `Denial::unregistered` (`perm.denied`) when no registered principal is
-/// available. This read surface catches that denial and reports empty
-/// authorities.
+/// `but_authz::resolve_principal_from_env`, resolving the acting principal from the
+/// `BUT_AGENT_HANDLE` environment variable against the committed
+/// `.gitbutler/agents.toml` (handle set by the trusted harness wrapper, not
+/// self-asserted). This read surface catches an unresolved-caller denial and
+/// reports empty authorities.
 #[but_api(napi, GovernanceStatus)]
 pub fn governance_status_read(ctx: &Context) -> anyhow::Result<GovernanceStatus> {
     let repo = ctx.repo.get()?;
@@ -518,14 +516,13 @@ pub fn governance_status_read(ctx: &Context) -> anyhow::Result<GovernanceStatus>
         });
     }
     let config = load_governance_config(&repo, &target_ref)?;
-    let authorities = match resolve_principal_with_runtime_registry(&repo, &config) {
+    let authorities = match but_authz::resolve_principal_from_env(&config) {
         Ok(caller) => but_authz::effective_authority(&caller, &config)
             .iter()
             .map(|authority| authority.name().to_owned())
             .collect(),
-        // No resolvable caller: read-only, not an error.
-        Err(error) if error.downcast_ref::<Denial>().is_some() => Vec::new(),
-        Err(error) => return Err(error),
+        // No resolvable caller (no/unknown handle): read-only, not an error.
+        Err(_denial) => Vec::new(),
     };
     Ok(GovernanceStatus {
         authorities,
@@ -588,18 +585,16 @@ pub fn governance_commit(
 /// Read branch gates under administration-read authority.
 ///
 /// `branch_gates_read_with_repo` gets its caller from
-/// `resolve_principal_with_runtime_registry`; the `but_authz::authorize`
-/// resolver order is (1) runtime registry via
-/// `but_authz::resolve_principal_with_registry`, (2) environment fallback only
-/// when `BUT_AUTHZ_ALLOW_ENV_HANDLE` is `1`, and (3)
-/// `Denial::unregistered` (`perm.denied`) when no registered principal is
-/// available.
+/// `but_authz::resolve_principal_from_env`, resolving the acting principal from the
+/// `BUT_AGENT_HANDLE` environment variable against the committed
+/// `.gitbutler/agents.toml` (handle set by the trusted harness wrapper, not
+/// self-asserted).
 pub fn branch_gates_read_with_repo(
     repo: &gix::Repository,
     target_ref: &str,
 ) -> anyhow::Result<BranchGatesOutcome> {
     let config = load_governance_config(repo, target_ref)?;
-    let caller = resolve_principal_with_runtime_registry(repo, &config)?;
+    let caller = but_authz::resolve_principal_from_env(&config)?;
     let held = but_authz::effective_authority(&caller, &config);
     if !held.contains(Authority::AdministrationRead)
         && !held.contains(Authority::AdministrationWrite)
@@ -1198,18 +1193,16 @@ fn authority_set_for_pending(
 /// List governed groups under administration-read authority.
 ///
 /// `group_list_with_repo` identifies the caller with
-/// `resolve_principal_with_runtime_registry`; the `but_authz::authorize`
-/// resolver order is (1) runtime registry via
-/// `but_authz::resolve_principal_with_registry`, (2) environment fallback only
-/// when `BUT_AUTHZ_ALLOW_ENV_HANDLE` is `1`, and (3)
-/// `Denial::unregistered` (`perm.denied`) when no registered principal is
-/// available.
+/// `but_authz::resolve_principal_from_env`, resolving the acting principal from the
+/// `BUT_AGENT_HANDLE` environment variable against the committed
+/// `.gitbutler/agents.toml` (handle set by the trusted harness wrapper, not
+/// self-asserted).
 pub fn group_list_with_repo(
     repo: &gix::Repository,
     target_ref: &str,
 ) -> anyhow::Result<GroupListOutcome> {
     let config = load_governance_config(repo, target_ref)?;
-    let caller = resolve_principal_with_runtime_registry(repo, &config)?;
+    let caller = but_authz::resolve_principal_from_env(&config)?;
     let held = but_authz::effective_authority(&caller, &config);
     if !held.contains(Authority::AdministrationRead)
         && !held.contains(Authority::AdministrationWrite)
@@ -1513,19 +1506,17 @@ fn group_delete_authorized(
 /// List committed permissions plus working-tree pending grants for a principal.
 ///
 /// `perm_list_with_repo` scopes self-versus-admin reads by resolving the caller
-/// with `resolve_principal_with_runtime_registry`; the `but_authz::authorize`
-/// resolver order is (1) runtime registry via
-/// `but_authz::resolve_principal_with_registry`, (2) environment fallback only
-/// when `BUT_AUTHZ_ALLOW_ENV_HANDLE` is `1`, and (3)
-/// `Denial::unregistered` (`perm.denied`) when no registered principal is
-/// available.
+/// with `but_authz::resolve_principal_from_env`, resolving the acting principal
+/// from the `BUT_AGENT_HANDLE` environment variable against the committed
+/// `.gitbutler/agents.toml` (handle set by the trusted harness wrapper, not
+/// self-asserted).
 pub fn perm_list_with_repo(
     repo: &gix::Repository,
     target_ref: &str,
     principal: Option<&str>,
 ) -> anyhow::Result<PermListOutcome> {
     let config = load_governance_config(repo, target_ref)?;
-    let caller = resolve_principal_with_runtime_registry(repo, &config)?;
+    let caller = but_authz::resolve_principal_from_env(&config)?;
     let target = principal.unwrap_or_else(|| caller.id().as_str());
     let target_id = PrincipalId::new(target);
 
@@ -1691,19 +1682,17 @@ fn resolve_target_principal(
 /// of those groups), and its authorized-action set from the closed CATALOG.
 ///
 /// `whoami_with_repo` resolves the requesting principal with
-/// `resolve_principal_with_runtime_registry`; the `but_authz::authorize`
-/// resolver order is (1) runtime registry via
-/// `but_authz::resolve_principal_with_registry`, (2) environment fallback only
-/// when `BUT_AUTHZ_ALLOW_ENV_HANDLE` is `1`, and (3)
-/// `Denial::unregistered` (`perm.denied`) when no registered principal is
-/// available.
+/// `but_authz::resolve_principal_from_env`, resolving the acting principal from the
+/// `BUT_AGENT_HANDLE` environment variable against the committed
+/// `.gitbutler/agents.toml` (handle set by the trusted harness wrapper, not
+/// self-asserted).
 pub fn whoami_with_repo(
     repo: &gix::Repository,
     target_ref: &str,
     principal: Option<&str>,
 ) -> anyhow::Result<WhoamiOutcome> {
     let config = load_governance_config(repo, target_ref)?;
-    let caller = resolve_principal_with_runtime_registry(repo, &config)?;
+    let caller = but_authz::resolve_principal_from_env(&config)?;
     let target = principal.unwrap_or_else(|| caller.id().as_str());
     let target_id = PrincipalId::new(target);
 
@@ -1750,12 +1739,10 @@ pub fn whoami_with_repo(
 /// resolved, so the endpoint cannot be used as a principal-existence oracle.
 ///
 /// `can_i_with_repo` resolves the requesting principal with
-/// `resolve_principal_with_runtime_registry`; the `but_authz::authorize`
-/// resolver order is (1) runtime registry via
-/// `but_authz::resolve_principal_with_registry`, (2) environment fallback only
-/// when `BUT_AUTHZ_ALLOW_ENV_HANDLE` is `1`, and (3)
-/// `Denial::unregistered` (`perm.denied`) when no registered principal is
-/// available.
+/// `but_authz::resolve_principal_from_env`, resolving the acting principal from the
+/// `BUT_AGENT_HANDLE` environment variable against the committed
+/// `.gitbutler/agents.toml` (handle set by the trusted harness wrapper, not
+/// self-asserted).
 pub fn can_i_with_repo(
     repo: &gix::Repository,
     target_ref: &str,
@@ -1763,7 +1750,7 @@ pub fn can_i_with_repo(
     principal: Option<&str>,
 ) -> anyhow::Result<CanIOutcome> {
     let config = load_governance_config(repo, target_ref)?;
-    let caller = resolve_principal_with_runtime_registry(repo, &config)?;
+    let caller = but_authz::resolve_principal_from_env(&config)?;
     let target = principal.unwrap_or_else(|| caller.id().as_str());
     let target_id = PrincipalId::new(target);
 

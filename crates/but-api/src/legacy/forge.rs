@@ -14,8 +14,6 @@ use gitbutler_repo::{FileInfo, RepoCommands};
 use serde::Serialize;
 use tracing::instrument;
 
-use crate::commit::create::gate::resolve_principal_with_runtime_registry;
-
 /// Structured forge-gate error payload for CLI and API callers.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct ForgeGateError {
@@ -164,15 +162,13 @@ fn branch_ref(branch: &str) -> String {
 /// Resolve and authorize the runtime principal for a governed branch action.
 ///
 /// Returns `Ok(None)` when the branch is not governed. Governed branches resolve
-/// through the runtime registry, with the explicit env-handle fallback policy
-/// owned by `but-authz`.
+/// the acting principal from the `BUT_AGENT_HANDLE` environment variable, with the
+/// resolution policy owned by `but-authz`.
 ///
-/// `authorize_branch_action` uses `resolve_principal_with_runtime_registry`;
-/// the `but_authz::authorize` resolver order is (1) runtime registry via
-/// `but_authz::resolve_principal_with_registry`, (2) environment fallback only
-/// when `BUT_AUTHZ_ALLOW_ENV_HANDLE` is `1`, and (3)
-/// `Denial::unregistered` (`perm.denied`) when no registered principal is
-/// available.
+/// `authorize_branch_action` calls `but_authz::resolve_principal_from_env`,
+/// resolving the acting principal from the `BUT_AGENT_HANDLE` environment variable
+/// against the committed `.gitbutler/agents.toml` (handle set by the trusted
+/// harness wrapper, not self-asserted).
 pub fn authorize_branch_action(
     repo: &gix::Repository,
     branch: &str,
@@ -184,7 +180,7 @@ pub fn authorize_branch_action(
     }
 
     let cfg = load_forge_governance_config(repo, &ref_name)?;
-    let principal = resolve_principal_with_runtime_registry(repo, &cfg)?;
+    let principal = but_authz::resolve_principal_from_env(&cfg)?;
     // STEER-002: the forge `authorize_branch_action` match is reconciled
     // with the ROUTE_AUTHORITY_TABLE rows in `but-authz`. The three
     // explicit arms below (ReviewsWrite / CommentsWrite / PullRequestsWrite)

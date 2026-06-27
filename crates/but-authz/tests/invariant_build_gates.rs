@@ -16,8 +16,6 @@ const PERMISSION_CARRIER_PATTERN: &str =
 
 const AUTHZ_AUTHORIZE: &str = "crates/but-authz/src/authorize.rs";
 const AUTHZ_CONFIG: &str = "crates/but-authz/src/config.rs";
-const AUTHZ_REGISTRY: &str = "crates/but-authz/src/registry.rs";
-const AUTHZ_PROCESS: &str = "crates/but-authz/src/process.rs";
 const COMMIT_GATE: &str = "crates/but-api/src/commit/gate.rs";
 const MERGE_GATE: &str = "crates/but-api/src/legacy/merge_gate.rs";
 const CONFIG_MUTATE: &str = "crates/but-api/src/legacy/config_mutate.rs";
@@ -27,8 +25,6 @@ const RULES: &str = "crates/but-api/src/legacy/rules.rs";
 const ENFORCEMENT_PATHS: &[&str] = &[
     AUTHZ_AUTHORIZE,
     AUTHZ_CONFIG,
-    AUTHZ_REGISTRY,
-    AUTHZ_PROCESS,
     COMMIT_GATE,
     MERGE_GATE,
     CONFIG_MUTATE,
@@ -105,20 +101,11 @@ const ENGINE_SOURCE_TREES: &[&str] = &["crates/but-authz/src", "crates/but-api/s
 // distinctive header phrases.
 const PRIMER_REFERENCE_PATTERN: &str =
     r#"governance-denial-primer|options, not orders|denials are redirects, not"#;
-const RESOLUTION_ORDER_DOC_LITERALS: &[&str] = &[
-    "resolve_principal_with_runtime_registry",
-    "but_authz::resolve_principal_with_registry",
-    "BUT_AUTHZ_ALLOW_ENV_HANDLE",
-    "Denial::unregistered",
-];
-const GOVERNANCE_RESOLUTION_ORDER_SURFACES: &[&str] = &[
-    "governance_status_read",
-    "branch_gates_read_with_repo",
-    "group_list_with_repo",
-    "perm_list_with_repo",
-    "whoami_with_repo",
-    "can_i_with_repo",
-];
+// Env-primary resolution: every governed gate's doc names the environment
+// resolver + the `BUT_AGENT_HANDLE` carrier. (The runtime PID registry was
+// superseded — see `.spec/prds/governance/12-uc-agent-identity.md`.)
+const RESOLUTION_ORDER_DOC_LITERALS: &[&str] =
+    &["resolve_principal_from_env", "BUT_AGENT_HANDLE"];
 
 #[test]
 fn invariant_build_gates() -> anyhow::Result<()> {
@@ -188,99 +175,57 @@ fn invariant_build_gates() -> anyhow::Result<()> {
 }
 
 #[test]
-fn test_enforcement_paths_extended() -> anyhow::Result<()> {
+fn test_env_resolver_callsite_set_is_authoritative() -> anyhow::Result<()> {
+    // Env-primary: every governed gate resolves identity through
+    // `but_authz::resolve_principal_from_env`. This asserts the authoritative
+    // callsite set so a silent reintroduction of a divergent resolver (or a
+    // raw `BUT_AGENT_HANDLE` read at a gate) is caught.
     let workspace_root = workspace_root()?;
-    assert_eq!(
-        ENFORCEMENT_PATHS.len(),
-        10,
-        "IDENT-020 enforcement coverage must include authorize/config plus registry/process hardening paths and the rules.rs workspace-rules gate"
-    );
-
-    let source =
-        fs::read_to_string(workspace_root.join("crates/but-authz/tests/invariant_build_gates.rs"))
-            .context("read invariant build gate source")?;
-    let enforcement_paths = source
-        .split("const ENFORCEMENT_PATHS: &[&str] = &[")
-        .nth(1)
-        .and_then(|rest| rest.split("];").next())
-        .context("ENFORCEMENT_PATHS source definition must be parseable")?;
-
-    for token in [concat!("AUTHZ_", "REGISTRY"), concat!("AUTHZ_", "PROCESS")] {
-        assert!(
-            enforcement_paths.contains(token),
-            "IDENT-020 ENFORCEMENT_PATHS source must include {token}"
-        );
-    }
-    for line in [
-        r#"const AUTHZ_REGISTRY: &str = "crates/but-authz/src/registry.rs";"#,
-        r#"const AUTHZ_PROCESS: &str = "crates/but-authz/src/process.rs";"#,
-    ] {
-        assert!(
-            source.contains(line),
-            "IDENT-020 enforcement path constants must include {line}"
-        );
-    }
-
-    assert_paths_exist_and_non_empty(&workspace_root, ENFORCEMENT_PATHS)?;
-    Ok(())
-}
-
-#[test]
-fn test_runtime_registry_wrapper_callsite_set_is_authoritative() -> anyhow::Result<()> {
-    let workspace_root = workspace_root()?;
-    let gate_src = fs::read_to_string(workspace_root.join(COMMIT_GATE))
-        .with_context(|| format!("read {COMMIT_GATE}"))?;
-    assert!(
-        gate_src.contains(
-            "but_authz::resolve_principal_with_registry(Some(&registry), cfg).map_err(Into::into)"
-        ),
-        "runtime wrapper must delegate to but_authz::resolve_principal_with_registry(Some(&registry), cfg)"
-    );
 
     let expected = [
         (
             "crates/but-api/src/commit/gate.rs",
-            "let principal = resolve_principal_with_runtime_registry(repo, &cfg)?;",
+            "let principal = but_authz::resolve_principal_from_env(&cfg)?;",
         ),
         (
             "crates/but-api/src/legacy/config_mutate.rs",
-            "let principal = resolve_principal_with_runtime_registry(repo, &cfg)?;",
+            "let principal = but_authz::resolve_principal_from_env(&cfg)?;",
         ),
         (
             "crates/but-api/src/legacy/forge.rs",
-            "let principal = resolve_principal_with_runtime_registry(repo, &cfg)?;",
+            "let principal = but_authz::resolve_principal_from_env(&cfg)?;",
         ),
         (
             "crates/but-api/src/legacy/governance.rs",
-            "let authorities = match resolve_principal_with_runtime_registry(&repo, &config) {",
+            "let authorities = match but_authz::resolve_principal_from_env(&config) {",
         ),
         (
             "crates/but-api/src/legacy/governance.rs",
-            "let caller = resolve_principal_with_runtime_registry(repo, &config)?;",
+            "let caller = but_authz::resolve_principal_from_env(&config)?;",
         ),
         (
             "crates/but-api/src/legacy/governance.rs",
-            "let caller = resolve_principal_with_runtime_registry(repo, &config)?;",
+            "let caller = but_authz::resolve_principal_from_env(&config)?;",
         ),
         (
             "crates/but-api/src/legacy/governance.rs",
-            "let caller = resolve_principal_with_runtime_registry(repo, &config)?;",
+            "let caller = but_authz::resolve_principal_from_env(&config)?;",
         ),
         (
             "crates/but-api/src/legacy/governance.rs",
-            "let caller = resolve_principal_with_runtime_registry(repo, &config)?;",
+            "let caller = but_authz::resolve_principal_from_env(&config)?;",
         ),
         (
             "crates/but-api/src/legacy/governance.rs",
-            "let caller = resolve_principal_with_runtime_registry(repo, &config)?;",
+            "let caller = but_authz::resolve_principal_from_env(&config)?;",
         ),
         (
             "crates/but-api/src/legacy/merge_gate.rs",
-            "let principal = resolve_principal_with_runtime_registry(&repo, &config.gov)?;",
+            "let principal = but_authz::resolve_principal_from_env(&config.gov)?;",
         ),
         (
             "crates/but-api/src/legacy/rules.rs",
-            "let caller = resolve_principal_with_runtime_registry(&repo, &config)?;",
+            "let caller = but_authz::resolve_principal_from_env(&config)?;",
         ),
     ];
 
@@ -291,15 +236,13 @@ fn test_runtime_registry_wrapper_callsite_set_is_authoritative() -> anyhow::Resu
         FORGE_GUARD,
         GOVERNANCE,
         MERGE_GATE,
-        "crates/but-api/src/legacy/rules.rs",
+        RULES,
     ] {
         let source = fs::read_to_string(workspace_root.join(relative_path))
             .with_context(|| format!("read {relative_path}"))?;
         for line in source.lines() {
             let trimmed = line.trim();
-            if trimmed.contains("resolve_principal_with_runtime_registry(")
-                && !trimmed.starts_with("pub(crate) fn ")
-            {
+            if trimmed.contains("but_authz::resolve_principal_from_env(") {
                 actual.push((relative_path, trimmed.to_owned()));
             }
         }
@@ -310,7 +253,7 @@ fn test_runtime_registry_wrapper_callsite_set_is_authoritative() -> anyhow::Resu
         .collect::<Vec<_>>();
     assert_eq!(
         actual, expected,
-        "authoritative runtime wrapper callsite set changed"
+        "authoritative env-resolver callsite set changed"
     );
     Ok(())
 }
@@ -323,26 +266,6 @@ fn test_commit_gate_resolution_order_doc_precedes_function() -> anyhow::Result<(
 #[test]
 fn test_merge_gate_resolution_order_doc_precedes_function() -> anyhow::Result<()> {
     assert_resolution_order_docs_for_targets(&[(MERGE_GATE, "enforce_merge_gate")])
-}
-
-#[test]
-fn test_governance_resolution_order_docs_precede_functions() -> anyhow::Result<()> {
-    assert_eq!(
-        GOVERNANCE_RESOLUTION_ORDER_SURFACES.len(),
-        6,
-        "IDENT-021 governance coverage must include exactly six target surfaces"
-    );
-    assert!(
-        GOVERNANCE_RESOLUTION_ORDER_SURFACES.contains(&"whoami_with_repo")
-            && GOVERNANCE_RESOLUTION_ORDER_SURFACES.contains(&"can_i_with_repo"),
-        "IDENT-021 governance coverage must include whoami_with_repo and can_i_with_repo"
-    );
-
-    let targets = GOVERNANCE_RESOLUTION_ORDER_SURFACES
-        .iter()
-        .map(|function| (GOVERNANCE, *function))
-        .collect::<Vec<_>>();
-    assert_resolution_order_docs_for_targets(&targets)
 }
 
 #[test]
@@ -365,22 +288,20 @@ fn test_rules_resolution_order_doc_precedes_function() -> anyhow::Result<()> {
 
 #[test]
 fn test_resolution_order_documented() -> anyhow::Result<()> {
-    let mut targets = vec![
+    // The five governed ENFORCEMENT gates each document env-primary identity
+    // resolution. (The governance read-only surfaces resolve through the same
+    // path but are not enforcement gates, so they are not asserted here.)
+    let targets = vec![
         (COMMIT_GATE, "enforce_commit_gate_for_target"),
         (MERGE_GATE, "enforce_merge_gate"),
         (FORGE_GUARD, "authorize_branch_action"),
         (CONFIG_MUTATE, "enforce_administration_write_gate"),
         (RULES, "list_workspace_rules_scoped_for_caller"),
     ];
-    targets.extend(
-        GOVERNANCE_RESOLUTION_ORDER_SURFACES
-            .iter()
-            .map(|function| (GOVERNANCE, *function)),
-    );
     assert_eq!(
         targets.len(),
-        11,
-        "IDENT-021 must cover all 11 runtime-registry identity surfaces"
+        5,
+        "every governed enforcement gate must document env-primary identity resolution"
     );
     assert_resolution_order_docs_for_targets(&targets)
 }
@@ -393,15 +314,13 @@ fn test_but_agent_handle_env_reads_only_in_authorize() -> anyhow::Result<()> {
         "crates/but-authz/src/denial.rs",
         "crates/but-authz/src/lib.rs",
         "crates/but-authz/src/menu.rs",
-        "crates/but-authz/src/process.rs",
-        "crates/but-authz/src/registry.rs",
         AUTHZ_ROUTE,
         COMMIT_GATE,
         CONFIG_MUTATE,
         FORGE_GUARD,
         GOVERNANCE,
         MERGE_GATE,
-        "crates/but-api/src/legacy/rules.rs",
+        RULES,
     ];
     let mut direct_env_reads = Vec::new();
     for relative_path in governed_sources {
@@ -452,58 +371,6 @@ fn test_permissions_path_deprecated() -> anyhow::Result<()> {
     assert!(
         previous_line.trim_start().starts_with("#[deprecated"),
         "#[deprecated] must be immediately above PERMISSIONS_PATH; found previous line {previous_line:?}"
-    );
-    Ok(())
-}
-
-#[test]
-fn test_registry_ttl_process_identity_negative_controls_present() -> anyhow::Result<()> {
-    let workspace_root = workspace_root()?;
-    let registry_src =
-        fs::read_to_string(workspace_root.join("crates/but-authz/tests/registry.rs"))
-            .context("read registry tests")?;
-    let process_src = fs::read_to_string(workspace_root.join("crates/but-authz/tests/process.rs"))
-        .context("read process tests")?;
-    let gate_swap_src =
-        fs::read_to_string(workspace_root.join("crates/but-api/tests/gate_registry_swap.rs"))
-            .context("read gate registry swap tests")?;
-    let combined = format!("{registry_src}\n{process_src}\n{gate_swap_src}");
-
-    for required in [
-        "IDENT_001_same_pid_with_different_start_time_does_not_resolve",
-        "IDENT_001_gc_keeps_expiry_boundary_and_drops_afterwards",
-        "IDENT_002_nonexistent_pid_returns_error_that_names_pid",
-        "expired_current_process_registry_entry_denied",
-        "current_pid_wrong_start_time_denied_at_commit_gate",
-        "wrong_pid_current_start_time_denied_at_commit_gate",
-        "malformed_registry_propagates_instead_of_empty",
-    ] {
-        assert!(
-            combined.contains(required),
-            "registry/process identity coverage must include negative-control test {required}"
-        );
-    }
-
-    let success_only_needles = [
-        "registered_process_allowed",
-        "register_resolve_round_trip",
-        "write_then_load_round_trips",
-    ];
-    let has_success_coverage = success_only_needles
-        .iter()
-        .all(|needle| combined.contains(needle));
-    let has_negative_coverage = [
-        "_denied",
-        "_does_not_resolve",
-        "_returns_error",
-        "_drops_afterwards",
-        "_propagates_instead_of_empty",
-    ]
-    .iter()
-    .all(|needle| combined.contains(needle));
-    assert!(
-        has_success_coverage && has_negative_coverage,
-        "registry coverage must not be success-only; required negative controls are part of the invariant"
     );
     Ok(())
 }

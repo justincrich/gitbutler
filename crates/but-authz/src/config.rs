@@ -1,12 +1,6 @@
 #![allow(deprecated)]
 
-use std::{
-    borrow::Borrow,
-    collections::BTreeMap,
-    env,
-    path::{Path, PathBuf},
-    str,
-};
+use std::{borrow::Borrow, collections::BTreeMap, path::Path, str};
 
 use anyhow::{Context, anyhow};
 use serde::{Deserialize, Serialize};
@@ -18,15 +12,6 @@ const AGENTS_PATH: &str = ".gitbutler/agents.toml";
 const PERMISSIONS_PATH: &str = ".gitbutler/permissions.toml";
 const GATES_PATH: &str = ".gitbutler/gates.toml";
 const CONFIG_INVALID: &str = "config.invalid";
-
-/// Environment override naming an explicit runtime registry file. When set it
-/// wins over every host-derived default and its parent directory is assumed to
-/// already exist (the operator owns the path).
-const AGENT_REGISTRY_PATH_ENV: &str = "BUT_AGENT_REGISTRY_PATH";
-/// Sole filename for the runtime agent registry. Shared by the `but agent`
-/// CLI writer and the gate reader so a process registered by the CLI is visible
-/// to the gate at the same resolved path.
-const RUNTIME_REGISTRY_FILE_NAME: &str = "agents-runtime.toml";
 
 /// Return the repository-relative governance agents path.
 ///
@@ -43,84 +28,6 @@ pub fn agents_path() -> &'static str {
 /// ```
 pub fn permissions_path() -> &'static str {
     PERMISSIONS_PATH
-}
-
-/// Resolved location of the runtime agent registry for one repository.
-///
-/// Produced by [`runtime_registry_location`] and consumed both by the
-/// `but agent` CLI (which writes the registry) and by the governed gates (which
-/// read it). `create_parent` tells the writer whether it must create the parent
-/// directory before writing — `true` for the host-derived defaults (XDG /
-/// worktree), `false` for the explicit `BUT_AGENT_REGISTRY_PATH` override whose
-/// directory the operator owns.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct RegistryLocation {
-    /// Absolute path to the `agents-runtime.toml` registry file.
-    pub path: PathBuf,
-    /// Whether the parent directory must be created before writing.
-    pub create_parent: bool,
-}
-
-/// Resolve the runtime agent registry location for `repo`.
-///
-/// This is the single source of truth for where the runtime registry lives, so
-/// the `but agent register` writer and the gate reader never diverge. Resolution
-/// order (first match wins):
-///
-/// 1. `BUT_AGENT_REGISTRY_PATH` — explicit override (`create_parent: false`).
-/// 2. `$XDG_RUNTIME_DIR/gitbutler/<repo-hash>/agents-runtime.toml`
-///    (`create_parent: true`).
-/// 3. `<workdir>/.gitbutler/agents-runtime.toml` (`create_parent: true`).
-/// 4. `None` — a bare repository with no override and no `XDG_RUNTIME_DIR` has
-///    no default registry location.
-///
-/// `<repo-hash>` is the lowercase hex of the first 16 bytes of the SHA-256 of
-/// the canonicalized git directory, keeping per-host registries isolated.
-///
-/// ```
-/// # fn example(repo: &gix::Repository) -> anyhow::Result<()> {
-/// if let Some(location) = but_authz::runtime_registry_location(repo)? {
-///     assert!(location.path.ends_with("agents-runtime.toml"));
-/// }
-/// # Ok(())
-/// # }
-/// ```
-pub fn runtime_registry_location(
-    repo: &gix::Repository,
-) -> anyhow::Result<Option<RegistryLocation>> {
-    if let Some(path) = env::var_os(AGENT_REGISTRY_PATH_ENV) {
-        return Ok(Some(RegistryLocation {
-            path: PathBuf::from(path),
-            create_parent: false,
-        }));
-    }
-
-    if let Some(runtime_dir) = env::var_os("XDG_RUNTIME_DIR") {
-        let path = PathBuf::from(runtime_dir)
-            .join("gitbutler")
-            .join(repo_hash(repo)?)
-            .join(RUNTIME_REGISTRY_FILE_NAME);
-        return Ok(Some(RegistryLocation {
-            path,
-            create_parent: true,
-        }));
-    }
-
-    Ok(repo.workdir().map(|workdir| RegistryLocation {
-        path: workdir.join(".gitbutler").join(RUNTIME_REGISTRY_FILE_NAME),
-        create_parent: true,
-    }))
-}
-
-fn repo_hash(repo: &gix::Repository) -> anyhow::Result<String> {
-    let path = gix::path::realpath(repo.git_dir()).unwrap_or_else(|_| repo.git_dir().to_owned());
-    let mut hasher = gix::hash::hasher(gix::hash::Kind::Sha256);
-    hasher.update(path.as_os_str().as_encoded_bytes());
-    let digest = hasher.try_finalize()?;
-    Ok(digest.as_slice()[..16]
-        .iter()
-        .map(|byte| format!("{byte:02x}"))
-        .collect())
 }
 
 /// Load committed governance config from the supplied target ref.
