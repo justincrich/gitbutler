@@ -86,19 +86,33 @@ review requirement at head) — applied **branching-mechanism-agnostically** (vi
 branches, plain git, opt-in worktrees). Role separation (implementer vs. reviewer vs.
 maintainer) **emerges from the permission set**; no enforcement path keys off a role name.
 
-A sixth functional group — **agent identity registration (IDENT)** — replaces the
-self-asserted `BUT_AGENT_HANDLE` environment variable with a runtime PID registry anchored
-in committed `.gitbutler/agents.toml`, so every governed `but` invocation resolves to a
-registered `(pid, start_time)` instead of whatever an agent claims to be. Identity here is
-process-level, **not cryptographic** (the trust root is the host OS plus the orchestrator
-that writes the registry). The IDENT chain (sprints 08–11) is **complete**: the
-registry/process engine, `but agent` CLI (register/whoami/list/migrate), the 8 gate callsite
-swap to `resolve_principal_with_registry`, env-handle deny-default hardening, the governed
-orchestration skills (but-init writes `agents.toml`; but-run-sprint registers subagents
-after spawn — no `BUT_AGENT_HANDLE` self-assertion), and the full documentation surface
-(`crates/but-authz/README.md`, RULES.md, cross-references) are all landed. A field migration
-of the `agent-intel` repo proved the end-to-end registry-path commit. Full spec
+A sixth functional group — **agent identity registration (IDENT)** — gives every governed
+`but` invocation a principal to resolve, anchored in committed `.gitbutler/agents.toml`, so a
+gate decides against *who* an agent is rather than whatever it claims. Identity here is
+process-level, **not cryptographic** (the trust root is the host OS plus the harness that
+assigns identity). Full spec
 → [`12-uc-agent-identity.md`](./prds/governance/12-uc-agent-identity.md).
+
+**Identity: why env-primary (a reversal worth recording).** IDENT first shipped a runtime
+**PID registry** — `but agent register` mapping `(pid, start_time) → agent_id`, with the
+gates resolving the *current* pid. Dogfooding it on `agent-intel` exposed a structural flaw:
+every agent runs `but` as a **one-shot child process** (`cd … && but commit`), so the pid the
+gate sees is an ephemeral grandchild that was never registered — registration was inert, the
+gate denied, and agents fell back to the `BUT_AGENT_HANDLE` env hatch for **100% of governed
+operations** (live: 112 env-hatch invocations vs. 8 failed `register` attempts; the registry
+resolved nothing). A PID **ancestry walk** was considered and rejected: the real harnesses
+(OpenCode, Claude Code) multiplex many subagents into *one* host process, so siblings are
+indistinguishable by process lineage. So the registry was **reverted** and `BUT_AGENT_HANDLE`
+made the **primary** identifier again — but now **set by the trusted harness wrapper**, not
+self-asserted by the agent: a verified probe confirmed OpenCode's `shell.env` hook injects the
+handle into each subagent's shell (host-set, un-forgeable), and on Claude Code / Codex (whose
+hooks can't mutate the child env) the steerer **match-enforces** — denying any governed `but`
+whose handle differs from the harness-assigned agent. The trust root is unchanged from what
+the registry already conceded (host + orchestrator); the machinery is far smaller and it
+actually governs the real execution model. The env-handle path is the **production** resolver
+(`resolve_principal_from_env`); a sealed (signed) token is noted as a possible follow-on, not
+built. UC-IDENT-02/03/04 (the registry/pid mechanism) are **superseded**; UC-IDENT-01
+(`agents.toml`) and UC-IDENT-05 (skills stop self-asserting) stand.
 
 **The thesis — irrigation, not a dam.** You don't harness a river by stopping it; you
 channel it. An agent *can* step outside the governed path, but if compliance is cheaper
@@ -115,7 +129,7 @@ the only acts with consequence.
 | Merge gate (`merge` authority + review-at-head, self-escalation-proof) | **Merged + tested** | `crates/but-api/src/legacy/merge_gate.rs`; `local_review_verdicts` in `but-db` |
 | CLI: `but perm` / `but group` | **Merged** | `crates/but/src/args/{perm,group}.rs` |
 | Desktop governance UI (Tauri IPC + settings scaffold) | **In progress** — IPC merged; principal/group/branch-gate forms pending | `apps/desktop/.../governance/` |
-| Agent identity registry (`but agent` register/whoami/migrate, `agents.toml`) | **Implemented** — engine + CLI + 8-callsite gate swap + env-handle deny-default + orchestration skills + docs, all on `kb/steer-integration`; field-proven on `agent-intel` | `crates/but-authz/src/{registry,process,authorize}.rs`, `crates/but/src/command/agent.rs`, [`crates/but-authz/README.md`](../../crates/but-authz/README.md); [`12-uc-agent-identity.md`](./prds/governance/12-uc-agent-identity.md) |
+| Agent identity (env-primary `BUT_AGENT_HANDLE`, harness-injected; `agents.toml`) | **Implemented** — 11-callsite gate resolution via `resolve_principal_from_env` + `but agent list --committed`/`migrate` + harness injection (OpenCode `shell.env`, CC/Codex match-enforcement) + docs, on `kb/steer-integration`; field-tested on `agent-intel`. The PID registry was tried and **reverted** (see *Identity: why env-primary* above). | `crates/but-authz/src/authorize.rs`, `crates/but/src/command/agent.rs`, git→but steerer, [`crates/but-authz/README.md`](../../crates/but-authz/README.md); [`12-uc-agent-identity.md`](./prds/governance/12-uc-agent-identity.md) |
 
 **What it deliberately does *not* do** (stated plainly, because honesty is part of the
 design): it governs GitButler's own `but` actions, **not raw git or the filesystem** — the
@@ -144,13 +158,11 @@ crates/
 │       ├── authority.rs                 permission tokens (contents:write, merge, …) + parse/serialize
 │       ├── principal.rs                 principals, groups, ids
 │       ├── config.rs                    load agents.toml / gates.toml at the TARGET ref; branch protection
-│       ├── authorize.rs                 the authorize() decision + principal resolution + effective authority
+│       ├── authorize.rs    [IDENT]      the authorize() decision + env-primary principal resolution (resolve_principal_from_env)
 │       ├── denial.rs                    structured {code,message,remediation} Denial + steering envelope
 │       ├── route.rs        [STEER]      ROUTE_AUTHORITY_TABLE — single source of route → required authority
 │       ├── menu.rs         [STEER]      capability catalog + authorized_actions() for can-i / whoami
 │       ├── assignment_state.rs [STEER]  gate-state input feeding gate-aware authorized actions
-│       ├── registry.rs     [IDENT]      runtime PID registry backed by .gitbutler/agents-runtime.toml
-│       └── process.rs      [IDENT]      process-identity primitives (pid, start_time)
 │
 ├── but-api/                            ← gates wired into the existing action boundaries
 │   └── src/
@@ -175,7 +187,7 @@ crates/
 │       ├── group.rs                     `but group`  — inspect / administer principal groups
 │       ├── whoami.rs       [STEER]      `but whoami` — resolve & print the registered principal
 │       ├── can_i.rs        [STEER]      `but can-i`  — authority self-check (blocked-agent self-discovery)
-│       └── agent.rs       [IDENT]      `but agent`  — runtime register / migrate
+│       └── agent.rs       [IDENT]      `but agent`  — list --committed roster / migrate
 │
 └── gitbutler-tauri/
     └── src/governance.rs                Tauri IPC command boundary (signed-in fleet-owner identity)
@@ -208,7 +220,7 @@ apps/desktop/src/
 | **Read API** | `but-api/src/legacy/governance.rs` | Read-side governance queries (current config, pending state) for the desktop UI. | Merged |
 | **CLI — admin** | `but perm`, `but group` | Inspect / administer permissions and principal groups. | Merged |
 | **CLI — self-discovery** [STEER] | `but can-i`, `but whoami`, `governance-denial-primer.md` (+ `route.rs`/`menu.rs`/`assignment_state.rs`) | A blocked agent can ask what it's allowed to do next instead of guessing — authority self-check + identity resolution over the single route-authority table. | Merged |
-| **Identity** [IDENT] | `but agent` + `but-authz` `registry.rs`/`process.rs`/`authorize.rs` (`agents.toml`) + orchestration skills + `crates/but-authz/README.md` | Runtime PID registry replacing the self-asserted `BUT_AGENT_HANDLE`. Engine + CLI + 8 gate callsites swapped to `resolve_principal_with_registry` + env-handle deny-default locked + skills migrated (but-init writes `agents.toml`; but-run-sprint registers after spawn) + docs. Field-proven on `agent-intel`. | On `kb/steer-integration` |
+| **Identity** [IDENT] | `but agent` + `but-authz` `authorize.rs` (`agents.toml`) + git→but steerer + `crates/but-authz/README.md` | **Env-primary, harness-injected `BUT_AGENT_HANDLE`** (the runtime PID registry was tried and reverted — see *Identity: why env-primary* below). The 11 gate callsites resolve via `resolve_principal_from_env` against committed `agents.toml`; the trusted harness wrapper assigns each agent's handle (OpenCode `shell.env` injection; Claude Code/Codex PreToolUse match-enforcement). Field-tested on `agent-intel`. | On `kb/steer-integration` |
 | **Desktop** | `gitbutler-tauri/src/governance.rs`; `apps/desktop/src/{components,lib}/governance/*` | Tauri IPC boundary (fleet-owner identity) + Svelte settings UI to view/edit principals & groups. | IPC + read views merged; some edit forms pending |
 | **Config** | `.gitbutler/agents.toml`, `.gitbutler/gates.toml` | The committed, ref-pinned source of truth both gates read at the target ref. `agents.toml` supersedes `permissions.toml` (one-release legacy fallback via `but agent migrate`). | Merged |
 

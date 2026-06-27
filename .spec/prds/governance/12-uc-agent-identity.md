@@ -6,6 +6,21 @@ functional_group: IDENT
 ---
 # Use Cases: Agent Identity Registration (IDENT)
 
+> **⚠️ SUPERSEDED IN PART (env-primary identity).** UC-IDENT-02 (runtime PID registry),
+> UC-IDENT-03 (registry resolution at the gates), and UC-IDENT-04 (`but agent
+> register`/`unregister`/`whoami` CLI) describe a **runtime PID registry** that was built,
+> dogfooded on `agent-intel`, and then **reverted**. The registry could not govern the real
+> execution model: every agent runs `but` as a one-shot child process whose pid is never the
+> registered pid, so registration was inert and the env hatch carried 100% of governed
+> operations. Identity is now **environment-primary** — `BUT_AGENT_HANDLE` resolved via
+> `resolve_principal_from_env` against committed `agents.toml`, **set by the trusted harness
+> wrapper** (OpenCode `shell.env` injection; Claude Code/Codex PreToolUse match-enforcement),
+> not self-asserted by the agent. See [`.spec/README.md`](../../README.md) → *Identity: why
+> env-primary* for the full decision record + evidence, and `crates/but-authz/README.md` for
+> the current model. **UC-IDENT-01** (`agents.toml` rename) and **UC-IDENT-05** (skills stop
+> self-asserting the handle) survive the reversal and are satisfied by harness injection. The
+> UCs below are preserved as the historical record of what was tried.
+
 Today an agent's identity is a self-asserted string in `BUT_AGENT_HANDLE` — a caller-controlled env var the engine trusts verbatim. This initiative replaces that string with a **runtime PID registry** whose identifiers are anchored in committed `.gitbutler/agents.toml`. Every governed `but` invocation must be attributable to a registered agent identifier, and the engine must refuse unregistered callers. Identity is process-level (`(pid, start_time)`), not cryptographic; the trust root is the host OS + the orchestrator that writes the registry file. `permissions.toml` is renamed to `agents.toml` (the `[[principal]]` block becomes `[[agent]]`); the runtime registry is a sibling file (`agents-runtime.toml`, gitignored) mapping `(pid, start_time, expiry) → agent_id`.
 
 > **Honest threat model.** Spoofing collapses to "write to the registry file you already have fs access to" — same trust root as `permissions.toml` today, but now every governed call **requires a registry hit** instead of trusting a caller-set env var. Cross-host non-repudiation, cryptographic signatures, keychain storage, and sandboxing are explicitly **out of scope** this slice.
@@ -35,7 +50,7 @@ The static, committed, ref-pinned principal catalog is renamed: `[[principal]]` 
 
 ---
 
-## UC-IDENT-02: Runtime PID registry
+## UC-IDENT-02: Runtime PID registry  · **SUPERSEDED (reverted; see header note)**
 A runtime registry file maps `(pid, start_time) → (agent_id, expiry, registered_at, registered_by)`. Default location `$XDG_RUNTIME_DIR/gitbutler/<repo-hash>/agents-runtime.toml` (tmpfs on Linux, dies on reboot); override via `BUT_AGENT_REGISTRY_PATH` for tests/sandboxing. Mode 0600, owned by the user. `start_time` is unix seconds from `/proc/[pid]/stat` field 22 (Linux) or `libproc` `proc_pidinfo(PROC_PIDTBSDINFO)` (macOS) — cheap PID-reuse defense: a recycled PID with a new start_time is rejected as stale. Entries expire (default TTL 4h, overridable per-registration); expired entries are GC'd lazily on read.
 
 ### Acceptance Criteria
@@ -49,7 +64,7 @@ A runtime registry file maps `(pid, start_time) → (agent_id, expiry, registere
 
 ---
 
-## UC-IDENT-03: Enforced resolution at every gate
+## UC-IDENT-03: Enforced resolution at every gate  · **SUPERSEDED (env-primary; see header note)**
 The 8 gate callsites in `but-api` (`commit/gate.rs:72`, `legacy/merge_gate.rs:114`, `legacy/governance.rs:{347,378,448,750}`, `legacy/forge.rs:58`, `legacy/config_mutate.rs:23`) switch from `resolve_principal_from_env(&cfg)` to `resolve_principal_with_registry(reg, &cfg)`. Resolution order: (1) registry hit → principal; (2) registry miss + `BUT_AUTHZ_ALLOW_ENV_HANDLE=1` → env fallback; (3) else → `Denial::unregistered(pid)` (code = `perm.denied`, consistent with `no_handle`). A stale registration (start_time mismatch) yields `Denial::stale_registration(pid, start)`. The registry is loaded once per gate invocation (cheap — small file, in-memory map). Load path resolves via `BUT_AGENT_REGISTRY_PATH` → `$XDG_RUNTIME_DIR/gitbutler/<repo-hash>/agents-runtime.toml` → absence (fall through to env/denial).
 
 ### Acceptance Criteria
@@ -63,7 +78,7 @@ The 8 gate callsites in `but-api` (`commit/gate.rs:72`, `legacy/merge_gate.rs:11
 
 ---
 
-## UC-IDENT-04: `but agent` CLI surface
+## UC-IDENT-04: `but agent` CLI surface  · **SUPERSEDED (register/unregister/whoami removed; see header note)**
 A new `but agent` noun mirrors the `but perm` / `but group` shape (`crates/but/src/command/perm.rs` is the template). Verbs: `register`, `unregister`, `list`, `list --committed`, `whoami`, `migrate`. Registration validates that `agent_id` exists in committed `agents.toml` (fail-fast: `but agent register --as ghost` exits 1 immediately, not later at gate time). The orchestrator is allowed to register arbitrary PIDs (its children); a malicious caller could register a PID it doesn't own, but it could also just register its own PID and act — no additional risk.
 
 ### Acceptance Criteria
