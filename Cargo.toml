@@ -239,6 +239,7 @@ keyring = { version = "3.6.3", features = [
     "crypto-rust",
 ] }
 anyhow = "1.0.100"
+libc = "0.2.186"
 parking_lot = "0.12.4"
 boolean-enums = { version = "0.4.1", features = ["serde"] }
 futures = "0.3.31"

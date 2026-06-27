@@ -1,9 +1,0 @@
-
-> @gitbutler/desktop@0.0.0 check /Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-006-PRINCIPALS-LIST-CONTRACT/apps/desktop
-> svelte-check --tsconfig ./tsconfig.json
-
-sh: svelte-check: command not found
-/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/DEPENDENCY-MGMT-UI-006-PRINCIPALS-LIST-CONTRACT/apps/desktop:
- ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  @gitbutler/desktop@0.0.0 check: `svelte-check --tsconfig ./tsconfig.json`
-spawn ENOENT
- WARN   Local package.json exists, but node_modules missing, did you mean to install?

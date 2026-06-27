@@ -26,6 +26,7 @@ const MERGE_GATE: &str = "crates/but-api/src/legacy/merge_gate.rs";
 const CONFIG_MUTATE: &str = "crates/but-api/src/legacy/config_mutate.rs";
 const GOVERNANCE: &str = "crates/but-api/src/legacy/governance.rs";
 const FORGE_GUARD: &str = "crates/but-api/src/legacy/forge.rs";
+const RULES: &str = "crates/but-api/src/legacy/rules.rs";
 const ENFORCEMENT_PATHS: &[&str] = &[
     AUTHZ_AUTHORIZE,
     AUTHZ_CONFIG,
@@ -35,6 +36,7 @@ const ENFORCEMENT_PATHS: &[&str] = &[
     CONFIG_MUTATE,
     GOVERNANCE,
     FORGE_GUARD,
+    RULES,
 ];
 const SPRINT_02_ENFORCEMENT_PATHS: &[&str] = &[MERGE_GATE, CONFIG_MUTATE, FORGE_GUARD];
 
@@ -152,6 +154,10 @@ const STEER_ROUTE_VARIANTS: &[&str] = &[
     "ForgePullRequestsWrite",
     "Admin",
 ];
+// Env-primary resolution: every governed gate's doc names the environment
+// resolver + the `BUT_AGENT_HANDLE` carrier. (The runtime PID registry was
+// superseded — see `.spec/prds/governance/12-uc-agent-identity.md`.)
+const RESOLUTION_ORDER_DOC_LITERALS: &[&str] = &["resolve_principal_from_env", "BUT_AGENT_HANDLE"];
 
 #[test]
 fn invariant_build_gates() -> anyhow::Result<()> {
@@ -262,6 +268,211 @@ fn invariant_build_gates() -> anyhow::Result<()> {
 
     assert_seeded_controls_fire()?;
 
+    Ok(())
+}
+
+#[test]
+fn test_env_resolver_callsite_set_is_authoritative() -> anyhow::Result<()> {
+    // Env-primary: every governed gate resolves identity through
+    // `but_authz::resolve_principal_from_env`. This asserts the authoritative
+    // callsite set so a silent reintroduction of a divergent resolver (or a
+    // raw `BUT_AGENT_HANDLE` read at a gate) is caught.
+    let workspace_root = workspace_root()?;
+
+    let expected = [
+        // The commit gate's env-primary resolution moved into the
+        // mechanism-agnostic `but_authz` waist (`enforce_commit_gate_for_target`),
+        // so `but-api/src/commit/gate.rs` no longer carries the callsite. The
+        // file stays in the scan set below so a divergent resolver reintroduced
+        // there is still caught.
+        (
+            "crates/but-api/src/legacy/config_mutate.rs",
+            "let principal = but_authz::resolve_principal_from_env(&cfg)?;",
+        ),
+        (
+            "crates/but-api/src/legacy/forge.rs",
+            "let principal = but_authz::resolve_principal_from_env(&cfg)?;",
+        ),
+        (
+            "crates/but-api/src/legacy/governance.rs",
+            "let authorities = match but_authz::resolve_principal_from_env(&config) {",
+        ),
+        (
+            "crates/but-api/src/legacy/governance.rs",
+            "let caller = but_authz::resolve_principal_from_env(&config)?;",
+        ),
+        (
+            "crates/but-api/src/legacy/governance.rs",
+            "let caller = but_authz::resolve_principal_from_env(&config)?;",
+        ),
+        (
+            "crates/but-api/src/legacy/governance.rs",
+            "let caller = but_authz::resolve_principal_from_env(&config)?;",
+        ),
+        (
+            "crates/but-api/src/legacy/governance.rs",
+            "let caller = but_authz::resolve_principal_from_env(&config)?;",
+        ),
+        (
+            "crates/but-api/src/legacy/governance.rs",
+            "let caller = but_authz::resolve_principal_from_env(&config)?;",
+        ),
+        (
+            "crates/but-api/src/legacy/merge_gate.rs",
+            "let principal = but_authz::resolve_principal_from_env(&config.gov)?;",
+        ),
+        (
+            "crates/but-api/src/legacy/rules.rs",
+            "let caller = but_authz::resolve_principal_from_env(&config)?;",
+        ),
+    ];
+
+    let mut actual = Vec::new();
+    for relative_path in [
+        COMMIT_GATE,
+        CONFIG_MUTATE,
+        FORGE_GUARD,
+        GOVERNANCE,
+        MERGE_GATE,
+        RULES,
+    ] {
+        let source = fs::read_to_string(workspace_root.join(relative_path))
+            .with_context(|| format!("read {relative_path}"))?;
+        for line in source.lines() {
+            let trimmed = line.trim();
+            if trimmed.contains("but_authz::resolve_principal_from_env(") {
+                actual.push((relative_path, trimmed.to_owned()));
+            }
+        }
+    }
+    let expected = expected
+        .into_iter()
+        .map(|(path, line)| (path, line.to_owned()))
+        .collect::<Vec<_>>();
+    assert_eq!(
+        actual, expected,
+        "authoritative env-resolver callsite set changed"
+    );
+    Ok(())
+}
+
+#[test]
+fn test_commit_gate_resolution_order_doc_precedes_function() -> anyhow::Result<()> {
+    // The full `enforce_commit_gate_for_target` waist now lives in `but_authz`;
+    // the but-api commit enforcement entry point is the thin `enforce_commit_gate`
+    // wrapper, whose doc names the env-primary resolution the waist performs.
+    assert_resolution_order_docs_for_targets(&[(COMMIT_GATE, "enforce_commit_gate")])
+}
+
+#[test]
+fn test_merge_gate_resolution_order_doc_precedes_function() -> anyhow::Result<()> {
+    assert_resolution_order_docs_for_targets(&[(MERGE_GATE, "enforce_merge_gate")])
+}
+
+#[test]
+fn test_forge_resolution_order_doc_precedes_function() -> anyhow::Result<()> {
+    assert_resolution_order_docs_for_targets(&[(FORGE_GUARD, "authorize_branch_action")])
+}
+
+#[test]
+fn test_config_mutate_resolution_order_doc_precedes_function() -> anyhow::Result<()> {
+    assert_resolution_order_docs_for_targets(&[(
+        CONFIG_MUTATE,
+        "enforce_administration_write_gate",
+    )])
+}
+
+#[test]
+fn test_rules_resolution_order_doc_precedes_function() -> anyhow::Result<()> {
+    assert_resolution_order_docs_for_targets(&[(RULES, "list_workspace_rules_scoped_for_caller")])
+}
+
+#[test]
+fn test_resolution_order_documented() -> anyhow::Result<()> {
+    // The five governed ENFORCEMENT gates each document env-primary identity
+    // resolution. (The governance read-only surfaces resolve through the same
+    // path but are not enforcement gates, so they are not asserted here.)
+    let targets = vec![
+        (COMMIT_GATE, "enforce_commit_gate"),
+        (MERGE_GATE, "enforce_merge_gate"),
+        (FORGE_GUARD, "authorize_branch_action"),
+        (CONFIG_MUTATE, "enforce_administration_write_gate"),
+        (RULES, "list_workspace_rules_scoped_for_caller"),
+    ];
+    assert_eq!(
+        targets.len(),
+        5,
+        "every governed enforcement gate must document env-primary identity resolution"
+    );
+    assert_resolution_order_docs_for_targets(&targets)
+}
+
+#[test]
+fn test_but_agent_handle_env_reads_only_in_authorize() -> anyhow::Result<()> {
+    let workspace_root = workspace_root()?;
+    let governed_sources = [
+        AUTHZ_CONFIG,
+        "crates/but-authz/src/denial.rs",
+        "crates/but-authz/src/lib.rs",
+        "crates/but-authz/src/menu.rs",
+        AUTHZ_ROUTE,
+        COMMIT_GATE,
+        CONFIG_MUTATE,
+        FORGE_GUARD,
+        GOVERNANCE,
+        MERGE_GATE,
+        RULES,
+    ];
+    let mut direct_env_reads = Vec::new();
+    for relative_path in governed_sources {
+        let source = fs::read_to_string(workspace_root.join(relative_path))
+            .with_context(|| format!("read {relative_path}"))?;
+        for (line_index, line) in source.lines().enumerate() {
+            let reads_env = line.contains("env::var") || line.contains("std::env::var");
+            if line.contains("BUT_AGENT_HANDLE") && reads_env {
+                direct_env_reads.push(format!("{relative_path}:{}:{line}", line_index + 1));
+            }
+        }
+    }
+    assert!(
+        direct_env_reads.is_empty(),
+        "direct_env_reads=0 outside authorize.rs; found:\n{}",
+        direct_env_reads.join("\n")
+    );
+    Ok(())
+}
+
+#[test]
+fn test_agents_path_exists() -> anyhow::Result<()> {
+    let workspace_root = workspace_root()?;
+    let config_src = fs::read_to_string(workspace_root.join(AUTHZ_CONFIG))
+        .with_context(|| format!("read {AUTHZ_CONFIG}"))?;
+    assert!(
+        config_src.contains(r#"const AGENTS_PATH: &str = ".gitbutler/agents.toml";"#),
+        "AGENTS_PATH must remain the preferred governance identity config path"
+    );
+    Ok(())
+}
+
+#[test]
+fn test_permissions_path_deprecated() -> anyhow::Result<()> {
+    let workspace_root = workspace_root()?;
+    let config_src = fs::read_to_string(workspace_root.join(AUTHZ_CONFIG))
+        .with_context(|| format!("read {AUTHZ_CONFIG}"))?;
+    let permissions_line = config_src
+        .lines()
+        .position(|line| line.contains("const PERMISSIONS_PATH: &str"))
+        .context("PERMISSIONS_PATH const must exist")?;
+    let lines = config_src.lines().collect::<Vec<_>>();
+    let previous_line = lines[..permissions_line]
+        .iter()
+        .rev()
+        .find(|line| !line.trim().is_empty())
+        .context("PERMISSIONS_PATH must have a preceding attribute line")?;
+    assert!(
+        previous_line.trim_start().starts_with("#[deprecated"),
+        "#[deprecated] must be immediately above PERMISSIONS_PATH; found previous line {previous_line:?}"
+    );
     Ok(())
 }
 
@@ -547,6 +758,78 @@ fn assert_paths_exist_and_non_empty(root: &Path, relative_paths: &[&str]) -> any
         }
     }
     Ok(())
+}
+
+fn assert_resolution_order_docs_for_targets(targets: &[(&str, &str)]) -> anyhow::Result<()> {
+    let workspace_root = workspace_root()?;
+    let mut failures = Vec::new();
+    for (relative_path, function_name) in targets {
+        let source = fs::read_to_string(workspace_root.join(relative_path))
+            .with_context(|| format!("read {relative_path}"))?;
+        let doc_block = match preceding_doc_block(&source, function_name) {
+            Ok(doc_block) => doc_block,
+            Err(error) => {
+                failures.push(format!(
+                    "{relative_path}::{function_name} missing preceding /// doc block: {error:#}"
+                ));
+                continue;
+            }
+        };
+        for literal in RESOLUTION_ORDER_DOC_LITERALS {
+            if !doc_block.contains(literal) {
+                failures.push(format!(
+                    "{relative_path}::{function_name} doc block missing {literal:?}"
+                ));
+            }
+        }
+    }
+
+    if failures.is_empty() {
+        Ok(())
+    } else {
+        bail!(
+            "IDENT-021 resolution-order docs must name the runtime-registry resolver chain and denial order:\n{}",
+            failures.join("\n")
+        )
+    }
+}
+
+fn preceding_doc_block(source: &str, function_name: &str) -> anyhow::Result<String> {
+    let function_line = source
+        .lines()
+        .position(|line| {
+            let trimmed = line.trim_start();
+            trimmed.starts_with(&format!("pub fn {function_name}("))
+                || trimmed.starts_with(&format!("pub async fn {function_name}("))
+                || trimmed.starts_with(&format!("pub(crate) fn {function_name}("))
+        })
+        .with_context(|| format!("function {function_name} not found"))?;
+    let lines = source.lines().collect::<Vec<_>>();
+    let mut cursor = function_line;
+    while cursor > 0 {
+        let previous = lines[cursor - 1].trim_start();
+        if previous.is_empty() || previous.starts_with("#[") {
+            cursor -= 1;
+            continue;
+        }
+        break;
+    }
+
+    let mut doc_lines = Vec::new();
+    while cursor > 0 {
+        let previous = lines[cursor - 1].trim_start();
+        if let Some(doc) = previous.strip_prefix("///") {
+            doc_lines.push(doc.trim_start());
+            cursor -= 1;
+        } else {
+            break;
+        }
+    }
+    doc_lines.reverse();
+    if doc_lines.is_empty() {
+        bail!("function {function_name} has no immediately preceding /// doc block");
+    }
+    Ok(doc_lines.join("\n"))
 }
 
 fn assert_grep_has_no_matches(

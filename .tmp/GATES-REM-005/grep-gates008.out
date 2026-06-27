@@ -1,3 +1,0 @@
-    VERIFY: ./tools/governance-checks/check_merge_gate_production_unchanged.sh
-    { "id": "TC-3", "type": "test_criterion", "description": "GATES-008 modifies NO production merge-path classification logic (merge_gate.rs production unchanged via direct-diff); AUTHZ-004 remains the owner (no duplicate undefined-group/malformed check)", "verify": "./tools/governance-checks/check_merge_gate_production_unchanged.sh", "maps_to_ac": "AC-2" },
-exit=0

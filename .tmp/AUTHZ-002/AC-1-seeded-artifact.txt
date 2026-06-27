@@ -1,3 +1,0 @@
-dev effective set contains Authority::ContentsWrite
-ro effective set excludes Authority::ContentsWrite
-branch main protected == true

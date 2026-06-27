@@ -1,3 +1,0 @@
-$ ! grep -rEni 'is_bot|is_human|"human"|"ai"|\bhuman\b|\bbot\b' crates/but-api/src/legacy/review_requirement.rs
-
-exit_code=0

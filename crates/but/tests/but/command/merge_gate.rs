@@ -13,7 +13,7 @@ fn merge_gate_auto_merge_denial_is_structured() -> anyhow::Result<()> {
 
     env.but("--format json pr auto-merge 1")
         .allow_json()
-        .env("BUT_AGENT_HANDLE", "impl")
+        .env("BUT_AUTHZ_ALLOW_ENV_HANDLE", "1").env("BUT_AGENT_HANDLE", "impl")
         .assert()
         .failure()
         .stdout_eq(snapbox::str![[r#"

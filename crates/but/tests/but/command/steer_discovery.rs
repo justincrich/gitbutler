@@ -103,6 +103,7 @@ fn steer_discovery_affordance_surfaced_in_menu() -> anyhow::Result<()> {
     // Prove the discovery verb is a REAL shipped CLI verb — no phantom command.
     let discovery_run = env
         .but("perm list")
+        .env("BUT_AUTHZ_ALLOW_ENV_HANDLE", "1")
         .env("BUT_AGENT_HANDLE", "rev")
         .output()?;
     assert!(
@@ -214,7 +215,11 @@ fn steer_discovery_membership_not_inline() -> anyhow::Result<()> {
 fn steer_whoami_returns_full_self_picture() -> anyhow::Result<()> {
     let env = reviewers_group_with_members_env()?;
 
-    let output = env.but("whoami").env("BUT_AGENT_HANDLE", "rev").output()?;
+    let output = env
+        .but("whoami")
+        .env("BUT_AUTHZ_ALLOW_ENV_HANDLE", "1")
+        .env("BUT_AGENT_HANDLE", "rev")
+        .output()?;
     assert!(
         output.status.success(),
         "`but whoami` as rev must exit 0: {}",
@@ -267,6 +272,7 @@ fn steer_discovery_cross_principal_denied() -> anyhow::Result<()> {
     // Cross-principal: rev cannot recon maint's authority set.
     let cross = env
         .but("can-i --principal maint merge")
+        .env("BUT_AUTHZ_ALLOW_ENV_HANDLE", "1")
         .env("BUT_AGENT_HANDLE", "rev")
         .output()?;
     assert_eq!(
@@ -289,6 +295,7 @@ fn steer_discovery_cross_principal_denied() -> anyhow::Result<()> {
     // Self can-i: rev holds reviews:write via group → exit 0.
     let self_check = env
         .but("can-i reviews:write")
+        .env("BUT_AUTHZ_ALLOW_ENV_HANDLE", "1")
         .env("BUT_AGENT_HANDLE", "rev")
         .output()?;
     assert!(
@@ -317,7 +324,11 @@ fn steer_discovery_cross_principal_denied() -> anyhow::Result<()> {
 fn steer_whoami_hides_other_group_members() -> anyhow::Result<()> {
     let env = reviewers_group_with_members_env()?;
 
-    let output = env.but("whoami").env("BUT_AGENT_HANDLE", "rev").output()?;
+    let output = env
+        .but("whoami")
+        .env("BUT_AUTHZ_ALLOW_ENV_HANDLE", "1")
+        .env("BUT_AGENT_HANDLE", "rev")
+        .output()?;
     assert!(
         output.status.success(),
         "`but whoami` as rev must exit 0: {}",
@@ -356,6 +367,7 @@ fn steer_discovery_not_a_principal_oracle() -> anyhow::Result<()> {
     // Unknown target.
     let unknown = env
         .but("can-i --principal ghost-9f3a merge")
+        .env("BUT_AUTHZ_ALLOW_ENV_HANDLE", "1")
         .env("BUT_AGENT_HANDLE", "rev")
         .output()?;
     assert_eq!(
@@ -379,6 +391,7 @@ fn steer_discovery_not_a_principal_oracle() -> anyhow::Result<()> {
     // Existing target (that rev cannot recon).
     let existing = env
         .but("can-i --principal maint merge")
+        .env("BUT_AUTHZ_ALLOW_ENV_HANDLE", "1")
         .env("BUT_AGENT_HANDLE", "rev")
         .output()?;
     assert_eq!(

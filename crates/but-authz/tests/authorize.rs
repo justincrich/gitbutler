@@ -1,10 +1,17 @@
+#![allow(non_snake_case)]
+
 use but_authz::{
     Authority, AuthoritySet, Denial, GovConfig, GroupName, Principal, PrincipalId, authorize,
-    effective_authority, load_governance_config, resolve_principal,
+    effective_authority, load_governance_config, resolve_principal, resolve_principal_from_env,
 };
 use std::ffi::OsString;
+use std::sync::Mutex;
 
 const TARGET_REF: &str = "refs/heads/main";
+
+// `resolve_principal_from_env` reads the real process environment, so a local
+// lock keeps the env-mutating positive case serialized within this binary.
+static ENV_LOCK: Mutex<()> = Mutex::new(());
 
 #[test]
 fn authorize_held_vs_missing() -> anyhow::Result<()> {
@@ -146,6 +153,49 @@ fn authority_only_from_config() -> anyhow::Result<()> {
     Ok(())
 }
 
+#[test]
+fn env_primary_handle_resolves_committed_principal() -> anyhow::Result<()> {
+    // Env-primary identity: a `BUT_AGENT_HANDLE` naming a committed principal
+    // resolves to that principal at the gate. This is the production path —
+    // `resolve_principal_from_env` is what every governed `but-api` gate calls.
+    let _guard = ENV_LOCK.lock().expect("env lock must not be poisoned");
+    with_agent_handle(Some("rust-implementer"), || {
+        let (repo, _tmp) = governed_repo();
+        let config = load_governance_config(&repo, TARGET_REF)?;
+
+        let principal = assert_principal_resolved(
+            resolve_principal_from_env(&config),
+            "a committed BUT_AGENT_HANDLE must resolve to its principal",
+        );
+
+        assert_eq!(
+            principal.id().as_str(),
+            "rust-implementer",
+            "the resolved principal must be the one named by BUT_AGENT_HANDLE"
+        );
+        Ok(())
+    })
+}
+
+#[test]
+fn env_primary_unset_handle_denies() -> anyhow::Result<()> {
+    // Fail closed: an unset `BUT_AGENT_HANDLE` resolves no principal and is
+    // denied with the stable `perm.denied` code (`Denial::no_handle`).
+    let _guard = ENV_LOCK.lock().expect("env lock must not be poisoned");
+    with_agent_handle(None, || {
+        let (repo, _tmp) = governed_repo();
+        let config = load_governance_config(&repo, TARGET_REF)?;
+
+        let denial = assert_no_principal_denied(resolve_principal_from_env(&config));
+        assert_eq!(
+            denial.code,
+            Denial::PERM_DENIED_CODE,
+            "an unset BUT_AGENT_HANDLE must fail closed with perm.denied"
+        );
+        Ok(())
+    })
+}
+
 fn governed_repo() -> (gix::Repository, impl std::fmt::Debug) {
     let (repo, tmp) = but_testsupport::writable_scenario("governance-base");
     but_testsupport::invoke_bash(
@@ -154,6 +204,10 @@ mkdir -p .gitbutler
 cat >.gitbutler/permissions.toml <<'EOF'
 [[principal]]
 id = "dev"
+permissions = ["contents:write"]
+
+[[principal]]
+id = "rust-implementer"
 permissions = ["contents:write"]
 
 [[principal]]
@@ -184,6 +238,35 @@ git commit -m "principals"
     (repo, tmp)
 }
 
+fn with_agent_handle(
+    agent_handle: Option<&str>,
+    test: impl FnOnce() -> anyhow::Result<()>,
+) -> anyhow::Result<()> {
+    let previous_agent = std::env::var_os("BUT_AGENT_HANDLE");
+    set_env_var("BUT_AGENT_HANDLE", agent_handle);
+    let result = test();
+    restore_env_var("BUT_AGENT_HANDLE", previous_agent);
+    result
+}
+
+fn set_env_var(key: &str, value: Option<&str>) {
+    unsafe {
+        match value {
+            Some(value) => std::env::set_var(key, value),
+            None => std::env::remove_var(key),
+        }
+    }
+}
+
+fn restore_env_var(key: &str, value: Option<OsString>) {
+    unsafe {
+        match value {
+            Some(value) => std::env::set_var(key, value),
+            None => std::env::remove_var(key),
+        }
+    }
+}
+
 fn principal(config: &GovConfig, id: &str) -> anyhow::Result<Principal> {
     let principal_id = PrincipalId::new(id);
     let authorities = config
@@ -210,5 +293,12 @@ fn assert_no_principal_denied(result: Result<Principal, Denial>) -> Denial {
             principal.id().as_str()
         ),
         Err(denial) => denial,
+    }
+}
+
+fn assert_principal_resolved(result: Result<Principal, Denial>, context: &str) -> Principal {
+    match result {
+        Ok(principal) => principal,
+        Err(denial) => panic!("{context}: {} {}", denial.code, denial.message),
     }
 }

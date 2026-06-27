@@ -1,2 +1,0 @@
-$ test "$(grep -c '^name = "but-authz"' Cargo.lock)" -eq 1
-exit_status=0

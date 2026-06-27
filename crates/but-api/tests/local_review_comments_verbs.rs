@@ -20,17 +20,24 @@ async fn post_comment_persists_comment_with_resolved_false() -> anyhow::Result<(
     let verdicts_before = verdict_count(&ctx)?;
     let assignments_before = assignment_count(&ctx)?;
 
-    temp_env::async_with_vars([("BUT_AGENT_HANDLE", Some("rev"))], async {
-        but_api::legacy::forge::post_comment(
-            ctx.to_sync(),
-            "feat".to_owned(),
-            "fix this".to_owned(),
-            Some("f.rs".to_owned()),
-            Some(12),
-            "t1".to_owned(),
-        )
-        .await
-    })
+    temp_env::async_with_vars(
+        [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+            ("BUT_AGENT_HANDLE", Some("rev")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        async {
+            but_api::legacy::forge::post_comment(
+                ctx.to_sync(),
+                "feat".to_owned(),
+                "fix this".to_owned(),
+                Some("f.rs".to_owned()),
+                Some(12),
+                "t1".to_owned(),
+            )
+            .await
+        },
+    )
     .await?;
 
     let (target, author, body, file, line, thread_id, resolved) = {
@@ -129,9 +136,14 @@ async fn list_comments_returns_threads_excludes_pr_meta() -> anyhow::Result<()> 
         but_api::legacy::forge::RESERVED_PR_META_THREAD,
     )?;
 
-    let rows = temp_env::async_with_vars([("BUT_AGENT_HANDLE", Some("rev"))], async {
-        but_api::legacy::forge::list_comments(ctx.to_sync(), "feat".to_owned()).await
-    })
+    let rows = temp_env::async_with_vars(
+        [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+            ("BUT_AGENT_HANDLE", Some("rev")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        async { but_api::legacy::forge::list_comments(ctx.to_sync(), "feat".to_owned()).await },
+    )
     .await?;
 
     let t1_count = rows.iter().filter(|c| c.thread_id == "t1").count();
@@ -169,15 +181,22 @@ async fn resolve_thread_flips_whole_thread() -> anyhow::Result<()> {
     let verdicts_snapshot = snapshot_verdicts(&ctx)?;
     let assignments_snapshot = snapshot_assignments(&ctx)?;
 
-    temp_env::async_with_vars([("BUT_AGENT_HANDLE", Some("rev"))], async {
-        but_api::legacy::forge::resolve_thread(
-            ctx.to_sync(),
-            "feat".to_owned(),
-            "t1".to_owned(),
-            true,
-        )
-        .await
-    })
+    temp_env::async_with_vars(
+        [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+            ("BUT_AGENT_HANDLE", Some("rev")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        async {
+            but_api::legacy::forge::resolve_thread(
+                ctx.to_sync(),
+                "feat".to_owned(),
+                "t1".to_owned(),
+                true,
+            )
+            .await
+        },
+    )
     .await?;
 
     let db = ctx.db.get_cache()?;
@@ -224,17 +243,24 @@ async fn post_comment_denied_without_authority_writes_nothing() -> anyhow::Resul
 
     let comments_before = comment_count(&ctx, "feat")?;
 
-    let err = temp_env::async_with_vars([("BUT_AGENT_HANDLE", Some("impl"))], async {
-        but_api::legacy::forge::post_comment(
-            ctx.to_sync(),
-            "feat".to_owned(),
-            "x".to_owned(),
-            None,
-            None,
-            "t1".to_owned(),
-        )
-        .await
-    })
+    let err = temp_env::async_with_vars(
+        [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+            ("BUT_AGENT_HANDLE", Some("impl")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        async {
+            but_api::legacy::forge::post_comment(
+                ctx.to_sync(),
+                "feat".to_owned(),
+                "x".to_owned(),
+                None,
+                None,
+                "t1".to_owned(),
+            )
+            .await
+        },
+    )
     .await
     .expect_err("a principal lacking comments:write must not post a comment");
 
@@ -269,17 +295,24 @@ async fn post_comment_is_local_cache_only() -> anyhow::Result<()> {
     let objects_before = object_count(&repo)?;
     let refs_before = ref_count(&repo)?;
 
-    temp_env::async_with_vars([("BUT_AGENT_HANDLE", Some("rev"))], async {
-        but_api::legacy::forge::post_comment(
-            ctx.to_sync(),
-            "feat".to_owned(),
-            "x".to_owned(),
-            None,
-            None,
-            "t1".to_owned(),
-        )
-        .await
-    })
+    temp_env::async_with_vars(
+        [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+            ("BUT_AGENT_HANDLE", Some("rev")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        async {
+            but_api::legacy::forge::post_comment(
+                ctx.to_sync(),
+                "feat".to_owned(),
+                "x".to_owned(),
+                None,
+                None,
+                "t1".to_owned(),
+            )
+            .await
+        },
+    )
     .await?;
 
     // The row IS written (local-cache only, like approve_review — no DryRun guard).
@@ -333,9 +366,14 @@ async fn unresolved_comment_does_not_block_merge() -> anyhow::Result<()> {
         None,
         "t-open",
     )?;
-    let rows = temp_env::async_with_vars([("BUT_AGENT_HANDLE", Some("reviewer"))], async {
-        but_api::legacy::forge::list_comments(ctx.to_sync(), "feat".to_owned()).await
-    })
+    let rows = temp_env::async_with_vars(
+        [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+            ("BUT_AGENT_HANDLE", Some("reviewer")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        async { but_api::legacy::forge::list_comments(ctx.to_sync(), "feat".to_owned()).await },
+    )
     .await?;
     assert!(
         rows.iter().any(|c| c.thread_id == "t-open" && !c.resolved),
@@ -345,9 +383,14 @@ async fn unresolved_comment_does_not_block_merge() -> anyhow::Result<()> {
     // The governed merge proceeds: the open thread is a drive signal that never
     // reaches the gate. The call fails OUTSIDE governance (network-backed forge
     // call), proving the gate itself passed.
-    let err = temp_env::async_with_vars([("BUT_AGENT_HANDLE", Some("maint"))], async {
-        but_api::legacy::forge::merge_review(ctx.to_sync(), REVIEW_ID, None).await
-    })
+    let err = temp_env::async_with_vars(
+        [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+            ("BUT_AGENT_HANDLE", Some("maint")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        async { but_api::legacy::forge::merge_review(ctx.to_sync(), REVIEW_ID, None).await },
+    )
     .await
     .expect_err("local fixture reaches the forge call and fails outside governance");
     assert!(
@@ -370,15 +413,22 @@ async fn unauthorized_resolve_rejected_and_pr_meta_guarded() -> anyhow::Result<(
 
     // `other` holds comments:write but is NOT the thread author, NOT the assigned
     // reviewer, and NOT a reviews:write holder → must be REJECTED (R22).
-    let err = temp_env::async_with_vars([("BUT_AGENT_HANDLE", Some("other"))], async {
-        but_api::legacy::forge::resolve_thread(
-            ctx.to_sync(),
-            "feat".to_owned(),
-            "t1".to_owned(),
-            true,
-        )
-        .await
-    })
+    let err = temp_env::async_with_vars(
+        [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+            ("BUT_AGENT_HANDLE", Some("other")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        async {
+            but_api::legacy::forge::resolve_thread(
+                ctx.to_sync(),
+                "feat".to_owned(),
+                "t1".to_owned(),
+                true,
+            )
+            .await
+        },
+    )
     .await
     .expect_err("a third unrelated principal must not self-resolve another party's thread");
     assert!(
@@ -398,15 +448,22 @@ async fn unauthorized_resolve_rejected_and_pr_meta_guarded() -> anyhow::Result<(
     }
 
     // The thread author (`rev`) CAN resolve.
-    temp_env::async_with_vars([("BUT_AGENT_HANDLE", Some("rev"))], async {
-        but_api::legacy::forge::resolve_thread(
-            ctx.to_sync(),
-            "feat".to_owned(),
-            "t1".to_owned(),
-            true,
-        )
-        .await
-    })
+    temp_env::async_with_vars(
+        [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+            ("BUT_AGENT_HANDLE", Some("rev")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        async {
+            but_api::legacy::forge::resolve_thread(
+                ctx.to_sync(),
+                "feat".to_owned(),
+                "t1".to_owned(),
+                true,
+            )
+            .await
+        },
+    )
     .await?;
     {
         let db = ctx.db.get_cache()?;
@@ -419,15 +476,22 @@ async fn unauthorized_resolve_rejected_and_pr_meta_guarded() -> anyhow::Result<(
 
     // The assigned reviewer (`rev2`) CAN resolve after we reset the thread.
     set_thread_resolved(&ctx, "feat", "t1", false)?;
-    temp_env::async_with_vars([("BUT_AGENT_HANDLE", Some("rev2"))], async {
-        but_api::legacy::forge::resolve_thread(
-            ctx.to_sync(),
-            "feat".to_owned(),
-            "t1".to_owned(),
-            true,
-        )
-        .await
-    })
+    temp_env::async_with_vars(
+        [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+            ("BUT_AGENT_HANDLE", Some("rev2")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        async {
+            but_api::legacy::forge::resolve_thread(
+                ctx.to_sync(),
+                "feat".to_owned(),
+                "t1".to_owned(),
+                true,
+            )
+            .await
+        },
+    )
     .await?;
     {
         let db = ctx.db.get_cache()?;
@@ -441,15 +505,22 @@ async fn unauthorized_resolve_rejected_and_pr_meta_guarded() -> anyhow::Result<(
     // A reviews:write holder (`rev3`) who is NOT the author and NOT the assigned
     // reviewer CAN resolve after we reset.
     set_thread_resolved(&ctx, "feat", "t1", false)?;
-    temp_env::async_with_vars([("BUT_AGENT_HANDLE", Some("rev3"))], async {
-        but_api::legacy::forge::resolve_thread(
-            ctx.to_sync(),
-            "feat".to_owned(),
-            "t1".to_owned(),
-            true,
-        )
-        .await
-    })
+    temp_env::async_with_vars(
+        [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+            ("BUT_AGENT_HANDLE", Some("rev3")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        async {
+            but_api::legacy::forge::resolve_thread(
+                ctx.to_sync(),
+                "feat".to_owned(),
+                "t1".to_owned(),
+                true,
+            )
+            .await
+        },
+    )
     .await?;
     {
         let db = ctx.db.get_cache()?;
@@ -461,17 +532,24 @@ async fn unauthorized_resolve_rejected_and_pr_meta_guarded() -> anyhow::Result<(
     }
 
     // R23: a caller cannot post to the reserved __pr_meta__ thread.
-    let err = temp_env::async_with_vars([("BUT_AGENT_HANDLE", Some("rev"))], async {
-        but_api::legacy::forge::post_comment(
-            ctx.to_sync(),
-            "feat".to_owned(),
-            "sentinel".to_owned(),
-            None,
-            None,
-            but_api::legacy::forge::RESERVED_PR_META_THREAD.to_owned(),
-        )
-        .await
-    })
+    let err = temp_env::async_with_vars(
+        [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+            ("BUT_AGENT_HANDLE", Some("rev")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        async {
+            but_api::legacy::forge::post_comment(
+                ctx.to_sync(),
+                "feat".to_owned(),
+                "sentinel".to_owned(),
+                None,
+                None,
+                but_api::legacy::forge::RESERVED_PR_META_THREAD.to_owned(),
+            )
+            .await
+        },
+    )
     .await
     .expect_err("the reserved __pr_meta__ thread must be rejected");
     assert!(
@@ -480,15 +558,22 @@ async fn unauthorized_resolve_rejected_and_pr_meta_guarded() -> anyhow::Result<(
     );
 
     // R23: resolve_thread also refuses the reserved thread.
-    let err = temp_env::async_with_vars([("BUT_AGENT_HANDLE", Some("rev"))], async {
-        but_api::legacy::forge::resolve_thread(
-            ctx.to_sync(),
-            "feat".to_owned(),
-            but_api::legacy::forge::RESERVED_PR_META_THREAD.to_owned(),
-            true,
-        )
-        .await
-    })
+    let err = temp_env::async_with_vars(
+        [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+            ("BUT_AGENT_HANDLE", Some("rev")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        async {
+            but_api::legacy::forge::resolve_thread(
+                ctx.to_sync(),
+                "feat".to_owned(),
+                but_api::legacy::forge::RESERVED_PR_META_THREAD.to_owned(),
+                true,
+            )
+            .await
+        },
+    )
     .await
     .expect_err("resolve_thread must refuse the reserved __pr_meta__ thread");
     assert!(
@@ -795,8 +880,13 @@ fn snapshot_assignments(ctx: &but_ctx::Context) -> anyhow::Result<String> {
 }
 
 async fn approve_branch(ctx: &but_ctx::Context, principal_id: &str) -> anyhow::Result<()> {
-    temp_env::async_with_vars([("BUT_AGENT_HANDLE", Some(principal_id))], async {
-        but_api::legacy::forge::approve_review(ctx.to_sync(), "feat".to_owned()).await
-    })
+    temp_env::async_with_vars(
+        [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+            ("BUT_AGENT_HANDLE", Some(principal_id)),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        async { but_api::legacy::forge::approve_review(ctx.to_sync(), "feat".to_owned()).await },
+    )
     .await
 }

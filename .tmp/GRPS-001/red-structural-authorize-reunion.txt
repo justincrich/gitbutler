@@ -1,2 +1,0 @@
-56:    cfg.groups()
-58:        .filter(|group| group.members().contains(principal.id()))

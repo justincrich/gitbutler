@@ -1,6 +1,0 @@
-OK: crates/but-api/src/branch.rs::apply calls `enforce_commit_gate_for_target` at line 650 before `exclusive_worktree_access` at line 657
-OK: crates/but-api/src/branch.rs::apply_branch_integration calls `enforce_commit_gate_for_target` at line 982 before `exclusive_worktree_access` at line 990
-OK: crates/but-api/src/legacy/worktree.rs::worktree_integrate calls `enforce_commit_gate_for_target` at line 61 before `exclusive_worktree_access` at line 67
-OK: crates/but-api/src/branch.rs::apply_with_perm contains no `enforce_commit_gate_for_target` call
-OK: crates/but-api/src/branch.rs::apply_branch_integration_with_perm contains no `enforce_commit_gate_for_target` call
-OK: gate-before-guard source contract holds

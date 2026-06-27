@@ -1,3 +1,0 @@
-apps/desktop/tests/governance/GovernanceSettingsReadOnly.spec.ts:16:	await expect(component.getByTestId("governance-principals-control")).toHaveCount(0);
-apps/desktop/tests/governance/GovernanceSettingsAdminRoleNoWrite.spec.ts:17:	await expect(component.getByTestId("governance-principals-control")).toHaveCount(0);
-apps/desktop/tests/governance/GovernanceSettingsTabs.spec.ts:35:	await expect(component.getByTestId("governance-principals-control")).toHaveCount(0);

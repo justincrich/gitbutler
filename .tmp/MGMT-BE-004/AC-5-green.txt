@@ -1,2 +1,0 @@
-GREEN command: cargo test -p but-api branch_gates -- --nocapture
-AC-5 seeded: clean_min=2; clean_pending=false; pending_min=2; pending_flag=true

@@ -1,8 +1,0 @@
-    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.29s
-     Running tests/governance_api.rs (target/debug/deps/governance_api-c65881f20ac9bc4d)
-
-running 1 test
-test governance_api_group_add_member_non_admin_denied_with_hint ... ok
-
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 5 filtered out; finished in 0.08s
-

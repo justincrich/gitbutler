@@ -1,7 +1,0 @@
-apps/desktop/src/components/governance/PrincipalsList.svelte 74ms
-apps/desktop/src/components/governance/GovernanceSettings.svelte 10ms (unchanged)
-apps/desktop/tests/governance/PrincipalsList.spec.ts 19ms (unchanged)
-apps/desktop/tests/governance/PrincipalsListBackendHarness.svelte 3ms (unchanged)
-apps/desktop/tests/governance/GovernanceSettingsHarness.svelte 3ms (unchanged)
-apps/desktop/tests/governance/GovernanceSettingsTabs.spec.ts 2ms (unchanged)
-apps/desktop/tests/governance/GovernanceSettingsReadOnly.spec.ts 1ms (unchanged)

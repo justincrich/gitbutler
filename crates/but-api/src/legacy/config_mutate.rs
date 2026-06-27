@@ -34,9 +34,15 @@ pub struct AdminWriteGateError {
 
 /// Enforce authorization before mutating governed configuration.
 ///
-/// The guard reads governance files from the committed `target_ref`, resolves
-/// the acting principal from `BUT_AGENT_HANDLE`, and requires
+/// The guard reads governance files from the committed `target_ref`, resolves the
+/// acting principal from the `BUT_AGENT_HANDLE` environment variable, and requires
 /// `administration:write`.
+///
+/// Administration-write identity resolution calls
+/// `but_authz::resolve_principal_from_env`, resolving the acting principal from the
+/// `BUT_AGENT_HANDLE` environment variable against the committed
+/// `.gitbutler/agents.toml` (handle set by the trusted harness wrapper, not
+/// self-asserted).
 pub fn enforce_administration_write_gate(
     repo: &gix::Repository,
     target_ref: &str,

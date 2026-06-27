@@ -1,5 +1,0 @@
-error: unexpected argument 'config' found
-
-Usage: cargo test [OPTIONS] [TESTNAME] [-- [ARGS]...]
-
-For more information, try '--help'.

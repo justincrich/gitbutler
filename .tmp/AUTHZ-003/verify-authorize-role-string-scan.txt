@@ -1,3 +1,0 @@
-$ ! grep -rEn '== "(read|triage|write|maintain|admin)"|"(read|triage|write|maintain|admin)" *=>|from_role\(' crates/but-authz/src/authorize.rs
-
-EXIT_CODE=0

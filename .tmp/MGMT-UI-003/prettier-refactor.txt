@@ -1,2 +1,0 @@
-apps/desktop/src/components/governance/GovernanceSettings.svelte 58ms (unchanged)
-apps/desktop/src/lib/governance/pendingStore.svelte.ts 14ms (unchanged)

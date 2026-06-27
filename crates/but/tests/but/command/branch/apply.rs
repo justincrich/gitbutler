@@ -98,6 +98,7 @@ fn branch_apply_readonly_denied() -> anyhow::Result<()> {
     let output = env
         .but("--format json apply feature-branch")
         .allow_json()
+        .env("BUT_AUTHZ_ALLOW_ENV_HANDLE", "1")
         .env("BUT_AGENT_HANDLE", "ro")
         .output()?;
     assert_cli_denial(
@@ -121,6 +122,7 @@ fn branch_apply_readonly_denied() -> anyhow::Result<()> {
     let dev_output = dev_env
         .but("--format json apply feature-branch")
         .allow_json()
+        .env("BUT_AUTHZ_ALLOW_ENV_HANDLE", "1")
         .env("BUT_AGENT_HANDLE", "dev")
         .output()?;
     assert!(

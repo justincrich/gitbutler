@@ -1,7 +1,0 @@
-Command: GIT_CONFIG_GLOBAL=e2e/playwright/fixtures/.gitconfig E2E_TEST_APP_DATA_DIR=<tmp>/config BUT=/Users/justinrich/Projects/gitbutler/target/debug/but bash e2e/playwright/scripts/governance-project-with-origin-main.sh
-Result: exit 0
-Remote HEAD: b658a6d3efa5c2dc273df14687eb2c7840afa32a
-Proof files:
-- committed-permissions.toml: committed HEAD:.gitbutler/permissions.toml from remote-project
-- dev-principal-block.toml: extracted committed dev principal block
-Assertion: dev principal exists in the committed blob and its block does not contain administration:write.

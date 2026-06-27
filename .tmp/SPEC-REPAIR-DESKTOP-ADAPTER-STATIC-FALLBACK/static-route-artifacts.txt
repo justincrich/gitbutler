@@ -1,3 +1,0 @@
-apps/desktop/build/index.html
-apps/desktop/build/onboarding.html
-apps/desktop/build/onboarding/clone.html

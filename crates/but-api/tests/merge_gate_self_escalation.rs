@@ -18,7 +18,7 @@ async fn self_add_to_maintainers_on_feature_head_still_denied_merge() -> anyhow:
 
     let ctx = context_with_review(&repo, ref_id(&repo, FEAT_REF)?)?;
 
-    temp_env::async_with_vars([("BUT_AGENT_HANDLE", Some("feat-author"))], async {
+    temp_env::async_with_vars([("BUT_AGENT_HANDLE", Some("feat-author")), ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1"))], async {
         let err = enforce_merge_gate(&ctx, REVIEW_ID)
             .expect_err("feature-head self-add must not clear Authority::Merge");
         let denial = classify_error(&err).expect("merge-authority denial must be structured");
@@ -50,17 +50,24 @@ async fn landed_membership_clears_merge_authority_step() -> anyhow::Result<()> {
     let main_before = ref_id(&repo, MAIN_REF)?;
     let ctx = context_with_review(&repo, ref_id(&repo, FEAT_REF)?)?;
 
-    temp_env::async_with_vars([("BUT_AGENT_HANDLE", Some("feat-author"))], async {
-        let err = enforce_merge_gate(&ctx, REVIEW_ID)
-            .expect_err("pre-landing self-add must be denied at Authority::Merge");
-        let denial = classify_error(&err).expect("pre-landing denial must be structured");
-        assert_eq!(
-            denial.code,
-            but_authz::Denial::PERM_DENIED_CODE,
-            "before landing, feat-author must not hold merge on the target ref"
-        );
-        Ok::<(), anyhow::Error>(())
-    })
+    temp_env::async_with_vars(
+        [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+            ("BUT_AGENT_HANDLE", Some("feat-author")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        async {
+            let err = enforce_merge_gate(&ctx, REVIEW_ID)
+                .expect_err("pre-landing self-add must be denied at Authority::Merge");
+            let denial = classify_error(&err).expect("pre-landing denial must be structured");
+            assert_eq!(
+                denial.code,
+                but_authz::Denial::PERM_DENIED_CODE,
+                "before landing, feat-author must not hold merge on the target ref"
+            );
+            Ok::<(), anyhow::Error>(())
+        },
+    )
     .await?;
 
     land_feat_author_membership(&repo);
@@ -71,7 +78,7 @@ async fn landed_membership_clears_merge_authority_step() -> anyhow::Result<()> {
     );
     assert_maintainers_members(&repo, &["maint", "feat-author"], &[])?;
 
-    temp_env::async_with_vars([("BUT_AGENT_HANDLE", Some("feat-author"))], async {
+    temp_env::async_with_vars([("BUT_AGENT_HANDLE", Some("feat-author")), ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1"))], async {
         let err = enforce_merge_gate(&ctx, REVIEW_ID)
             .expect_err("unapproved review gate should be the expected next gate");
         let denial = classify_error(&err).expect("review gate denial must be structured");

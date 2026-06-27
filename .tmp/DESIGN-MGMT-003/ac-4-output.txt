@@ -1,7 +1,0 @@
-found: GovernanceSettings.svelte` derives one
-found: boolean, `isReadOnly`, from the `administration:write` check
-found: prop to `PrincipalsList`, `PrincipalEditor`, `GroupsList`, and
-found: `BranchGatesList`
-found: Child components consume the prop; they do not re-derive
-found: `GovernancePendingBanner` is hidden
-found: commit affordance is unavailable

@@ -1,4 +1,0 @@
-$ curl -sS -X POST http://127.0.0.1:7793/governance_commit -H content-type:application/json -d {}
-{"type":"error","subject":{"code":"Unknown","message":"Command governance_commit not found!"}}
-$ curl -sS -X POST http://127.0.0.1:7793/governance_pending -H content-type:application/json -d {}
-{"type":"error","subject":{"code":"Unknown","message":"Command governance_pending not found!"}}

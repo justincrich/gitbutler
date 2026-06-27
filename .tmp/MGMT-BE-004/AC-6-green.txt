@@ -1,2 +1,0 @@
-GREEN command: cargo test -p but-api branch_gates -- --nocapture
-AC-6 seeded: release distinct=true; groups=["maintainers", "code-reviewers"]

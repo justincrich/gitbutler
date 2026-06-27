@@ -1,2 +1,0 @@
-OK: crates/but-api/src/branch.rs has 2 enforce_commit_gate_for_target calls and crates/but-api/src/legacy/worktree.rs has 1
-exit=0

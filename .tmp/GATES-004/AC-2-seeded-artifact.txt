@@ -1,2 +1,0 @@
-AC-2 reviewer commit denial stderr: Error: {"error":{"code":"perm.denied","message":"action requires contents:write; authorization denied (held permissions: contents:read, reviews:write, comments:write)"}}
-AC-2 verdict row: principal_id=reviewer, verdict=approved, head_oid=548483f9959e007e07fa735ca4fd8daaad4724f6

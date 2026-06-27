@@ -7,6 +7,7 @@ fn review_guard_reviews_write_denied() -> anyhow::Result<()> {
     let dev = env
         .but("--format json review approve feat")
         .allow_json()
+        .env("BUT_AUTHZ_ALLOW_ENV_HANDLE", "1")
         .env("BUT_AGENT_HANDLE", "dev")
         .output()?;
     assert!(
@@ -28,10 +29,14 @@ fn review_guard_reviews_write_denied() -> anyhow::Result<()> {
         let mut cmd = env.but("--format json review approve feat").allow_json();
         match handle {
             Some(value) => {
-                cmd = cmd.env("BUT_AGENT_HANDLE", value);
+                cmd = cmd
+                    .env("BUT_AUTHZ_ALLOW_ENV_HANDLE", "1")
+                    .env("BUT_AGENT_HANDLE", value);
             }
             None => {
-                cmd = cmd.env_remove("BUT_AGENT_HANDLE");
+                cmd = cmd
+                    .env("BUT_AUTHZ_ALLOW_ENV_HANDLE", "1")
+                    .env_remove("BUT_AGENT_HANDLE");
             }
         }
         let output = cmd.output()?;
@@ -66,6 +71,7 @@ fn review_guard_reviewer_commit_denied_review_accepted() -> anyhow::Result<()> {
     let commit = env
         .but("--format json commit feat -m reviewer-change")
         .allow_json()
+        .env("BUT_AUTHZ_ALLOW_ENV_HANDLE", "1")
         .env("BUT_AGENT_HANDLE", "reviewer")
         .output()?;
     assert!(
@@ -90,6 +96,7 @@ fn review_guard_reviewer_commit_denied_review_accepted() -> anyhow::Result<()> {
 
     env.but("--format json review approve feat")
         .allow_json()
+        .env("BUT_AUTHZ_ALLOW_ENV_HANDLE", "1")
         .env("BUT_AGENT_HANDLE", "reviewer")
         .assert()
         .success();
@@ -124,6 +131,7 @@ fn review_guard_comment_comments_write() -> anyhow::Result<()> {
     let ro = env
         .but("--format json review comment feat -m note")
         .allow_json()
+        .env("BUT_AUTHZ_ALLOW_ENV_HANDLE", "1")
         .env("BUT_AGENT_HANDLE", "ro")
         .output()?;
     assert!(
@@ -153,6 +161,7 @@ fn review_guard_comment_comments_write() -> anyhow::Result<()> {
 
     env.but("--format json review comment feat -m note")
         .allow_json()
+        .env("BUT_AUTHZ_ALLOW_ENV_HANDLE", "1")
         .env("BUT_AGENT_HANDLE", "reviewer")
         .assert()
         .success();

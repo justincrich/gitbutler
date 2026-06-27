@@ -1,2 +1,0 @@
-    Checking but-authz v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/GRPS-001/crates/but-authz)
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.84s

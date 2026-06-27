@@ -1,8 +1,0 @@
-    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.45s
-     Running tests/governance_api.rs (target/debug/deps/governance_api-c65881f20ac9bc4d)
-
-running 1 test
-test governance_api_invariant_build_gate_covers_governance_boundary ... ok
-
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 5 filtered out; finished in 0.00s
-

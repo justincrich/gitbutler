@@ -22,20 +22,32 @@ async fn review_status_derives_lifecycle_and_agent_tag() -> anyhow::Result<()> {
 
     // `agent_opener` is declared `kind = "agent"` in committed permissions.toml.
     // It opens the review and seeds a pending reviewer assignment for `rev`.
-    temp_env::async_with_vars([("BUT_AGENT_HANDLE", Some("agent_opener"))], async {
-        but_api::legacy::forge::request_review(
-            ctx.to_sync(),
-            FEAT_REF.to_owned(),
-            Some("rev".to_owned()),
-        )
-        .await
-    })
+    temp_env::async_with_vars(
+        [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+            ("BUT_AGENT_HANDLE", Some("agent_opener")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        async {
+            but_api::legacy::forge::request_review(
+                ctx.to_sync(),
+                FEAT_REF.to_owned(),
+                Some("rev".to_owned()),
+            )
+            .await
+        },
+    )
     .await
     .context("request_review as agent_opener must succeed")?;
 
-    let status = temp_env::async_with_vars([("BUT_AGENT_HANDLE", Some("rev"))], async {
-        but_api::legacy::forge::review_status(ctx.to_sync(), FEAT_REF.to_owned()).await
-    })
+    let status = temp_env::async_with_vars(
+        [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+            ("BUT_AGENT_HANDLE", Some("rev")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        async { but_api::legacy::forge::review_status(ctx.to_sync(), FEAT_REF.to_owned()).await },
+    )
     .await
     .context("review_status must succeed on a branch with a pending assignment")?;
 
@@ -82,19 +94,31 @@ async fn review_status_reflects_approval() -> anyhow::Result<()> {
     let ctx = but_ctx::Context::from_repo(repo)?.with_memory_app_cache();
 
     // `human_opener` opens the review (default-human — no `kind` declared).
-    temp_env::async_with_vars([("BUT_AGENT_HANDLE", Some("human_opener"))], async {
-        but_api::legacy::forge::request_review(
-            ctx.to_sync(),
-            FEAT_REF.to_owned(),
-            Some("rev".to_owned()),
-        )
-        .await
-    })
+    temp_env::async_with_vars(
+        [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+            ("BUT_AGENT_HANDLE", Some("human_opener")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        async {
+            but_api::legacy::forge::request_review(
+                ctx.to_sync(),
+                FEAT_REF.to_owned(),
+                Some("rev".to_owned()),
+            )
+            .await
+        },
+    )
     .await?;
     // `rev` approves the current HEAD.
-    temp_env::async_with_vars([("BUT_AGENT_HANDLE", Some("rev"))], async {
-        but_api::legacy::forge::approve_review(ctx.to_sync(), FEAT_REF.to_owned()).await
-    })
+    temp_env::async_with_vars(
+        [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+            ("BUT_AGENT_HANDLE", Some("rev")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        async { but_api::legacy::forge::approve_review(ctx.to_sync(), FEAT_REF.to_owned()).await },
+    )
     .await?;
 
     let status = but_api::legacy::forge::review_status(ctx.to_sync(), FEAT_REF.to_owned()).await?;
@@ -121,23 +145,37 @@ async fn review_status_reflects_changes_requested() -> anyhow::Result<()> {
     let (repo, _tmp) = lpr_governed_repo();
     let ctx = but_ctx::Context::from_repo(repo)?.with_memory_app_cache();
 
-    temp_env::async_with_vars([("BUT_AGENT_HANDLE", Some("human_opener"))], async {
-        but_api::legacy::forge::request_review(
-            ctx.to_sync(),
-            FEAT_REF.to_owned(),
-            Some("rev".to_owned()),
-        )
-        .await
-    })
+    temp_env::async_with_vars(
+        [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+            ("BUT_AGENT_HANDLE", Some("human_opener")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        async {
+            but_api::legacy::forge::request_review(
+                ctx.to_sync(),
+                FEAT_REF.to_owned(),
+                Some("rev".to_owned()),
+            )
+            .await
+        },
+    )
     .await?;
-    temp_env::async_with_vars([("BUT_AGENT_HANDLE", Some("rev"))], async {
-        but_api::legacy::forge::request_changes_review(
-            ctx.to_sync(),
-            FEAT_REF.to_owned(),
-            Some("needs work".to_owned()),
-        )
-        .await
-    })
+    temp_env::async_with_vars(
+        [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+            ("BUT_AGENT_HANDLE", Some("rev")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        async {
+            but_api::legacy::forge::request_changes_review(
+                ctx.to_sync(),
+                FEAT_REF.to_owned(),
+                Some("needs work".to_owned()),
+            )
+            .await
+        },
+    )
     .await?;
 
     let status = but_api::legacy::forge::review_status(ctx.to_sync(), FEAT_REF.to_owned()).await?;
@@ -157,14 +195,21 @@ async fn review_status_two_read_convergence() -> anyhow::Result<()> {
 
     // Seed the same drive state two orchestrators would see: opener + an
     // assignment + an unresolved comment thread.
-    temp_env::async_with_vars([("BUT_AGENT_HANDLE", Some("agent_opener"))], async {
-        but_api::legacy::forge::request_review(
-            ctx.to_sync(),
-            FEAT_REF.to_owned(),
-            Some("rev".to_owned()),
-        )
-        .await
-    })
+    temp_env::async_with_vars(
+        [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+            ("BUT_AGENT_HANDLE", Some("agent_opener")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        async {
+            but_api::legacy::forge::request_review(
+                ctx.to_sync(),
+                FEAT_REF.to_owned(),
+                Some("rev".to_owned()),
+            )
+            .await
+        },
+    )
     .await?;
     seed_unresolved_comment(&ctx, FEAT_REF, "rev", "please revisit", "t-open")?;
 

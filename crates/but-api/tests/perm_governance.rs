@@ -15,9 +15,14 @@ fn perm_grant_writes_worktree_inert_until_committed() -> anyhow::Result<()> {
     let (repo, _tmp) = perm_governance_base(false);
     let main_before = ref_id(&repo, MAIN_REF)?;
 
-    let grant = temp_env::with_var("BUT_AGENT_HANDLE", Some("admin"), || {
-        perm_grant_with_repo(&repo, MAIN_REF, "rust-implementer", &["reviews:write"])
-    })?;
+    let grant = temp_env::with_vars(
+        [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+            ("BUT_AGENT_HANDLE", Some("admin")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        || perm_grant_with_repo(&repo, MAIN_REF, "rust-implementer", &["reviews:write"]),
+    )?;
 
     let worktree_permissions = worktree_permissions(&repo)?;
     let rust_implementer = principal_block(&worktree_permissions, "rust-implementer")?;
@@ -59,9 +64,14 @@ fn perm_grant_writes_worktree_inert_until_committed() -> anyhow::Result<()> {
 fn perm_grant_preserves_unrelated_entries_and_role_sugar() -> anyhow::Result<()> {
     let (repo, _tmp) = perm_governance_base(true);
 
-    temp_env::with_var("BUT_AGENT_HANDLE", Some("admin"), || {
-        perm_grant_with_repo(&repo, MAIN_REF, "rust-implementer", &["merge"])
-    })?;
+    temp_env::with_vars(
+        [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+            ("BUT_AGENT_HANDLE", Some("admin")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        || perm_grant_with_repo(&repo, MAIN_REF, "rust-implementer", &["merge"]),
+    )?;
 
     let worktree_permissions = worktree_permissions(&repo)?;
     let rust_implementer = principal_block(&worktree_permissions, "rust-implementer")?;
@@ -98,9 +108,14 @@ fn perm_first_grant_seeds_principal_and_authorizes_when_committed() -> anyhow::R
         "seed fixture must start with no rust-implementer principal"
     );
 
-    let grant = temp_env::with_var("BUT_AGENT_HANDLE", Some("admin"), || {
-        perm_grant_with_repo(&repo, MAIN_REF, "rust-implementer", &["reviews:write"])
-    })?;
+    let grant = temp_env::with_vars(
+        [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+            ("BUT_AGENT_HANDLE", Some("admin")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        || perm_grant_with_repo(&repo, MAIN_REF, "rust-implementer", &["reviews:write"]),
+    )?;
     let worktree_permissions = worktree_permissions(&repo)?;
     assert!(
         principal_block(&worktree_permissions, "admin")?.contains("administration:write"),
@@ -141,9 +156,14 @@ git commit -m "seed rust-implementer"
 fn perm_revoke_removes_token_and_idempotent_noop() -> anyhow::Result<()> {
     let (repo, _tmp) = perm_governance_base(false);
 
-    let revoke = temp_env::with_var("BUT_AGENT_HANDLE", Some("admin"), || {
-        perm_revoke_with_repo(&repo, MAIN_REF, "rust-implementer", &["contents:write"])
-    })?;
+    let revoke = temp_env::with_vars(
+        [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+            ("BUT_AGENT_HANDLE", Some("admin")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        || perm_revoke_with_repo(&repo, MAIN_REF, "rust-implementer", &["contents:write"]),
+    )?;
     let after_revoke = worktree_permissions(&repo)?;
     let rust_implementer = principal_block(&after_revoke, "rust-implementer")?;
     assert!(
@@ -168,9 +188,14 @@ fn perm_revoke_removes_token_and_idempotent_noop() -> anyhow::Result<()> {
     );
 
     let before_noop = worktree_permissions(&repo)?;
-    temp_env::with_var("BUT_AGENT_HANDLE", Some("admin"), || {
-        perm_revoke_with_repo(&repo, MAIN_REF, "rust-implementer", &["merge"])
-    })?;
+    temp_env::with_vars(
+        [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+            ("BUT_AGENT_HANDLE", Some("admin")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        || perm_revoke_with_repo(&repo, MAIN_REF, "rust-implementer", &["merge"]),
+    )?;
     assert_eq!(
         worktree_permissions(&repo)?,
         before_noop,
@@ -187,14 +212,21 @@ fn perm_grant_revoke_non_admin_denied() -> anyhow::Result<()> {
     let (repo, _tmp) = perm_governance_base(false);
     let before = worktree_permissions(&repo)?;
 
-    let grant_error = temp_env::with_var("BUT_AGENT_HANDLE", Some("rust-implementer"), || {
-        classified_error(perm_grant_with_repo(
-            &repo,
-            MAIN_REF,
-            "rust-implementer",
-            &["administration:write"],
-        ))
-    })?;
+    let grant_error = temp_env::with_vars(
+        [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+            ("BUT_AGENT_HANDLE", Some("rust-implementer")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        || {
+            classified_error(perm_grant_with_repo(
+                &repo,
+                MAIN_REF,
+                "rust-implementer",
+                &["administration:write"],
+            ))
+        },
+    )?;
     assert_perm_denied_administration_write(&grant_error);
     assert_eq!(
         worktree_permissions(&repo)?,
@@ -202,14 +234,21 @@ fn perm_grant_revoke_non_admin_denied() -> anyhow::Result<()> {
         "denied non-admin grant must not write permissions.toml"
     );
 
-    let revoke_error = temp_env::with_var("BUT_AGENT_HANDLE", Some("rust-implementer"), || {
-        classified_error(perm_revoke_with_repo(
-            &repo,
-            MAIN_REF,
-            "admin",
-            &["administration:write"],
-        ))
-    })?;
+    let revoke_error = temp_env::with_vars(
+        [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+            ("BUT_AGENT_HANDLE", Some("rust-implementer")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        || {
+            classified_error(perm_revoke_with_repo(
+                &repo,
+                MAIN_REF,
+                "admin",
+                &["administration:write"],
+            ))
+        },
+    )?;
     assert_perm_denied_administration_write(&revoke_error);
     assert_eq!(
         worktree_permissions(&repo)?,
@@ -226,9 +265,14 @@ fn perm_grant_revoke_non_admin_denied() -> anyhow::Result<()> {
 fn perm_grant_fail_closed_bad_token_and_unset_handle() -> anyhow::Result<()> {
     let (repo, _tmp) = perm_governance_base(false);
     let before_bad_token = worktree_permissions(&repo)?;
-    let bad_token = temp_env::with_var("BUT_AGENT_HANDLE", Some("admin"), || {
-        perm_grant_with_repo(&repo, MAIN_REF, "rust-implementer", &["badtoken"])
-    });
+    let bad_token = temp_env::with_vars(
+        [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+            ("BUT_AGENT_HANDLE", Some("admin")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        || perm_grant_with_repo(&repo, MAIN_REF, "rust-implementer", &["badtoken"]),
+    );
     assert!(
         bad_token.is_err(),
         "unparseable authority token must return an error, not silently skip"
@@ -240,14 +284,21 @@ fn perm_grant_fail_closed_bad_token_and_unset_handle() -> anyhow::Result<()> {
     );
 
     let before_unset_handle = worktree_permissions(&repo)?;
-    let unset_handle_error = temp_env::with_var("BUT_AGENT_HANDLE", None::<&str>, || {
-        classified_error(perm_grant_with_repo(
-            &repo,
-            MAIN_REF,
-            "rust-implementer",
-            &["reviews:write"],
-        ))
-    })?;
+    let unset_handle_error = temp_env::with_vars(
+        [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+            ("BUT_AGENT_HANDLE", None::<&str>),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        || {
+            classified_error(perm_grant_with_repo(
+                &repo,
+                MAIN_REF,
+                "rust-implementer",
+                &["reviews:write"],
+            ))
+        },
+    )?;
     assert_eq!(
         unset_handle_error.code, "perm.denied",
         "unset BUT_AGENT_HANDLE must fail closed as perm.denied"
@@ -268,9 +319,14 @@ fn perm_revoke_fail_closed_bad_token() -> anyhow::Result<()> {
     let (repo, _tmp) = perm_remediation_base();
     let before = worktree_permissions(&repo)?;
 
-    let error = temp_env::with_var("BUT_AGENT_HANDLE", Some("admin"), || {
-        perm_revoke_with_repo(&repo, MAIN_REF, "rust-implementer", &["not a permission"])
-    })
+    let error = temp_env::with_vars(
+        [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+            ("BUT_AGENT_HANDLE", Some("admin")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        || perm_revoke_with_repo(&repo, MAIN_REF, "rust-implementer", &["not a permission"]),
+    )
     .expect_err("bad permission token must reject before mutation");
     let invalid = error.downcast::<but_api::json::ConfigInvalid>()?;
     assert_eq!(
@@ -305,12 +361,19 @@ fn perm_revoke_fail_closed_unset_handle() -> anyhow::Result<()> {
     let (repo, _tmp) = perm_remediation_base();
     let before = worktree_permissions(&repo)?;
 
-    let denial = temp_env::with_var("BUT_AGENT_HANDLE", None::<&str>, || {
-        structured_denial(
-            perm_revoke_with_repo(&repo, MAIN_REF, "rust-implementer", &["reviews:write"]),
-            "unset-handle perm_revoke",
-        )
-    })?;
+    let denial = temp_env::with_vars(
+        [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+            ("BUT_AGENT_HANDLE", None::<&str>),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        || {
+            structured_denial(
+                perm_revoke_with_repo(&repo, MAIN_REF, "rust-implementer", &["reviews:write"]),
+                "unset-handle perm_revoke",
+            )
+        },
+    )?;
     assert_denial_payload(
         &denial,
         "BUT_AGENT_HANDLE",
@@ -334,12 +397,19 @@ fn perm_revoke_fail_closed_unset_handle() -> anyhow::Result<()> {
 fn perm_list_fail_closed_unset_handle() -> anyhow::Result<()> {
     let (repo, _tmp) = perm_remediation_base();
 
-    let denial = temp_env::with_var("BUT_AGENT_HANDLE", None::<&str>, || {
-        structured_denial(
-            perm_list_with_repo(&repo, MAIN_REF, Some("rust-implementer")),
-            "unset-handle perm_list",
-        )
-    })?;
+    let denial = temp_env::with_vars(
+        [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+            ("BUT_AGENT_HANDLE", None::<&str>),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        || {
+            structured_denial(
+                perm_list_with_repo(&repo, MAIN_REF, Some("rust-implementer")),
+                "unset-handle perm_list",
+            )
+        },
+    )?;
     assert_denial_payload(
         &denial,
         "BUT_AGENT_HANDLE",
@@ -363,24 +433,45 @@ fn perm_list_fail_closed_unset_handle() -> anyhow::Result<()> {
 fn perm_denials_include_remediation_hint() -> anyhow::Result<()> {
     let (repo, _tmp) = perm_remediation_base();
 
-    let grant = temp_env::with_var("BUT_AGENT_HANDLE", Some("rust-implementer"), || {
-        structured_denial(
-            perm_grant_with_repo(&repo, MAIN_REF, "rust-reviewer", &["reviews:write"]),
-            "perm_grant",
-        )
-    })?;
-    let revoke = temp_env::with_var("BUT_AGENT_HANDLE", Some("rust-implementer"), || {
-        structured_denial(
-            perm_revoke_with_repo(&repo, MAIN_REF, "admin", &["administration:write"]),
-            "perm_revoke",
-        )
-    })?;
-    let list = temp_env::with_var("BUT_AGENT_HANDLE", Some("rust-implementer"), || {
-        structured_denial(
-            perm_list_with_repo(&repo, MAIN_REF, Some("rust-reviewer")),
-            "perm_list",
-        )
-    })?;
+    let grant = temp_env::with_vars(
+        [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+            ("BUT_AGENT_HANDLE", Some("rust-implementer")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        || {
+            structured_denial(
+                perm_grant_with_repo(&repo, MAIN_REF, "rust-reviewer", &["reviews:write"]),
+                "perm_grant",
+            )
+        },
+    )?;
+    let revoke = temp_env::with_vars(
+        [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+            ("BUT_AGENT_HANDLE", Some("rust-implementer")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        || {
+            structured_denial(
+                perm_revoke_with_repo(&repo, MAIN_REF, "admin", &["administration:write"]),
+                "perm_revoke",
+            )
+        },
+    )?;
+    let list = temp_env::with_vars(
+        [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+            ("BUT_AGENT_HANDLE", Some("rust-implementer")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        || {
+            structured_denial(
+                perm_list_with_repo(&repo, MAIN_REF, Some("rust-reviewer")),
+                "perm_list",
+            )
+        },
+    )?;
 
     for (verb, denial) in [
         ("perm_grant", grant),
@@ -406,18 +497,28 @@ fn perm_denials_include_remediation_hint() -> anyhow::Result<()> {
 fn perm_list_cross_principal_scoping() -> anyhow::Result<()> {
     let (repo, _tmp) = perm_governance_base(false);
 
-    let self_list = temp_env::with_var("BUT_AGENT_HANDLE", Some("rust-implementer"), || {
-        perm_list_with_repo(&repo, MAIN_REF, None)
-    })?;
+    let self_list = temp_env::with_vars(
+        [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+            ("BUT_AGENT_HANDLE", Some("rust-implementer")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        || perm_list_with_repo(&repo, MAIN_REF, None),
+    )?;
     let self_text = format!("{self_list:?}");
     assert!(
         self_text.contains("contents:write"),
         "self-read must show rust-implementer's actual contents:write authority"
     );
 
-    let cross_error = temp_env::with_var("BUT_AGENT_HANDLE", Some("rust-implementer"), || {
-        classified_error(perm_list_with_repo(&repo, MAIN_REF, Some("maint")))
-    })?;
+    let cross_error = temp_env::with_vars(
+        [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+            ("BUT_AGENT_HANDLE", Some("rust-implementer")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        || classified_error(perm_list_with_repo(&repo, MAIN_REF, Some("maint"))),
+    )?;
     assert_eq!(
         cross_error.code, "perm.denied",
         "resolved non-admin cross-principal list must be denied as the scope decision"
@@ -427,9 +528,14 @@ fn perm_list_cross_principal_scoping() -> anyhow::Result<()> {
         "cross-principal denial must not leak maint's merge authority"
     );
 
-    let admin_list = temp_env::with_var("BUT_AGENT_HANDLE", Some("admin-reader"), || {
-        perm_list_with_repo(&repo, MAIN_REF, Some("maint"))
-    })?;
+    let admin_list = temp_env::with_vars(
+        [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+            ("BUT_AGENT_HANDLE", Some("admin-reader")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        || perm_list_with_repo(&repo, MAIN_REF, Some("maint")),
+    )?;
     assert!(
         format!("{admin_list:?}").contains("merge"),
         "administration:read holder must be allowed to list another principal"
@@ -444,12 +550,22 @@ fn perm_list_cross_principal_scoping() -> anyhow::Result<()> {
 fn perm_list_pending_marks_uncommitted_grant() -> anyhow::Result<()> {
     let (repo, _tmp) = perm_governance_base(false);
 
-    temp_env::with_var("BUT_AGENT_HANDLE", Some("admin"), || {
-        perm_grant_with_repo(&repo, MAIN_REF, "rust-implementer", &["reviews:write"])
-    })?;
-    let list = temp_env::with_var("BUT_AGENT_HANDLE", Some("admin"), || {
-        perm_list_with_repo(&repo, MAIN_REF, Some("rust-implementer"))
-    })?;
+    temp_env::with_vars(
+        [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+            ("BUT_AGENT_HANDLE", Some("admin")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        || perm_grant_with_repo(&repo, MAIN_REF, "rust-implementer", &["reviews:write"]),
+    )?;
+    let list = temp_env::with_vars(
+        [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+            ("BUT_AGENT_HANDLE", Some("admin")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        || perm_list_with_repo(&repo, MAIN_REF, Some("rust-implementer")),
+    )?;
     let list_text = format!("{list:?}");
 
     assert!(

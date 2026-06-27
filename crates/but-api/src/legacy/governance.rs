@@ -24,6 +24,29 @@ use super::config_mutate::enforce_administration_write_gate;
 /// Operator-facing caveat for working-tree governance writes.
 pub const REF_PIN_CAVEAT: &str = "takes effect once committed to the target branch";
 
+/// Compile-time witness that the caller passed the authenticated fleet-owner
+/// boundary.
+///
+/// The private `_private` field makes this constructible ONLY via
+/// [`FleetOwnerCapability::mint`] — even from other crates, which cannot use a
+/// struct literal against a private field. Every `*_as_fleet_owner` governance
+/// mutation requires `&FleetOwnerCapability`, so none of them is reachable
+/// without first crossing the authenticated boundary that mints the witness.
+pub struct FleetOwnerCapability {
+    _private: (),
+}
+
+impl FleetOwnerCapability {
+    /// Mint the fleet-owner capability witness.
+    ///
+    /// Call this ONLY at the authenticated fleet-owner boundary, immediately
+    /// after the signed-in desktop fleet-owner identity has been resolved.
+    #[must_use]
+    pub fn mint() -> Self {
+        Self { _private: () }
+    }
+}
+
 /// Result of a governance permission write.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, schemars::JsonSchema)]
 pub struct PermWriteOutcome {
@@ -541,8 +564,15 @@ pub fn perm_revoke(
 ///
 /// Reports a graceful `not_configured` status (instead of an error) when the target ref
 /// has no committed governance config, and returns the resolved `target_ref` so the UI
-/// reuses it for follow-up reads. A caller that can't be resolved (e.g. `BUT_AGENT_HANDLE`
-/// unset) yields empty authorities (read-only), not an error.
+/// reuses it for follow-up reads. A caller that can't be resolved yields empty
+/// authorities (read-only), not an error.
+///
+/// `governance_status_read` resolves the caller through
+/// `but_authz::resolve_principal_from_env`, resolving the acting principal from the
+/// `BUT_AGENT_HANDLE` environment variable against the committed
+/// `.gitbutler/agents.toml` (handle set by the trusted harness wrapper, not
+/// self-asserted). This read surface catches an unresolved-caller denial and
+/// reports empty authorities.
 #[but_api(napi, GovernanceStatus)]
 pub fn governance_status_read(ctx: &Context) -> anyhow::Result<GovernanceStatus> {
     let repo = ctx.repo.get()?;
@@ -560,8 +590,8 @@ pub fn governance_status_read(ctx: &Context) -> anyhow::Result<GovernanceStatus>
             .iter()
             .map(|authority| authority.name().to_owned())
             .collect(),
-        // No resolvable caller (e.g. BUT_AGENT_HANDLE unset) → read-only, not an error.
-        Err(_) => Vec::new(),
+        // No resolvable caller (no/unknown handle): read-only, not an error.
+        Err(_denial) => Vec::new(),
     };
     Ok(GovernanceStatus {
         authorities,
@@ -658,6 +688,12 @@ pub fn principal_kind_update(
 }
 
 /// Read branch gates under administration-read authority.
+///
+/// `branch_gates_read_with_repo` gets its caller from
+/// `but_authz::resolve_principal_from_env`, resolving the acting principal from the
+/// `BUT_AGENT_HANDLE` environment variable against the committed
+/// `.gitbutler/agents.toml` (handle set by the trusted harness wrapper, not
+/// self-asserted).
 pub fn branch_gates_read_with_repo(
     repo: &gix::Repository,
     target_ref: &str,
@@ -697,8 +733,10 @@ pub fn branch_gates_update_with_repo(
     branch_gates_update_authorized(repo, target_ref, branch, protection)
 }
 
-/// Update one branch gate entry for a principal resolved by the desktop command boundary.
-pub fn branch_gates_update_with_repo_as_principal(
+/// Update one branch gate entry after the desktop fleet-owner boundary has
+/// asserted unconditional administration-write authority.
+pub fn branch_gates_update_with_repo_as_fleet_owner(
+    _cap: &FleetOwnerCapability,
     repo: &gix::Repository,
     target_ref: &str,
     principal: &str,
@@ -964,6 +1002,7 @@ pub fn governance_commit_with_repo(
 /// Commit governance config files after the desktop fleet-owner boundary has
 /// asserted unconditional administration-write authority.
 pub fn governance_commit_with_repo_as_fleet_owner(
+    _cap: &FleetOwnerCapability,
     repo: &gix::Repository,
     target_ref: &str,
 ) -> anyhow::Result<GovernanceCommitOutcome> {
@@ -1504,6 +1543,12 @@ fn authority_set_for_pending(
 }
 
 /// List governed groups under administration-read authority.
+///
+/// `group_list_with_repo` identifies the caller with
+/// `but_authz::resolve_principal_from_env`, resolving the acting principal from the
+/// `BUT_AGENT_HANDLE` environment variable against the committed
+/// `.gitbutler/agents.toml` (handle set by the trusted harness wrapper, not
+/// self-asserted).
 pub fn group_list_with_repo(
     repo: &gix::Repository,
     target_ref: &str,
@@ -1542,6 +1587,7 @@ pub fn group_create_with_repo(
 /// Create a governed group after the desktop fleet-owner boundary has asserted
 /// unconditional administration-write authority.
 pub fn group_create_with_repo_as_fleet_owner(
+    _cap: &FleetOwnerCapability,
     repo: &gix::Repository,
     target_ref: &str,
     group: &str,
@@ -1600,6 +1646,7 @@ pub fn group_grant_with_repo(
 /// fleet-owner boundary has asserted unconditional administration-write
 /// authority.
 pub fn group_grant_with_repo_as_fleet_owner(
+    _cap: &FleetOwnerCapability,
     repo: &gix::Repository,
     target_ref: &str,
     group: &str,
@@ -1653,6 +1700,7 @@ pub fn group_revoke_with_repo(
 /// fleet-owner boundary has asserted unconditional administration-write
 /// authority.
 pub fn group_revoke_with_repo_as_fleet_owner(
+    _cap: &FleetOwnerCapability,
     repo: &gix::Repository,
     target_ref: &str,
     group: &str,
@@ -1700,6 +1748,7 @@ pub fn group_add_member_with_repo(
 /// Add a principal to a governed group after the desktop fleet-owner boundary
 /// has asserted unconditional administration-write authority.
 pub fn group_add_member_with_repo_as_fleet_owner(
+    _cap: &FleetOwnerCapability,
     repo: &gix::Repository,
     target_ref: &str,
     group: &str,
@@ -1744,6 +1793,7 @@ pub fn group_remove_member_with_repo(
 /// Remove a principal from a governed group after the desktop fleet-owner
 /// boundary has asserted unconditional administration-write authority.
 pub fn group_remove_member_with_repo_as_fleet_owner(
+    _cap: &FleetOwnerCapability,
     repo: &gix::Repository,
     target_ref: &str,
     group: &str,
@@ -1783,6 +1833,7 @@ pub fn group_delete_with_repo(
 /// Delete a governed group after the desktop fleet-owner boundary has asserted
 /// unconditional administration-write authority.
 pub fn group_delete_with_repo_as_fleet_owner(
+    _cap: &FleetOwnerCapability,
     repo: &gix::Repository,
     target_ref: &str,
     group: &str,
@@ -1807,6 +1858,12 @@ fn group_delete_authorized(
 }
 
 /// List committed permissions plus working-tree pending grants for a principal.
+///
+/// `perm_list_with_repo` scopes self-versus-admin reads by resolving the caller
+/// with `but_authz::resolve_principal_from_env`, resolving the acting principal
+/// from the `BUT_AGENT_HANDLE` environment variable against the committed
+/// `.gitbutler/agents.toml` (handle set by the trusted harness wrapper, not
+/// self-asserted).
 pub fn perm_list_with_repo(
     repo: &gix::Repository,
     target_ref: &str,
@@ -1977,6 +2034,12 @@ fn resolve_target_principal(
 /// The disclosure is self-scoped: it surfaces the target's effective authority
 /// set, its OWN group memberships (group names only — never the other members
 /// of those groups), and its authorized-action set from the closed CATALOG.
+///
+/// `whoami_with_repo` resolves the requesting principal with
+/// `but_authz::resolve_principal_from_env`, resolving the acting principal from the
+/// `BUT_AGENT_HANDLE` environment variable against the committed
+/// `.gitbutler/agents.toml` (handle set by the trusted harness wrapper, not
+/// self-asserted).
 pub fn whoami_with_repo(
     repo: &gix::Repository,
     target_ref: &str,
@@ -2028,6 +2091,12 @@ pub fn whoami_with_repo(
 /// unheld authority (that is a factual answer, not an error). Cross-principal
 /// recon by a non-admin caller is denied `perm.denied` before the target is
 /// resolved, so the endpoint cannot be used as a principal-existence oracle.
+///
+/// `can_i_with_repo` resolves the requesting principal with
+/// `but_authz::resolve_principal_from_env`, resolving the acting principal from the
+/// `BUT_AGENT_HANDLE` environment variable against the committed
+/// `.gitbutler/agents.toml` (handle set by the trusted harness wrapper, not
+/// self-asserted).
 pub fn can_i_with_repo(
     repo: &gix::Repository,
     target_ref: &str,
@@ -2091,10 +2160,10 @@ pub fn perm_grant_with_repo(
 /// Grant direct permissions after the desktop command boundary has resolved the
 /// signed-in fleet-owner and asserted the v1 administration-write exception.
 ///
-/// This is intentionally not used by the agent/env path, which must continue to
-/// call [`perm_grant_with_repo`] and resolve `BUT_AGENT_HANDLE` through
-/// `but-authz`.
+/// This is intentionally not used by the agent runtime-registry path, which must
+/// continue to call [`perm_grant_with_repo`] and resolve through `but-authz`.
 pub fn perm_grant_with_repo_as_fleet_owner(
+    _cap: &FleetOwnerCapability,
     repo: &gix::Repository,
     target_ref: &str,
     principal: &str,
@@ -2147,6 +2216,7 @@ pub fn perm_revoke_with_repo(
 /// Revoke direct permissions after the desktop fleet-owner boundary has
 /// asserted unconditional administration-write authority.
 pub fn perm_revoke_with_repo_as_fleet_owner(
+    _cap: &FleetOwnerCapability,
     repo: &gix::Repository,
     target_ref: &str,
     principal: &str,

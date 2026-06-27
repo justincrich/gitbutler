@@ -1,2 +1,0 @@
-fresh_db queryable assignments=0 comments=0 meta_is_some=false
-highest_migration_ids=[20260621120200, 20260621120100, 20260621120000, 20260619120000, 20260618093000]

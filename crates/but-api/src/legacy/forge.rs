@@ -3,7 +3,7 @@ use anyhow::{Context as _, Result};
 use but_api_macros::but_api;
 use but_authz::{
     AssignmentState, Authority, AuthorizedAction, Denial, DenialClass, load_governance_config,
-    resolve_principal_from_env, serialize_authority_tokens,
+    serialize_authority_tokens,
 };
 use but_core::{RepositoryExt, ref_metadata::ProjectMeta};
 use but_ctx::{Context, ThreadSafeContext};
@@ -159,7 +159,17 @@ fn branch_ref(branch: &str) -> String {
     }
 }
 
-fn authorize_branch_action(
+/// Resolve and authorize the runtime principal for a governed branch action.
+///
+/// Returns `Ok(None)` when the branch is not governed. Governed branches resolve
+/// the acting principal from the `BUT_AGENT_HANDLE` environment variable, with the
+/// resolution policy owned by `but-authz`.
+///
+/// `authorize_branch_action` calls `but_authz::resolve_principal_from_env`,
+/// resolving the acting principal from the `BUT_AGENT_HANDLE` environment variable
+/// against the committed `.gitbutler/agents.toml` (handle set by the trusted
+/// harness wrapper, not self-asserted).
+pub fn authorize_branch_action(
     repo: &gix::Repository,
     branch: &str,
     authority: Authority,
@@ -170,7 +180,7 @@ fn authorize_branch_action(
     }
 
     let cfg = load_forge_governance_config(repo, &ref_name)?;
-    let principal = resolve_principal_from_env(&cfg)?;
+    let principal = but_authz::resolve_principal_from_env(&cfg)?;
     // STEER-002: the forge `authorize_branch_action` match is reconciled
     // with the ROUTE_AUTHORITY_TABLE rows in `but-authz`. The three
     // explicit arms below (ReviewsWrite / CommentsWrite / PullRequestsWrite)

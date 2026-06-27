@@ -1,4 +1,0 @@
-10:	import { USER_SERVICE } from "$lib/user/userService.svelte";
-19:	const userService = inject(USER_SERVICE);
-20:	const isAdmin = $derived(userService.user?.role === "admin");
-34:	{isAdmin}

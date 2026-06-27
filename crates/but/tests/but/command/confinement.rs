@@ -13,6 +13,7 @@ fn confinement_no_inband_identity_override() -> anyhow::Result<()> {
 
     env.but("--format json review approve A")
         .allow_json()
+        .env("BUT_AUTHZ_ALLOW_ENV_HANDLE", "1")
         .env("BUT_AGENT_HANDLE", "reviewer")
         .assert()
         .success();
@@ -28,6 +29,7 @@ fn confinement_no_inband_identity_override() -> anyhow::Result<()> {
     let denied = env
         .but("--format json pr merge 1 --dry-run")
         .allow_json()
+        .env("BUT_AUTHZ_ALLOW_ENV_HANDLE", "1")
         .env("BUT_AGENT_HANDLE", "reviewer")
         .output()?;
     assert!(
@@ -47,6 +49,7 @@ fn confinement_no_inband_identity_override() -> anyhow::Result<()> {
     let override_attempt = env
         .but("--format json pr merge 1 --dry-run --as maint")
         .allow_json()
+        .env("BUT_AUTHZ_ALLOW_ENV_HANDLE", "1")
         .env("BUT_AGENT_HANDLE", "reviewer")
         .output()?;
     assert!(

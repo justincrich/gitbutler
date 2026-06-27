@@ -4,8 +4,9 @@ use anyhow::{Context as _, anyhow};
 use but_api::{
     json,
     legacy::governance::{
-        BranchGatesOutcome, BranchProtectionInput, GovernanceCommitOutcome, GovernancePending,
-        GovernancePrincipalsList, GrantOutcome, GroupWriteOutcome, PermWriteOutcome,
+        BranchGatesOutcome, BranchProtectionInput, FleetOwnerCapability, GovernanceCommitOutcome,
+        GovernancePending, GovernancePrincipalsList, GrantOutcome, GroupWriteOutcome,
+        PermWriteOutcome,
     },
 };
 use but_ctx::{Context, ProjectHandleOrLegacyProjectId};
@@ -93,10 +94,14 @@ pub fn fleet_owner_context(
     session: &(impl DesktopSession + ?Sized),
     project_id: ProjectHandleOrLegacyProjectId,
     target_ref: &str,
-) -> Result<(Context, FleetOwnerIdentity), json::Error> {
+) -> Result<(Context, FleetOwnerIdentity, FleetOwnerCapability), json::Error> {
     let owner = session.fleet_owner_identity().map_err(json::Error::from)?;
+    // The signed-in desktop fleet-owner has been resolved: this is the sole
+    // boundary authorized to mint the capability witness that the
+    // `*_as_fleet_owner` governance mutations require.
+    let cap = FleetOwnerCapability::mint();
     let ctx = context_for_project(project_id, target_ref).map_err(json::Error::from)?;
-    Ok((ctx, owner))
+    Ok((ctx, owner, cap))
 }
 
 /// Invoke `perm_grant` as the signed-in desktop fleet-owner.
@@ -107,10 +112,11 @@ pub fn perm_grant_for_desktop_session(
     principal: String,
     authorities: Vec<String>,
 ) -> Result<GrantOutcome, json::Error> {
-    let (ctx, _owner) = fleet_owner_context(session, project_id, &target_ref)?;
+    let (ctx, _owner, cap) = fleet_owner_context(session, project_id, &target_ref)?;
     let repo = ctx.repo.get().map_err(json::Error::from)?;
     let authorities = authority_slices(&authorities);
     but_api::legacy::governance::perm_grant_with_repo_as_fleet_owner(
+        &cap,
         &repo,
         &target_ref,
         &principal,
@@ -128,10 +134,11 @@ pub fn perm_revoke_for_desktop_session(
     principal: String,
     authorities: Vec<String>,
 ) -> Result<PermWriteOutcome, json::Error> {
-    let (ctx, _owner) = fleet_owner_context(session, project_id, &target_ref)?;
+    let (ctx, _owner, cap) = fleet_owner_context(session, project_id, &target_ref)?;
     let repo = ctx.repo.get().map_err(json::Error::from)?;
     let authorities = authority_slices(&authorities);
     but_api::legacy::governance::perm_revoke_with_repo_as_fleet_owner(
+        &cap,
         &repo,
         &target_ref,
         &principal,
@@ -148,10 +155,11 @@ pub fn group_create_for_desktop_session(
     group: String,
     authorities: Vec<String>,
 ) -> Result<GroupWriteOutcome, json::Error> {
-    let (ctx, _owner) = fleet_owner_context(session, project_id, &target_ref)?;
+    let (ctx, _owner, cap) = fleet_owner_context(session, project_id, &target_ref)?;
     let repo = ctx.repo.get().map_err(json::Error::from)?;
     let authorities = authority_slices(&authorities);
     but_api::legacy::governance::group_create_with_repo_as_fleet_owner(
+        &cap,
         &repo,
         &target_ref,
         &group,
@@ -168,10 +176,11 @@ pub fn group_grant_for_desktop_session(
     group: String,
     authorities: Vec<String>,
 ) -> Result<GroupWriteOutcome, json::Error> {
-    let (ctx, _owner) = fleet_owner_context(session, project_id, &target_ref)?;
+    let (ctx, _owner, cap) = fleet_owner_context(session, project_id, &target_ref)?;
     let repo = ctx.repo.get().map_err(json::Error::from)?;
     let authorities = authority_slices(&authorities);
     but_api::legacy::governance::group_grant_with_repo_as_fleet_owner(
+        &cap,
         &repo,
         &target_ref,
         &group,
@@ -188,10 +197,11 @@ pub fn group_revoke_for_desktop_session(
     group: String,
     authorities: Vec<String>,
 ) -> Result<GroupWriteOutcome, json::Error> {
-    let (ctx, _owner) = fleet_owner_context(session, project_id, &target_ref)?;
+    let (ctx, _owner, cap) = fleet_owner_context(session, project_id, &target_ref)?;
     let repo = ctx.repo.get().map_err(json::Error::from)?;
     let authorities = authority_slices(&authorities);
     but_api::legacy::governance::group_revoke_with_repo_as_fleet_owner(
+        &cap,
         &repo,
         &target_ref,
         &group,
@@ -208,9 +218,10 @@ pub fn group_add_member_for_desktop_session(
     group: String,
     member: String,
 ) -> Result<GroupWriteOutcome, json::Error> {
-    let (ctx, _owner) = fleet_owner_context(session, project_id, &target_ref)?;
+    let (ctx, _owner, cap) = fleet_owner_context(session, project_id, &target_ref)?;
     let repo = ctx.repo.get().map_err(json::Error::from)?;
     but_api::legacy::governance::group_add_member_with_repo_as_fleet_owner(
+        &cap,
         &repo,
         &target_ref,
         &group,
@@ -227,9 +238,10 @@ pub fn group_remove_member_for_desktop_session(
     group: String,
     member: String,
 ) -> Result<GroupWriteOutcome, json::Error> {
-    let (ctx, _owner) = fleet_owner_context(session, project_id, &target_ref)?;
+    let (ctx, _owner, cap) = fleet_owner_context(session, project_id, &target_ref)?;
     let repo = ctx.repo.get().map_err(json::Error::from)?;
     but_api::legacy::governance::group_remove_member_with_repo_as_fleet_owner(
+        &cap,
         &repo,
         &target_ref,
         &group,
@@ -245,10 +257,15 @@ pub fn group_delete_for_desktop_session(
     target_ref: String,
     group: String,
 ) -> Result<GroupWriteOutcome, json::Error> {
-    let (ctx, _owner) = fleet_owner_context(session, project_id, &target_ref)?;
+    let (ctx, _owner, cap) = fleet_owner_context(session, project_id, &target_ref)?;
     let repo = ctx.repo.get().map_err(json::Error::from)?;
-    but_api::legacy::governance::group_delete_with_repo_as_fleet_owner(&repo, &target_ref, &group)
-        .map_err(json::Error::from)
+    but_api::legacy::governance::group_delete_with_repo_as_fleet_owner(
+        &cap,
+        &repo,
+        &target_ref,
+        &group,
+    )
+    .map_err(json::Error::from)
 }
 
 /// Invoke `branch_gates_read` as the signed-in desktop fleet-owner.
@@ -257,7 +274,7 @@ pub fn branch_gates_read_for_desktop_session(
     project_id: ProjectHandleOrLegacyProjectId,
     target_ref: String,
 ) -> Result<BranchGatesOutcome, json::Error> {
-    let (ctx, owner) = fleet_owner_context(session, project_id, &target_ref)?;
+    let (ctx, owner, _cap) = fleet_owner_context(session, project_id, &target_ref)?;
     let repo = ctx.repo.get().map_err(json::Error::from)?;
     but_api::legacy::governance::branch_gates_read_with_repo_as_principal(
         &repo,
@@ -275,9 +292,10 @@ pub fn branch_gates_update_for_desktop_session(
     branch: String,
     protection: BranchProtectionInput,
 ) -> Result<BranchGatesOutcome, json::Error> {
-    let (ctx, owner) = fleet_owner_context(session, project_id, &target_ref)?;
+    let (ctx, owner, cap) = fleet_owner_context(session, project_id, &target_ref)?;
     let repo = ctx.repo.get().map_err(json::Error::from)?;
-    but_api::legacy::governance::branch_gates_update_with_repo_as_principal(
+    but_api::legacy::governance::branch_gates_update_with_repo_as_fleet_owner(
+        &cap,
         &repo,
         &target_ref,
         &owner.principal_handle(),
@@ -324,10 +342,14 @@ pub fn governance_commit_for_desktop_session(
     project_id: ProjectHandleOrLegacyProjectId,
     target_ref: String,
 ) -> Result<GovernanceCommitOutcome, json::Error> {
-    let (ctx, _owner) = fleet_owner_context(session, project_id, &target_ref)?;
+    let (ctx, _owner, cap) = fleet_owner_context(session, project_id, &target_ref)?;
     let repo = ctx.repo.get().map_err(json::Error::from)?;
-    but_api::legacy::governance::governance_commit_with_repo_as_fleet_owner(&repo, &target_ref)
-        .map_err(json::Error::from)
+    but_api::legacy::governance::governance_commit_with_repo_as_fleet_owner(
+        &cap,
+        &repo,
+        &target_ref,
+    )
+    .map_err(json::Error::from)
 }
 
 fn context_for_project(
@@ -677,7 +699,7 @@ pub fn principal_kind_update_for_desktop_session(
     principal: String,
     kind: String,
 ) -> Result<PrincipalKindWriteOutcome, json::Error> {
-    let (ctx, _owner) = fleet_owner_context(session, project_id, &target_ref)?;
+    let (ctx, _owner, _cap) = fleet_owner_context(session, project_id, &target_ref)?;
     let repo = ctx.repo.get().map_err(json::Error::from)?;
     but_api::legacy::governance::principal_kind_update_with_repo_as_fleet_owner(
         &repo,

@@ -17,18 +17,25 @@ async fn confinement_reviewer_denied_other_merge_and_self_grant() -> anyhow::Res
     let ctx = context_with_review(&merge_repo, head)?;
     approve_branch(&ctx, "reviewer").await?;
 
-    temp_env::async_with_vars([("BUT_AGENT_HANDLE", Some("reviewer"))], async {
-        let denial = assert_merge_denied(
-            but_api::legacy::forge::merge_review(ctx.to_sync(), REVIEW_ID, None).await,
-            "perm.denied",
-        );
-        assert!(
-            denial.message.contains("merge"),
-            "merge denial must name the missing merge authority, got: {}",
-            denial.message
-        );
-        Ok::<(), anyhow::Error>(())
-    })
+    temp_env::async_with_vars(
+        [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+            ("BUT_AGENT_HANDLE", Some("reviewer")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        async {
+            let denial = assert_merge_denied(
+                but_api::legacy::forge::merge_review(ctx.to_sync(), REVIEW_ID, None).await,
+                "perm.denied",
+            );
+            assert!(
+                denial.message.contains("merge"),
+                "merge denial must name the missing merge authority, got: {}",
+                denial.message
+            );
+            Ok::<(), anyhow::Error>(())
+        },
+    )
     .await?;
     assert_eq!(
         ref_id(&merge_repo, MAIN_REF)?,
@@ -37,17 +44,27 @@ async fn confinement_reviewer_denied_other_merge_and_self_grant() -> anyhow::Res
     );
 
     let (admin_repo, _admin_tmp) = admin_write_confined_repo();
-    let principal_id = temp_env::with_var("BUT_AGENT_HANDLE", Some("reviewer"), || {
-        resolved_principal_id(&admin_repo, MAIN_REF)
-    })?;
+    let principal_id = temp_env::with_vars(
+        [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+            ("BUT_AGENT_HANDLE", Some("reviewer")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        || resolved_principal_id(&admin_repo, MAIN_REF),
+    )?;
     assert_eq!(
         principal_id, "reviewer",
         "administration guard fixture must resolve the acting principal from BUT_AGENT_HANDLE"
     );
 
-    let admin_error = temp_env::with_var("BUT_AGENT_HANDLE", Some("reviewer"), || {
-        classified_admin_error(enforce_administration_write_gate(&admin_repo, MAIN_REF))
-    })?;
+    let admin_error = temp_env::with_vars(
+        [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+            ("BUT_AGENT_HANDLE", Some("reviewer")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        || classified_admin_error(enforce_administration_write_gate(&admin_repo, MAIN_REF)),
+    )?;
     assert_eq!(
         admin_error.code, "perm.denied",
         "reviewer must be denied before reaching any governed config write"
@@ -65,39 +82,46 @@ async fn confinement_reviewer_denied_other_merge_and_self_grant() -> anyhow::Res
 #[serial_test::serial]
 async fn confinement_authority_from_config_not_claim() -> anyhow::Result<()> {
     let (admin_repo, _admin_tmp) = admin_write_confined_repo();
-    temp_env::with_var("BUT_AGENT_HANDLE", Some("reviewer"), || {
-        let cfg = but_authz::load_governance_config(&admin_repo, MAIN_REF)?;
-        let principal = but_authz::resolve_principal_from_env(&cfg)?;
-        assert_eq!(
-            principal.id().as_str(),
-            "reviewer",
-            "resolver must bind the acting principal to BUT_AGENT_HANDLE"
-        );
-        assert!(
-            principal
-                .authorities()
-                .contains(but_authz::Authority::ReviewsWrite),
-            "reviewer must hold reviews:write from committed config"
-        );
-        assert!(
-            !principal
-                .authorities()
-                .contains(but_authz::Authority::Merge),
-            "reviewer must not hold merge from committed config"
-        );
-        let denial = but_authz::authorize(&principal, but_authz::Authority::Merge, &cfg)
-            .expect_err("reviewer must not receive merge from an in-memory claim");
-        assert_eq!(
-            denial.code, "perm.denied",
-            "direct authorization must deny missing merge"
-        );
-        assert!(
-            denial.message.contains("merge"),
-            "direct denial must name merge, got: {}",
-            denial.message
-        );
-        Ok::<(), anyhow::Error>(())
-    })?;
+    temp_env::with_vars(
+        [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+            ("BUT_AGENT_HANDLE", Some("reviewer")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        || {
+            let cfg = but_authz::load_governance_config(&admin_repo, MAIN_REF)?;
+            let principal = but_authz::resolve_principal_from_env(&cfg)?;
+            assert_eq!(
+                principal.id().as_str(),
+                "reviewer",
+                "resolver must bind the acting principal to BUT_AGENT_HANDLE"
+            );
+            assert!(
+                principal
+                    .authorities()
+                    .contains(but_authz::Authority::ReviewsWrite),
+                "reviewer must hold reviews:write from committed config"
+            );
+            assert!(
+                !principal
+                    .authorities()
+                    .contains(but_authz::Authority::Merge),
+                "reviewer must not hold merge from committed config"
+            );
+            let denial = but_authz::authorize(&principal, but_authz::Authority::Merge, &cfg)
+                .expect_err("reviewer must not receive merge from an in-memory claim");
+            assert_eq!(
+                denial.code, "perm.denied",
+                "direct authorization must deny missing merge"
+            );
+            assert!(
+                denial.message.contains("merge"),
+                "direct denial must name merge, got: {}",
+                denial.message
+            );
+            Ok::<(), anyhow::Error>(())
+        },
+    )?;
 
     let (merge_repo, _merge_tmp) = confined_merge_repo()?;
     let main_before = ref_id(&merge_repo, MAIN_REF)?;
@@ -105,18 +129,25 @@ async fn confinement_authority_from_config_not_claim() -> anyhow::Result<()> {
     let ctx = context_with_review(&merge_repo, head)?;
     approve_branch(&ctx, "reviewer").await?;
 
-    temp_env::async_with_vars([("BUT_AGENT_HANDLE", Some("reviewer"))], async {
-        let denial = assert_merge_denied(
-            but_api::legacy::forge::merge_review(ctx.to_sync(), REVIEW_ID, None).await,
-            "perm.denied",
-        );
-        assert!(
-            denial.message.contains("merge"),
-            "governed merge denial must name merge, got: {}",
-            denial.message
-        );
-        Ok::<(), anyhow::Error>(())
-    })
+    temp_env::async_with_vars(
+        [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+            ("BUT_AGENT_HANDLE", Some("reviewer")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        async {
+            let denial = assert_merge_denied(
+                but_api::legacy::forge::merge_review(ctx.to_sync(), REVIEW_ID, None).await,
+                "perm.denied",
+            );
+            assert!(
+                denial.message.contains("merge"),
+                "governed merge denial must name merge, got: {}",
+                denial.message
+            );
+            Ok::<(), anyhow::Error>(())
+        },
+    )
     .await?;
     assert_eq!(
         ref_id(&merge_repo, MAIN_REF)?,
@@ -249,9 +280,14 @@ fn seed_review(ctx: &mut but_ctx::Context, head: gix::ObjectId) -> anyhow::Resul
 }
 
 async fn approve_branch(ctx: &but_ctx::Context, principal_id: &str) -> anyhow::Result<()> {
-    temp_env::async_with_vars([("BUT_AGENT_HANDLE", Some(principal_id))], async {
-        but_api::legacy::forge::approve_review(ctx.to_sync(), "feat".to_owned()).await
-    })
+    temp_env::async_with_vars(
+        [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+            ("BUT_AGENT_HANDLE", Some(principal_id)),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        async { but_api::legacy::forge::approve_review(ctx.to_sync(), "feat".to_owned()).await },
+    )
     .await
 }
 

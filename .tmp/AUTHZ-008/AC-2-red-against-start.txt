@@ -1,2 +1,0 @@
-AC-2 RED against start: required merge/admin authority assertions and Sprint-02 carrier assertion are absent in HEAD.
-grep_exit=1

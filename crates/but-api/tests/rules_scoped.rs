@@ -166,26 +166,41 @@ fn list_workspace_rules_scoped_cross_principal_not_disclosed() -> anyhow::Result
     let mut ctx = context_with_target(&repo)?;
     let seeded = seed_principal_scoped_rules(&mut ctx)?;
 
-    let self_scoped = temp_env::with_var("BUT_AGENT_HANDLE", Some("agent-A"), || {
-        but_api::legacy::rules::list_workspace_rules_scoped_for_caller(&ctx, Some("agent-A"))
-    })?;
+    let self_scoped = temp_env::with_vars(
+        [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+            ("BUT_AGENT_HANDLE", Some("agent-A")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        || but_api::legacy::rules::list_workspace_rules_scoped_for_caller(&ctx, Some("agent-A")),
+    )?;
     assert_eq!(
         rule_ids(&self_scoped),
         vec![seeded.rule_a.id()],
         "a non-admin caller must be allowed to scope the rules query to its own principal"
     );
 
-    let cross_scoped = temp_env::with_var("BUT_AGENT_HANDLE", Some("agent-A"), || {
-        but_api::legacy::rules::list_workspace_rules_scoped_for_caller(&ctx, Some("agent-B"))
-    })?;
+    let cross_scoped = temp_env::with_vars(
+        [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+            ("BUT_AGENT_HANDLE", Some("agent-A")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        || but_api::legacy::rules::list_workspace_rules_scoped_for_caller(&ctx, Some("agent-B")),
+    )?;
     assert!(
         cross_scoped.is_empty(),
         "a non-admin caller requesting another principal must receive an empty list, not the other principal's rules"
     );
 
-    let admin_scoped = temp_env::with_var("BUT_AGENT_HANDLE", Some("admin-reader"), || {
-        but_api::legacy::rules::list_workspace_rules_scoped_for_caller(&ctx, Some("agent-B"))
-    })?;
+    let admin_scoped = temp_env::with_vars(
+        [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+            ("BUT_AGENT_HANDLE", Some("admin-reader")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        || but_api::legacy::rules::list_workspace_rules_scoped_for_caller(&ctx, Some("agent-B")),
+    )?;
     assert_eq!(
         rule_ids(&admin_scoped),
         vec![seeded.rule_b.id()],

@@ -124,6 +124,7 @@ fn group_cli_create_grant_members_list_denial_and_delete() -> anyhow::Result<()>
 
     let create = env
         .but("group create release-captains --permissions reviews:write")
+        .env("BUT_AUTHZ_ALLOW_ENV_HANDLE", "1")
         .env("BUT_AGENT_HANDLE", "admin")
         .output()?;
     assert!(create.status.success(), "admin group create must succeed");
@@ -135,6 +136,7 @@ fn group_cli_create_grant_members_list_denial_and_delete() -> anyhow::Result<()>
 
     let grant = env
         .but("group grant release-captains administration:write")
+        .env("BUT_AUTHZ_ALLOW_ENV_HANDLE", "1")
         .env("BUT_AGENT_HANDLE", "admin")
         .output()?;
     assert!(grant.status.success(), "admin group grant must succeed");
@@ -146,6 +148,7 @@ fn group_cli_create_grant_members_list_denial_and_delete() -> anyhow::Result<()>
 
     let add_member = env
         .but("group add-member release-captains rust-implementer")
+        .env("BUT_AUTHZ_ALLOW_ENV_HANDLE", "1")
         .env("BUT_AGENT_HANDLE", "admin")
         .output()?;
     assert!(
@@ -166,6 +169,7 @@ fn group_cli_create_grant_members_list_denial_and_delete() -> anyhow::Result<()>
 
     let list = env
         .but("group list")
+        .env("BUT_AUTHZ_ALLOW_ENV_HANDLE", "1")
         .env("BUT_AGENT_HANDLE", "admin-reader")
         .output()?;
     assert!(list.status.success(), "admin-read group list must succeed");
@@ -180,6 +184,7 @@ fn group_cli_create_grant_members_list_denial_and_delete() -> anyhow::Result<()>
 
     let remove_member = env
         .but("group remove-member release-captains rust-implementer")
+        .env("BUT_AUTHZ_ALLOW_ENV_HANDLE", "1")
         .env("BUT_AGENT_HANDLE", "admin")
         .output()?;
     assert!(
@@ -202,6 +207,7 @@ fn group_cli_create_grant_members_list_denial_and_delete() -> anyhow::Result<()>
 
     let denied = env
         .but("group add-member code-reviewers rust-implementer")
+        .env("BUT_AUTHZ_ALLOW_ENV_HANDLE", "1")
         .env("BUT_AGENT_HANDLE", "rust-implementer")
         .output()?;
     assert!(!denied.status.success(), "non-admin add-member must fail");
@@ -213,6 +219,7 @@ fn group_cli_create_grant_members_list_denial_and_delete() -> anyhow::Result<()>
 
     let override_attempt = env
         .but("group grant --as admin release-captains reviews:write")
+        .env("BUT_AUTHZ_ALLOW_ENV_HANDLE", "1")
         .env("BUT_AGENT_HANDLE", "rust-implementer")
         .output()?;
     assert!(
@@ -227,6 +234,7 @@ fn group_cli_create_grant_members_list_denial_and_delete() -> anyhow::Result<()>
 
     let delete_attempt = env
         .but("group delete release-captains")
+        .env("BUT_AUTHZ_ALLOW_ENV_HANDLE", "1")
         .env("BUT_AGENT_HANDLE", "admin")
         .output()?;
     assert!(
@@ -251,24 +259,28 @@ fn group_denials_include_remediation_hint() -> anyhow::Result<()> {
         (
             "group create",
             env.but("group create new-team --permissions reviews:write")
+                .env("BUT_AUTHZ_ALLOW_ENV_HANDLE", "1")
                 .env("BUT_AGENT_HANDLE", "rust-implementer")
                 .output()?,
         ),
         (
             "group grant",
             env.but("group grant code-reviewers comments:write")
+                .env("BUT_AUTHZ_ALLOW_ENV_HANDLE", "1")
                 .env("BUT_AGENT_HANDLE", "rust-implementer")
                 .output()?,
         ),
         (
             "group add-member",
             env.but("group add-member code-reviewers rust-implementer")
+                .env("BUT_AUTHZ_ALLOW_ENV_HANDLE", "1")
                 .env("BUT_AGENT_HANDLE", "rust-implementer")
                 .output()?,
         ),
         (
             "group remove-member",
             env.but("group remove-member code-reviewers rust-reviewer")
+                .env("BUT_AUTHZ_ALLOW_ENV_HANDLE", "1")
                 .env("BUT_AGENT_HANDLE", "rust-implementer")
                 .output()?,
         ),
@@ -320,6 +332,7 @@ fn group_cli_uses_workspace_target_ref_not_head() -> anyhow::Result<()> {
 
     let add_member = env
         .but("group add-member maintainers rust-reviewer")
+        .env("BUT_AUTHZ_ALLOW_ENV_HANDLE", "1")
         .env("BUT_AGENT_HANDLE", "admin")
         .output()?;
     assert!(
@@ -371,6 +384,7 @@ fn group_cli_denies_using_workspace_target_when_head_self_grants() -> anyhow::Re
 
     let denied = env
         .but("group grant maintainers reviews:write")
+        .env("BUT_AUTHZ_ALLOW_ENV_HANDLE", "1")
         .env("BUT_AGENT_HANDLE", "rust-reviewer")
         .output()?;
     assert_eq!(

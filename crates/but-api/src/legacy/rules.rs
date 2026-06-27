@@ -92,6 +92,13 @@ pub fn list_workspace_rules_scoped(
         .collect())
 }
 
+/// List workspace rules scoped to `principal_id` after resolving the caller.
+///
+/// `list_workspace_rules_scoped_for_caller` calls
+/// `but_authz::resolve_principal_from_env`, resolving the acting principal from the
+/// `BUT_AGENT_HANDLE` environment variable against the committed
+/// `.gitbutler/agents.toml` (handle set by the trusted harness wrapper, not
+/// self-asserted).
 #[instrument(err(Debug))]
 pub fn list_workspace_rules_scoped_for_caller(
     ctx: &Context,

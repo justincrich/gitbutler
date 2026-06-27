@@ -1,3 +1,0 @@
-apps/desktop/src/components/governance/PrincipalEditor.svelte 94ms
-apps/desktop/tests/governance/PrincipalEditor.spec.ts 29ms
-apps/desktop/tests/governance/PrincipalEditorInheritedReadOnly-PrincipalEditorLocalState-PrincipalEditorBatchSave-PrincipalEditorPreset-PrincipalEditorGroupChip-PrincipalEditorSelfEscalation.spec.ts 1ms (unchanged)

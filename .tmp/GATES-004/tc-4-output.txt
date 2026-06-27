@@ -1,8 +1,0 @@
-crates/but/src/args/forge.rs:42:        /// Approve a branch review locally after authorization.
-crates/but/src/args/forge.rs:43:        Approve {
-crates/but/src/args/forge.rs:49:        RequestChanges {
-crates/but/src/args/forge.rs:57:        /// Comment on a branch review after authorization.
-crates/but/src/args/forge.rs:58:        Comment {
-crates/but/src/args/forge.rs:62:            /// Comment text.
-crates/but/src/args/forge.rs:66:        /// Close a branch review after authorization.
-crates/but/src/args/forge.rs:67:        Close {

@@ -56,6 +56,12 @@ permission-taking helper.
   keep output checks in snapbox. In tests, use panicking assertions such as
   `assert!`, `assert_eq!`, or `assert_ne!` rather than `anyhow::ensure!`.
 
+## Agent Identity
+
+- `but agent` — agent identity management (register/migrate/list --committed/whoami); see [`but-authz/README.md`](../but-authz/README.md) for the identity model, threat model, and `agents.toml` format.
+- `BUT_AGENT_HANDLE` is a test-only escape hatch consulted only when
+  `BUT_AUTHZ_ALLOW_ENV_HANDLE=1` is set; it is not the production identity path.
+
 ## CLI Skills
 
 - After changing CLI commands or workflows, update `crates/but/skill/` so

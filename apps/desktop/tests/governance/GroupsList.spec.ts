@@ -1,4 +1,5 @@
 import GroupsList from "$components/governance/GroupsList.svelte";
+import GroupsListBackendHarness from "./GroupsListBackendHarness.svelte";
 import { expect, test } from "@playwright/experimental-ct-svelte";
 import type { GroupListEntry, GroupListOutcome, GroupWriteOutcome } from "@gitbutler/but-sdk";
 
@@ -157,6 +158,25 @@ test("GroupsListRows renders expandable groups with grants and members", async (
 	await expect(component.getByTestId("groups-list-toggle-eng-contents-write")).toBeChecked();
 	await expect(component.getByTestId("groups-list-members-eng")).toContainText("claude-agent");
 	await expect(component.getByTestId("groups-list-members-eng")).toContainText("codex-agent");
+});
+
+test("GroupsListDefaultService reads groups through the ungated governance_groups_list command", async ({
+	mount,
+}) => {
+	const component = await mount(GroupsListBackendHarness);
+
+	// Regression for the "Could not load groups — unregistered process … no governed principal
+	// resolved" error: the renderer must use the ungated read command, not the governed CLI
+	// `group_list`, and must pass the target ref through.
+	await expect(component.getByTestId("groups-list-backend-calls")).toContainText(
+		"governance_groups_list",
+	);
+	await expect(component.getByTestId("groups-list-backend-args")).toContainText(
+		"refs/remotes/origin/master",
+	);
+	await expect(component.getByTestId("groups-list-row-code-reviewers")).toContainText(
+		"code-reviewers",
+	);
 });
 
 test("GroupsListPendingMarker renders pending group badge in the summary", async ({ mount }) => {

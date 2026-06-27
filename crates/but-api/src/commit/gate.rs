@@ -40,6 +40,13 @@ pub struct CommitGateError {
 /// `but_ctx::Context` + workspace graph traversal), then delegates to the
 /// mechanism-agnostic [`but_authz::enforce_commit_gate_for_target`] waist so
 /// every commit producer shares one gate.
+///
+/// Identity is env-primary: the waist resolves the acting principal from the
+/// `BUT_AGENT_HANDLE` environment variable via
+/// `but_authz::resolve_principal_from_env` against committed governance config,
+/// requires `contents:write`, and rejects direct commits to protected branches.
+/// The handle is set by the trusted harness wrapper (the git→but steerer), not
+/// self-asserted by the agent; an unset/unknown handle denies with `perm.denied`.
 pub fn enforce_commit_gate(ctx: &but_ctx::Context, relative_to: &RelativeTo) -> anyhow::Result<()> {
     let target = gate_target(ctx, relative_to)?;
     let repo = ctx.repo.get()?;

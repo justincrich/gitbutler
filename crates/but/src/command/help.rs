@@ -147,6 +147,8 @@ fn print_grouped_with_truncation(
                 SubcommandDiscriminant::Alias => Group::OtherCommands,
                 SubcommandDiscriminant::Config => Group::OtherCommands,
                 #[cfg(feature = "legacy")]
+                SubcommandDiscriminant::Agent => Group::OtherCommands,
+                #[cfg(feature = "legacy")]
                 SubcommandDiscriminant::Perm => Group::OtherCommands,
                 #[cfg(feature = "legacy")]
                 SubcommandDiscriminant::Whoami => Group::OtherCommands,
@@ -368,6 +370,7 @@ Other Commands:
   update       Manage GitButler CLI and app updates
   alias        Manage command aliases
   config       View and manage GitButler configuration
+  agent        Manage runtime agent registrations
   perm         Manage governed functional permissions
   whoami       Show your effective permissions, own group memberships, and aut…
   can-i        Check whether you hold a functional authority (e.g. but can-i m…

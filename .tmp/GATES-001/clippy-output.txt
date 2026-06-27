@@ -1,4 +1,0 @@
-    Checking but-api v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/GATES-001/crates/but-api)
-    Checking but-transaction v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/GATES-001/crates/but-transaction)
-    Checking but v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/GATES-001/crates/but)
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 8.47s

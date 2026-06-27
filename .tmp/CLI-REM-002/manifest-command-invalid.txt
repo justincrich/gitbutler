@@ -1,5 +1,0 @@
-error: unexpected argument 'group_denials_include_remediation_hint' found
-
-Usage: cargo test [OPTIONS] [TESTNAME] [-- [ARGS]...]
-
-For more information, try '--help'.

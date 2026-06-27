@@ -1,5 +1,0 @@
-ERROR: crates/but-api/src/branch.rs::apply is missing `enforce_commit_gate_for_target`
-ERROR: crates/but-api/src/branch.rs::apply_branch_integration is missing `enforce_commit_gate_for_target`
-OK: crates/but-api/src/legacy/worktree.rs::worktree_integrate calls `enforce_commit_gate_for_target` at line 61 before `exclusive_worktree_access` at line 67
-OK: crates/but-api/src/branch.rs::apply_with_perm contains no `enforce_commit_gate_for_target` call
-OK: crates/but-api/src/branch.rs::apply_branch_integration_with_perm contains no `enforce_commit_gate_for_target` call

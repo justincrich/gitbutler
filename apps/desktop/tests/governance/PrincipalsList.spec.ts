@@ -1,5 +1,6 @@
 import PrincipalsList from "$components/governance/PrincipalsList.svelte";
 import PrincipalsListBackendHarness from "./PrincipalsListBackendHarness.svelte";
+import PrincipalsScrollHarness from "./PrincipalsScrollHarness.svelte";
 import { expect, test } from "@playwright/experimental-ct-svelte";
 import type { PrincipalEditorService } from "$components/governance/PrincipalEditor.svelte";
 import type { PrincipalsListEntry } from "$components/governance/PrincipalsList.svelte";
@@ -59,7 +60,9 @@ function baseProps(entries = seededPrincipals) {
 	};
 }
 
-test("PrincipalsListRows renders seeded principals and grant sources", async ({ mount }) => {
+test("PrincipalsListRows renders a capability matrix with direct and inherited grants", async ({
+	mount,
+}) => {
 	const component = await mount(PrincipalsList, {
 		props: baseProps(),
 	});
@@ -68,17 +71,61 @@ test("PrincipalsListRows renders seeded principals and grant sources", async ({ 
 	await expect(component.getByTestId("principals-list-row-codex-agent")).toContainText(
 		"codex-agent",
 	);
-	await expect(component.getByTestId("principals-list-row-codex-agent")).toContainText(
-		"contents:write",
-	);
-	await expect(component.getByTestId("principals-list-row-codex-agent")).toContainText(
-		"group: eng",
-	);
-	await expect(component.getByTestId("principals-list-row-claude-agent")).toContainText(
-		"pull_requests:write",
-	);
-	await expect(component.getByTestId("principals-list-row-claude-agent")).toContainText(
-		"own grant",
+	// Direct own grant renders as a "own" cell; the group-inherited grant renders as "inherited".
+	await expect(
+		component.getByTestId("principals-cell-codex-agent-contents-read"),
+	).toHaveAttribute("data-grant", "own");
+	await expect(
+		component.getByTestId("principals-cell-codex-agent-contents-write"),
+	).toHaveAttribute("data-grant", "inherited");
+	// Group membership is surfaced on the row.
+	await expect(component.getByTestId("principals-list-row-codex-agent")).toContainText("eng");
+
+	// A capability the agent does not hold renders as an empty cell.
+	await expect(
+		component.getByTestId("principals-cell-claude-agent-pull-requests-write"),
+	).toHaveAttribute("data-grant", "own");
+	await expect(
+		component.getByTestId("principals-cell-claude-agent-administration-write"),
+	).toHaveAttribute("data-grant", "none");
+});
+
+test("PrincipalsListGlossary explains what each capability means", async ({ mount }) => {
+	const component = await mount(PrincipalsList, {
+		props: baseProps(),
+	});
+
+	await component.getByRole("button", { name: "What these permissions mean" }).click();
+
+	const glossary = component.getByTestId("principals-glossary");
+	await expect(glossary).toContainText("Create commits and push changes");
+	await expect(glossary).toContainText("Merge reviewed changes into a protected branch");
+});
+
+test("PrincipalsScroll matrix scrolls horizontally inside a constrained container", async ({
+	mount,
+}) => {
+	const component = await mount(PrincipalsScrollHarness);
+	const scroll = component.getByTestId("principals-scroll");
+
+	const metrics = await scroll.evaluate((el) => ({
+		clientWidth: el.clientWidth,
+		scrollWidth: el.scrollWidth,
+	}));
+
+	// Constrained to the 420px container (does NOT overflow it)...
+	expect(metrics.clientWidth).toBeLessThanOrEqual(420);
+	// ...yet the wider matrix overflows the container, so it is horizontally scrollable.
+	expect(metrics.scrollWidth).toBeGreaterThan(metrics.clientWidth);
+});
+
+test("PrincipalsListConfigHint points to the governed TOML file", async ({ mount }) => {
+	const component = await mount(PrincipalsList, {
+		props: baseProps(),
+	});
+
+	await expect(component.getByTestId("governance-config-hint")).toContainText(
+		".gitbutler/agents.toml",
 	);
 });
 
@@ -97,7 +144,7 @@ test("PrincipalsListDefaultService reads all principals through governance backe
 		"backend-agent",
 	);
 	await expect(component.getByTestId("principals-list-row-backend-agent")).toContainText(
-		"group: platform",
+		"platform",
 	);
 });
 
@@ -110,14 +157,17 @@ test("PrincipalsListEditorToggle opens PrincipalEditor inline without navigation
 	});
 	const beforeUrl = page.url();
 
-	await component.getByTestId("principals-list-row-claude-agent").click();
+	await component
+		.getByTestId("principals-list-row-claude-agent")
+		.getByTestId("principals-list-row")
+		.click();
 
 	await expect(component.getByTestId("principal-editor")).toBeVisible();
 	await expect(component.getByTestId("principal-editor")).toContainText("claude-agent");
 	expect(page.url()).toBe(beforeUrl);
 });
 
-test("PrincipalsListPending marks pending row and keeps effective grants committed", async ({
+test("PrincipalsListPending marks pending row and keeps effective grants visible", async ({
 	mount,
 }) => {
 	const component = await mount(PrincipalsList, {
@@ -125,12 +175,12 @@ test("PrincipalsListPending marks pending row and keeps effective grants committ
 	});
 
 	await expect(component.getByTestId("principals-list-row-cursor-bot")).toContainText("○");
-	await expect(component.getByTestId("principals-list-row-cursor-bot")).toContainText(
-		"contents:read",
-	);
-	await expect(component.getByTestId("principals-list-row-cursor-bot")).toContainText(
-		"contents:write",
-	);
+	await expect(
+		component.getByTestId("principals-cell-cursor-bot-contents-read"),
+	).toHaveAttribute("data-grant", "own");
+	await expect(
+		component.getByTestId("principals-cell-cursor-bot-contents-write"),
+	).toHaveAttribute("data-grant", "inherited");
 	await expect(component.getByTestId("principals-list-row-cursor-bot")).not.toContainText(
 		"working-tree draft",
 	);

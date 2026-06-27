@@ -190,7 +190,7 @@ impl ParseAuthorityError {
     /// Return the rejected token or role name.
     ///
     /// ```
-    /// use but_authz::Authority;
+    /// use but_authz::{Authority, ParseAuthorityError};
     ///
     /// let error = Authority::parse("contents:bogus").err();
     /// assert_eq!(error.as_ref().map(ParseAuthorityError::token), Some("contents:bogus"));

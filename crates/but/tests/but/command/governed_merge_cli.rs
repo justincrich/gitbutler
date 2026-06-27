@@ -13,7 +13,7 @@ fn merge_denial_is_structured_for_implementer_without_merge_authority() -> anyho
 
     env.but("--format json pr merge 1 --method squash")
         .allow_json()
-        .env("BUT_AGENT_HANDLE", "impl")
+        .env("BUT_AUTHZ_ALLOW_ENV_HANDLE", "1").env("BUT_AGENT_HANDLE", "impl")
         .assert()
         .failure()
         .stdout_eq(snapbox::str![[r#"
@@ -42,6 +42,7 @@ fn merge_dry_run_denial_leaves_refs_and_cache_unchanged() -> anyhow::Result<()> 
     let output = env
         .but("--format json pr merge 1 --dry-run")
         .allow_json()
+        .env("BUT_AUTHZ_ALLOW_ENV_HANDLE", "1")
         .env("BUT_AGENT_HANDLE", "impl")
         .output()?;
     assert!(
@@ -94,8 +95,12 @@ fn merge_dry_run_fails_closed_without_agent_handle() -> anyhow::Result<()> {
     for (label, handle) in [("unset", None), ("empty", Some(""))] {
         let mut cmd = env.but("--format json pr merge 1 --dry-run").allow_json();
         cmd = match handle {
-            Some(value) => cmd.env("BUT_AGENT_HANDLE", value),
-            None => cmd.env_remove("BUT_AGENT_HANDLE"),
+            Some(value) => cmd
+                .env("BUT_AUTHZ_ALLOW_ENV_HANDLE", "1")
+                .env("BUT_AGENT_HANDLE", value),
+            None => cmd
+                .env("BUT_AUTHZ_ALLOW_ENV_HANDLE", "1")
+                .env_remove("BUT_AGENT_HANDLE"),
         };
 
         let output = cmd.output()?;
@@ -131,6 +136,7 @@ fn non_dry_run_reaches_forge_merge_boundary_after_gate_passes() -> anyhow::Resul
     let output = env
         .but("--format json pr merge 1 --method rebase")
         .allow_json()
+        .env("BUT_AUTHZ_ALLOW_ENV_HANDLE", "1")
         .env("BUT_AGENT_HANDLE", "maint")
         .output()?;
 

@@ -1,6 +1,0 @@
-  VERIFY: ./tools/governance-checks/check_merge_gate_production_unchanged.sh
-    VERIFY: ./tools/governance-checks/check_merge_gate_production_unchanged.sh
-- NO competing merge-path classification change (DIRECT-DIFF form, S1): `./tools/governance-checks/check_merge_gate_production_unchanged.sh` -> Exit 0 (no production merge-gate diff from AUTHZ-004 baseline; AUTHZ-004 remains the owner)
-      "verify": "./tools/governance-checks/check_merge_gate_production_unchanged.sh",
-    { "id": "TC-3", "type": "test_criterion", "description": "GATES-008 modifies NO production merge-path classification logic (merge_gate.rs production unchanged via direct-diff); AUTHZ-004 remains the owner (no duplicate undefined-group/malformed check)", "verify": "./tools/governance-checks/check_merge_gate_production_unchanged.sh", "maps_to_ac": "AC-2" },
-exit=0

@@ -1,9 +1,0 @@
-   Compiling but-authz v0.0.0 (/Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/AUTHZ-003/crates/but-authz)
-error[E0432]: unresolved import `but_authz::resolve_principal`
- --> crates/but-authz/tests/authorize.rs:3:5
-  |
-3 |     resolve_principal,
-  |     ^^^^^^^^^^^^^^^^^ no `resolve_principal` in the root
-
-For more information about this error, try `rustc --explain E0432`.
-error: could not compile `but-authz` (test "authorize") due to 1 previous error

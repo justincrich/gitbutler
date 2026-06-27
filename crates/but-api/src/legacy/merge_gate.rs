@@ -63,6 +63,11 @@ impl std::fmt::Display for MergeGateError {
 impl std::error::Error for MergeGateError {}
 
 /// Enforce merge authority and the target-ref review requirement for a forge review.
+///
+/// Merge-gate identity resolution calls `but_authz::resolve_principal_from_env`,
+/// resolving the acting principal from the `BUT_AGENT_HANDLE` environment
+/// variable against the committed `.gitbutler/agents.toml` (handle set by the
+/// trusted harness wrapper, not self-asserted).
 pub fn enforce_merge_gate(ctx: &but_ctx::Context, review_id: usize) -> anyhow::Result<()> {
     let review = review_for_id(ctx, review_id)?;
     let target_ref = branch_ref(&review.target_branch);

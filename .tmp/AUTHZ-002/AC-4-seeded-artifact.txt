@@ -1,3 +1,0 @@
-release-bot set contains Authority::Merge
-release-bot set contains Authority::AdministrationRead
-release-bot set excludes Authority::AdministrationWrite

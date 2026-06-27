@@ -25,13 +25,20 @@ fn keep_reviews_local_false_returns_named_seam_error() -> anyhow::Result<()> {
     *ctx.legacy_project.keep_reviews_local = false;
 
     let runtime = tokio::runtime::Runtime::new()?;
-    let err = match temp_env::with_var("BUT_AGENT_HANDLE", Some("dev"), || {
-        runtime.block_on(but_api::legacy::forge::request_review(
-            ctx.to_sync(),
-            FEAT_REF.to_owned(),
-            Some("rev2".to_owned()),
-        ))
-    }) {
+    let err = match temp_env::with_vars(
+        [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+            ("BUT_AGENT_HANDLE", Some("dev")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        || {
+            runtime.block_on(but_api::legacy::forge::request_review(
+                ctx.to_sync(),
+                FEAT_REF.to_owned(),
+                Some("rev2".to_owned()),
+            ))
+        },
+    ) {
         Ok(()) => anyhow::bail!(
             "keep_reviews_local=false must surface the named seam error, not succeed silently"
         ),

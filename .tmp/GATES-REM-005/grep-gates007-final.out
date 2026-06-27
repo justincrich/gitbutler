@@ -1,6 +1,0 @@
-  VERIFY: cargo test -p but-api commit_gate_apply_integrate_dryrun_targetref_pinned && ./tools/governance-checks/check_gate_helper_parity.sh
-    VERIFY: ./tools/governance-checks/check_gate_helper_parity.sh
-- One shared decision helper (mechanism parity, PER-FILE): `./tools/governance-checks/check_gate_helper_parity.sh` -> Exit 0. A loose cross-file SUM is INSUFFICIENT — it could pass with worktree_integrate ungated (e.g. 3 in branch.rs, 0 in worktree.rs).
-      "verify": "cargo test -p but-api commit_gate_apply_integrate_dryrun_targetref_pinned && ./tools/governance-checks/check_gate_helper_parity.sh",
-      "verify": "./tools/governance-checks/check_gate_helper_parity.sh",
-exit=0

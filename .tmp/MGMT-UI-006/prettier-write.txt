@@ -1,2 +1,0 @@
-apps/desktop/src/components/governance/PrincipalsList.svelte 71ms (unchanged)
-apps/desktop/tests/governance/PrincipalsList.spec.ts 21ms

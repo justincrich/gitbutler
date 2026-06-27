@@ -1,2 +1,0 @@
-GREEN command: cargo test -p but-api branch_gates -- --nocapture
-AC-2 seeded: main protected=false; min_approvals=2; distinct=true; groups=["code-reviewers", "maintainers"]

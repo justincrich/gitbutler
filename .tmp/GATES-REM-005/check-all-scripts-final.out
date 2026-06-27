@@ -1,4 +1,0 @@
-OK: crates/but-api/src/legacy/review_requirement.rs contains no forbidden human/AI/role literals
-OK: crates/but-api/src/branch.rs has 2 enforce_commit_gate_for_target calls and crates/but-api/src/legacy/worktree.rs has 1
-OK: crates/but-api/src/legacy/merge_gate.rs is unchanged from AUTHZ-004 baseline a80ce888a894ae3568ee8127866e987e89d6c092
-exit=0

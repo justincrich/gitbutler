@@ -1,3 +1,0 @@
-
-> @gitbutler/e2e@ check:governance-fixture /Users/justinrich/Projects/gitbutler/e2e
-> pnpm exec tsc -p ./playwright/fixtures/governance-app/tsconfig.json --noEmit

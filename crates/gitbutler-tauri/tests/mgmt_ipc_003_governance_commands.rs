@@ -74,13 +74,19 @@ fn mgmt_unauthorized_agent_config_command_denied() -> anyhow::Result<()> {
     let app = governance_app(test_desktop_session())?;
     let webview = governance_webview(&app)?;
 
-    let error = temp_env::with_var("BUT_AGENT_HANDLE", Some("rust-implementer"), || {
-        invoke_err(
-            &webview,
-            "agent_perm_grant",
-            grant_payload(&project_id, "rust-implementer", ["administration:write"]),
-        )
-    })?;
+    let error = temp_env::with_vars(
+        [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+            ("BUT_AGENT_HANDLE", Some("rust-implementer")),
+        ],
+        || {
+            invoke_err(
+                &webview,
+                "agent_perm_grant",
+                grant_payload(&project_id, "rust-implementer", ["administration:write"]),
+            )
+        },
+    )?;
 
     assert_perm_denied_with_hint(&error, "administration:write");
     assert_eq!(

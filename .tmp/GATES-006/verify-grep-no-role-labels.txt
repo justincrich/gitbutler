@@ -1,3 +1,0 @@
-$ ! grep -rEni '\bimplementer\b|\breviewer\b|\bmaintainer\b' crates/but-api/src/legacy/review_requirement.rs
-
-exit_code=0

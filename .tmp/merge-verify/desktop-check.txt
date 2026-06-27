@@ -1,8 +1,0 @@
-
-> @gitbutler/desktop@0.0.0 check /private/var/folders/rt/8_hh9gmj43x4763f7_l_nk3c0000gn/T/opencode/verify-06b-merge/apps/desktop
-> svelte-check --tsconfig ./tsconfig.json
-
-Loading svelte-check in workspace: /private/var/folders/rt/8_hh9gmj43x4763f7_l_nk3c0000gn/T/opencode/verify-06b-merge/apps/desktop
-Getting Svelte diagnostics...
-
-svelte-check found 0 errors and 0 warnings

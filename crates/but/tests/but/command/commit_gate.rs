@@ -82,11 +82,13 @@ unset GIT_INDEX_FILE
     env.file("after-governance.txt", "after");
     env.but("--format json commit2 -m after-governance")
         .allow_json()
+        .env("BUT_AUTHZ_ALLOW_ENV_HANDLE", "1")
         .env("BUT_AGENT_HANDLE", "dev")
         .assert()
         .failure()
         .stderr_eq(snapbox::str![[r#"
-Error: {"error":{"code":"branch.protected","message":[..]A[..]}}
+warning: .gitbutler/permissions.toml is deprecated; run: but agent migrate
+Error: {"error":{"code":"branch.protected","message":"direct commits to protected branch /"A/" are denied for principal /"dev/"; land changes through a reviewed merge","remediation_hint":"open a reviewed merge into A instead of committing directly","class":"actor_correctable","held_permissions":["contents:write"],"authorized_actions":[{"command":"but commit","effect":"create a commit on an unprotected feature branch ref"},{"command":"but perm list","effect":"list your own effective permissions (self-discovery)"}]}}
 
 "#]]);
 
@@ -100,12 +102,13 @@ fn commit_gate_denies_protected_branch() -> anyhow::Result<()> {
     env.file("protected.txt", "protected");
     env.but("--format json commit2 -m protected")
         .allow_json()
-        .env("BUT_AGENT_HANDLE", "dev")
+        .env("BUT_AUTHZ_ALLOW_ENV_HANDLE", "1").env("BUT_AGENT_HANDLE", "dev")
         .assert()
         .failure()
         .stdout_eq(snapbox::str![[r#"
 "#]])
         .stderr_eq(snapbox::str![[r#"
+warning: .gitbutler/permissions.toml is deprecated; run: but agent migrate
 Error: {"error":{"code":"branch.protected","message":"direct commits to protected branch /"A/" are denied for principal /"dev/"; land changes through a reviewed merge","remediation_hint":"open a reviewed merge into A instead of committing directly","class":"actor_correctable","held_permissions":["contents:write"],"authorized_actions":[{"command":"but commit","effect":"create a commit on an unprotected feature branch ref"},{"command":"but perm list","effect":"list your own effective permissions (self-discovery)"}]}}
 
 "#]]);
@@ -120,12 +123,13 @@ fn commit_gate_denies_new_branch_without_contents_write() -> anyhow::Result<()> 
     env.file("readonly.txt", "readonly");
     env.but("--format json commit2 -m readonly -b")
         .allow_json()
-        .env("BUT_AGENT_HANDLE", "ro")
+        .env("BUT_AUTHZ_ALLOW_ENV_HANDLE", "1").env("BUT_AGENT_HANDLE", "ro")
         .assert()
         .failure()
         .stdout_eq(snapbox::str![[r#"
 "#]])
         .stderr_eq(snapbox::str![[r#"
+warning: .gitbutler/permissions.toml is deprecated; run: but agent migrate
 Error: {"error":{"code":"perm.denied","message":"action requires contents:write; authorization denied (held permissions: contents:read)","remediation_hint":"request a reviewed merge or ask a maintainer to grant contents:write","class":"actor_correctable","held_permissions":["contents:read"],"authorized_actions":[{"command":"but perm list","effect":"list your own effective permissions (self-discovery)"}]}}
 
 "#]]);
@@ -169,13 +173,14 @@ unset GIT_INDEX_FILE
     env.file("invalid.txt", "invalid");
     env.but("--format json commit2 -m invalid --above fe")
         .allow_json()
-        .env("BUT_AGENT_HANDLE", "dev")
+        .env("BUT_AUTHZ_ALLOW_ENV_HANDLE", "1").env("BUT_AGENT_HANDLE", "dev")
         .assert()
         .failure()
         .stdout_eq(snapbox::str![[r#"
 "#]])
         .stderr_eq(snapbox::str![[r#"
-Error: {"error":{"code":"config.invalid","message":"invalid governance config: parsing .gitbutler/gates.toml at refs/heads/A[..]"}}
+warning: .gitbutler/permissions.toml is deprecated; run: but agent migrate
+Error: {"error":{"code":"config.invalid","message":"invalid governance config: parsing .gitbutler/gates.toml at refs/heads/A","class":"operator_required","held_permissions":[],"authorized_actions":[],"do_not":"do not retry — an operator must fix the committed .gitbutler config"}}
 
 "#]]);
 

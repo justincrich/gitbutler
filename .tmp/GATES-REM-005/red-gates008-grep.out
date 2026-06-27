@@ -1,2 +1,0 @@
-grep: .spec/prds/governance/tasks/sprint-04-gates-deepening/GATES-008-merge-gate-failclosed-target-ref-only.md: No such file or directory
-exit=2

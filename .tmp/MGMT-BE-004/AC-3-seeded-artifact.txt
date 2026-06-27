@@ -1,1 +1,0 @@
-AC-3 seeded: branch_len=2; gate_len=2; main_min=2; release_min=1; release_groups=["maintainers"]

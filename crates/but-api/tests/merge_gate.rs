@@ -14,17 +14,24 @@ async fn merge_gate_self_and_stale_dismissed() -> anyhow::Result<()> {
     let ctx = context_with_review(&repo, head)?;
 
     approve_branch(&ctx, "impl").await?;
-    temp_env::async_with_vars([("BUT_AGENT_HANDLE", Some("maint"))], async {
-        let denial = assert_gate_denied(
-            but_api::legacy::forge::merge_review(ctx.to_sync(), REVIEW_ID, None).await,
-            "gate.review_required",
-        );
-        assert!(
-            denial.unmet.iter().any(|entry| entry == "no_approval"),
-            "self-approval denial should report the no_approval discriminator"
-        );
-        Ok::<(), anyhow::Error>(())
-    })
+    temp_env::async_with_vars(
+        [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+            ("BUT_AGENT_HANDLE", Some("maint")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        async {
+            let denial = assert_gate_denied(
+                but_api::legacy::forge::merge_review(ctx.to_sync(), REVIEW_ID, None).await,
+                "gate.review_required",
+            );
+            assert!(
+                denial.unmet.iter().any(|entry| entry == "no_approval"),
+                "self-approval denial should report the no_approval discriminator"
+            );
+            Ok::<(), anyhow::Error>(())
+        },
+    )
     .await?;
     assert_eq!(
         ref_id(&repo, MAIN_REF)?,
@@ -44,33 +51,49 @@ async fn merge_gate_self_and_stale_dismissed() -> anyhow::Result<()> {
         "stale-approval fixture must advance feat from H1 to H2"
     );
 
-    temp_env::async_with_vars([("BUT_AGENT_HANDLE", Some("maint"))], async {
-        let denial = assert_gate_denied(
-            but_api::legacy::forge::merge_review(ctx.to_sync(), REVIEW_ID, None).await,
-            "gate.review_required",
-        );
-        assert!(
-            denial
-                .unmet
-                .iter()
-                .any(|entry| entry == "approval_stale_at_head"),
-            "stale approval denial should report approval_stale_at_head"
-        );
-        Ok::<(), anyhow::Error>(())
-    })
+    temp_env::async_with_vars(
+        [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+            ("BUT_AGENT_HANDLE", Some("maint")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        async {
+            let denial = assert_gate_denied(
+                but_api::legacy::forge::merge_review(ctx.to_sync(), REVIEW_ID, None).await,
+                "gate.review_required",
+            );
+            assert!(
+                denial
+                    .unmet
+                    .iter()
+                    .any(|entry| entry == "approval_stale_at_head"),
+                "stale approval denial should report approval_stale_at_head"
+            );
+            Ok::<(), anyhow::Error>(())
+        },
+    )
     .await?;
 
     approve_branch(&ctx, "reviewer").await?;
-    temp_env::async_with_vars([("BUT_AGENT_HANDLE", Some("maint"))], async {
-        let err = but_api::legacy::forge::merge_review(ctx.to_sync(), REVIEW_ID, None)
-            .await
-            .expect_err("local fixture should reach the forge call and fail outside governance");
-        assert!(
-            classify_error(&err).is_none(),
-            "fresh re-approval at H2 should satisfy the merge gate"
-        );
-        Ok::<(), anyhow::Error>(())
-    })
+    temp_env::async_with_vars(
+        [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+            ("BUT_AGENT_HANDLE", Some("maint")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        async {
+            let err = but_api::legacy::forge::merge_review(ctx.to_sync(), REVIEW_ID, None)
+                .await
+                .expect_err(
+                    "local fixture should reach the forge call and fail outside governance",
+                );
+            assert!(
+                classify_error(&err).is_none(),
+                "fresh re-approval at H2 should satisfy the merge gate"
+            );
+            Ok::<(), anyhow::Error>(())
+        },
+    )
     .await?;
 
     Ok(())
@@ -85,16 +108,25 @@ async fn merge_gate_distinct_current_head_satisfies() -> anyhow::Result<()> {
 
     approve_branch(&ctx, "reviewer").await?;
 
-    temp_env::async_with_vars([("BUT_AGENT_HANDLE", Some("maint"))], async {
-        let err = but_api::legacy::forge::merge_review(ctx.to_sync(), REVIEW_ID, None)
-            .await
-            .expect_err("local fixture should reach the forge call and fail outside governance");
-        assert!(
-            classify_error(&err).is_none(),
-            "distinct current-head approval should satisfy the merge gate"
-        );
-        Ok::<(), anyhow::Error>(())
-    })
+    temp_env::async_with_vars(
+        [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+            ("BUT_AGENT_HANDLE", Some("maint")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        async {
+            let err = but_api::legacy::forge::merge_review(ctx.to_sync(), REVIEW_ID, None)
+                .await
+                .expect_err(
+                    "local fixture should reach the forge call and fail outside governance",
+                );
+            assert!(
+                classify_error(&err).is_none(),
+                "distinct current-head approval should satisfy the merge gate"
+            );
+            Ok::<(), anyhow::Error>(())
+        },
+    )
     .await?;
 
     Ok(())
@@ -109,39 +141,55 @@ async fn merge_gate_authorize_and_review_requirement() -> anyhow::Result<()> {
     let ctx = context_with_review(&repo, head)?;
     approve_branch(&ctx, "reviewer").await?;
 
-    temp_env::async_with_vars([("BUT_AGENT_HANDLE", Some("impl"))], async {
-        let denial = assert_gate_denied(
-            but_api::legacy::forge::merge_review(ctx.to_sync(), REVIEW_ID, None).await,
-            "perm.denied",
-        );
-        assert!(
-            denial.message.contains("merge"),
-            "perm.denied should name the missing merge authority"
-        );
+    temp_env::async_with_vars(
+        [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+            ("BUT_AGENT_HANDLE", Some("impl")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        async {
+            let denial = assert_gate_denied(
+                but_api::legacy::forge::merge_review(ctx.to_sync(), REVIEW_ID, None).await,
+                "perm.denied",
+            );
+            assert!(
+                denial.message.contains("merge"),
+                "perm.denied should name the missing merge authority"
+            );
 
-        let denial = assert_gate_denied(
-            but_api::legacy::forge::set_review_auto_merge(ctx.to_sync(), REVIEW_ID, true).await,
-            "perm.denied",
-        );
-        assert!(
-            denial.message.contains("merge"),
-            "auto-merge denial should name the missing merge authority"
-        );
+            let denial = assert_gate_denied(
+                but_api::legacy::forge::set_review_auto_merge(ctx.to_sync(), REVIEW_ID, true).await,
+                "perm.denied",
+            );
+            assert!(
+                denial.message.contains("merge"),
+                "auto-merge denial should name the missing merge authority"
+            );
 
-        anyhow::Ok(())
-    })
+            anyhow::Ok(())
+        },
+    )
     .await?;
 
-    temp_env::async_with_vars([("BUT_AGENT_HANDLE", Some("maint"))], async {
-        let err = but_api::legacy::forge::merge_review(ctx.to_sync(), REVIEW_ID, None)
-            .await
-            .expect_err("local fixture should reach the forge call and fail outside governance");
-        assert!(
-            classify_error(&err).is_none(),
-            "authorized reviewed merge should not fail with a governance denial"
-        );
-        Ok::<(), anyhow::Error>(())
-    })
+    temp_env::async_with_vars(
+        [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+            ("BUT_AGENT_HANDLE", Some("maint")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        async {
+            let err = but_api::legacy::forge::merge_review(ctx.to_sync(), REVIEW_ID, None)
+                .await
+                .expect_err(
+                    "local fixture should reach the forge call and fail outside governance",
+                );
+            assert!(
+                classify_error(&err).is_none(),
+                "authorized reviewed merge should not fail with a governance denial"
+            );
+            Ok::<(), anyhow::Error>(())
+        },
+    )
     .await?;
 
     assert_eq!(
@@ -160,17 +208,24 @@ async fn merge_gate_below_min_approvals_blocked() -> anyhow::Result<()> {
     let main_before = ref_id(&repo, MAIN_REF)?;
     let ctx = context_with_review(&repo, ref_id(&repo, FEAT_REF)?)?;
 
-    temp_env::async_with_vars([("BUT_AGENT_HANDLE", Some("maint"))], async {
-        let denial = assert_gate_denied(
-            but_api::legacy::forge::merge_review(ctx.to_sync(), REVIEW_ID, None).await,
-            "gate.review_required",
-        );
-        assert!(
-            denial.message.contains("min_approvals") || denial.message.contains("approval"),
-            "gate.review_required should name the unmet approval shortfall"
-        );
-        Ok::<(), anyhow::Error>(())
-    })
+    temp_env::async_with_vars(
+        [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+            ("BUT_AGENT_HANDLE", Some("maint")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        async {
+            let denial = assert_gate_denied(
+                but_api::legacy::forge::merge_review(ctx.to_sync(), REVIEW_ID, None).await,
+                "gate.review_required",
+            );
+            assert!(
+                denial.message.contains("min_approvals") || denial.message.contains("approval"),
+                "gate.review_required should name the unmet approval shortfall"
+            );
+            Ok::<(), anyhow::Error>(())
+        },
+    )
     .await?;
 
     assert_eq!(
@@ -189,7 +244,7 @@ async fn merge_gate_targetref_only_feature_head_drop_ignored() -> anyhow::Result
     let main_before = ref_id(&repo, MAIN_REF)?;
     let ctx = context_with_review(&repo, ref_id(&repo, FEAT_REF)?)?;
 
-    temp_env::async_with_vars([("BUT_AGENT_HANDLE", Some("maint"))], async {
+    temp_env::async_with_vars([("BUT_AGENT_HANDLE", Some("maint")), ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1"))], async {
         let denial = assert_gate_denied(
             but_api::legacy::forge::merge_review(ctx.to_sync(), REVIEW_ID, None).await,
             "gate.review_required",
@@ -214,7 +269,7 @@ async fn merge_gate_targetref_only_feature_head_drop_ignored() -> anyhow::Result
 
     approve_branch(&ctx, "reviewer").await?;
 
-    temp_env::async_with_vars([("BUT_AGENT_HANDLE", Some("maint"))], async {
+    temp_env::async_with_vars([("BUT_AGENT_HANDLE", Some("maint")), ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1"))], async {
         let err = but_api::legacy::forge::merge_review(ctx.to_sync(), REVIEW_ID, None)
             .await
             .expect_err("local fixture should reach the forge call and fail outside governance");
@@ -242,32 +297,48 @@ async fn merge_gate_two_group_both_present_proceeds() -> anyhow::Result<()> {
     let head = ref_id(&repo, FEAT_REF)?;
     let ctx = context_with_review(&repo, head)?;
 
-    temp_env::async_with_vars([("BUT_AGENT_HANDLE", Some("maint"))], async {
-        let denial = assert_gate_denied(
-            but_api::legacy::forge::merge_review(ctx.to_sync(), REVIEW_ID, None).await,
-            "gate.review_required",
-        );
-        assert!(
-            denial.message.contains("code-reviewers") && denial.message.contains("maintainers"),
-            "two-group denial should name both missing approval groups"
-        );
-        Ok::<(), anyhow::Error>(())
-    })
+    temp_env::async_with_vars(
+        [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+            ("BUT_AGENT_HANDLE", Some("maint")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        async {
+            let denial = assert_gate_denied(
+                but_api::legacy::forge::merge_review(ctx.to_sync(), REVIEW_ID, None).await,
+                "gate.review_required",
+            );
+            assert!(
+                denial.message.contains("code-reviewers") && denial.message.contains("maintainers"),
+                "two-group denial should name both missing approval groups"
+            );
+            Ok::<(), anyhow::Error>(())
+        },
+    )
     .await?;
 
     approve_branch(&ctx, "reviewer-a").await?;
     approve_branch(&ctx, "reviewer-b").await?;
 
-    temp_env::async_with_vars([("BUT_AGENT_HANDLE", Some("maint"))], async {
-        let err = but_api::legacy::forge::merge_review(ctx.to_sync(), REVIEW_ID, None)
-            .await
-            .expect_err("local fixture should reach the forge call and fail outside governance");
-        assert!(
-            classify_error(&err).is_none(),
-            "both required groups approving at head should satisfy the merge gate"
-        );
-        Ok::<(), anyhow::Error>(())
-    })
+    temp_env::async_with_vars(
+        [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+            ("BUT_AGENT_HANDLE", Some("maint")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        async {
+            let err = but_api::legacy::forge::merge_review(ctx.to_sync(), REVIEW_ID, None)
+                .await
+                .expect_err(
+                    "local fixture should reach the forge call and fail outside governance",
+                );
+            assert!(
+                classify_error(&err).is_none(),
+                "both required groups approving at head should satisfy the merge gate"
+            );
+            Ok::<(), anyhow::Error>(())
+        },
+    )
     .await?;
 
     Ok(())
@@ -282,32 +353,48 @@ async fn merge_gate_two_required_groups_require_each_group() -> anyhow::Result<(
 
     approve_branch(&ctx, "reviewer-a").await?;
 
-    temp_env::async_with_vars([("BUT_AGENT_HANDLE", Some("maint"))], async {
-        let denial = assert_gate_denied(
-            but_api::legacy::forge::merge_review(ctx.to_sync(), REVIEW_ID, None).await,
-            "gate.review_required",
-        );
-        assert_eq!(
-            denial.unmet,
-            ["require_approval_from_group maintainers: no_approval"],
-            "one required group approval must not satisfy the disjoint group requirement"
-        );
-        Ok::<(), anyhow::Error>(())
-    })
+    temp_env::async_with_vars(
+        [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+            ("BUT_AGENT_HANDLE", Some("maint")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        async {
+            let denial = assert_gate_denied(
+                but_api::legacy::forge::merge_review(ctx.to_sync(), REVIEW_ID, None).await,
+                "gate.review_required",
+            );
+            assert_eq!(
+                denial.unmet,
+                ["require_approval_from_group maintainers: no_approval"],
+                "one required group approval must not satisfy the disjoint group requirement"
+            );
+            Ok::<(), anyhow::Error>(())
+        },
+    )
     .await?;
 
     approve_branch(&ctx, "reviewer-b").await?;
 
-    temp_env::async_with_vars([("BUT_AGENT_HANDLE", Some("maint"))], async {
-        let err = but_api::legacy::forge::merge_review(ctx.to_sync(), REVIEW_ID, None)
-            .await
-            .expect_err("local fixture should reach the forge call and fail outside governance");
-        assert!(
-            classify_error(&err).is_none(),
-            "one approval from each required group should satisfy the merge gate"
-        );
-        Ok::<(), anyhow::Error>(())
-    })
+    temp_env::async_with_vars(
+        [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+            ("BUT_AGENT_HANDLE", Some("maint")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        async {
+            let err = but_api::legacy::forge::merge_review(ctx.to_sync(), REVIEW_ID, None)
+                .await
+                .expect_err(
+                    "local fixture should reach the forge call and fail outside governance",
+                );
+            assert!(
+                classify_error(&err).is_none(),
+                "one approval from each required group should satisfy the merge gate"
+            );
+            Ok::<(), anyhow::Error>(())
+        },
+    )
     .await?;
 
     Ok(())
@@ -322,22 +409,29 @@ async fn merge_gate_overlapping_required_groups_policy() -> anyhow::Result<()> {
 
     approve_branch(&ctx, "reviewer-x").await?;
 
-    temp_env::async_with_vars([("BUT_AGENT_HANDLE", Some("maint"))], async {
-        let denial = assert_gate_denied(
-            but_api::legacy::forge::merge_review(ctx.to_sync(), REVIEW_ID, None).await,
-            "gate.review_required",
-        );
-        assert!(
-            denial.message.contains("distinct"),
-            "overlap denial should explain that required groups need distinct approvals"
-        );
-        assert_eq!(
-            denial.unmet,
-            ["require_approval_from_group maintainers: no_distinct_approval"],
-            "a single overlapping principal must not satisfy every required group"
-        );
-        Ok::<(), anyhow::Error>(())
-    })
+    temp_env::async_with_vars(
+        [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+            ("BUT_AGENT_HANDLE", Some("maint")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        async {
+            let denial = assert_gate_denied(
+                but_api::legacy::forge::merge_review(ctx.to_sync(), REVIEW_ID, None).await,
+                "gate.review_required",
+            );
+            assert!(
+                denial.message.contains("distinct"),
+                "overlap denial should explain that required groups need distinct approvals"
+            );
+            assert_eq!(
+                denial.unmet,
+                ["require_approval_from_group maintainers: no_distinct_approval"],
+                "a single overlapping principal must not satisfy every required group"
+            );
+            Ok::<(), anyhow::Error>(())
+        },
+    )
     .await?;
 
     assert_eq!(
@@ -358,26 +452,33 @@ async fn merge_gate_two_group_only_one_blocked() -> anyhow::Result<()> {
 
     approve_branch(&ctx, "reviewer-a").await?;
 
-    temp_env::async_with_vars([("BUT_AGENT_HANDLE", Some("maint"))], async {
-        let denial = assert_gate_denied(
-            but_api::legacy::forge::merge_review(ctx.to_sync(), REVIEW_ID, None).await,
-            "gate.review_required",
-        );
-        assert_eq!(
-            denial.unmet,
-            ["require_approval_from_group maintainers: no_approval"],
-            "AI-only approval should report exactly the missing maintainers group"
-        );
-        assert!(
-            !denial
-                .unmet
-                .iter()
-                .any(|entry| entry.starts_with("require_approval_from_group code-reviewers:")),
-            "AI-only approval should omit the satisfied code-reviewers group, got {:?}",
-            denial.unmet
-        );
-        Ok::<(), anyhow::Error>(())
-    })
+    temp_env::async_with_vars(
+        [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+            ("BUT_AGENT_HANDLE", Some("maint")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        async {
+            let denial = assert_gate_denied(
+                but_api::legacy::forge::merge_review(ctx.to_sync(), REVIEW_ID, None).await,
+                "gate.review_required",
+            );
+            assert_eq!(
+                denial.unmet,
+                ["require_approval_from_group maintainers: no_approval"],
+                "AI-only approval should report exactly the missing maintainers group"
+            );
+            assert!(
+                !denial
+                    .unmet
+                    .iter()
+                    .any(|entry| entry.starts_with("require_approval_from_group code-reviewers:")),
+                "AI-only approval should omit the satisfied code-reviewers group, got {:?}",
+                denial.unmet
+            );
+            Ok::<(), anyhow::Error>(())
+        },
+    )
     .await?;
 
     assert_eq!(
@@ -392,26 +493,33 @@ async fn merge_gate_two_group_only_one_blocked() -> anyhow::Result<()> {
 
     approve_branch(&ctx, "reviewer-b").await?;
 
-    temp_env::async_with_vars([("BUT_AGENT_HANDLE", Some("maint"))], async {
-        let denial = assert_gate_denied(
-            but_api::legacy::forge::merge_review(ctx.to_sync(), REVIEW_ID, None).await,
-            "gate.review_required",
-        );
-        assert_eq!(
-            denial.unmet,
-            ["require_approval_from_group code-reviewers: no_approval"],
-            "maintainers-only approval should report exactly the missing code-reviewers group"
-        );
-        assert!(
-            !denial
-                .unmet
-                .iter()
-                .any(|entry| entry.starts_with("require_approval_from_group maintainers:")),
-            "maintainers-only approval should omit the satisfied maintainers group, got {:?}",
-            denial.unmet
-        );
-        Ok::<(), anyhow::Error>(())
-    })
+    temp_env::async_with_vars(
+        [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+            ("BUT_AGENT_HANDLE", Some("maint")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        async {
+            let denial = assert_gate_denied(
+                but_api::legacy::forge::merge_review(ctx.to_sync(), REVIEW_ID, None).await,
+                "gate.review_required",
+            );
+            assert_eq!(
+                denial.unmet,
+                ["require_approval_from_group code-reviewers: no_approval"],
+                "maintainers-only approval should report exactly the missing code-reviewers group"
+            );
+            assert!(
+                !denial
+                    .unmet
+                    .iter()
+                    .any(|entry| entry.starts_with("require_approval_from_group maintainers:")),
+                "maintainers-only approval should omit the satisfied maintainers group, got {:?}",
+                denial.unmet
+            );
+            Ok::<(), anyhow::Error>(())
+        },
+    )
     .await?;
 
     assert_eq!(
@@ -432,17 +540,24 @@ async fn merge_gate_dryrun_and_malformed_failclosed() -> anyhow::Result<()> {
     approve_branch(&ctx, "reviewer").await?;
     let verdicts_before = verdict_count(&ctx)?;
 
-    temp_env::async_with_vars([("BUT_AGENT_HANDLE", Some("impl"))], async {
-        let denial = assert_gate_denied(
-            but_api::legacy::forge::merge_review(ctx.to_sync(), REVIEW_ID, None).await,
-            "perm.denied",
-        );
-        assert!(
-            denial.message.contains("merge"),
-            "dry-run-equivalent merge path should still require merge authority"
-        );
-        Ok::<(), anyhow::Error>(())
-    })
+    temp_env::async_with_vars(
+        [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+            ("BUT_AGENT_HANDLE", Some("impl")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        async {
+            let denial = assert_gate_denied(
+                but_api::legacy::forge::merge_review(ctx.to_sync(), REVIEW_ID, None).await,
+                "perm.denied",
+            );
+            assert!(
+                denial.message.contains("merge"),
+                "dry-run-equivalent merge path should still require merge authority"
+            );
+            Ok::<(), anyhow::Error>(())
+        },
+    )
     .await?;
 
     assert_eq!(
@@ -459,13 +574,20 @@ async fn merge_gate_dryrun_and_malformed_failclosed() -> anyhow::Result<()> {
     let (repo, _tmp) = merge_gated_repo(GateConfig::Malformed)?;
     let ctx = context_with_review(&repo, ref_id(&repo, FEAT_REF)?)?;
 
-    temp_env::async_with_vars([("BUT_AGENT_HANDLE", Some("maint"))], async {
-        assert_gate_denied(
-            but_api::legacy::forge::merge_review(ctx.to_sync(), REVIEW_ID, None).await,
-            "config.invalid",
-        );
-        Ok::<(), anyhow::Error>(())
-    })
+    temp_env::async_with_vars(
+        [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+            ("BUT_AGENT_HANDLE", Some("maint")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        async {
+            assert_gate_denied(
+                but_api::legacy::forge::merge_review(ctx.to_sync(), REVIEW_ID, None).await,
+                "config.invalid",
+            );
+            Ok::<(), anyhow::Error>(())
+        },
+    )
     .await?;
 
     Ok(())
@@ -479,23 +601,30 @@ async fn merge_gate_unknown_and_no_handle_failclosed() -> anyhow::Result<()> {
     let ctx = context_with_review(&repo, ref_id(&repo, FEAT_REF)?)?;
     approve_branch(&ctx, "reviewer").await?;
 
-    temp_env::async_with_vars([("BUT_AGENT_HANDLE", Some("ghost"))], async {
-        let denial = assert_gate_denied(
-            but_api::legacy::forge::merge_review(ctx.to_sync(), REVIEW_ID, None).await,
-            "perm.denied",
-        );
-        assert!(
-            denial
-                .message
-                .contains("principal \"ghost\" not found in committed governance config"),
-            "unknown principal denial should name the missing handle"
-        );
-        assert!(
-            denial.unmet.is_empty(),
-            "perm.denied should not carry review-requirement unmet entries"
-        );
-        Ok::<(), anyhow::Error>(())
-    })
+    temp_env::async_with_vars(
+        [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+            ("BUT_AGENT_HANDLE", Some("ghost")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        async {
+            let denial = assert_gate_denied(
+                but_api::legacy::forge::merge_review(ctx.to_sync(), REVIEW_ID, None).await,
+                "perm.denied",
+            );
+            assert!(
+                denial
+                    .message
+                    .contains("principal \"ghost\" not found in committed governance config"),
+                "unknown principal denial should name the missing handle"
+            );
+            assert!(
+                denial.unmet.is_empty(),
+                "perm.denied should not carry review-requirement unmet entries"
+            );
+            Ok::<(), anyhow::Error>(())
+        },
+    )
     .await?;
     assert_eq!(
         ref_id(&repo, MAIN_REF)?,
@@ -503,23 +632,30 @@ async fn merge_gate_unknown_and_no_handle_failclosed() -> anyhow::Result<()> {
         "unknown-principal denial must leave main unchanged"
     );
 
-    temp_env::async_with_vars([("BUT_AGENT_HANDLE", None::<&str>)], async {
-        let denial = assert_gate_denied(
-            but_api::legacy::forge::merge_review(ctx.to_sync(), REVIEW_ID, None).await,
-            "perm.denied",
-        );
-        assert!(
-            denial
-                .message
-                .contains("BUT_AGENT_HANDLE is required to resolve a governed principal"),
-            "no-handle denial should name BUT_AGENT_HANDLE"
-        );
-        assert!(
-            denial.unmet.is_empty(),
-            "perm.denied should not carry review-requirement unmet entries"
-        );
-        Ok::<(), anyhow::Error>(())
-    })
+    temp_env::async_with_vars(
+        [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+            ("BUT_AGENT_HANDLE", None::<&str>),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        async {
+            let denial = assert_gate_denied(
+                but_api::legacy::forge::merge_review(ctx.to_sync(), REVIEW_ID, None).await,
+                "perm.denied",
+            );
+            assert!(
+                denial
+                    .message
+                    .contains("BUT_AGENT_HANDLE is required to resolve a governed principal"),
+                "no-handle denial should name BUT_AGENT_HANDLE"
+            );
+            assert!(
+                denial.unmet.is_empty(),
+                "perm.denied should not carry review-requirement unmet entries"
+            );
+            Ok::<(), anyhow::Error>(())
+        },
+    )
     .await?;
     assert_eq!(
         ref_id(&repo, MAIN_REF)?,
@@ -537,17 +673,24 @@ async fn merge_gate_malformed_config_is_config_invalid() -> anyhow::Result<()> {
     let main_before = ref_id(&repo, MAIN_REF)?;
     let ctx = context_with_review(&repo, ref_id(&repo, FEAT_REF)?)?;
 
-    temp_env::async_with_vars([("BUT_AGENT_HANDLE", Some("maint"))], async {
-        let denial = assert_gate_denied(
-            but_api::legacy::forge::merge_review(ctx.to_sync(), REVIEW_ID, None).await,
-            "config.invalid",
-        );
-        assert!(
-            denial.message.contains(".gitbutler/gates.toml"),
-            "malformed target-ref gate config should be identified"
-        );
-        Ok::<(), anyhow::Error>(())
-    })
+    temp_env::async_with_vars(
+        [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+            ("BUT_AGENT_HANDLE", Some("maint")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        async {
+            let denial = assert_gate_denied(
+                but_api::legacy::forge::merge_review(ctx.to_sync(), REVIEW_ID, None).await,
+                "config.invalid",
+            );
+            assert!(
+                denial.message.contains(".gitbutler/gates.toml"),
+                "malformed target-ref gate config should be identified"
+            );
+            Ok::<(), anyhow::Error>(())
+        },
+    )
     .await?;
     assert_eq!(
         ref_id(&repo, MAIN_REF)?,
@@ -555,17 +698,24 @@ async fn merge_gate_malformed_config_is_config_invalid() -> anyhow::Result<()> {
         "malformed-config denial for maint must leave main unchanged"
     );
 
-    temp_env::async_with_vars([("BUT_AGENT_HANDLE", Some("ghost"))], async {
-        let denial = assert_gate_denied(
-            but_api::legacy::forge::merge_review(ctx.to_sync(), REVIEW_ID, None).await,
-            "config.invalid",
-        );
-        assert!(
-            denial.message.contains(".gitbutler/gates.toml"),
-            "malformed target-ref gate config should win before principal resolution"
-        );
-        Ok::<(), anyhow::Error>(())
-    })
+    temp_env::async_with_vars(
+        [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+            ("BUT_AGENT_HANDLE", Some("ghost")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        async {
+            let denial = assert_gate_denied(
+                but_api::legacy::forge::merge_review(ctx.to_sync(), REVIEW_ID, None).await,
+                "config.invalid",
+            );
+            assert!(
+                denial.message.contains(".gitbutler/gates.toml"),
+                "malformed target-ref gate config should win before principal resolution"
+            );
+            Ok::<(), anyhow::Error>(())
+        },
+    )
     .await?;
     assert_eq!(
         ref_id(&repo, MAIN_REF)?,
@@ -584,25 +734,32 @@ async fn merge_gate_undefined_required_group_denied() -> anyhow::Result<()> {
     let ctx = context_with_review(&repo, ref_id(&repo, FEAT_REF)?)?;
     approve_branch(&ctx, "reviewer").await?;
 
-    temp_env::async_with_vars([("BUT_AGENT_HANDLE", Some("maint"))], async {
-        let denial = assert_gate_denied(
-            but_api::legacy::forge::merge_review(ctx.to_sync(), REVIEW_ID, None).await,
-            "gate.review_required",
-        );
-        assert!(
-            denial
-                .unmet
-                .iter()
-                .any(|entry| entry == "undefined required group ghost-reviewers"),
-            "undefined required group must be reported as unsatisfiable, got {:?}",
-            denial.unmet
-        );
-        assert!(
-            denial.message.contains("ghost-reviewers"),
-            "undefined group denial should name the required group"
-        );
-        Ok::<(), anyhow::Error>(())
-    })
+    temp_env::async_with_vars(
+        [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+            ("BUT_AGENT_HANDLE", Some("maint")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        async {
+            let denial = assert_gate_denied(
+                but_api::legacy::forge::merge_review(ctx.to_sync(), REVIEW_ID, None).await,
+                "gate.review_required",
+            );
+            assert!(
+                denial
+                    .unmet
+                    .iter()
+                    .any(|entry| entry == "undefined required group ghost-reviewers"),
+                "undefined required group must be reported as unsatisfiable, got {:?}",
+                denial.unmet
+            );
+            assert!(
+                denial.message.contains("ghost-reviewers"),
+                "undefined group denial should name the required group"
+            );
+            Ok::<(), anyhow::Error>(())
+        },
+    )
     .await?;
     assert_eq!(
         ref_id(&repo, MAIN_REF)?,
@@ -622,19 +779,26 @@ async fn merge_gate_dryrun_unknown_failclosed_persists_nothing() -> anyhow::Resu
     approve_branch(&ctx, "reviewer").await?;
     let verdicts_before = verdict_count(&ctx)?;
 
-    temp_env::async_with_vars([("BUT_AGENT_HANDLE", Some("ghost"))], async {
-        let denial = assert_gate_denied(
-            but_api::legacy::forge::dry_run_merge_review(ctx.to_sync(), REVIEW_ID),
-            "perm.denied",
-        );
-        assert!(
-            denial
-                .message
-                .contains("principal \"ghost\" not found in committed governance config"),
-            "dry-run unknown principal denial should name the missing handle"
-        );
-        Ok::<(), anyhow::Error>(())
-    })
+    temp_env::async_with_vars(
+        [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+            ("BUT_AGENT_HANDLE", Some("ghost")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        async {
+            let denial = assert_gate_denied(
+                but_api::legacy::forge::dry_run_merge_review(ctx.to_sync(), REVIEW_ID),
+                "perm.denied",
+            );
+            assert!(
+                denial
+                    .message
+                    .contains("principal \"ghost\" not found in committed governance config"),
+                "dry-run unknown principal denial should name the missing handle"
+            );
+            Ok::<(), anyhow::Error>(())
+        },
+    )
     .await?;
 
     assert_eq!(
@@ -669,14 +833,20 @@ async fn merge_gate_steering_fields_positive_assertions() -> anyhow::Result<()> 
     let main_before = ref_id(&repo, MAIN_REF)?;
     let ctx = context_with_review(&repo, ref_id(&repo, FEAT_REF)?)?;
 
-    let review_required_err =
-        temp_env::async_with_vars([("BUT_AGENT_HANDLE", Some("maint"))], async {
+    let review_required_err = temp_env::async_with_vars(
+        [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+            ("BUT_AGENT_HANDLE", Some("maint")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        async {
             but_api::legacy::forge::merge_review(ctx.to_sync(), REVIEW_ID, None)
                 .await
                 .err()
-        })
-        .await
-        .expect("maintainer with zero approvals must be denied");
+        },
+    )
+    .await
+    .expect("maintainer with zero approvals must be denied");
 
     let gate_error = review_required_err
         .downcast_ref::<but_api::legacy::merge_gate::MergeGateError>()
@@ -716,11 +886,18 @@ async fn merge_gate_steering_fields_positive_assertions() -> anyhow::Result<()> 
     let ctx = context_with_review(&repo, ref_id(&repo, FEAT_REF)?)?;
     approve_branch(&ctx, "reviewer").await?;
 
-    let perm_denied_err = temp_env::async_with_vars([("BUT_AGENT_HANDLE", Some("impl"))], async {
-        but_api::legacy::forge::merge_review(ctx.to_sync(), REVIEW_ID, None)
-            .await
-            .err()
-    })
+    let perm_denied_err = temp_env::async_with_vars(
+        [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+            ("BUT_AGENT_HANDLE", Some("impl")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        async {
+            but_api::legacy::forge::merge_review(ctx.to_sync(), REVIEW_ID, None)
+                .await
+                .err()
+        },
+    )
     .await
     .expect("impl lacks merge authority — must be denied");
 
@@ -1029,9 +1206,14 @@ fn verdict_count(ctx: &but_ctx::Context) -> anyhow::Result<usize> {
 }
 
 async fn approve_branch(ctx: &but_ctx::Context, principal_id: &str) -> anyhow::Result<()> {
-    temp_env::async_with_vars([("BUT_AGENT_HANDLE", Some(principal_id))], async {
-        but_api::legacy::forge::approve_review(ctx.to_sync(), "feat".to_owned()).await
-    })
+    temp_env::async_with_vars(
+        [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+            ("BUT_AGENT_HANDLE", Some(principal_id)),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        async { but_api::legacy::forge::approve_review(ctx.to_sync(), "feat".to_owned()).await },
+    )
     .await
 }
 

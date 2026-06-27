@@ -1,8 +1,0 @@
-
-> @gitbutler/desktop@0.0.0 check /Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-003/apps/desktop
-> svelte-check --tsconfig ./tsconfig.json
-
-Loading svelte-check in workspace: /Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-003/apps/desktop
-Getting Svelte diagnostics...
-
-svelte-check found 0 errors and 0 warnings

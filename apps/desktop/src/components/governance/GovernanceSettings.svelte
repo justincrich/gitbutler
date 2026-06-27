@@ -308,39 +308,49 @@
 	.governance-settings {
 		display: flex;
 		flex-direction: column;
-		gap: var(--clr-space-8);
+		min-width: 0;
+		gap: 8px;
+	}
+
+	/* Let PrincipalsList's horizontal scroll engage: every flex ancestor between the
+	   fixed-width settings modal and the matrix's overflow container must be allowed to
+	   shrink below its content width. Scoped to the governance subtree so shared Tabs
+	   aren't affected app-wide. */
+	.governance-settings :global(.tab-wrapper),
+	.governance-settings :global(.tab-content) {
+		min-width: 0;
 	}
 
 	.pending-banner {
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-		padding: var(--clr-space-8);
-		gap: var(--clr-space-8);
-		border: 1px solid var(--clr-border-2);
+		padding: 8px;
+		gap: 8px;
+		border: 1px solid var(--border-2);
 		border-radius: var(--radius-m);
-		background: var(--clr-bg-2);
+		background: var(--bg-2);
 	}
 
 	.pending-banner__copy {
 		display: flex;
 		flex-direction: column;
-		gap: var(--clr-space-4);
+		gap: 4px;
 	}
 
 	.governance-button {
-		padding: var(--clr-space-4) var(--clr-space-8);
-		border: 1px solid var(--clr-border-2);
+		padding: 4px 8px;
+		border: 1px solid var(--border-2);
 		border-radius: var(--radius-s);
-		background: var(--clr-bg-1);
-		color: var(--clr-text-1);
+		background: var(--bg-1);
+		color: var(--text-1);
 		font: inherit;
 		cursor: pointer;
 	}
 
 	.governance-button--primary {
-		border-color: var(--clr-theme-pop-element);
-		background: var(--clr-theme-pop-element);
+		border-color: var(--fill-pop-bg);
+		background: var(--fill-pop-bg);
 		color: var(--clr-white);
 	}
 
@@ -357,9 +367,10 @@
 		display: flex;
 		align-items: flex-start;
 		justify-content: space-between;
+		min-width: 0;
 		min-height: 120px;
-		padding: var(--clr-space-8) 0;
-		gap: var(--clr-space-8);
+		padding: 8px 0;
+		gap: 8px;
 	}
 
 	.governance-panel--principals,
@@ -367,7 +378,10 @@
 	.governance-panel--branch-gates,
 	.governance-panel--rules,
 	.governance-panel--local-review {
+		/* Column layout that stretches children to the panel width (overriding the base
+		   panel's align-items: flex-start) so the matrix's horizontal scroll can engage. */
 		flex-direction: column;
+		align-items: stretch;
 	}
 
 	.governance-rules-list {

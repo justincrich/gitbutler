@@ -1,4 +1,0 @@
-
-> @gitbutler/core@0.0.1 package /Users/justinrich/Projects/gitbutler/.kb-run-sprint/worktrees/MGMT-UI-003/packages/core
-> tsc -p tsconfig.json
-

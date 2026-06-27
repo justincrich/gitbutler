@@ -10,10 +10,16 @@ const PERMISSIONS_PATH: &str = ".gitbutler/permissions.toml";
 fn admin_write_guard_denies_non_admin_allows_admin() -> anyhow::Result<()> {
     let (repo, _tmp) = admin_write_repo();
 
-    let dev_error =
-        temp_env::with_var("BUT_AGENT_HANDLE", Some("dev"), || -> anyhow::Result<_> {
+    let dev_error = temp_env::with_vars(
+        [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+            ("BUT_AGENT_HANDLE", Some("dev")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        || -> anyhow::Result<_> {
             classified_error(enforce_administration_write_gate(&repo, MAIN_REF))
-        })?;
+        },
+    )?;
     assert_eq!(
         dev_error.code, "perm.denied",
         "principal without administration:write must be denied"
@@ -23,9 +29,12 @@ fn admin_write_guard_denies_non_admin_allows_admin() -> anyhow::Result<()> {
         "denial message must name the missing administration:write authority"
     );
 
-    temp_env::with_var(
-        "BUT_AGENT_HANDLE",
-        Some("admin"),
+    temp_env::with_vars(
+        [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+            ("BUT_AGENT_HANDLE", Some("admin")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
         || -> anyhow::Result<()> { enforce_administration_write_gate(&repo, MAIN_REF) },
     )?;
 
@@ -43,10 +52,16 @@ permissions = ["administration:write", "merge"]
 "#,
     )?;
 
-    let self_grant_error =
-        temp_env::with_var("BUT_AGENT_HANDLE", Some("dev"), || -> anyhow::Result<_> {
+    let self_grant_error = temp_env::with_vars(
+        [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+            ("BUT_AGENT_HANDLE", Some("dev")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
+        || -> anyhow::Result<_> {
             classified_error(enforce_administration_write_gate(&repo, MAIN_REF))
-        })?;
+        },
+    )?;
     assert_eq!(
         self_grant_error.code, "perm.denied",
         "uncommitted working-tree permissions.toml must not widen target-ref authority"
@@ -72,9 +87,12 @@ permissions = ["administration:write", "merge"]
 fn admin_write_guard_malformed_config_invalid() -> anyhow::Result<()> {
     let (repo, _tmp) = admin_write_malformed();
 
-    let error = temp_env::with_var(
-        "BUT_AGENT_HANDLE",
-        Some("admin"),
+    let error = temp_env::with_vars(
+        [
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+            ("BUT_AGENT_HANDLE", Some("admin")),
+            ("BUT_AUTHZ_ALLOW_ENV_HANDLE", Some("1")),
+        ],
         || -> anyhow::Result<_> {
             classified_error(enforce_administration_write_gate(&repo, MAIN_REF))
         },

@@ -27,11 +27,18 @@
 </script>
 
 <script lang="ts">
+	import GovernanceConfigHint from "$components/governance/GovernanceConfigHint.svelte";
 	import PrincipalEditor from "$components/governance/PrincipalEditor.svelte";
+	import ExpandableSection from "$components/shared/ExpandableSection.svelte";
 	import { BACKEND } from "$lib/backend";
-	import { createGovernanceRendererContract } from "$lib/governance";
+	import {
+		CAPABILITY_AUTHORITIES,
+		CAPABILITY_CATALOG,
+		CAPABILITY_CATEGORIES,
+		createGovernanceRendererContract,
+	} from "$lib/governance";
 	import { injectOptional } from "@gitbutler/core/context";
-	import { Badge, Button, EmptyStatePlaceholder, InfoMessage } from "@gitbutler/ui";
+	import { Badge, Button, EmptyStatePlaceholder, Icon, InfoMessage, Tooltip } from "@gitbutler/ui";
 	import { untrack } from "svelte";
 	import type { GovernanceRendererContract } from "$lib/governance";
 
@@ -65,6 +72,9 @@
 		onAddFirst,
 		onPrincipalPending,
 	}: Props = $props();
+
+	const knownAuthorities = new Set(CAPABILITY_AUTHORITIES);
+	const totalColumns = CAPABILITY_CATALOG.length + 1;
 
 	const backend = injectOptional(BACKEND, undefined);
 	const service = untrack(() => providedService ?? createPrincipalsListService());
@@ -123,19 +133,34 @@
 		};
 	}
 
-	function uniqueSorted(values: string[]): string[] {
-		return [...new Set(values)].sort((left, right) => left.localeCompare(right));
-	}
-
 	function slug(value: string): string {
 		return value.replace(/[^a-z0-9]+/gi, "-");
 	}
 
-	function effectiveGrants(principal: PrincipalsListEntry): string[] {
-		return uniqueSorted([
+	function grantState(
+		principal: PrincipalsListEntry,
+		authority: string,
+	): "own" | "inherited" | "none" {
+		if (principal.ownGrants.includes(authority)) return "own";
+		if ((principal.inheritedGrants ?? []).some((grant) => grant.authority === authority)) {
+			return "inherited";
+		}
+		return "none";
+	}
+
+	function inheritedSource(principal: PrincipalsListEntry, authority: string): string | undefined {
+		return (principal.inheritedGrants ?? []).find((grant) => grant.authority === authority)
+			?.sourceLabel;
+	}
+
+	// Surface any granted authority that isn't in the standard catalog rather than silently
+	// dropping it — hiding a real grant on a security surface would be a lie.
+	function customGrants(principal: PrincipalsListEntry): string[] {
+		const all = [
 			...principal.ownGrants,
 			...(principal.inheritedGrants ?? []).map((grant) => grant.authority),
-		]);
+		];
+		return [...new Set(all.filter((authority) => !knownAuthorities.has(authority)))].sort();
 	}
 
 	async function loadPrincipals() {
@@ -179,7 +204,7 @@
 	}
 </script>
 
-<section class="principals-list" data-testid="principals-list">
+<section class="principals" data-testid="principals-list">
 	{#if loadError}
 		<InfoMessage style="danger" outlined>
 			{#snippet title()}Could not load principals{/snippet}
@@ -187,162 +212,386 @@
 		</InfoMessage>
 	{/if}
 
+	<GovernanceConfigHint file="agents" {targetRef} cli="but perm" />
+
 	{#if !isLoading && principals.length === 0}
 		<div data-testid="principals-list-empty">
 			<EmptyStatePlaceholder gap={12} topBottomPadding={24}>
 				{#snippet title()}No principals configured{/snippet}
+				{#snippet caption()}
+					Add agents to <code>.gitbutler/agents.toml</code> and commit to see them here.
+				{/snippet}
 				{#snippet actions()}
 					<Button kind="outline" disabled={isReadOnly} onclick={onAddFirst}>+ Add first</Button>
 				{/snippet}
 			</EmptyStatePlaceholder>
 		</div>
 	{:else}
-		<div class="principals-list__table" aria-busy={isLoading}>
-			{#each principals as principal (principal.principalId)}
-				{@const inheritedGrants = principal.inheritedGrants ?? []}
-				{@const groupMemberships = principal.groupMemberships ?? []}
-				<div
-					class="principals-list__row-wrap"
-					data-testid={`principals-list-row-${slug(principal.principalId)}`}
-				>
-					<button
-						type="button"
-						class="principals-list__row"
-						data-testid="principals-list-row"
-						aria-expanded={selectedPrincipalId === principal.principalId}
-						onclick={() => selectPrincipal(principal.principalId)}
-					>
-						<span class="principals-list__principal">
-							{#if principal.pending && principal.ownGrants.length > 0}
-								<Badge
-									testId={`principals-list-pending-${slug(principal.principalId)}`}
-									style="warning"
-									kind="soft"
-									size="icon"
-								>
-									○
-								</Badge>
-							{/if}
-							<strong>{principal.principalId}</strong>
-							{#if principal.kind === "agent"}
-								<Badge
-									testId={`principals-list-agent-${slug(principal.principalId)}`}
-									style="gray"
-									kind="soft"
-									size="tag"
-									tooltip="This label identifies the principal as an agent or human for tagging purposes. It does not change any permission grant or gate decision."
-								>
-									agent
-								</Badge>
-							{/if}
-						</span>
-
-						<span class="principals-list__grants">
-							{#each effectiveGrants(principal) as authority (authority)}
-								<span class="principals-list__grant">
-									<span>{authority}</span>
-									{#if principal.ownGrants.includes(authority)}
-										<small>own grant</small>
-									{:else}
-										<small>
-											{inheritedGrants.find((grant) => grant.authority === authority)?.sourceLabel}
-										</small>
-									{/if}
-								</span>
-							{/each}
-						</span>
-
-						<span class="principals-list__groups">
-							{#each groupMemberships as group (group)}
-								<Badge style="gray" kind="soft" size="tag">group: {group}</Badge>
-							{/each}
-						</span>
-					</button>
-
-					{#if selectedPrincipal?.principalId === principal.principalId}
-						<div class="principals-list__editor">
-							<PrincipalEditor
-								{projectId}
-								{targetRef}
-								principalId={principal.principalId}
-								ownGrants={principal.ownGrants}
-								{inheritedGrants}
-								{groupMemberships}
-								{availableGroups}
-								isCurrentUser={principal.isCurrentUser}
-								kind={principal.kind}
-								{isReadOnly}
-								service={editorService}
-								onCancel={() => (selectedPrincipalId = undefined)}
-								onSaved={refreshAfterSave}
-							/>
-						</div>
-					{/if}
-				</div>
-			{/each}
+		<div class="principals__legend" data-testid="principals-legend">
+			<span class="legend-item"><span class="cell-mark cell-mark--own">✓</span> Direct grant</span>
+			<span class="legend-item">
+				<span class="cell-mark cell-mark--inherited">◐</span> Inherited from group
+			</span>
+			<span class="legend-item legend-item--muted">Dimmed columns aren't enforced yet</span>
 		</div>
+
+		<div class="principals__scroll" data-testid="principals-scroll" aria-busy={isLoading}>
+			<table class="matrix" data-testid="principals-matrix">
+				<thead>
+					<tr>
+						<th class="matrix__corner" rowspan="2" scope="col">Agent</th>
+						{#each CAPABILITY_CATEGORIES as category (category.id)}
+							<th class="matrix__group" colspan={category.capabilities.length} scope="colgroup">
+								{category.label}
+							</th>
+						{/each}
+					</tr>
+					<tr>
+						{#each CAPABILITY_CATALOG as capability (capability.authority)}
+							<th
+								class="matrix__cap"
+								class:matrix__cap--soon={!capability.enforced}
+								scope="col"
+							>
+								<Tooltip
+									text={`${capability.authority} — ${capability.description}${capability.enforced ? "" : " (defined, not yet enforced)"}`}
+								>
+									<span class="matrix__cap-label">{capability.short}</span>
+								</Tooltip>
+							</th>
+						{/each}
+					</tr>
+				</thead>
+				<tbody>
+					{#each principals as principal (principal.principalId)}
+						{@const groupMemberships = principal.groupMemberships ?? []}
+						{@const extras = customGrants(principal)}
+						<tr
+							class="matrix__row"
+							data-testid={`principals-list-row-${slug(principal.principalId)}`}
+						>
+							<th class="matrix__agent" scope="row">
+								<button
+									type="button"
+									class="matrix__agent-button"
+									data-testid="principals-list-row"
+									aria-expanded={selectedPrincipalId === principal.principalId}
+									onclick={() => selectPrincipal(principal.principalId)}
+								>
+									<span class="matrix__agent-name">
+										{#if principal.pending}
+											<Badge
+												testId={`principals-list-pending-${slug(principal.principalId)}`}
+												style="warning"
+												kind="soft"
+												size="icon"
+											>
+												○
+											</Badge>
+										{/if}
+										<strong>{principal.principalId}</strong>
+										{#if principal.isCurrentUser}
+											<Badge style="pop" kind="soft" size="tag">You</Badge>
+										{/if}
+									</span>
+									{#if groupMemberships.length > 0}
+										<span class="matrix__agent-groups">
+											{#each groupMemberships as group (group)}
+												<span class="group-chip" title={`Member of group: ${group}`}>
+													<Icon name="folder" />{group}
+												</span>
+											{/each}
+										</span>
+									{/if}
+									{#if extras.length > 0}
+										<span class="matrix__agent-groups">
+											{#each extras as extra (extra)}
+												<Badge style="warning" kind="soft" size="tag">{extra}</Badge>
+											{/each}
+										</span>
+									{/if}
+								</button>
+							</th>
+
+							{#each CAPABILITY_CATALOG as capability (capability.authority)}
+								{@const state = grantState(principal, capability.authority)}
+								{@const source = inheritedSource(principal, capability.authority)}
+								<td
+									class="matrix__cell"
+									class:matrix__cell--soon={!capability.enforced}
+									data-testid={`principals-cell-${slug(principal.principalId)}-${slug(capability.authority)}`}
+									data-grant={state}
+								>
+									{#if state === "own"}
+										<Tooltip text={`${capability.label} — direct grant`}>
+											<span class="cell-mark cell-mark--own">✓</span>
+										</Tooltip>
+									{:else if state === "inherited"}
+										<Tooltip text={`${capability.label} — inherited from ${source}`}>
+											<span class="cell-mark cell-mark--inherited">◐</span>
+										</Tooltip>
+									{:else}
+										<span class="cell-mark cell-mark--none" aria-hidden="true">·</span>
+									{/if}
+								</td>
+							{/each}
+						</tr>
+
+						{#if selectedPrincipal?.principalId === principal.principalId}
+							<tr class="matrix__editor-row">
+								<td colspan={totalColumns}>
+									<PrincipalEditor
+										{projectId}
+										{targetRef}
+										principalId={principal.principalId}
+										ownGrants={principal.ownGrants}
+										inheritedGrants={principal.inheritedGrants ?? []}
+										{groupMemberships}
+										{availableGroups}
+										isCurrentUser={principal.isCurrentUser}
+										{isReadOnly}
+										service={editorService}
+										onCancel={() => (selectedPrincipalId = undefined)}
+										onSaved={refreshAfterSave}
+									/>
+								</td>
+							</tr>
+						{/if}
+					{/each}
+				</tbody>
+			</table>
+		</div>
+
+		<ExpandableSection label="What these permissions mean" icon="info">
+			{#snippet content()}
+				<dl class="glossary" data-testid="principals-glossary">
+					{#each CAPABILITY_CATALOG as capability (capability.authority)}
+						<div class="glossary__row">
+							<dt>
+								<code>{capability.authority}</code>
+								<span class="glossary__name">{capability.label}</span>
+								{#if !capability.enforced}
+									<Badge style="gray" kind="soft" size="tag">not yet enforced</Badge>
+								{/if}
+							</dt>
+							<dd>{capability.description}</dd>
+						</div>
+					{/each}
+				</dl>
+			{/snippet}
+		</ExpandableSection>
 	{/if}
 </section>
 
 <style>
-	.principals-list,
-	.principals-list__table,
-	.principals-list__row-wrap {
+	.principals {
 		display: flex;
 		flex-direction: column;
-		gap: var(--clr-space-8);
+		/* width:100% + min-width:0 keep this constrained to the parent's width even when an
+		   ancestor flex column uses align-items other than stretch — otherwise the wide matrix
+		   would size the column to its own content and never trigger horizontal scroll. */
+		width: 100%;
+		min-width: 0;
+		gap: 10px;
 	}
 
-	.principals-list__row {
-		display: grid;
-		grid-template-columns: minmax(140px, 0.7fr) minmax(220px, 1.6fr) minmax(120px, 0.8fr);
-		align-items: start;
+	.principals__legend {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 12px;
+		color: var(--text-2);
+		font-size: 12px;
+	}
+
+	.legend-item {
+		display: inline-flex;
+		align-items: center;
+		gap: 4px;
+	}
+
+	.legend-item--muted {
+		color: var(--text-3);
+	}
+
+	.principals__scroll {
 		width: 100%;
-		padding: var(--clr-space-8);
-		gap: var(--clr-space-8);
-		border: 1px solid var(--clr-border-2);
-		border-radius: var(--radius-s);
-		background: var(--clr-bg-1);
-		color: var(--clr-text-1);
+		min-width: 0;
+		max-width: 100%;
+		overflow-x: auto;
+		border: 1px solid var(--border-2);
+		border-radius: var(--radius-m);
+	}
+
+	.matrix {
+		width: 100%;
+		border-collapse: collapse;
+		font-size: 12px;
+	}
+
+	.matrix th,
+	.matrix td {
+		border-bottom: 1px solid var(--border-3);
+		border-left: 1px solid var(--border-3);
+	}
+
+	.matrix__group,
+	.matrix__cap {
+		padding: 4px 6px;
+		color: var(--text-2);
+		font-weight: 600;
+		text-align: center;
+		white-space: nowrap;
+		background: var(--bg-2);
+	}
+
+	.matrix__group {
+		border-bottom: 1px solid var(--border-2);
+		font-size: 11px;
+		text-transform: uppercase;
+		letter-spacing: 0.04em;
+	}
+
+	.matrix__cap {
+		font-weight: 500;
+	}
+
+	.matrix__cap-label {
+		cursor: help;
+	}
+
+	.matrix__cap--soon,
+	.matrix__cell--soon {
+		background: var(--bg-1);
+		opacity: 0.65;
+	}
+
+	.matrix__corner {
+		position: sticky;
+		left: 0;
+		z-index: 1;
+		padding: 4px 8px;
+		border-left: 0;
+		color: var(--text-2);
+		font-weight: 600;
+		text-align: left;
+		background: var(--bg-2);
+	}
+
+	.matrix__agent {
+		position: sticky;
+		left: 0;
+		z-index: 1;
+		border-left: 0;
+		background: var(--bg-1);
+	}
+
+	.matrix__row:hover .matrix__agent {
+		background: var(--bg-2);
+	}
+
+	.matrix__agent-button {
+		display: flex;
+		flex-direction: column;
+		width: 100%;
+		min-width: 160px;
+		padding: 6px 8px;
+		gap: 4px;
+		background: transparent;
+		color: var(--text-1);
 		font: inherit;
 		text-align: left;
 		cursor: pointer;
 	}
 
-	.principals-list__row:hover {
-		background: var(--clr-bg-2);
-	}
-
-	.principals-list__principal,
-	.principals-list__grants,
-	.principals-list__groups,
-	.principals-list__grant {
+	.matrix__agent-name {
 		display: flex;
-		min-width: 0;
-		gap: var(--clr-space-4);
-	}
-
-	.principals-list__principal {
 		align-items: center;
+		gap: 4px;
 	}
 
-	.principals-list__grants,
-	.principals-list__groups {
+	.matrix__agent-groups {
+		display: flex;
 		flex-wrap: wrap;
+		gap: 4px;
 	}
 
-	.principals-list__grant {
-		flex-direction: column;
-		padding: var(--clr-space-4) var(--clr-space-6);
+	.group-chip {
+		display: inline-flex;
+		align-items: center;
+		padding: 0 4px;
+		gap: 2px;
 		border-radius: var(--radius-s);
-		background: var(--clr-bg-2);
+		background: var(--bg-2);
+		color: var(--text-2);
+		font-size: 11px;
 	}
 
-	.principals-list__grant small {
-		color: var(--clr-text-2);
+	.matrix__cell {
+		padding: 4px;
+		text-align: center;
 	}
 
-	.principals-list__editor {
-		padding-left: var(--clr-space-12);
+	.matrix__row:hover .matrix__cell {
+		background: var(--bg-2);
+	}
+
+	.cell-mark {
+		display: inline-block;
+		font-weight: 700;
+	}
+
+	.cell-mark--own {
+		color: var(--fill-pop-bg);
+	}
+
+	.cell-mark--inherited {
+		color: var(--text-2);
+	}
+
+	.cell-mark--none {
+		color: var(--text-3);
+	}
+
+	.matrix__editor-row td {
+		padding: 8px;
+		background: var(--bg-2);
+	}
+
+	.glossary {
+		display: flex;
+		flex-direction: column;
+		margin: 0;
+		gap: 8px;
+	}
+
+	.glossary__row {
+		display: flex;
+		flex-direction: column;
+		gap: 2px;
+	}
+
+	.glossary dt {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 6px;
+	}
+
+	.glossary__name {
+		font-weight: 600;
+	}
+
+	.glossary dd {
+		margin: 0;
+		color: var(--text-2);
+		font-size: 12px;
+	}
+
+	.glossary code {
+		padding: 0 2px;
+		border-radius: var(--radius-s);
+		background: var(--bg-2);
+		font-size: 11px;
 	}
 </style>
