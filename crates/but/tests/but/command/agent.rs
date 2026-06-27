@@ -97,7 +97,10 @@ Options:
 fn agent_list_committed_prints_roster() -> anyhow::Result<()> {
     // The runtime registry was removed (identity is env-primary). `but agent
     // list` reports the committed roster from `.gitbutler/agents.toml`.
-    let env = ident_fixture("ident-agent-list-committed", RUST_IMPLEMENTER_AND_REVIEWER_AGENTS)?;
+    let env = ident_fixture(
+        "ident-agent-list-committed",
+        RUST_IMPLEMENTER_AND_REVIEWER_AGENTS,
+    )?;
 
     env.but("agent list --committed")
         .assert()

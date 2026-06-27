@@ -187,22 +187,40 @@ fn principal_from_handle(handle: &str, cfg: &GovConfig) -> Result<Principal, Den
     Ok(Principal::new(principal_id, authorities, groups))
 }
 
-/// Resolve the acting principal from the process environment.
+/// Resolve the acting principal from the process environment — the PRODUCTION
+/// gate resolver. Every governed `but-api` gate resolves the acting principal
+/// from the `BUT_AGENT_HANDLE` environment variable against the committed
+/// `.gitbutler/agents.toml`.
+///
+/// # Why an env var (and not a PID registry)
+///
+/// Identity was first built as a runtime PID registry (`but agent register`
+/// mapping `(pid, start_time) -> agent_id`, gate resolves the current pid). It
+/// was reverted because it cannot govern the real execution model: an agent runs
+/// `but` as a **one-shot child process** (`cd … && but commit`), so the pid the
+/// gate sees is an ephemeral grandchild that was never registered — registration
+/// is inert and the gate denies. A PID **ancestry walk** was also rejected: the
+/// real harnesses (OpenCode, Claude Code) multiplex many subagents into ONE host
+/// process, so siblings are indistinguishable by lineage. `BUT_AGENT_HANDLE`
+/// works where the registry can't because it is inherited/host-set per shell.
+///
+/// The handle is **set by the trusted harness wrapper** (the git→but steerer),
+/// NOT self-asserted by the agent: OpenCode's `shell.env` hook injects it
+/// (host-set, un-forgeable); Claude Code / Codex (whose hooks can't mutate the
+/// child env) match-enforce — denying a governed `but` whose handle differs from
+/// the assigned agent. The trust root is the host OS + that harness wrapper — the
+/// same trust class the registry already conceded, with far less machinery. A
+/// sealed (signed) token is a possible follow-on, not built. See
+/// `crates/but-authz/README.md` for the full trust model and
+/// `.spec/prds/governance/12-uc-agent-identity.md` for the reversal record.
 ///
 /// This is a thin wrapper around [`resolve_principal`]; tests should use the
-/// injected lookup variant to avoid mutating process environment.
+/// injected lookup variant to avoid mutating the process environment.
 ///
 /// ```
 /// # let config = but_authz::GovConfig::new([], [], []);
 /// let _ = but_authz::resolve_principal_from_env(&config);
 /// ```
-///
-/// This is the PRODUCTION gate resolver: every governed `but-api` gate resolves
-/// the acting principal from the `BUT_AGENT_HANDLE` environment variable against
-/// the committed `.gitbutler/agents.toml`. Identity is set by the trusted
-/// harness wrapper (the git→but steerer), not self-asserted by the agent — see
-/// `crates/but-authz/README.md` for the trust model. (Superseded the runtime PID
-/// registry; see `.spec/prds/governance/12-uc-agent-identity.md`.)
 pub fn resolve_principal_from_env(cfg: &GovConfig) -> Result<Principal, Denial> {
     resolve_principal(|key| env::var_os(key), cfg)
 }

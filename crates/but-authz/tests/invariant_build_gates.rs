@@ -104,8 +104,7 @@ const PRIMER_REFERENCE_PATTERN: &str =
 // Env-primary resolution: every governed gate's doc names the environment
 // resolver + the `BUT_AGENT_HANDLE` carrier. (The runtime PID registry was
 // superseded — see `.spec/prds/governance/12-uc-agent-identity.md`.)
-const RESOLUTION_ORDER_DOC_LITERALS: &[&str] =
-    &["resolve_principal_from_env", "BUT_AGENT_HANDLE"];
+const RESOLUTION_ORDER_DOC_LITERALS: &[&str] = &["resolve_principal_from_env", "BUT_AGENT_HANDLE"];
 
 #[test]
 fn invariant_build_gates() -> anyhow::Result<()> {

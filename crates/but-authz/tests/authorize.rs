@@ -302,4 +302,3 @@ fn assert_principal_resolved(result: Result<Principal, Denial>, context: &str) -
         Err(denial) => panic!("{context}: {} {}", denial.code, denial.message),
     }
 }
-

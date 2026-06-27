@@ -217,14 +217,17 @@ See `frontend.md` for full frontend-test detail.
 
 ### Agent identity
 
-- In governed repos, each process must run `but agent register` before any
-  gate; an unregistered process resolves no principal and is denied with
-  `perm.denied`.
-- `BUT_AGENT_HANDLE` is a test-only escape hatch: it is consulted only when
-  `BUT_AUTHZ_ALLOW_ENV_HANDLE=1` is set, and it is not the production identity
-  path.
-- Resolution order is strict: process registry → flag-gated `BUT_AGENT_HANDLE`
-  → `Denial::unregistered`.
+- In governed repos, identity is resolved from `BUT_AGENT_HANDLE` set by the
+  trusted harness wrapper (the git→but steerer), not self-asserted by the agent.
+  The gates call `resolve_principal_from_env` against committed
+  `.gitbutler/agents.toml`; an unset or unknown handle resolves no principal and
+  is denied with `perm.denied`.
+- The steerer assigns each agent's handle: OpenCode via a `shell.env` injection
+  (host-set, un-forgeable); Claude Code / Codex via PreToolUse match-enforcement
+  (deny a governed `but` whose handle ≠ the harness-assigned agent). There is no
+  runtime registry.
+- `but agent` exposes only `list --committed` and `migrate`. See
+  `crates/but-authz/README.md` for the trust model and forgeability caveat.
 
 ## Scoped Instructions & Key Docs
 

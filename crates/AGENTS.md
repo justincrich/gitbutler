@@ -136,5 +136,5 @@ vendored, or fixture data unless the task is specifically about that code.
 
 ## Related Documentation
 
-- **Agent identity model**: see [`but-authz/README.md`](but-authz/README.md) for the threat model, `agents.toml` format, and resolution order.
+- **Agent identity model**: env-primary — gates resolve the acting principal from `BUT_AGENT_HANDLE` (set by the trusted harness wrapper, not self-asserted) against committed `agents.toml`. See [`but-authz/README.md`](but-authz/README.md) for the threat model, `agents.toml` format, and resolution order.
 - For graph/workspace/branch/stack/commit/rebase relationships, see [`WORKSPACE_MODEL.md`](WORKSPACE_MODEL.md).

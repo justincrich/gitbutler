@@ -3,29 +3,34 @@
 Functional authorization primitives for governed GitButler actions.
 
 `but-authz` answers two questions for every governed `but` invocation: **who is
-acting**, and **are they allowed**. It resolves an acting principal from a
-runtime process registry, loads committed governance config, and authorizes
-functional authorities (`contents:write`, `reviews:write`, …) against branch
-protection and review gates.
+acting**, and **are they allowed**. It resolves an acting principal from the
+`BUT_AGENT_HANDLE` environment variable, loads committed governance config, and
+authorizes functional authorities (`contents:write`, `reviews:write`, …) against
+branch protection and review gates.
 
 ## Threat model
 
 > **Honest, scoped threat model.** Read this before relying on `but-authz` for
 > any security decision.
 
-Agent identity in `but-authz` is **process-level**, not cryptographic. The
-acting principal is bound to the operating-system process via the tuple
-`(pid, start_time)` — the `start_time` value is Unix seconds read from:
+Agent identity in `but-authz` is **environment-primary**, not cryptographic. The
+acting principal is resolved from the `BUT_AGENT_HANDLE` environment variable and
+matched against the committed `.gitbutler/agents.toml` catalog. The handle is a
+**plaintext string** — there is no signature, no token, no shared secret. Its
+integrity comes entirely from **who sets it**: the trusted **harness wrapper**
+(the git→but steerer) assigns each agent its handle; the agent does **not**
+self-assert it.
 
-- **Linux** — `/proc/[pid]/stat` field 22 (`starttime`, in clock ticks after
-  boot), converted with `sysconf(_SC_CLK_TCK)` and the system `btime`.
-- **macOS** — `proc_pidinfo(pid, PROC_PIDTBSDINFO, …)` returning
-  `proc_bsdinfo.pbi_start_tvsec`.
-
-The `(pid, start_time)` tuple is a cheap **PID-reuse defense**: a recycled PID
-acquires a new start time, so a stale registration whose start time no longer
-matches the observed process is refused as `Denial::stale_registration`. It
-does **not** make any spoof-prevention or cryptographic-identity claim.
+**Explicit forgeability caveat.** A plaintext handle is only as strong as the
+harness that sets it. Any actor that can set `BUT_AGENT_HANDLE` in a governed
+`but` process's environment can present that identity. The trust root is
+therefore **the host OS plus the harness wrapper that sets the env var** — the
+same trust class the prior runtime registry already conceded (spoofing it
+collapsed to "write the registry file you already have filesystem access to").
+The improvement is not a stronger identity primitive: it is that identity now
+tracks the *real* execution model (one-shot `but` child processes, many
+subagents multiplexed into one host process) instead of a process registry the
+gate could never resolve.
 
 **Explicitly OUT OF SCOPE** for this crate:
 
@@ -36,21 +41,34 @@ does **not** make any spoof-prevention or cryptographic-identity claim.
 - **Keychain / secret storage** — no credentials are stored in or read from an
   OS keychain. There are no shared secrets.
 - **Sandboxing** — the engine does not confine, jail, or otherwise restrict the
-  process it identifies. It trusts the host OS to report `pid` and
-  `start_time` truthfully.
+  process it identifies. It trusts the host OS and the harness to set
+  `BUT_AGENT_HANDLE` truthfully.
 
-The trust root is the **host OS plus the orchestrator that writes the runtime
-registry file**. Spoofing collapses to "write to the registry file you already
-have filesystem access to" — the same trust root as the legacy
-`permissions.toml` model. The improvement over the legacy model is **not** a
-stronger identity primitive: it is that every governed call now **requires a
-registry hit** instead of trusting a caller-set environment variable. An
-unregistered process resolves no principal and is denied with
-`perm.denied`.
+A **sealed (signed) token** that would let the engine verify the handle
+independently of the harness is noted as a possible follow-on — it is **not
+built**.
+
+## Per-harness identity mechanism
+
+The handle is un-forgeable only to the degree the harness wrapper controls the
+child environment. The steerer uses the strongest mechanism each harness allows:
+
+| Harness | Mechanism | Property |
+|---|---|---|
+| **OpenCode** | `shell.env` plugin hook **injects** `BUT_AGENT_HANDLE` into each subagent's shell. | **Host-set, un-forgeable** — the agent never controls the value; the host writes it. |
+| **Claude Code** / **Codex** | PreToolUse **match-enforcement**: their hooks cannot mutate the child env, so the steerer **denies** any governed `but` whose handle ≠ the harness-assigned `agent_type`. | Forgery is detected and **blocked at the boundary** rather than prevented at the source. |
+
+Both paths anchor the same trust root (host + harness wrapper); they differ only
+in whether the handle is *injected* or *match-enforced*.
+
+A **PID ancestry walk** was considered and rejected as an alternative: OpenCode
+and Claude Code multiplex many subagents into **one** host process, so sibling
+agents are indistinguishable by process lineage.
 
 ## File layout
 
-Governance state is split across two files with different lifecycles.
+Governance state lives in committed, ref-pinned config — there is no runtime
+state file.
 
 ### Committed: `agents.toml` (ref-pinned)
 
@@ -78,59 +96,6 @@ The Rust domain types (`Principal`, `PrincipalId`) are unchanged by the rename;
 only the wire format and filename moved from `[[principal]]` /
 `permissions.toml` to `[[agent]]` / `agents.toml`.
 
-### Runtime: `agents-runtime.toml` (per-host, mode 0600)
-
-The runtime registry maps `(pid, start_time, expiry) → agent_id` and is written
-by `but agent register`. It is **per-host process state**, never committed.
-
-**Resolution order** (`runtime_registry_location`, the single source of truth
-shared by the CLI writer and the gate reader; first match wins):
-
-1. **`BUT_AGENT_REGISTRY_PATH`** — explicit override. Wins over every
-   host-derived default; its parent directory is assumed to already exist (the
-   operator owns the path). Used for tests and sandboxed environments.
-2. **`$XDG_RUNTIME_DIR/gitbutler/<repo-hash>/agents-runtime.toml`** — when
-   `XDG_RUNTIME_DIR` is set (the normal Linux case). This is typically tmpfs and
-   cleared on reboot. `<repo-hash>` is the lowercase hex of the first 16 bytes
-   of the SHA-256 of the canonicalized git directory, keeping per-host
-   registries isolated.
-3. **`<workdir>/.gitbutler/agents-runtime.toml`** — the **worktree fallback**,
-   used when `XDG_RUNTIME_DIR` is unset (the normal **macOS** case). This file
-   lives **inside the working tree** and **persists there** — it is not on tmpfs
-   and is not cleared on reboot.
-
-A bare repository with no override and no `XDG_RUNTIME_DIR` has no default
-registry location.
-
-**Guarantees the code enforces:**
-
-- **Mode `0600`, owned by the user.** The file is created owner-only: the write
-  path sets `0600` on the locked temp file before the atomic rename
-  (`Registry::write_inner`), so the mode survives commit instead of inheriting
-  the process umask. The registry is the spoofing trust root, so on the worktree
-  fallback path — where it sits in the working tree — owner-only matters.
-- **Gitignored on the worktree fallback path.** Because the fallback file lives
-  inside the working tree, `but agent register` (its creator) ensures
-  `<workdir>/.gitbutler/.gitignore` contains a line `agents-runtime.toml`
-  (`ensure_runtime_registry_gitignored`, idempotent — created if absent, the
-  rule appended only when missing). This keeps the file one `git add` short of
-  being committed. The override and XDG paths live outside the working tree and
-  are not gitignored.
-- **Atomic write.** Written through a Git-style lock file (`gix::lock` with
-  `flush` + `sync_all` + atomic rename). Expired entries (`expires_at < now`)
-  are garbage-collected lazily on read (`Registry::gc`).
-
-```toml
-# agents-runtime.toml — per-host runtime state, mode 0600
-[[registration]]
-pid = 4711
-start_time = 1719417600
-agent_id = "rust-implementer"
-registered_at = 1719417600
-expires_at = 1719432000
-registered_by = "but-cli"
-```
-
 A ref is considered **governed** once it commits at least one of
 `agents.toml`, `permissions.toml` (legacy), or `gates.toml` into its tree
 (`governance_present`).
@@ -154,65 +119,54 @@ window so existing governed repos keep authorizing unchanged.
    add and delete together. The command is **idempotent**: a second run when
    `agents.toml` exists is a no-op (exit 0, no file change).
 
-## Environment variable deprecation
-
-`BUT_AGENT_HANDLE` — the legacy self-asserted identity string — is now
-**test/CI-only**. It is consulted **only** when `BUT_AUTHZ_ALLOW_ENV_HANDLE=1`
-is also set, and it is **slated for deprecation** once the runtime registry is
-the sole production identity path. Production governed calls must not set
-either variable; orchestrators call `but agent register` after spawning each
-subagent instead.
+The `but agent` CLI surface is intentionally small: `but agent list --committed`
+prints the committed `[[agent]]` roster at the target ref, and `but agent
+migrate` performs the rename. There are no runtime registration verbs — identity
+is set in the environment by the harness, not registered in-engine.
 
 ## Resolution order
 
-Gates resolve the acting principal through
-`resolve_principal_with_registry(Option<&Registry>, &GovConfig)`. Resolution is
-strict and fail-closed:
+Gates resolve the acting principal through `resolve_principal_from_env(&GovConfig)`
+— the **production resolver**. Resolution is strict and fail-closed:
 
-1. **Registry hit.** If the runtime registry has an entry for the current
-   `(pid, start_time)`, that entry's `agent_id` resolves to the principal. A
-   same-PID entry whose `start_time` differs from the observed value is denied
-   as `Denial::stale_registration` (PID-reuse defense) — it never resolves a
-   principal.
-2. **Flag-gated env fallback.** On a registry miss, if
-   `BUT_AUTHZ_ALLOW_ENV_HANDLE=1` is set, fall back to the `BUT_AGENT_HANDLE`
-   environment variable via `resolve_principal`. This is the test/CI escape
-   hatch, not a production identity path.
-3. **`Denial::unregistered`.** Otherwise deny with `Denial::unregistered`
-   (`perm.denied`, `class = operator_required`). `reg = None` is treated as a
-   registry miss (so callers without a registry still get a deterministic
-   resolution attempt through the flag-gated fallback, then denial).
+1. **Read `BUT_AGENT_HANDLE`.** If the variable is unset or empty, deny with
+   `Denial::no_handle()` (`perm.denied`, `class = operator_required`).
+2. **Resolve against committed config.** Look the handle up in the committed
+   `agents.toml` at the target ref. An unknown handle (no matching `[[agent]]`)
+   denies with `Denial::unknown_principal(handle)` (`perm.denied`,
+   `class = operator_required`).
+3. **Resolve the principal.** On a hit, the handle resolves to a `Principal`
+   carrying its authorities and group memberships, which `authorize()` then
+   checks against the requested authority.
 
-The same denial code (`perm.denied`) is reused for `no_handle`,
-`unknown_principal`, and `unregistered_start_time_unresolved`; all carry
-`class = operator_required` and a do-not-retry hint, because no principal was
-resolved and the actor cannot self-correct in-system.
+The same denial code (`perm.denied`) is reused for `no_handle` and
+`unknown_principal`; both carry `class = operator_required` and a do-not-retry
+hint, because no principal was resolved and the actor cannot self-correct
+in-system (the operator/harness must set a valid handle).
 
 ### Worked example
 
-An orchestrator spawns a subagent and binds its identity before any governed
-verb runs:
+The trusted harness wrapper assigns each agent's handle; the agent's first
+governed call resolves it:
 
 ```bash
-# 1. Register the child process under an agent committed in agents.toml.
-but agent register --pid $CHILD_PID --as rust-implementer
-
-# 2. The child's first governed call resolves through the registry.
-#    Internally: current_pid() -> $CHILD_PID
-#                process_start_time($CHILD_PID) -> 1719417600
-#                registry.resolve(($CHILD_PID, 1719417600)) -> "rust-implementer"
-#                principal_from_handle("rust-implementer", cfg) -> Principal
-BUT_AUTHZ_ALLOW_ENV_HANDLE=1 but agent whoami   # sanity check (test-only flag)
+# The harness wrapper sets BUT_AGENT_HANDLE for the subagent it spawned
+# (OpenCode: shell.env injection; Claude Code/Codex: match-enforced).
+# The agent's governed call then resolves through the env:
+#   resolve_principal_from_env(cfg)
+#     -> env BUT_AGENT_HANDLE = "rust-implementer"
+#     -> principal_from_handle("rust-implementer", cfg) -> Principal
+but commit -m "..."
 ```
 
-Without `but agent register`, the same governed call resolves no principal and
-is denied:
+With no handle set (and no harness to set it), the same governed call resolves
+no principal and is denied:
 
 ```
 code:             perm.denied
 class:            operator_required
-message:          unregistered process pid 4711 start_time 1719417600; no governed principal resolved
-do_not:           register the principal / set BUT_AGENT_HANDLE; do not retry as-is
+message:          BUT_AGENT_HANDLE is required to resolve a governed principal
+remediation:      set BUT_AGENT_HANDLE to a principal committed in governance config
 ```
 
 ## Denial codes
@@ -220,7 +174,7 @@ do_not:           register the principal / set BUT_AGENT_HANDLE; do not retry as
 | Code | Carrier | `class` | Meaning |
 |------|---------|---------|---------|
 | `perm.denied` | missing authority | `actor_correctable` | A resolved principal lacks the required authority. The actor can self-correct (request a reviewed merge, use a different verb). |
-| `perm.denied` | unresolved principal | `operator_required` | No principal resolved (`no_handle`, `unknown_principal`, `unregistered`, `stale_registration`). An operator must register the process/principal. |
+| `perm.denied` | unresolved principal | `operator_required` | No principal resolved (`no_handle`, `unknown_principal`). The operator/harness must set a valid `BUT_AGENT_HANDLE`. |
 | `branch.protected` | branch protection | `actor_correctable` | The target ref is branch-protected. |
 | `gate.review_required` | review gate | `actor_correctable` | The review requirement is unmet. |
 | `config.invalid` | config load | `operator_required` | The committed `.gitbutler` config is malformed, incomplete, or unreadable. |
@@ -235,21 +189,36 @@ keeps operator-required denials from being miscategorized as self-recoverable.
 
 Resolution & authorization:
 
-- `resolve_principal_with_registry(Option<&Registry>, &GovConfig) -> Result<Principal, Denial>`
-- `resolve_principal(lookup, &GovConfig) -> Result<Principal, Denial>` (env-driven, test-only)
+- `resolve_principal_from_env(&GovConfig) -> Result<Principal, Denial>` — the
+  production gate resolver (reads `BUT_AGENT_HANDLE`).
+- `resolve_principal(lookup, &GovConfig) -> Result<Principal, Denial>` — the
+  injected-lookup variant tests use to avoid mutating process environment.
 - `authorize(&Principal, Authority, &GovConfig) -> Result<(), Denial>`
 - `effective_authority(&Principal, &GovConfig) -> AuthoritySet`
 
-Config & registry:
+Config:
 
 - `load_governance_config(&gix::Repository, target_ref) -> Result<GovConfig, ConfigError>`
 - `governance_present(&gix::Repository, target_ref) -> Result<bool>`
 - `agents_path()` / `permissions_path()` — single source of truth for the
   `.gitbutler/*.toml` literals.
-- `Registry::{load, write, register, unregister, resolve, gc}`
 
-Process identity:
+## Superseded: the PID registry
 
-- `current_pid() -> u32`
-- `process_start_time(pid) -> Result<u64>` (Linux `/proc/[pid]/stat`, macOS
-  `proc_pidinfo`; bails on unsupported platforms)
+IDENT first shipped a runtime **PID registry** — `but agent register` mapping
+`(pid, start_time) → agent_id`, with the gates resolving the *current* pid via
+`resolve_principal_with_registry`. Dogfooding exposed a structural flaw: every
+agent runs `but` as a **one-shot child process** (`cd … && but commit`), so the
+pid the gate saw was an ephemeral grandchild that was never registered — the
+registry resolved nothing and agents fell back to the env handle for 100% of
+governed operations. The registry was **reverted** and `BUT_AGENT_HANDLE` made
+the primary identifier again, now **set by the trusted harness wrapper** rather
+than self-asserted by the agent. The `registry.rs` / `process.rs` modules, the
+`agents-runtime.toml` file, the `(pid, start_time)` tuple, the
+`but agent register/unregister/whoami` verbs, and the `BUT_AUTHZ_ALLOW_ENV_HANDLE`
+flag are all gone.
+
+For the full reversal rationale see
+[`.spec/prds/governance/12-uc-agent-identity.md`](../../.spec/prds/governance/12-uc-agent-identity.md)
+and the **"Identity: why env-primary"** section of
+[`.spec/README.md`](../../.spec/README.md).
