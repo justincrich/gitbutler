@@ -86,7 +86,7 @@ review requirement at head) — applied **branching-mechanism-agnostically** (vi
 branches, plain git, opt-in worktrees). Role separation (implementer vs. reviewer vs.
 maintainer) **emerges from the permission set**; no enforcement path keys off a role name.
 
-A sixth functional group — **agent identity registration (IDENT)** — gives every governed
+A sixth functional group — **agent identity (IDENT)** — gives every governed
 `but` invocation a principal to resolve, anchored in committed `.gitbutler/agents.toml`, so a
 gate decides against *who* an agent is rather than whatever it claims. Identity here is
 process-level, **not cryptographic** (the trust root is the host OS plus the harness that
@@ -152,7 +152,7 @@ Tags: **[STEER]** capability-aware denials · **[IDENT]** agent identity.
 crates/
 ├── but-authz/                          ← NEW crate · the authorization engine (no git/FS I/O)
 │   ├── Cargo.toml
-│   ├── README.md         [IDENT]      agent identity docs — threat model, file layout, migration path, deprecation timeline
+│   ├── README.md         [IDENT]      agent identity docs — env-primary model, threat model, per-harness injection, agents.toml migration
 │   └── src/
 │       ├── lib.rs                       crate root — re-exports the authz API
 │       ├── authority.rs                 permission tokens (contents:write, merge, …) + parse/serialize
@@ -185,7 +185,7 @@ crates/
 │   └── src/{args,command}/
 │       ├── perm.rs                      `but perm`   — inspect / administer permissions
 │       ├── group.rs                     `but group`  — inspect / administer principal groups
-│       ├── whoami.rs       [STEER]      `but whoami` — resolve & print the registered principal
+│       ├── whoami.rs       [STEER]      `but whoami` — resolve & print the acting principal (from BUT_AGENT_HANDLE)
 │       ├── can_i.rs        [STEER]      `but can-i`  — authority self-check (blocked-agent self-discovery)
 │       └── agent.rs       [IDENT]      `but agent`  — list --committed roster / migrate
 │
@@ -285,8 +285,10 @@ grounded in something the engine already has:
   agent its authorized next move (the [STEER][steer] direction, sprint 07 — core merged)
   — turning two checkpoints into a legible map of the whole governed surface, rather than a
   broad action-governance claim shipped today. Agent identity (the [IDENT] chain, sprints
-  08–11) is now complete: every governed `but` invocation resolves through a runtime PID
-  registry, not a self-asserted env var.
+  08–11) is now complete: every governed `but` invocation resolves a principal from
+  `BUT_AGENT_HANDLE` against committed `agents.toml` — host-set by the trusted harness
+  wrapper, not self-asserted by the agent (the PID registry this chain first shipped was
+  reverted; see *Identity: why env-primary* above).
 - **Conflict-free parallel convergence.** N agents → N virtual branches over *one* working
   tree instead of N worktrees — no merge tax, no disk blow-up. Hunk-assignment already knows
   who owns what, so GitButler can *predict* a collision before it becomes a silent overwrite;
@@ -328,7 +330,7 @@ projection scales from one excellent local working tree toward a cross-machine f
 | [`prds/governance/`](./prds/governance/README.md) | The deliverable — permissions, groups, commit/merge gates, the governed loop, the management UI |
 | [`prds/governance/ROADMAP.md`](./prds/governance/ROADMAP.md) | 13-sprint roadmap (8 core + STEER + 4 IDENT) with per-sprint human-testing gates and review provenance |
 | [`prds/governance/enrichments/`](./prds/governance/enrichments/) | STEER — capability-aware denials (sprint 07; core merged) |
-| [`prds/governance/12-uc-agent-identity.md`](./prds/governance/12-uc-agent-identity.md) | IDENT — agent identity registration use cases (sprints 08–11 complete: engine, CLI, gates, migration, skills, docs) |
+| [`prds/governance/12-uc-agent-identity.md`](./prds/governance/12-uc-agent-identity.md) | IDENT — agent identity use cases (sprints 08–11; env-primary `BUT_AGENT_HANDLE` after the PID registry was reverted — UC-IDENT-02/03/04 superseded) |
 | [`prds/check-runner/`](./prds/check-runner/README.md) | Future work — local deterministic checks + the required-checks merge clause |
 | [`artifacts/team-product/`](./artifacts/team-product/04-synthesis-report.md) | The agent-verification definition-of-done, feature inventory, gap analysis, and synthesis |
 | [`reviews/`](./reviews/) | Adversarial spec audits |
