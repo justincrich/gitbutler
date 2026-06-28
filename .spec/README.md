@@ -76,8 +76,10 @@ the check runner, specced as future work, closes the second.
 
 **Full PRD → [`prds/governance/`](./prds/governance/README.md)** · v1.4.0 · 6 functional
 groups · 17 audited use cases · 129 acceptance criteria · 13 sprints (8 core + STEER + 4
-IDENT). All 13 sprints have task files generated and ACs verified; sprints 01a–11 are
-implemented on the `kb/steer-integration` branch.
+IDENT). All 13 sprints have task files generated and ACs verified; **sprints 01a–11 are
+merged to `master`** — the IDENT epic landed there via the `kb/steer-integration` merge. One
+later hardening pass — bringing the local `but merge` path under the same gate (see *The
+local `but merge` gap*, below) — is on `kb/steer-integration`, pending merge to `master`.
 
 A functional, GitHub-mirrored **permission system** (`but-authz`) plus **principal
 grouping**, wired into **two thin gates on GitButler's own git actions** — a commit gate
@@ -95,7 +97,7 @@ assigns identity). Full spec
 
 **Identity: why env-primary (a reversal worth recording).** IDENT first shipped a runtime
 **PID registry** — `but agent register` mapping `(pid, start_time) → agent_id`, with the
-gates resolving the *current* pid. Dogfooding it on `agent-intel` exposed a structural flaw:
+gates resolving the *current* pid. Dogfooding it on a real multi-agent project exposed a structural flaw:
 every agent runs `but` as a **one-shot child process** (`cd … && but commit`), so the pid the
 gate sees is an ephemeral grandchild that was never registered — registration was inert, the
 gate denied, and agents fell back to the `BUT_AGENT_HANDLE` env hatch for **100% of governed
@@ -114,6 +116,20 @@ actually governs the real execution model. The env-handle path is the **producti
 built. UC-IDENT-02/03/04 (the registry/pid mechanism) are **superseded**; UC-IDENT-01
 (`agents.toml`) and UC-IDENT-05 (skills stop self-asserting) stand.
 
+**The precondition — the harness hook must be wired (a hard requirement, not a setup
+nicety).** Env-primary identity only holds because the handle is set *from outside the agent's
+reach* — the job of a per-project harness hook, the **git→but steerer**: on OpenCode it injects
+`BUT_AGENT_HANDLE` host-side (`shell.env`); on Claude Code / Codex it match-enforces at
+PreToolUse, denying any governed `but` whose handle ≠ the harness-assigned agent. **So standing
+up governance is two steps, not one — commit `.gitbutler/agents.toml` *and* install the harness
+hook.** Skip the hook and the floor drops out: the engine gate still denies an *unknown* or
+*missing* handle, but nothing stops an agent from `export`-ing a handle it isn't entitled to —
+a privileged principal becomes forgeable and per-agent permissions degrade to honor-system. The
+hook is also **project-scoped**; a session launched outside the governed project isn't steered,
+so the harness layer doesn't enforce there. This is exactly why the trust root is stated as
+*host + harness*, not the engine alone — and why the steerer, though it lives in harness-side
+tooling rather than this repo's crates, is part of the delivered system, not an optional add-on.
+
 **The thesis — irrigation, not a dam.** You don't harness a river by stopping it; you
 channel it. An agent *can* step outside the governed path, but if compliance is cheaper
 than defection, a goal-directed agent flows toward good code. We grade the riverbed rather
@@ -125,11 +141,29 @@ the only acts with consequence.
 | Capability | Status | Where |
 |---|---|---|
 | `but-authz` engine (`Authority`/`Principal`/`Group`/`Denial`, ref-pinned config loader) | **Merged + tested** | `crates/but-authz/` |
-| Commit gate (`contents:write` + branch protection, fail-closed) | **Merged + tested** | `crates/but-api/src/commit/gate.rs` |
-| Merge gate (`merge` authority + review-at-head, self-escalation-proof) | **Merged + tested** | `crates/but-api/src/legacy/merge_gate.rs`; `local_review_verdicts` in `but-db` |
+| Commit gate (`contents:write` + branch protection, fail-closed) | **Merged + tested** · 14 gate tests | `crates/but-api/src/commit/gate.rs` |
+| Merge gate — review/PR-merge action (`merge` authority + review-at-head, author-distinct, self-escalation-proof) | **Merged + tested** · 15 gate tests + 2-case self-escalation proof | `crates/but-api/src/legacy/merge_gate.rs` (`enforce_merge_gate`); `local_review_verdicts` in `but-db` |
+| Merge gate — local `but merge` CLI path (same authority + review-at-head; author-distinctness deferred) | **On `kb/steer-integration`** · 7 gate tests — closes a gap where `but merge` merged with **no gate** | `enforce_local_merge_gate` in `merge_gate.rs`, wired in `crates/but/src/command/legacy/merge.rs` |
 | CLI: `but perm` / `but group` | **Merged** | `crates/but/src/args/{perm,group}.rs` |
 | Desktop governance UI (Tauri IPC + settings scaffold) | **In progress** — IPC merged; principal/group/branch-gate forms pending | `apps/desktop/.../governance/` |
-| Agent identity (env-primary `BUT_AGENT_HANDLE`, harness-injected; `agents.toml`) | **Implemented** — 11-callsite gate resolution via `resolve_principal_from_env` + `but agent list --committed`/`migrate` + harness injection (OpenCode `shell.env`, CC/Codex match-enforcement) + docs, on `kb/steer-integration`; field-tested on `agent-intel`. The PID registry was tried and **reverted** (see *Identity: why env-primary* above). | `crates/but-authz/src/authorize.rs`, `crates/but/src/command/agent.rs`, git→but steerer, [`crates/but-authz/README.md`](../../crates/but-authz/README.md); [`12-uc-agent-identity.md`](./prds/governance/12-uc-agent-identity.md) |
+| Agent identity (env-primary `BUT_AGENT_HANDLE`, harness-injected; `agents.toml`) | **Merged + tested** — 11-callsite gate resolution via `resolve_principal_from_env` + `but agent list --committed`/`migrate` + harness injection (OpenCode `shell.env`, CC/Codex match-enforcement) + docs; merged to `master` (the IDENT epic) and field-tested on a real multi-agent project. The PID registry was tried and **reverted** (see *Identity: why env-primary* above). | `crates/but-authz/src/authorize.rs`, `crates/but/src/command/agent.rs`, git→but steerer (harness-side), [`crates/but-authz/README.md`](../../crates/but-authz/README.md); [`12-uc-agent-identity.md`](./prds/governance/12-uc-agent-identity.md) |
+
+**The local `but merge` gap (a defect worth recording).** The merge gate above sits at
+GitButler's review/PR-merge action — but dogfooding surfaced that the *other* merge path
+slipped past it. The plain `but merge` CLI verb did a raw `repo.merge_commits` with **no
+gate**, so an implementer holding no merge authority could still land a merge locally; a
+planning task had *claimed* this path was wired, but it never was — no
+`enforce_local_merge_gate` existed. The fix factors the shared post-config enforcement
+(identity → `merge` authority → branch protection → review-at-head) into one helper the
+forge path now wraps behavior-neutrally, adds the forge-less `enforce_local_merge_gate`,
+wires it into `but merge`, and — the teeth that would have caught the gap — registers
+`merge.rs` in the `invariant_build_gates` enforcement-path grep, so a future un-gated merge
+fails the build. A 7-case fixture matrix covers it and an independent `rust-reviewer` pass
+returned SHIP. One honest limit remains: local merges carry no commit-author → `PrincipalId`
+mapping, so `require_distinct_from_author` is **deferred** (author is `None`) — identity,
+`merge` authority, approval count, and branch protection still enforce, but same-actor
+author-and-approve is the one check not yet wired. This is the piece on `kb/steer-integration`
+pending merge to `master`.
 
 **What it deliberately does *not* do** (stated plainly, because honesty is part of the
 design): it governs GitButler's own `but` actions, **not raw git or the filesystem** — the
@@ -168,7 +202,7 @@ crates/
 │   └── src/
 │       ├── commit/gate.rs               COMMIT GATE — contents:write + branch protection, fail-closed
 │       └── legacy/
-│           ├── merge_gate.rs            MERGE GATE — merge authority + review-at-head, self-escalation-proof
+│           ├── merge_gate.rs            MERGE GATE — merge authority + review-at-head, self-escalation-proof (enforce_merge_gate = review/PR path; enforce_local_merge_gate = the `but merge` CLI path [kb/steer-integration])
 │           ├── review_requirement.rs    pure review-at-head evaluator (one approval / required group / head OID)
 │           ├── config_mutate.rs         ADMIN-WRITE GATE for perm/group config edits + structured denial
 │           └── governance.rs            read-side governance queries for the desktop UI
@@ -214,13 +248,14 @@ apps/desktop/src/
 |---|---|---|---|
 | **Engine** (new crate) | `crates/but-authz/` | Pure authorization core — no git/FS I/O. Authorities, principals/groups, config loaded at the target ref, the `authorize()` decision, and the structured `Denial` contract. Callers ask; it answers. | Merged |
 | **Commit gate** | `but-api/src/commit/gate.rs` | At the commit boundary: requires `contents:write` and enforces branch protection; fail-closed. | Merged |
-| **Merge gate** | `but-api/src/legacy/{merge_gate,review_requirement}.rs` | At the local-merge boundary: requires `merge` authority **plus** a satisfied review-at-head (one approval per required group at the current head OID); self-escalation-proof. | Merged |
+| **Merge gate** (review/PR-merge) | `but-api/src/legacy/{merge_gate,review_requirement}.rs` | At GitButler's review/PR-merge action: requires `merge` authority **plus** a satisfied review-at-head (one approval per required group at the current head OID); author-distinct, self-escalation-proof. | Merged |
+| **Merge gate** (local `but merge`) | `enforce_local_merge_gate` in `merge_gate.rs`; wired in `but/src/command/legacy/merge.rs` | Same enforcement at the plain `but merge` CLI verb, which previously merged with no gate. Author-distinctness deferred (no commit-author → principal map). | On `kb/steer-integration` |
 | **Review store** | `but-db` `local_review_{verdicts,assignments,comments,meta}` | Persists the reviewer verdicts/assignments/comments the merge gate reads; verdicts bind to a head OID. | Merged |
 | **Admin-write gate** | `but-api/src/legacy/config_mutate.rs` | Gates edits to the governance config itself — only authorized principals change the rules; same structured denial. | Merged |
 | **Read API** | `but-api/src/legacy/governance.rs` | Read-side governance queries (current config, pending state) for the desktop UI. | Merged |
 | **CLI — admin** | `but perm`, `but group` | Inspect / administer permissions and principal groups. | Merged |
 | **CLI — self-discovery** [STEER] | `but can-i`, `but whoami`, `governance-denial-primer.md` (+ `route.rs`/`menu.rs`/`assignment_state.rs`) | A blocked agent can ask what it's allowed to do next instead of guessing — authority self-check + identity resolution over the single route-authority table. | Merged |
-| **Identity** [IDENT] | `but agent` + `but-authz` `authorize.rs` (`agents.toml`) + git→but steerer + `crates/but-authz/README.md` | **Env-primary, harness-injected `BUT_AGENT_HANDLE`** (the runtime PID registry was tried and reverted — see *Identity: why env-primary* below). The 11 gate callsites resolve via `resolve_principal_from_env` against committed `agents.toml`; the trusted harness wrapper assigns each agent's handle (OpenCode `shell.env` injection; Claude Code/Codex PreToolUse match-enforcement). Field-tested on `agent-intel`. | On `kb/steer-integration` |
+| **Identity** [IDENT] | `but agent` + `but-authz` `authorize.rs` (`agents.toml`) + git→but steerer (harness-side) + `crates/but-authz/README.md` | **Env-primary, harness-injected `BUT_AGENT_HANDLE`** (the runtime PID registry was tried and reverted — see *Identity: why env-primary* below). The 11 gate callsites resolve via `resolve_principal_from_env` against committed `agents.toml`; the trusted harness wrapper assigns each agent's handle (OpenCode `shell.env` injection; Claude Code/Codex PreToolUse match-enforcement). Merged to `master` (the IDENT epic); field-tested on a real multi-agent project. | Merged |
 | **Desktop** | `gitbutler-tauri/src/governance.rs`; `apps/desktop/src/{components,lib}/governance/*` | Tauri IPC boundary (fleet-owner identity) + Svelte settings UI to view/edit principals & groups. | IPC + read views merged; some edit forms pending |
 | **Config** | `.gitbutler/agents.toml`, `.gitbutler/gates.toml` | The committed, ref-pinned source of truth both gates read at the target ref. `agents.toml` supersedes `permissions.toml` (one-release legacy fallback via `but agent migrate`). | Merged |
 
@@ -285,7 +320,7 @@ grounded in something the engine already has:
   agent its authorized next move (the [STEER][steer] direction, sprint 07 — core merged)
   — turning two checkpoints into a legible map of the whole governed surface, rather than a
   broad action-governance claim shipped today. Agent identity (the [IDENT] chain, sprints
-  08–11) is now complete: every governed `but` invocation resolves a principal from
+  08–11) is now complete and merged to `master`: every governed `but` invocation resolves a principal from
   `BUT_AGENT_HANDLE` against committed `agents.toml` — host-set by the trusted harness
   wrapper, not self-asserted by the agent (the PID registry this chain first shipped was
   reverted; see *Identity: why env-primary* above).
@@ -316,7 +351,9 @@ projection scales from one excellent local working tree toward a cross-machine f
   a fakeability audit; the review records live in [`reviews/`](./reviews/) and each sprint's
   provenance is in [`prds/governance/ROADMAP.md`](./prds/governance/ROADMAP.md).
 - **Tested against real services, no mocks** — real `but-authz`, real git, real `but-db`;
-  e.g. the merge gate's self-escalation proof runs against the actual ref-pinned config.
+  e.g. the merge gate's self-escalation proof runs against the actual ref-pinned config. The
+  gates also run live in the deployed `but` binary, dogfooded on a real multi-agent project —
+  an unauthorized `but merge` is denied at the engine, not just in a test.
 - **Honest about limits.** Accepted leaks (R6, R14, the fence) are documented as limits, never
   dressed up as boundaries — and the doctrine they answer is written down first
   ([`artifacts/team-product/`](./artifacts/team-product/01-definition-of-done.md)).
