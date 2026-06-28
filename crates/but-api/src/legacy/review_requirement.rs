@@ -34,11 +34,17 @@ impl ReviewUnmet {
 }
 
 /// Evaluate a target-ref review requirement from supplied verdict rows.
+///
+/// # Parameters
+/// - `author`: Optional principal ID of the commit author. When `None`, the
+///   `require_distinct_from_author` check is skipped (local merges have no
+///   commit author → PrincipalId mapping). When `Some`, distinctness is enforced
+///   (forge merges have a known review author).
 pub(crate) fn evaluate(
     requirement: &ReviewRequirement,
     verdicts: &[LocalReviewVerdict],
     current_head_oid: &str,
-    author: &PrincipalId,
+    author: Option<&PrincipalId>,
     cfg: &GovConfig,
 ) -> Result<(), ReviewUnmet> {
     let approved = approved_verdicts(verdicts);
@@ -87,7 +93,7 @@ fn current_approvals(
     requirement: &ReviewRequirement,
     verdicts: &[&LocalReviewVerdict],
     current_head_oid: &str,
-    author: &PrincipalId,
+    author: Option<&PrincipalId>,
 ) -> BTreeSet<PrincipalId> {
     verdicts
         .iter()
@@ -100,7 +106,7 @@ fn stale_approvals(
     requirement: &ReviewRequirement,
     verdicts: &[&LocalReviewVerdict],
     current_head_oid: &str,
-    author: &PrincipalId,
+    author: Option<&PrincipalId>,
 ) -> BTreeSet<PrincipalId> {
     verdicts
         .iter()
@@ -112,14 +118,15 @@ fn stale_approvals(
 fn eligible_principal(
     requirement: &ReviewRequirement,
     verdict: &LocalReviewVerdict,
-    author: &PrincipalId,
+    author: Option<&PrincipalId>,
 ) -> Option<PrincipalId> {
     let principal = PrincipalId::new(verdict.principal_id.clone());
-    if requirement.require_distinct_from_author && principal == *author {
-        None
-    } else {
-        Some(principal)
+    // When author is None (local merge), skip distinctness check.
+    // When author is Some (forge merge), enforce distinctness.
+    if requirement.require_distinct_from_author && author.is_some_and(|auth| principal == *auth) {
+        return None;
     }
+    Some(principal)
 }
 
 fn has_group_approval(

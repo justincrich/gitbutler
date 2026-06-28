@@ -8,6 +8,29 @@ use crate::{
 use anyhow::bail;
 use but_ctx::Context;
 
+/// Convert a merge-gate denial into a CLI-friendly error envelope.
+fn merge_gate_cli_error(err: anyhow::Error) -> anyhow::Error {
+    if let Some(gate_error) = but_api::legacy::merge_gate::classify_error(&err) {
+        // STEER-005: render the full steering envelope (class,
+        // held_permissions, authorized_actions, do_not) through
+        // steer_envelope_from_parts(), then preserve the merge-site-only
+        // `unmet` key. Best-effort: a serialization fault still emits
+        // code/message/remediation_hint + exit 1 (invariant §9.5).
+        let envelope = but_authz::steer_envelope_from_parts(
+            gate_error.code,
+            &gate_error.message,
+            Some(&gate_error.remediation_hint),
+            gate_error.class,
+            &gate_error.held_permissions,
+            &gate_error.authorized_actions,
+            gate_error.do_not,
+        );
+        return anyhow::anyhow!("{}", serde_json::json!({ "error": envelope }));
+    }
+
+    err
+}
+
 pub async fn handle(
     ctx: &mut Context,
     out: &mut OutputChannel,
@@ -83,6 +106,14 @@ pub async fn handle(
             t.hint
                 .paint(shorten_object_id(&repo, local_branch_head_oid))
         )?;
+
+        // Enforce merge gate for local merges (governance check)
+        but_api::legacy::merge_gate::enforce_local_merge_gate(
+            ctx,
+            &format!("refs/heads/{local_branch_name}"),
+            &format!("refs/heads/{branch_name}"),
+        )
+        .map_err(merge_gate_cli_error)?;
 
         // do the merge
         let mut merge_result = repo.merge_commits(

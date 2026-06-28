@@ -75,6 +75,99 @@ pub fn enforce_merge_gate(ctx: &but_ctx::Context, review_id: usize) -> anyhow::R
     let repo = ctx.repo.get()?;
     let config = load_merge_governance_config(&repo, &target_ref)?;
 
+    // Extract the author for forge reviews (Some for distinctness check)
+    let author = review
+        .author
+        .as_ref()
+        .map(|author| PrincipalId::new(author.clone()));
+
+    // Delegate to shared helper
+    enforce_merge_gate_with_author(
+        ctx,
+        &repo,
+        &review.target_branch,
+        &review.source_branch,
+        &source_ref,
+        author.as_ref(),
+        &config,
+    )
+}
+
+/// Enforce merge authority and the target-ref review requirement for a local merge.
+///
+/// Local merges (via `but merge`) have no commit author → PrincipalId mapping,
+/// so the review requirement distinctness check is disabled. The gate still
+/// enforces merge authority and approval counts.
+///
+/// # Governance Opt-In (RF-010 amended)
+///
+/// Governance is **opt-in by presence**: if the target ref has no committed
+/// `.gitbutler/*.toml` governance files, the gate short-circuits and allows
+/// the merge (ungoverned repo). This prevents denying merges in repos that
+/// haven't opted into governance.
+///
+/// # Parameters
+/// - `target_ref`: Full target ref (e.g., `refs/heads/main`)
+/// - `source_ref`: Full source ref (e.g., `refs/heads/feat`)
+///
+/// # Errors
+/// - `perm.denied`: Principal lacks merge authority
+/// - `gate.review_required`: Review requirement not satisfied (e.g., no approvals)
+/// - `config.invalid`: Governance config is malformed or incomplete
+pub fn enforce_local_merge_gate(
+    ctx: &but_ctx::Context,
+    target_ref: &str,
+    source_ref: &str,
+) -> anyhow::Result<()> {
+    let repo = ctx.repo.get()?;
+
+    // CRITICAL: governance_present short-circuit (gotcha #1).
+    // Ungoverned repos (no .gitbutler config) must ALLOW, not deny.
+    // load_merge_governance_config FAILS-CLOSED (config.invalid), so we
+    // must check governance presence BEFORE loading config.
+    if !but_authz::governance_present(&repo, target_ref)? {
+        return Ok(());
+    }
+
+    let config = load_merge_governance_config(&repo, target_ref)?;
+
+    // Derive branch names from refs (gotcha #2).
+    // Some functions want names (main, feat), some want full refs.
+    let target_branch = branch_name_from_ref(target_ref);
+    let source_branch = branch_name_from_ref(source_ref);
+
+    // CRITICAL: author = None for local merges (gotcha #4).
+    // There is no commit-author → PrincipalId helper, so we skip
+    // require_distinct_from_author. Identity + merge authority + approvals
+    // still fully enforce.
+    enforce_merge_gate_with_author(
+        ctx,
+        &repo,
+        &target_branch,
+        &source_branch,
+        source_ref,
+        None,
+        &config,
+    )
+}
+
+/// Shared merge-gate enforcement logic for both forge and local merges.
+///
+/// # Parameters
+/// - `target_branch`: Target branch name (e.g., `main`)
+/// - `source_branch`: Source branch name (e.g., `feat`)
+/// - `source_ref`: Full source ref (e.g., `refs/heads/feat`) for head_oid resolution
+/// - `author`: Optional principal ID of the commit author. `Some` for forge merges,
+///   `None` for local merges (disables `require_distinct_from_author` check)
+fn enforce_merge_gate_with_author(
+    ctx: &but_ctx::Context,
+    repo: &gix::Repository,
+    target_branch: &str,
+    source_branch: &str,
+    source_ref: &str,
+    author: Option<&PrincipalId>,
+    config: &MergeGovernanceConfig,
+) -> anyhow::Result<()> {
     let principal = but_authz::resolve_principal_from_env(&config.gov)?;
     // STEER-002: Route::Merge row in ROUTE_AUTHORITY_TABLE supplies the
     // required Authority for this gate; the literal `but_authz::authorize`
@@ -98,13 +191,13 @@ pub fn enforce_merge_gate(ctx: &but_ctx::Context, review_id: usize) -> anyhow::R
 
     if !config
         .gov
-        .branch(&review.target_branch)
+        .branch(target_branch)
         .is_some_and(|branch| branch.protected())
     {
         return Ok(());
     }
 
-    let Some(requirement) = config.review_requirement_for(&review.target_branch) else {
+    let Some(requirement) = config.review_requirement_for(target_branch) else {
         return Ok(());
     };
 
@@ -114,7 +207,7 @@ pub fn enforce_merge_gate(ctx: &but_ctx::Context, review_id: usize) -> anyhow::R
             code: REVIEW_REQUIRED_CODE,
             message: format!(
                 "review requirement for {} is not satisfied: {}",
-                review.target_branch,
+                target_branch,
                 undefined_groups.join("; ")
             ),
             remediation_hint: "collect the required approvals at the current review head"
@@ -135,19 +228,14 @@ pub fn enforce_merge_gate(ctx: &but_ctx::Context, review_id: usize) -> anyhow::R
         return Err(error.into());
     }
 
-    let current_head_oid = current_head_oid(&repo, &source_ref)?;
-    let author = review
-        .author
-        .as_ref()
-        .map(|author| PrincipalId::new(author.clone()))
-        .ok_or_else(|| anyhow!("review {review_id} has no author for review requirement"))?;
-    let verdicts = review_verdicts(ctx, &review.source_branch)?;
+    let current_head_oid = current_head_oid(repo, source_ref)?;
+    let verdicts = review_verdicts(ctx, source_branch)?;
 
     match review_requirement::evaluate(
         requirement,
         &verdicts,
         &current_head_oid,
-        &author,
+        author,
         &config.gov,
     ) {
         Ok(()) => Ok(()),
@@ -164,7 +252,7 @@ pub fn enforce_merge_gate(ctx: &but_ctx::Context, review_id: usize) -> anyhow::R
                 code: REVIEW_REQUIRED_CODE,
                 message: format!(
                     "review requirement for {} is not satisfied: {}",
-                    review.target_branch,
+                    target_branch,
                     unmet.join("; ")
                 ),
                 remediation_hint: "collect the required approvals at the current review head"
@@ -181,6 +269,13 @@ pub fn enforce_merge_gate(ctx: &but_ctx::Context, review_id: usize) -> anyhow::R
             Err(error.into())
         }
     }
+}
+
+/// Extract branch name from a full ref (e.g., `refs/heads/main` → `main`).
+///
+/// If the ref is already a branch name (no `refs/` prefix), returns it as-is.
+fn branch_name_from_ref(ref_str: &str) -> &str {
+    ref_str.strip_prefix("refs/heads/").unwrap_or(ref_str)
 }
 
 /// Extract a structured merge-gate payload from an error chain.

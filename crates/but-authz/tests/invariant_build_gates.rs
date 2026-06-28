@@ -22,6 +22,7 @@ const CONFIG_MUTATE: &str = "crates/but-api/src/legacy/config_mutate.rs";
 const GOVERNANCE: &str = "crates/but-api/src/legacy/governance.rs";
 const FORGE_GUARD: &str = "crates/but-api/src/legacy/forge.rs";
 const RULES: &str = "crates/but-api/src/legacy/rules.rs";
+const LOCAL_MERGE: &str = "crates/but/src/command/legacy/merge.rs";
 const ENFORCEMENT_PATHS: &[&str] = &[
     AUTHZ_AUTHORIZE,
     AUTHZ_CONFIG,
@@ -32,6 +33,7 @@ const ENFORCEMENT_PATHS: &[&str] = &[
     FORGE_GUARD,
     RULES,
 ];
+const CLI_ENFORCEMENT_PATHS: &[&str] = &[LOCAL_MERGE];
 const SPRINT_02_ENFORCEMENT_PATHS: &[&str] = &[MERGE_GATE, CONFIG_MUTATE];
 
 // ---------------------------------------------------------------------------
@@ -114,9 +116,10 @@ fn invariant_build_gates() -> anyhow::Result<()> {
     // guards -- not just the commit-gate path. Functional `Authority` is the
     // only axis any gate may branch on.
     assert!(
-        ENFORCEMENT_PATHS.len() >= 5,
-        "Sprint-02 enforcement coverage must include the Sprint-01a trio plus merge and admin-write surfaces"
+        ENFORCEMENT_PATHS.len() >= 6,
+        "Sprint-02 enforcement coverage must include the Sprint-01a trio plus merge, admin-write, and local-merge surfaces"
     );
+    assert_paths_exist_and_non_empty(&workspace_root, CLI_ENFORCEMENT_PATHS)?;
     assert_paths_exist_and_non_empty(&workspace_root, ENFORCEMENT_PATHS)?;
 
     assert_grep_has_no_matches(
@@ -155,6 +158,10 @@ fn invariant_build_gates() -> anyhow::Result<()> {
         AUTHORITY_POSITIVE_PATTERN,
         &[GOVERNANCE],
     )?;
+    // LOCAL_MERGE (merge.rs) is a CLI command that DELEGATES to the merge gate —
+    // it does not carry the but-authz Authority axis itself (that lives in
+    // MERGE_GATE, asserted above). Its regression guard is the "calls the gate"
+    // grep below, not an Authority-axis grep.
     assert_grep_has_no_matches(
         "commit gate must not use GitButler Permission as authz carrier",
         &workspace_root,
@@ -166,6 +173,14 @@ fn invariant_build_gates() -> anyhow::Result<()> {
         &workspace_root,
         PERMISSION_CARRIER_PATTERN,
         SPRINT_02_ENFORCEMENT_PATHS,
+    )?;
+
+    // CLI enforcement paths must call the merge gate
+    assert_grep_has_matches(
+        "local merge CLI must call the merge gate",
+        &workspace_root,
+        r#"enforce_local_merge_gate"#,
+        CLI_ENFORCEMENT_PATHS,
     )?;
 
     assert_seeded_controls_fire()?;

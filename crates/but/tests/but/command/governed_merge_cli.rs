@@ -298,3 +298,12 @@ fn fixed_time(seconds: i64) -> chrono::NaiveDateTime {
 fn ref_id(repo: &gix::Repository, ref_name: &str) -> anyhow::Result<gix::ObjectId> {
     Ok(repo.find_reference(ref_name)?.peel_to_id()?.detach())
 }
+
+// NOTE: a cargo CLI-subprocess test for the LOCAL `but merge` gate is deferred.
+// The gate logic itself is covered by `crates/but-api/tests/local_merge_gate.rs`
+// (commit+merge matrix against a real repo, 7 cases) and the wiring is covered by
+// the `invariant_build_gates` "calls the gate" grep + verified live via
+// `target/debug/but` (implementer + no-handle local merges are denied). The
+// deferred piece — a CLI test using the `Sandbox` — needs a `gb-local` target
+// fixture (the scenario's metadata keeps an `origin` target, so the gated
+// `gb-local` arm doesn't run); that scenario-target setup is the follow-up.
